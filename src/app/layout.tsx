@@ -1,16 +1,18 @@
-import "@/styles/globals.css"
+import "@/ui/styles/globals.css";
 
-import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 
-import { siteConfig } from "@/config/site"
-import { cn } from "@/lib/utils"
-import { ThemeProvider } from "@/components/theme-provider"
+import { siteConfig } from "@/core/config/site";
+import { cn } from "@/core/utils/utils";
+import { getServerSessionUser } from "@/features/auth/auth-server";
+import { Providers } from "@/features/shared/components/providers";
+import { ThemeProvider } from "@/features/shared/components/theme-provider";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 interface RootLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export const metadata: Metadata = {
@@ -54,16 +56,25 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
-}
+};
 
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "black" },
   ],
-}
+};
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  // Get session server-side for SSR optimization
+  const user = await getServerSessionUser();
+  const session = user
+    ? {
+        user,
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+      }
+    : null;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
@@ -73,15 +84,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
           inter.className
         )}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <Providers session={session}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
-  )
+  );
 }

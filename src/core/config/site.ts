@@ -1,6 +1,6 @@
-import { SiteConfig } from "@/types"
+import { SiteConfig } from "@/core/types";
 
-import { env } from "@/env.mjs"
+import { env } from "@/core/config/env.mjs";
 
 export const siteConfig: SiteConfig = {
   name: "Next Entree",
@@ -16,4 +16,4 @@ export const siteConfig: SiteConfig = {
     github: "https://github.com/redpangilinan/next-entree",
   },
   ogImage: `${env.NEXT_PUBLIC_APP_URL}/og.jpg`,
-}
+};
