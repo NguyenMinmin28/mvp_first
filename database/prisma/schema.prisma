@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,6 +6,76 @@ generator client {
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
+}
+
+/* ===== Enums ===== */
+enum Role {
+  ADMIN
+  CLIENT
+  DEVELOPER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PaymentProvider {
+  paypal
+  razorpay
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+}
+
+enum DevLevel {
+  FRESHER
+  MID
+  EXPERT
+}
+
+enum AdminApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PresenceStatus {
+  available
+  checking
+  busy
+  away
+}
+
+/* ===== Core Auth ===== */
+model User {
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  role             Role?
+  name             String?
+  email            String?     @unique
+  emailVerified    DateTime?   @map("emailVerifiedAt")
+  passwordHash     String?     @db.String
+  status           UserStatus  @default(ACTIVE)
+  phoneE164        String?     
+  isPhoneVerified  Boolean     @default(false)
+  isProfileCompleted Boolean    @default(false)
+  image            String?
+  lastLoginAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // NextAuth-compatible (nếu dùng)
+  accounts         Account[]
+  sessions         Session[]
+
+  // Quan hệ ngược 1–12
+  clientProfile    ClientProfile?
+  developerProfile DeveloperProfile?
+
+  @@index([lastLoginAt])
 }
 
 model Account {
@@ -24,6 +95,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -31,20 +103,10 @@ model Session {
   sessionToken String   @unique
   userId       String   @db.ObjectId
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
 
-model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  todos         Todo[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -56,12 +118,151 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Todo {
+/* ===== OTP ===== */
+model OtpCode {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  content   String
-  done      Boolean  @default(false)
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phoneE164 String
+  hash      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-} 
+
+  @@index([phoneE164])
+}
+
+/* ===== Client Profiles ===== */
+model ClientProfile {
+  id                     String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId                 String         @unique @db.ObjectId
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName            String?
+  location               String?                                // Country/City
+
+  currentSubscriptionId  String?        @db.ObjectId
+  subscriptions          Subscription[] @relation("ClientSubscriptions")
+
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  @@index([currentSubscriptionId], map: "idx_client_profiles_currentSubscriptionId")
+}
+
+/* ===== Subscriptions & Packages ===== */
+model Subscription {
+  id                      String               @id @default(auto()) @map("_id") @db.ObjectId
+
+  clientId                String               @db.ObjectId
+  client                  ClientProfile        @relation("ClientSubscriptions", fields: [clientId], references: [id])
+
+  packageId               String               @db.ObjectId
+  package                 Package              @relation("PackageToSubscriptions", fields: [packageId], references: [id])
+
+  provider                PaymentProvider
+  providerSubscriptionId  String
+
+  status                  SubscriptionStatus
+
+  startAt                 DateTime
+  currentPeriodStart      DateTime
+  currentPeriodEnd        DateTime
+
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+
+  @@index([clientId], map: "idx_subscriptions_clientId")
+  @@index([packageId], map: "idx_subscriptions_packageId")
+  @@unique([provider, providerSubscriptionId], map: "uq_subscriptions_provider_external_id")
+
+}
+
+model Package {
+  id                      String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                    String
+  priceUSD                Float
+  projectsPerMonth        Int
+  contactClicksPerProject Int
+  features                String[]
+  isPopular               Boolean   @default(false)
+  active                  Boolean   @default(true)
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@unique([name], map: "uq_packages_name")
+  @@index([active], map: "idx_packages_active")
+
+  subscriptions Subscription[] @relation("PackageToSubscriptions")
+}
+
+/* ===== Developer Profiles ===== */
+model DeveloperProfile {
+  id                   String                @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String                @unique @db.ObjectId
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photoUrl             String?
+  bio                  String?
+  experienceYears      Int                   @default(0)
+  level                DevLevel
+  linkedinUrl          String?
+  portfolioLinks       String[]              // URLs
+
+  adminApprovalStatus  AdminApprovalStatus   @default(pending)
+  approvedAt           DateTime?
+  rejectedAt           DateTime?
+  rejectedReason       String?
+
+  whatsappNumber       String?               // E.164
+  whatsappVerifiedAt   DateTime?
+  usualResponseTimeMs  Int                   @default(0)
+  currentStatus        PresenceStatus        @default(available)
+
+  reviewsSummaryId     String?               @unique @db.ObjectId
+  reviewsSummary    ReviewsAggregate?  @relation("DevProfileToReviews", fields: [reviewsSummaryId], references: [id])
+
+  skills               DeveloperSkill[]
+
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([level])
+  @@index([adminApprovalStatus])
+  @@index([currentStatus])
+}
+
+model DeveloperSkill {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  developerProfileId String            @db.ObjectId
+  developerProfile   DeveloperProfile  @relation(fields: [developerProfileId], references: [id], onDelete: Cascade)
+
+  skillId            String            @db.ObjectId
+  // ĐẶT TÊN QUAN HỆ để rõ ràng
+  skill              Skill             @relation("SkillToDeveloperSkills", fields: [skillId], references: [id])
+
+  years              Int               @default(0)
+  rating             Int               @default(0)
+
+  @@unique([developerProfileId, skillId], map: "uq_devskill_profile_skill")
+  @@index([skillId], map: "idx_devskill_skill")
+}
+
+model Skill {
+  id                String            @id @default(auto()) @map("_id") @db.ObjectId
+  name              String            @unique
+  keywords          String[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // THÊM FIELD NGƯỢC, KHỚP TÊN QUAN HỆ
+  developerSkills   DeveloperSkill[]  @relation("SkillToDeveloperSkills")
+}
+
+model ReviewsAggregate {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  averageRating Float    @default(0)
+  totalReviews  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  developerProfile DeveloperProfile? @relation("DevProfileToReviews")
+}

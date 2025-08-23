@@ -5,7 +5,6 @@ import { Inter } from "next/font/google";
 
 import { siteConfig } from "@/core/config/site";
 import { cn } from "@/core/utils/utils";
-import { getServerSessionUser } from "@/features/auth/auth-server";
 import { Providers } from "@/features/shared/components/providers";
 import { ThemeProvider } from "@/features/shared/components/theme-provider";
 
@@ -65,16 +64,7 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({ children }: RootLayoutProps) {
-  // Get session server-side for SSR optimization
-  const user = await getServerSessionUser();
-  const session = user
-    ? {
-        user,
-        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      }
-    : null;
-
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
@@ -84,7 +74,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           inter.className
         )}
       >
-        <Providers session={session}>
+        <Providers>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
