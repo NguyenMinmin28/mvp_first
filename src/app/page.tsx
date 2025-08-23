@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { getServerSessionUser } from "@/features/auth/auth-server";
-import { ModeToggle } from "@/features/shared/components/mode-toggle";
-import { SignOutButton } from "@/features/auth/components/auth-buttons";
+import { Header } from "@/features/shared/components/header";
 import { MessageCircle, Mail, User, Calendar } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -19,20 +18,10 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            Welcome Back!
-          </h1>
-          <div className="flex items-center gap-4">
-            <ModeToggle />
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
+      <Header user={user} />
 
       {/* User Profile Section */}
-      <section className="pt-32 pb-20 px-4">
+      <section className="pt-20 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
@@ -122,7 +111,7 @@ export default async function Home() {
                 <div className="text-sm text-gray-600 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <p>You are currently signed in and your session is active.</p>
                   <p className="mt-2">
-                    Use the sign out button above to log out.
+                    Use the sign out button in the header to log out.
                   </p>
                 </div>
               </div>
