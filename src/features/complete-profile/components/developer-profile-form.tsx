@@ -36,41 +36,42 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Schema validation dựa theo DeveloperProfile model
+// Schema validation based on DeveloperProfile model
 const developerProfileSchema = z.object({
   // User basic fields
-  name: z.string().min(2, "Tên phải có ít nhất 2 ký tự"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
 
   // DeveloperProfile fields
   bio: z
     .string()
-    .min(10, "Bio phải có ít nhất 10 ký tự")
-    .max(500, "Bio không được quá 500 ký tự"),
+    .min(10, "Bio must be at least 10 characters")
+    .max(500, "Bio cannot exceed 500 characters"),
   experienceYears: z
     .number()
-    .min(0, "Số năm kinh nghiệm không thể âm")
-    .max(50, "Số năm kinh nghiệm quá lớn"),
+    .min(0, "Years of experience cannot be negative")
+    .max(50, "Years of experience too high"),
   level: z.enum(["FRESHER", "MID", "EXPERT"]),
   linkedinUrl: z
     .string()
-    .url("LinkedIn URL không hợp lệ")
+    .url("Invalid LinkedIn URL")
     .optional()
     .or(z.literal("")),
-  portfolioLinks: z
-    .array(z.string().url("Portfolio URL không hợp lệ"))
-    .optional(),
+  portfolioLinks: z.array(z.string().url("Invalid portfolio URL")).optional(),
   whatsappNumber: z.string().optional(),
 
-  // Skills sẽ được handle riêng vì cần liên kết với Skill model
+  // Skills will be handled separately as they need to link to Skill model
   skillsInput: z
     .array(
       z.object({
-        name: z.string().min(1, "Tên skill không được trống"),
-        years: z.number().min(0, "Số năm kinh nghiệm không thể âm").max(50),
-        rating: z.number().min(1, "Rating từ 1-5").max(5, "Rating từ 1-5"),
+        name: z.string().min(1, "Skill name cannot be empty"),
+        years: z
+          .number()
+          .min(0, "Years of experience cannot be negative")
+          .max(50),
+        rating: z.number().min(1, "Rating from 1-5").max(5, "Rating from 1-5"),
       })
     )
-    .min(1, "Phải có ít nhất 1 skill"),
+    .min(1, "Must have at least 1 skill"),
 });
 
 type DeveloperProfileFormData = z.infer<typeof developerProfileSchema>;
@@ -85,18 +86,18 @@ interface DeveloperProfileFormProps {
 const levelOptions = [
   {
     value: "FRESHER",
-    label: "Fresher (0-2 năm)",
-    description: "Mới tốt nghiệp hoặc ít kinh nghiệm",
+    label: "Fresher (0-2 years)",
+    description: "Recently graduated or little experience",
   },
   {
     value: "MID",
-    label: "Mid-level (2-5 năm)",
-    description: "Có kinh nghiệm và tự tin với công việc",
+    label: "Mid-level (2-5 years)",
+    description: "Experienced and confident with work",
   },
   {
     value: "EXPERT",
-    label: "Expert (5+ năm)",
-    description: "Chuyên gia với kinh nghiệm sâu",
+    label: "Expert (5+ years)",
+    description: "Specialist with deep experience",
   },
 ];
 
@@ -189,10 +190,10 @@ export default function DeveloperProfileForm({
       };
 
       await onSubmit(cleanedData);
-      toast.success("Hồ sơ đã được cập nhật thành công!");
+      toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Error submitting developer profile:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật hồ sơ");
+      toast.error("An error occurred while updating profile");
     } finally {
       setIsSubmitting(false);
     }
@@ -216,10 +217,10 @@ export default function DeveloperProfileForm({
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Hoàn thiện hồ sơ Developer
+            Complete Developer Profile
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Tạo hồ sơ chuyên nghiệp để thu hút các client tiềm năng
+            Create a professional profile to attract potential clients
           </p>
         </div>
 
@@ -229,18 +230,18 @@ export default function DeveloperProfileForm({
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="mr-2 h-5 w-5" />
-                Thông tin cơ bản
+                Basic Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    Tên hiển thị <span className="text-red-500">*</span>
+                    Display Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="name"
-                    placeholder="VD: Nguyễn Văn A"
+                    placeholder="e.g. John Doe"
                     {...register("name")}
                     className={errors.name ? "border-red-500" : ""}
                   />
@@ -252,10 +253,10 @@ export default function DeveloperProfileForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsappNumber">WhatsApp (tùy chọn)</Label>
+                  <Label htmlFor="whatsappNumber">WhatsApp (optional)</Label>
                   <Input
                     id="whatsappNumber"
-                    placeholder="VD: +84901234567"
+                    placeholder="e.g. +84901234567"
                     {...register("whatsappNumber")}
                   />
                 </div>
@@ -263,11 +264,11 @@ export default function DeveloperProfileForm({
 
               <div className="space-y-2">
                 <Label htmlFor="bio">
-                  Giới thiệu bản thân <span className="text-red-500">*</span>
+                  Self Introduction <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="bio"
-                  placeholder="Mô tả ngắn gọn về bản thân, kinh nghiệm và sở thích..."
+                  placeholder="Brief description about yourself, experience and interests..."
                   className={`min-h-[100px] ${errors.bio ? "border-red-500" : ""}`}
                   {...register("bio")}
                 />
@@ -275,7 +276,7 @@ export default function DeveloperProfileForm({
                   <p className="text-sm text-red-500">{errors.bio.message}</p>
                 )}
                 <p className="text-sm text-gray-500">
-                  {watch("bio")?.length || 0}/500 ký tự
+                  {watch("bio")?.length || 0}/500 characters
                 </p>
               </div>
             </CardContent>
@@ -286,21 +287,21 @@ export default function DeveloperProfileForm({
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Briefcase className="mr-2 h-5 w-5" />
-                Kinh nghiệm
+                Experience
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="experienceYears">
-                    Số năm kinh nghiệm <span className="text-red-500">*</span>
+                    Years of Experience <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="experienceYears"
                     type="number"
                     min="0"
                     max="50"
-                    placeholder="VD: 3"
+                    placeholder="e.g. 3"
                     {...register("experienceYears", { valueAsNumber: true })}
                     className={errors.experienceYears ? "border-red-500" : ""}
                   />
@@ -313,7 +314,7 @@ export default function DeveloperProfileForm({
 
                 <div className="space-y-2">
                   <Label>
-                    Cấp độ <span className="text-red-500">*</span>
+                    Level <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={level}
@@ -324,7 +325,7 @@ export default function DeveloperProfileForm({
                     <SelectTrigger
                       className={errors.level ? "border-red-500" : ""}
                     >
-                      <SelectValue placeholder="Chọn cấp độ của bạn" />
+                      <SelectValue placeholder="Select your level" />
                     </SelectTrigger>
                     <SelectContent>
                       {levelOptions.map((option) => (
@@ -353,17 +354,17 @@ export default function DeveloperProfileForm({
           <Card>
             <CardHeader>
               <CardTitle>
-                Kỹ năng <span className="text-red-500">*</span>
+                Skills <span className="text-red-500">*</span>
               </CardTitle>
               <CardDescription>
-                Thêm các kỹ năng và đánh giá mức độ thành thạo
+                Add skills and rate your proficiency level
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Popular Skills */}
               <div>
                 <Label className="text-sm font-medium mb-2 block">
-                  Kỹ năng phổ biến:
+                  Popular skills:
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {popularSkills.map((skill) => (
@@ -388,9 +389,9 @@ export default function DeveloperProfileForm({
                     className="grid grid-cols-12 gap-2 items-end"
                   >
                     <div className="col-span-5">
-                      <Label className="text-sm">Tên kỹ năng</Label>
+                      <Label className="text-sm">Skill name</Label>
                       <Input
-                        placeholder="VD: React"
+                        placeholder="e.g. React"
                         {...register(`skillsInput.${index}.name`)}
                         className={
                           errors.skillsInput?.[index]?.name
@@ -528,7 +529,7 @@ export default function DeveloperProfileForm({
                   size="sm"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Thêm portfolio link
+                  Add portfolio link
                 </Button>
               </div>
             </CardContent>
@@ -544,7 +545,7 @@ export default function DeveloperProfileForm({
               className="flex-1"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Quay lại
+              Back
             </Button>
             <Button
               type="submit"
@@ -554,10 +555,10 @@ export default function DeveloperProfileForm({
               {isSubmitting || isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Đang xử lý...
+                  Processing...
                 </>
               ) : (
-                "Hoàn tất hồ sơ"
+                "Complete Profile"
               )}
             </Button>
           </div>
@@ -572,12 +573,12 @@ export default function DeveloperProfileForm({
               </div>
               <div>
                 <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
-                  Sau khi hoàn tất:
+                  After completion:
                 </h3>
                 <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
-                  <li>• Hồ sơ sẽ được gửi đến admin để phê duyệt</li>
-                  <li>• Bạn có thể cập nhật thông tin bất cứ lúc nào</li>
-                  <li>• Thiết lập trạng thái online/offline</li>
+                  <li>• Profile will be sent to admin for approval</li>
+                  <li>• You can update information anytime</li>
+                  <li>• Set online/offline status</li>
                 </ul>
               </div>
             </div>

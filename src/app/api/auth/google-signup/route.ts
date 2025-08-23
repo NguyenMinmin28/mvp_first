@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/core/database/db";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
 import {
   ApiError,
   ApiResponse,
   handleApiError,
 } from "@/core/utils/error-handler";
 
-const signUpSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+const googleSignUpSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  image: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate input data
-    const validationResult = signUpSchema.safeParse(body);
+    const validationResult = googleSignUpSchema.safeParse(body);
     if (!validationResult.success) {
       throw new ApiError(
         "Validation failed",
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, password } = validationResult.data;
+    const { email, name, image } = validationResult.data;
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({
@@ -39,21 +38,20 @@ export async function POST(request: NextRequest) {
       throw new ApiError("Email already in use", 409);
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create user
+    // Create user with Google account
     const user = await db.user.create({
       data: {
         name,
         email,
-        passwordHash: hashedPassword,
-        emailVerified: new Date(), // Auto-verify for now, you can add email verification later
+        image,
+        emailVerified: new Date(), // Google accounts are pre-verified
+        isProfileCompleted: false, // User needs to complete profile
       },
       select: {
         id: true,
         name: true,
         email: true,
+        image: true,
         isProfileCompleted: true,
       },
     });
@@ -61,7 +59,7 @@ export async function POST(request: NextRequest) {
     const response: ApiResponse = {
       success: true,
       data: user,
-      message: "Account created successfully",
+      message: "Google account registered successfully",
     };
 
     return NextResponse.json(response, { status: 201 });

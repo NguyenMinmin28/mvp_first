@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import CompleteProfilePage from "@/features/complete-profile/view/complete-profile-page";
 
 export const metadata = {
-  title: "Hoàn thiện hồ sơ",
-  description:
-    "Hoàn thiện thông tin hồ sơ của bạn để sử dụng đầy đủ tính năng.",
+  title: "Complete Profile",
+  description: "Complete your profile information to use all features.",
 };
 
 export default async function CompleteProfile() {

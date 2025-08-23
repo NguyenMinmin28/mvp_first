@@ -82,11 +82,11 @@ export default function CompleteProfilePage() {
       setSelectedRole(role);
       setCurrentStep(role === "CLIENT" ? "client-form" : "developer-form");
       toast.success(
-        `Đã chọn vai trò ${role === "CLIENT" ? "Client" : "Developer"}`
+        `Role ${role === "CLIENT" ? "Client" : "Developer"} selected`
       );
     } catch (error) {
       console.error("Error updating role:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật vai trò");
+      toast.error("An error occurred while updating role");
     } finally {
       setIsLoading(false);
     }

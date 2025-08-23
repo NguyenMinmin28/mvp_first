@@ -29,13 +29,13 @@ export default function RoleSelection({
     {
       type: "CLIENT" as const,
       title: "Client",
-      description: "Tôi muốn thuê developer cho dự án của mình",
+      description: "I want to hire developers for my projects",
       icon: Building2,
       features: [
-        "Đăng dự án và tìm developer",
-        "Quản lý team freelancer",
-        "Theo dõi tiến độ dự án",
-        "Thanh toán qua platform",
+        "Post projects and find developers",
+        "Manage freelancer teams",
+        "Track project progress",
+        "Pay through platform",
       ],
       color:
         "bg-blue-50 border-blue-200 hover:bg-blue-100 dark:bg-blue-950 dark:border-blue-800",
@@ -43,13 +43,13 @@ export default function RoleSelection({
     {
       type: "DEVELOPER" as const,
       title: "Developer",
-      description: "Tôi muốn nhận job và làm freelance",
+      description: "I want to receive jobs and work as a freelancer",
       icon: Code2,
       features: [
-        "Nhận job từ client",
-        "Showcase portfolio và skills",
-        "Quản lý profile chuyên nghiệp",
-        "Nhận payment trực tiếp",
+        "Receive jobs from clients",
+        "Showcase portfolio and skills",
+        "Manage professional profile",
+        "Receive direct payments",
       ],
       color:
         "bg-green-50 border-green-200 hover:bg-green-100 dark:bg-green-950 dark:border-green-800",
@@ -61,10 +61,10 @@ export default function RoleSelection({
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Chào mừng đến với platform!
+            Welcome to the platform!
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Hãy chọn vai trò phù hợp với bạn để hoàn thiện hồ sơ
+            Choose the role that fits you to complete your profile
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export default function RoleSelection({
                     </div>
                     {isSelected && (
                       <Badge variant="secondary" className="ml-auto">
-                        Đã chọn
+                        Selected
                       </Badge>
                     )}
                   </div>
@@ -125,7 +125,7 @@ export default function RoleSelection({
             className="px-8 py-3 text-lg"
           >
             <Users className="mr-2 h-5 w-5" />
-            Tiếp tục với vai trò{" "}
+            Continue with role{" "}
             {selectedRole === "CLIENT"
               ? "Client"
               : selectedRole === "DEVELOPER"
@@ -135,7 +135,7 @@ export default function RoleSelection({
 
           {!selectedRole && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              Vui lòng chọn một vai trò để tiếp tục
+              Please select a role to continue
             </p>
           )}
         </div>

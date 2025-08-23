@@ -79,7 +79,7 @@ export default {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: user.role || undefined,
             isProfileCompleted: user.isProfileCompleted,
             image: user.image,
           }
@@ -167,8 +167,36 @@ export default {
   ],
   callbacks: {
     async signIn({ user, account, profile }: any) {
-      // Allow all sign ins to proceed
-      // Role assignment for Google users will be handled in the callback page
+      console.log("🔐 SignIn callback called:", { user, account, profile })
+
+      // Nếu là Google OAuth
+      if (account?.provider === "google") {
+        try {
+          // Kiểm tra xem user đã tồn tại trong database chưa
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+            select: {
+              id: true,
+              role: true,
+              isProfileCompleted: true,
+            },
+          })
+
+          if (!existingUser) {
+            console.log("❌ Google user not found in database:", user.email)
+            // Từ chối đăng nhập - user phải đăng ký trước
+            return false
+          }
+
+          console.log("✅ Google user found in database:", existingUser)
+          return true
+        } catch (error) {
+          console.error("Error handling Google user:", error)
+          return false
+        }
+      }
+
+      // Cho phép các provider khác (credentials, whatsapp)
       return true
     },
     session: async ({ session, token }: any) => {
@@ -270,5 +298,6 @@ export default {
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/signin", // Redirect về trang signin khi có lỗi
   },
 } satisfies NextAuthOptions

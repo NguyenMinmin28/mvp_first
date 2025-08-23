@@ -5,42 +5,42 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Các route cần authentication
+  // Routes that require authentication
   const protectedRoutes = ["/"];
 
-  // Các route không cần check profile completion
+  // Routes that don't require profile completion check
   const publicRoutes = ["/auth/signin", "/auth/signup", "/complete-profile"];
 
-  // Kiểm tra xem route hiện tại có cần authentication không
+  // Check if current route requires authentication
   const isProtectedRoute = protectedRoutes.some((route) => pathname === route);
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
-  // Lấy token từ cookie
+  // Get token from cookie
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  // Nếu là protected route và chưa đăng nhập
+  // If protected route and not logged in
   if (isProtectedRoute && !token) {
     const url = new URL("/auth/signin", request.url);
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);
   }
 
-  // // Nếu đã đăng nhập nhưng chưa hoàn thành profile và không phải public route
+  // // If logged in but profile not completed and not public route
   // if (token && !isPublicRoute && !token.isProfileCompleted) {
   //   return NextResponse.redirect(new URL("/complete-profile", request.url));
   // }
 
-  // Nếu đã đăng nhập và truy cập trang đăng nhập
+  // If logged in and accessing login page
   if (token && pathname.startsWith("/auth/")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Nếu đã hoàn thành profile và truy cập complete-profile
+  // If profile completed and accessing complete-profile
   if (
     token &&
     token.isProfileCompleted &&

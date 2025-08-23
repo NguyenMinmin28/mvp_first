@@ -25,14 +25,14 @@ import {
 import { Building2, MapPin, User, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-// Schema validation dựa theo ClientProfile model
+// Schema validation based on ClientProfile model
 const clientProfileSchema = z.object({
   // User basic fields
-  name: z.string().min(2, "Tên phải có ít nhất 2 ký tự"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
 
   // ClientProfile fields
   companyName: z.string().optional(),
-  location: z.string().min(1, "Vui lòng nhập địa điểm"),
+  location: z.string().min(1, "Please enter your location"),
 });
 
 type ClientProfileFormData = z.infer<typeof clientProfileSchema>;
@@ -44,12 +44,12 @@ interface ClientProfileFormProps {
   isLoading?: boolean;
 }
 
-// Danh sách các quốc gia/thành phố phổ biến
+// List of popular countries/cities
 const locations = [
-  "Hồ Chí Minh, Việt Nam",
-  "Hà Nội, Việt Nam",
-  "Đà Nẵng, Việt Nam",
-  "Cần Thơ, Việt Nam",
+  "Ho Chi Minh, Vietnam",
+  "Hanoi, Vietnam",
+  "Da Nang, Vietnam",
+  "Can Tho, Vietnam",
   "Singapore",
   "Bangkok, Thailand",
   "Manila, Philippines",
@@ -86,10 +86,10 @@ export default function ClientProfileForm({
     setIsSubmitting(true);
     try {
       await onSubmit(data);
-      toast.success("Hồ sơ đã được cập nhật thành công!");
+      toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Error submitting client profile:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật hồ sơ");
+      toast.error("An error occurred while updating profile");
     } finally {
       setIsSubmitting(false);
     }
@@ -106,11 +106,10 @@ export default function ClientProfileForm({
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Hoàn thiện hồ sơ Client
+            Complete Client Profile
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Cung cấp thông tin để chúng tôi có thể kết nối bạn với những
-            developer phù hợp
+            Provide information so we can connect you with suitable developers
           </p>
         </div>
 
@@ -118,10 +117,11 @@ export default function ClientProfileForm({
           <CardHeader>
             <CardTitle className="flex items-center">
               <User className="mr-2 h-5 w-5" />
-              Thông tin cá nhân
+              Personal Information
             </CardTitle>
             <CardDescription>
-              Thông tin này sẽ hiển thị cho các developer khi bạn đăng dự án
+              This information will be displayed to developers when you post
+              projects
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -132,11 +132,11 @@ export default function ClientProfileForm({
               {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name">
-                  Tên hiển thị <span className="text-red-500">*</span>
+                  Display Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="name"
-                  placeholder="VD: Nguyễn Văn A"
+                  placeholder="e.g. John Doe"
                   {...register("name")}
                   className={errors.name ? "border-red-500" : ""}
                 />
@@ -147,21 +147,21 @@ export default function ClientProfileForm({
 
               {/* Company Name */}
               <div className="space-y-2">
-                <Label htmlFor="companyName">Tên công ty (tùy chọn)</Label>
+                <Label htmlFor="companyName">Company Name (optional)</Label>
                 <Input
                   id="companyName"
-                  placeholder="VD: ABC Technology Co., Ltd"
+                  placeholder="e.g. ABC Technology Co., Ltd"
                   {...register("companyName")}
                 />
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Để trống nếu bạn là cá nhân tuyển dụng
+                  Leave blank if you are an individual recruiter
                 </p>
               </div>
 
               {/* Location */}
               <div className="space-y-2">
                 <Label htmlFor="location">
-                  Địa điểm <span className="text-red-500">*</span>
+                  Location <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={location}
@@ -170,7 +170,7 @@ export default function ClientProfileForm({
                   <SelectTrigger
                     className={errors.location ? "border-red-500" : ""}
                   >
-                    <SelectValue placeholder="Chọn địa điểm của bạn" />
+                    <SelectValue placeholder="Select your location" />
                   </SelectTrigger>
                   <SelectContent>
                     {locations.map((loc) => (
@@ -200,7 +200,7 @@ export default function ClientProfileForm({
                   className="flex-1"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Quay lại
+                  Back
                 </Button>
                 <Button
                   type="submit"
@@ -210,10 +210,10 @@ export default function ClientProfileForm({
                   {isSubmitting || isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Đang xử lý...
+                      Processing...
                     </>
                   ) : (
-                    "Hoàn tất hồ sơ"
+                    "Complete Profile"
                   )}
                 </Button>
               </div>
@@ -230,12 +230,12 @@ export default function ClientProfileForm({
               </div>
               <div>
                 <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                  Tiếp theo bạn có thể:
+                  Next you can:
                 </h3>
                 <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                  <li>• Đăng dự án đầu tiên của bạn</li>
-                  <li>• Duyệt qua danh sách developer có sẵn</li>
-                  <li>• Thiết lập phương thức thanh toán</li>
+                  <li>• Post your first project</li>
+                  <li>• Browse available developers</li>
+                  <li>• Set up payment methods</li>
                 </ul>
               </div>
             </div>
