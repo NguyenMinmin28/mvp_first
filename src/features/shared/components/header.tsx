@@ -1,8 +1,8 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { Icons } from "./icons";
-import { ModeToggle } from "./mode-toggle";
+import { Icons } from "@/features/shared/components/icons";
+import { ModeToggle } from "@/features/shared/components/mode-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +14,22 @@ import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import { LogOut, User, Settings } from "lucide-react";
 import { User as UserType } from "next-auth";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface HeaderProps {
   user: UserType;
 }
 
 export function Header({ user }: HeaderProps) {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const getUserInitials = (name: string) => {
     return name
       .split(" ")
@@ -34,12 +44,15 @@ export function Header({ user }: HeaderProps) {
       <div className="container flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <Icons.logo className="h-8 w-8 text-primary" />
+          <Link href="/">
+            <Icons.logo className="h-8 w-8 text-primary" />
+          </Link>
         </div>
 
         {/* Right side - Mode toggle and User dropdown */}
         <div className="flex items-center gap-4">
-          <ModeToggle />
+          {/* Only render ModeToggle after mounting to prevent hydration issues */}
+          {mounted && <ModeToggle />}
 
           {/* User Dropdown */}
           <DropdownMenu>
@@ -71,7 +84,7 @@ export function Header({ user }: HeaderProps) {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>

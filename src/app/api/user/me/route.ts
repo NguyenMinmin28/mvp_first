@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         usualResponseTimeMs: user.developerProfile.usualResponseTimeMs,
         currentStatus: user.developerProfile.currentStatus,
         adminApprovalStatus: user.developerProfile.adminApprovalStatus,
+        whatsappVerified: user.developerProfile.whatsappVerified,
       }),
     };
 

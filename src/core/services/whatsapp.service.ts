@@ -11,6 +11,8 @@ export interface WhatsAppMessage {
     };
     components?: {
       type: string;
+      sub_type?: string;
+      index?: string;
       parameters: {
         type: string;
         text: string;
@@ -70,21 +72,22 @@ export class WhatsAppService {
       to: WhatsAppService.formatPhoneForWhatsApp(phoneNumber),
       type: "template",
       template: {
-        name: "hello_world", // Sử dụng template có sẵn từ curl command
-        language: {
-          code: "en_US",
-        },
-        // components: [
-        //   {
-        //     type: "body",
-        //     parameters: [
-        //       {
-        //         type: "text",
-        //         text: code,
-        //       },
-        //     ],
-        //   },
-        // ],
+        name: "otp_verification",
+        language: { code: "en" }, // hoặc en_US / vi ... đúng với template đã duyệt
+        components: [
+          // {{1}} trong body
+          { type: "body", parameters: [{ type: "text", text: code }] },
+
+          // {{1}} trong URL button index 0
+          {
+            type: "button",
+            sub_type: "url",
+            index: "0",
+            parameters: [
+              { type: "text", text: code }, // hoặc token/magic string bạn muốn gắn vào URL
+            ],
+          },
+        ],
       },
     };
 

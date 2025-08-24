@@ -11,6 +11,7 @@ import { Tabs, TabsContent } from "@/ui/components/tabs";
 import InformationTab from "@/features/profile/components/information-tab";
 import BillingTab from "@/features/profile/components/billing-tab";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
+import { UserLayout } from "@/features/shared/components/user-layout";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -67,7 +68,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <UserLayout user={session.user} showFooter={false}>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -79,18 +80,6 @@ export default function ProfilePage() {
               <p className="text-gray-600 dark:text-gray-400 mt-2">
                 Manage your account information and billing details
               </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge
-                variant={userRole === "DEVELOPER" ? "default" : "secondary"}
-              >
-                {userRole === "DEVELOPER" ? "Developer" : "Client"}
-              </Badge>
-              <Badge variant="outline">
-                {session.user?.isProfileCompleted
-                  ? "Profile Complete"
-                  : "Profile Incomplete"}
-              </Badge>
             </div>
           </div>
         </div>
@@ -173,6 +162,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 }

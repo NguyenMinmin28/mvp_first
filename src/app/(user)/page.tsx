@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { getServerSessionUser } from "@/features/auth/auth-server";
-import { Header } from "@/features/shared/components/header";
+import { UserLayout } from "@/features/shared/components/user-layout";
 import { MessageCircle, Mail, User, Calendar } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -16,10 +16,7 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Header */}
-      <Header user={user} />
-
+    <UserLayout user={user}>
       {/* User Profile Section */}
       <section className="pt-20 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
@@ -145,13 +142,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="container mx-auto text-center text-gray-600 dark:text-gray-400">
-          <p>&copy; 2024 Todo App. All rights reserved.</p>
-        </div>
-      </footer>
-    </main>
+    </UserLayout>
   );
 }

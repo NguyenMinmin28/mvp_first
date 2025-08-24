@@ -215,7 +215,7 @@ model DeveloperProfile {
   rejectedReason       String?
 
   whatsappNumber       String?               // E.164
-  whatsappVerifiedAt   DateTime?
+  whatsappVerified   Boolean               @default(false)
   usualResponseTimeMs  Int                   @default(0)
   currentStatus        PresenceStatus        @default(available)
 
