@@ -38,6 +38,7 @@ enum DevLevel {
 }
 
 enum AdminApprovalStatus {
+  draft
   pending
   approved
   rejected
@@ -208,7 +209,7 @@ model DeveloperProfile {
   linkedinUrl          String?
   portfolioLinks       String[]              // URLs
 
-  adminApprovalStatus  AdminApprovalStatus   @default(pending)
+  adminApprovalStatus  AdminApprovalStatus   @default(draft)
   approvedAt           DateTime?
   rejectedAt           DateTime?
   rejectedReason       String?

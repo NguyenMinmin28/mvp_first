@@ -1,19 +1,36 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import {
+  adminRoutes as adminRoutesConfig,
+  userRoutes,
+  publicRoutes as publicRoutesConfig,
+} from "./core/config/routes";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Routes that require authentication
-  const protectedRoutes = ["/"];
+  const protectedRoutes = [userRoutes.HOME, userRoutes.PROFILE];
 
   // Routes that don't require profile completion check
-  const publicRoutes = ["/auth/signin", "/auth/signup", "/complete-profile"];
+  const publicRoutes = [
+    userRoutes.SIGNIN,
+    userRoutes.SIGNUP,
+    userRoutes.PROFILE,
+  ];
+
+  // Admin routes
+  const adminRoutes = Object.values(adminRoutesConfig);
+  const adminPublicRoutes = ["/admin/login"];
 
   // Check if current route requires authentication
   const isProtectedRoute = protectedRoutes.some((route) => pathname === route);
   const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
+  const isAdminPublicRoute = adminPublicRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
@@ -22,6 +39,31 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
+
+  // Handle admin routes
+  if (isAdminRoute) {
+    // If accessing admin login page without token, allow access
+    if (isAdminPublicRoute && !token) {
+      return NextResponse.next();
+    }
+
+    // If accessing admin login page with token, redirect to admin dashboard
+    if (isAdminPublicRoute && token) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
+    // If accessing other admin routes without token, redirect to admin login
+    if (!token) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+
+    // If accessing admin route with token, check if user is admin
+    if (token.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    return NextResponse.next();
+  }
 
   // If protected route and not logged in
   if (isProtectedRoute && !token) {
@@ -41,13 +83,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // If profile completed and accessing complete-profile
-  if (
-    token &&
-    token.isProfileCompleted &&
-    pathname.startsWith("/complete-profile")
-  ) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+  // if (
+  //   token &&
+  //   token.isProfileCompleted &&
+  //   pathname.startsWith("/complete-profile")
+  // ) {
+  //   return NextResponse.redirect(new URL("/", request.url));
+  // }
 
   return NextResponse.next();
 }

@@ -11,18 +11,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get fresh user data from database
+    // Get fresh user data from database with profile information
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isProfileCompleted: true,
-        phoneE164: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        clientProfile: true,
+        developerProfile: true,
       },
     });
 
@@ -30,8 +24,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Combine user data with profile data
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isProfileCompleted: user.isProfileCompleted,
+      phoneE164: user.phoneE164,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      // Include profile-specific fields
+      ...(user.clientProfile && {
+        companyName: user.clientProfile.companyName,
+        location: user.clientProfile.location,
+      }),
+      ...(user.developerProfile && {
+        photoUrl: user.developerProfile.photoUrl,
+        bio: user.developerProfile.bio,
+        experienceYears: user.developerProfile.experienceYears,
+        level: user.developerProfile.level,
+        linkedinUrl: user.developerProfile.linkedinUrl,
+        portfolioLinks: user.developerProfile.portfolioLinks,
+        whatsappNumber: user.developerProfile.whatsappNumber,
+        usualResponseTimeMs: user.developerProfile.usualResponseTimeMs,
+        currentStatus: user.developerProfile.currentStatus,
+        adminApprovalStatus: user.developerProfile.adminApprovalStatus,
+      }),
+    };
+
     return NextResponse.json({
-      user,
+      user: userData,
       session: session.user,
       timestamp: new Date().toISOString(),
     });

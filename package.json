@@ -16,7 +16,9 @@
     "cleanup:otps": "tsx scripts/cleanup-otps.ts",
     "test:whatsapp": "tsx scripts/test-whatsapp.ts",
     "test:nextauth": "tsx scripts/test-nextauth.ts",
-    "fix:database": "tsx scripts/fix-database.ts"
+    "fix:database": "tsx scripts/fix-database.ts",
+    "create:admin": "tsx scripts/create-admin.ts",
+    "test:admin": "tsx scripts/test-admin.ts"
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
@@ -26,10 +28,12 @@
     "@hookform/resolvers": "^5.2.1",
     "@prisma/client": "^6.14.0",
     "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@t3-oss/env-nextjs": "^0.9.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/qrcode": "^1.5.5",
