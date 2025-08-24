@@ -187,7 +187,7 @@ import { FieldError } from "@/ui/components/error-display";
 import { ProfileCompletionNotice } from "@/ui/components/profile-completion-notice";
 
 <ProfileCompletionNotice
-  onCompleteProfile={() => router.push("/complete-profile")}
+  onCompleteProfile={() => router.push("/role-selection")}
 />
 ```
 
@@ -227,7 +227,7 @@ Component để thông báo user cần hoàn thành profile.
 
 ```typescript
 <ProfileCompletionNotice
-  onCompleteProfile={() => router.push("/complete-profile")}
+  onCompleteProfile={() => router.push("/role-selection")}
 />
 ```
 

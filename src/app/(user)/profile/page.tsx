@@ -25,11 +25,6 @@ export default function ProfilePage() {
       router.push("/auth/signin");
       return;
     }
-
-    // if (!session.user?.isProfileCompleted) {
-    //   router.push("/complete-profile");
-    //   return;
-    // }
   }, [session, status, router]);
 
   if (status === "loading") {

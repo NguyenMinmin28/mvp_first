@@ -4,6 +4,8 @@ import { ReactNode, useState } from "react";
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
 import { Role } from "@prisma/client";
+import { useSessionRefresh } from "@/core/hooks/use-session-refresh";
+import { SessionRefreshNotice } from "@/ui/components/session-refresh-notice";
 
 interface AdminLayoutProps {
   user: {
@@ -28,13 +30,16 @@ export function AdminLayout({
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Use session refresh hook to automatically refresh user data on navigation
+  const { isRefreshing } = useSessionRefresh();
+
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
       <AdminHeader user={user} onToggleSidebar={toggleSidebar} />
-
+      <SessionRefreshNotice isRefreshing={isRefreshing} />
       {/* Sidebar */}
       <AdminSidebar
         user={user}

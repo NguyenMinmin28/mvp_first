@@ -1,6 +1,6 @@
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { redirect } from "next/navigation";
-import CompleteProfilePage from "@/features/complete-profile/view/complete-profile-page";
+import CompleteProfilePage from "@/features/role-selection/view/role-selection-page";
 
 export const metadata = {
   title: "Complete Profile",

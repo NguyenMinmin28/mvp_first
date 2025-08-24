@@ -232,46 +232,50 @@ export default {
     },
     jwt: async ({ user, token, trigger }: any) => {
       console.log("🔍 JWT callback - user:", user)
-      console.log("🔍 JWT callback - token:", token)
+      console.log("🔍 JWT callback - token:", trigger)
       console.log("🔍 JWT callback - trigger:", trigger)
 
       // Always refresh user data from database for fresh data
-      // This ensures we get the latest role information
+      // This ensures we get the latest user information on every request
       if (token.sub) {
-        if (token.sub) {
-          try {
-            console.log(
-              "🔄 JWT callback: Refreshing user data from database, trigger:",
-              trigger
-            )
+        try {
+          console.log(
+            "🔄 JWT callback: Refreshing user data from database, trigger:",
+            trigger
+          )
 
-            const dbUser = await prisma.user.findUnique({
-              where: { id: token.sub },
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phoneE164: true,
-                role: true,
-                isProfileCompleted: true,
-              },
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phoneE164: true,
+              role: true,
+              isProfileCompleted: true,
+            },
+          })
+
+          if (dbUser) {
+            console.log("🔄 JWT callback: Updated user data:", {
+              oldRole: token.role,
+              newRole: dbUser.role,
+              oldProfileStatus: token.isProfileCompleted,
+              newProfileStatus: dbUser.isProfileCompleted,
             })
 
-            if (dbUser) {
-              console.log("🔄 JWT callback: Updated user data:", {
-                oldRole: token.role,
-                newRole: dbUser.role,
-              })
-
-              token.name = dbUser.name
-              token.email = dbUser.email
-              token.phoneE164 = dbUser.phoneE164
-              token.role = dbUser.role
-              token.isProfileCompleted = dbUser.isProfileCompleted
-            }
-          } catch (error) {
-            console.error("Error fetching user data in JWT callback:", error)
+            // Always update with fresh data from database
+            token.name = dbUser.name
+            token.email = dbUser.email
+            token.phoneE164 = dbUser.phoneE164
+            token.role = dbUser.role
+            token.isProfileCompleted = dbUser.isProfileCompleted
+            
+            // Force token update to ensure fresh data
+            token.iat = Math.floor(Date.now() / 1000)
           }
+        } catch (error) {
+          console.error("Error fetching user data in JWT callback:", error)
         }
       }
 

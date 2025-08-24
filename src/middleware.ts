@@ -18,6 +18,7 @@ export async function middleware(request: NextRequest) {
     userRoutes.SIGNIN,
     userRoutes.SIGNUP,
     userRoutes.PROFILE,
+    "/role-selection", // Add role-selection to public routes
   ];
 
   // Admin routes
@@ -72,24 +73,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // // If logged in but profile not completed and not public route
-  // if (token && !isPublicRoute && !token.isProfileCompleted) {
-  //   return NextResponse.redirect(new URL("/complete-profile", request.url));
-  // }
-
   // If logged in and accessing login page
   if (token && pathname.startsWith("/auth/")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // If profile completed and accessing complete-profile
-  // if (
-  //   token &&
-  //   token.isProfileCompleted &&
-  //   pathname.startsWith("/complete-profile")
-  // ) {
-  //   return NextResponse.redirect(new URL("/", request.url));
-  // }
+  // If user has token but no role and is not on role-selection page, redirect to role-selection
+  if (token && !token.role && pathname !== "/role-selection") {
+    return NextResponse.redirect(new URL("/role-selection", request.url));
+  }
+
+  // If user has role and isProfileCompleted and is on role-selection page, redirect to home
+  if (token && token.role && token.isProfileCompleted && pathname === "/role-selection") {
+    return NextResponse.next();
+  }
 
   return NextResponse.next();
 }

@@ -263,6 +263,65 @@ export function DeveloperProfileManagement() {
       },
     },
     {
+      key: "approvalActions",
+      label: "Approval Actions",
+      width: "w-40",
+      render: (_, item) => {
+        if (item.adminApprovalStatus === "pending") {
+          return (
+            <div className="flex space-x-2">
+              <Button
+                size="sm"
+                variant="default"
+                className="flex-1"
+                onClick={() => handleApproval(item.id, "approved")}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  setSelectedProfile(item);
+                  setApprovalDialog(true);
+                }}
+              >
+                <XCircle className="w-4 h-4 mr-1" />
+                Reject
+              </Button>
+            </div>
+          );
+        }
+
+        if (item.adminApprovalStatus === "approved") {
+          return (
+            <Badge variant="default" className="w-full justify-center">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Approved
+            </Badge>
+          );
+        }
+
+        if (item.adminApprovalStatus === "rejected") {
+          return (
+            <Badge variant="destructive" className="w-full justify-center">
+              <XCircle className="w-3 h-3 mr-1" />
+              Rejected
+            </Badge>
+          );
+        }
+
+        return (
+          <Badge variant="outline" className="w-full justify-center">
+            <Clock className="w-3 h-3 mr-1" />
+            Draft
+          </Badge>
+        );
+      },
+    },
+    {
       key: "currentStatus",
       label: "Status",
       render: (value) => (
@@ -293,37 +352,17 @@ export function DeveloperProfileManagement() {
     {
       key: "actions",
       label: "Actions",
-      width: "w-32",
+      width: "w-24",
       render: (_, item) => (
-        <div className="flex space-x-2">
+        <div className="flex justify-center">
           <Button
             size="sm"
             variant="outline"
             onClick={() => setSelectedProfile(item)}
+            title="View Details"
           >
             <Eye className="w-4 h-4" />
           </Button>
-          {item.adminApprovalStatus === "pending" && (
-            <>
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => handleApproval(item.id, "approved")}
-              >
-                <CheckCircle className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => {
-                  setSelectedProfile(item);
-                  setApprovalDialog(true);
-                }}
-              >
-                <XCircle className="w-4 h-4" />
-              </Button>
-            </>
-          )}
         </div>
       ),
     },

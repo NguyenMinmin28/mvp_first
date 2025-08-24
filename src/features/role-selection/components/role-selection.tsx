@@ -15,11 +15,13 @@ import { Building2, Code2, Users, Briefcase } from "lucide-react";
 interface RoleSelectionProps {
   onRoleSelect: (role: "CLIENT" | "DEVELOPER") => void;
   currentRole?: "CLIENT" | "DEVELOPER";
+  isLoading?: boolean;
 }
 
 export default function RoleSelection({
   onRoleSelect,
   currentRole,
+  isLoading = false,
 }: RoleSelectionProps) {
   const [selectedRole, setSelectedRole] = useState<
     "CLIENT" | "DEVELOPER" | null
@@ -120,17 +122,26 @@ export default function RoleSelection({
         <div className="text-center">
           <Button
             size="lg"
-            disabled={!selectedRole}
+            disabled={!selectedRole || isLoading}
             onClick={() => selectedRole && onRoleSelect(selectedRole)}
             className="px-8 py-3 text-lg"
           >
-            <Users className="mr-2 h-5 w-5" />
-            Continue with role{" "}
-            {selectedRole === "CLIENT"
-              ? "Client"
-              : selectedRole === "DEVELOPER"
-                ? "Developer"
-                : ""}
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                Creating profile...
+              </>
+            ) : (
+              <>
+                <Users className="mr-2 h-5 w-5" />
+                Continue with role{" "}
+                {selectedRole === "CLIENT"
+                  ? "Client"
+                  : selectedRole === "DEVELOPER"
+                    ? "Developer"
+                    : ""}
+              </>
+            )}
           </Button>
 
           {!selectedRole && (

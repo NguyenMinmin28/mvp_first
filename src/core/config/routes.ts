@@ -12,7 +12,7 @@ export const userRoutes = {
   HOME: "/",
   SIGNIN: "/auth/signin",
   SIGNUP: "/auth/signup",
-  // COMPLETE_PROFILE: "/complete-profile",
+  ROLE_SELECTION: "/role-selection",
   PROFILE: "/profile",
 } as const;
 

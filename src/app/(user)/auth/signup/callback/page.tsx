@@ -35,7 +35,7 @@ export default function SignUpCallbackPage() {
           console.log("User already has correct role:", pendingRole);
           localStorage.removeItem("pendingRole");
           toast.success("Đăng ký thành công!");
-          router.push("/complete-profile");
+          router.push("/role-selection");
           return;
         }
 
@@ -72,7 +72,7 @@ export default function SignUpCallbackPage() {
         // Force a hard refresh to reload the session completely
         // This ensures NextAuth creates a fresh session with updated user data
         setTimeout(() => {
-          window.location.href = "/complete-profile";
+          window.location.href = "/role-selection";
         }, 1500);
       } catch (error) {
         console.error("Error in Google signup callback:", error);
