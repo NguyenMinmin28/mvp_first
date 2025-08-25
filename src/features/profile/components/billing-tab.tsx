@@ -7,29 +7,14 @@ import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { toast } from "sonner";
-
-interface Subscription {
-  id: string;
-  status: "active" | "past_due" | "canceled";
-  startAt: string;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  package: {
-    name: string;
-    priceUSD: number;
-    projectsPerMonth: number;
-    contactClicksPerProject: number;
-    features: string[];
-  };
-  provider: "paypal" | "razorpay";
-}
+import { SubscriptionWithPackage } from "@/core/types/subscription.types";
 
 interface BillingTabProps {
   userRole: "CLIENT" | "DEVELOPER" | undefined;
 }
 
 export default function BillingTab({ userRole }: BillingTabProps) {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionWithPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAction, setIsLoadingAction] = useState(false);
 
@@ -120,8 +105,9 @@ export default function BillingTab({ userRole }: BillingTabProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (date: string | Date) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",

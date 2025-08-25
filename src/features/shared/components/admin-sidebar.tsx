@@ -45,6 +45,12 @@ const navigationItems = [
     icon: Users,
     description: "Manage developer profiles",
   },
+  {
+    name: "Developer Approvals",
+    href: "/admin/developers",
+    icon: Users,
+    description: "Review and approve developers",
+  },
 ];
 
 export function AdminSidebar({

@@ -1,10 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Compiler optimizations
-  compiler: {
-    // Remove console.log in production
-    removeConsole: process.env.NODE_ENV === "production",
-  },
+  // Disable caching in development
+  ...(process.env.NODE_ENV === "development" && {
+    onDemandEntries: {
+      // period (in ms) where the server will keep pages in the buffer
+      maxInactiveAge: 25 * 1000,
+      // number of pages that should be kept simultaneously without being disposed
+      pagesBufferLength: 2,
+    },
+  }),
 
   // Image optimization
   images: {
@@ -28,7 +32,9 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            value: process.env.NODE_ENV === "development" 
+              ? "no-cache, no-store, must-revalidate" 
+              : "public, max-age=31536000, immutable",
           },
         ],
       },

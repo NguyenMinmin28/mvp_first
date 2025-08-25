@@ -31,6 +31,66 @@ enum SubscriptionStatus {
   canceled
 }
 
+enum PaymentStatus {
+  created
+  authorized
+  captured
+  failed
+  refunded
+}
+
+enum ProjectStatus {
+  draft
+  submitted
+  assigning
+  accepted
+  in_progress
+  completed
+  canceled
+}
+
+enum ResponseStatus {
+  pending
+  accepted
+  rejected
+  expired
+  invalidated
+}
+
+enum BatchStatus {
+  active
+  completed
+  expired
+  replaced
+}
+
+enum AuthorRole {
+  developer
+  admin
+}
+
+enum RevealChannel {
+  whatsapp
+  email
+}
+
+enum ReviewType {
+  client_for_developer
+  developer_for_client
+}
+
+enum ModerationStatus {
+  published
+  hidden
+  flagged
+}
+
+enum FileType {
+  agreement
+  verification_document
+  other
+}
+
 enum DevLevel {
   FRESHER
   MID
@@ -75,6 +135,11 @@ model User {
   // Quan hệ ngược 1–12
   clientProfile    ClientProfile?
   developerProfile DeveloperProfile?
+  progressUpdates  ProjectProgressUpdate[] @relation("UserProgressUpdates")
+  files            File[]             @relation("UserFiles")
+  reviewsGiven     Review[]           @relation("UserReviewsGiven")
+  reviewsReceived  Review[]           @relation("UserReviewsReceived")
+  moderatedReviews Review[]           @relation("UserModeratedReviews")
 
   @@index([lastLoginAt])
 }
@@ -142,6 +207,9 @@ model ClientProfile {
 
   currentSubscriptionId  String?        @db.ObjectId
   subscriptions          Subscription[] @relation("ClientSubscriptions")
+  payments               Payment[]      @relation("ClientPayments")
+  projects               Project[]      @relation("ClientProjects")
+  contactReveals         ContactRevealEvent[] @relation("ClientContactReveals")
 
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
@@ -171,10 +239,57 @@ model Subscription {
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
 
+  // Relations
+  payments                Payment[]            @relation("SubscriptionPayments")
+  subscriptionUsages      SubscriptionUsage[]  @relation("SubscriptionToUsage")
+
   @@index([clientId], map: "idx_subscriptions_clientId")
   @@index([packageId], map: "idx_subscriptions_packageId")
   @@unique([provider, providerSubscriptionId], map: "uq_subscriptions_provider_external_id")
 
+}
+
+/* ===== Payments ===== */
+model Payment {
+  id                      String               @id @default(auto()) @map("_id") @db.ObjectId
+
+  subscriptionId          String               @db.ObjectId
+  subscription            Subscription         @relation("SubscriptionPayments", fields: [subscriptionId], references: [id])
+
+  clientId                String               @db.ObjectId
+  client                  ClientProfile        @relation("ClientPayments", fields: [clientId], references: [id])
+
+  provider                PaymentProvider
+  providerPaymentId       String
+
+  amount                  Float
+  currency                String               @default("USD")
+  
+  status                  PaymentStatus        @default(created)
+  
+  createdAt               DateTime             @default(now())
+
+  @@index([subscriptionId], map: "idx_payments_subscriptionId")
+  @@index([clientId], map: "idx_payments_clientId")
+  @@index([status], map: "idx_payments_status")
+}
+
+/* ===== Subscription Usage ===== */
+model SubscriptionUsage {
+  id                      String               @id @default(auto()) @map("_id") @db.ObjectId
+
+  subscriptionId          String               @db.ObjectId
+  subscription            Subscription         @relation("SubscriptionToUsage", fields: [subscriptionId], references: [id])
+
+  periodStart             DateTime
+  periodEnd               DateTime
+  
+  projectsPostedCount     Int                  @default(0)
+  contactClicksByProject  Json                 // Map<projectId, number>
+
+  @@index([subscriptionId], map: "idx_subscription_usage_subscriptionId")
+  @@index([periodStart], map: "idx_subscription_usage_periodStart")
+  @@index([periodEnd], map: "idx_subscription_usage_periodEnd")
 }
 
 model Package {
@@ -223,6 +338,10 @@ model DeveloperProfile {
   reviewsSummary    ReviewsAggregate?  @relation("DevProfileToReviews", fields: [reviewsSummaryId], references: [id])
 
   skills               DeveloperSkill[]
+  contactRevealedProjects Project[]          @relation("ProjectContactReveals")
+  assignmentCandidates AssignmentCandidate[] @relation("DeveloperCandidates")
+  contactReveals       ContactRevealEvent[] @relation("DeveloperContactReveals")
+  rotationCursors      RotationCursor[]     @relation("DeveloperToRotationCursors")
 
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -248,16 +367,7 @@ model DeveloperSkill {
   @@index([skillId], map: "idx_devskill_skill")
 }
 
-model Skill {
-  id                String            @id @default(auto()) @map("_id") @db.ObjectId
-  name              String            @unique
-  keywords          String[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
 
-  // THÊM FIELD NGƯỢC, KHỚP TÊN QUAN HỆ
-  developerSkills   DeveloperSkill[]  @relation("SkillToDeveloperSkills")
-}
 
 model ReviewsAggregate {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -266,4 +376,251 @@ model ReviewsAggregate {
   updatedAt     DateTime @updatedAt
 
   developerProfile DeveloperProfile? @relation("DevProfileToReviews")
+}
+
+/* ===== Skills ===== */
+model Skill {
+  id                String            @id @default(auto()) @map("_id") @db.ObjectId
+  name              String            @unique
+  slug              String            @unique
+  category          String            // e.g., FE/BE/DevOps
+  keywords          String[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  developerSkills   DeveloperSkill[]  @relation("SkillToDeveloperSkills")
+  rotationCursors   RotationCursor[]  @relation("SkillToRotationCursors")
+
+  @@index([category], map: "idx_skills_category")
+}
+
+/* ===== Projects ===== */
+model Project {
+  id                          String               @id @default(auto()) @map("_id") @db.ObjectId
+  
+  clientId                    String               @db.ObjectId
+  client                      ClientProfile        @relation("ClientProjects", fields: [clientId], references: [id])
+  
+  title                       String               // Short project name
+  description                 String               // Fast submit ≤ 60s
+  
+  skillsRequired              String[]             @db.ObjectId // Array of skill IDs
+  
+  budgetMin                   Float?               // Optional
+  budgetMax                   Float?               // Optional
+  currency                    String               @default("USD")
+  
+  status                      ProjectStatus        @default(draft)
+  postedAt                    DateTime?
+  
+  disclaimerAccepted          Boolean              @default(false)
+  agreementFileId             String?              @db.ObjectId // ref:files
+  agreementFile               File?                @relation("ProjectAgreementFiles", fields: [agreementFileId], references: [id])
+  
+  contactRevealEnabled        Boolean              @default(false) // Enabled after first accept
+  contactRevealedDeveloperId  String?              @db.ObjectId
+  contactRevealedDeveloper    DeveloperProfile?    @relation("ProjectContactReveals", fields: [contactRevealedDeveloperId], references: [id])
+  
+  contactRevealsCount         Int                  @default(0) // For quota
+  currentBatchId              String?              @db.ObjectId
+  currentBatch                AssignmentBatch?     @relation("ProjectCurrentBatch", fields: [currentBatchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+
+  // Relations
+  assignmentBatches           AssignmentBatch[]    @relation("ProjectBatches")
+  progressUpdates             ProjectProgressUpdate[] @relation("ProjectUpdates")
+  assignmentCandidates        AssignmentCandidate[] @relation("ProjectCandidates")
+  contactRevealEvents         ContactRevealEvent[] @relation("ProjectContactReveals")
+  reviews                     Review[]             @relation("ProjectReviews")
+
+  @@index([clientId], map: "idx_projects_clientId")
+  @@index([status], map: "idx_projects_status")
+  @@index([postedAt], map: "idx_projects_postedAt")
+  @@index([currentBatchId], map: "idx_projects_currentBatchId")
+}
+
+/* ===== Project Progress Updates ===== */
+model ProjectProgressUpdate {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  
+  projectId     String       @db.ObjectId
+  project       Project      @relation("ProjectUpdates", fields: [projectId], references: [id])
+  
+  authorId      String       @db.ObjectId
+  author        User         @relation("UserProgressUpdates", fields: [authorId], references: [id])
+  
+  authorRole    AuthorRole   // developer or admin
+  content       String       // Progress text
+  attachments   String[]     @db.ObjectId @default([]) // Array of file IDs
+  
+  createdAt     DateTime     @default(now())
+
+  @@index([projectId], map: "idx_progress_updates_projectId")
+  @@index([authorId], map: "idx_progress_updates_authorId")
+  @@index([createdAt], map: "idx_progress_updates_createdAt")
+}
+
+/* ===== Assignment Batches ===== */
+model AssignmentBatch {
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  
+  projectId       String               @db.ObjectId
+  project         Project              @relation("ProjectBatches", fields: [projectId], references: [id])
+  
+  batchNumber     Int                  // Incremental
+  selection       Json                 // {skillIds: array, fresherCount: number, midCount: number, expertCount: number}
+  
+  status          BatchStatus          @default(active)
+  expiresAt       DateTime?            // Optional
+  refreshReason   String?              // When client requests new list
+  
+  createdAt       DateTime             @default(now())
+
+  // Relations
+  candidates      AssignmentCandidate[] @relation("BatchCandidates")
+  currentProjects Project[]            @relation("ProjectCurrentBatch")
+  contactReveals  ContactRevealEvent[] @relation("BatchContactReveals")
+
+  @@index([projectId], map: "idx_assignment_batches_projectId")
+  @@index([status], map: "idx_assignment_batches_status")
+  @@index([expiresAt], map: "idx_assignment_batches_expiresAt")
+}
+
+/* ===== Assignment Candidates ===== */
+model AssignmentCandidate {
+  id                              String               @id @default(auto()) @map("_id") @db.ObjectId
+  
+  batchId                         String               @db.ObjectId
+  batch                           AssignmentBatch      @relation("BatchCandidates", fields: [batchId], references: [id])
+  
+  projectId                       String               @db.ObjectId
+  project                         Project              @relation("ProjectCandidates", fields: [projectId], references: [id])
+  
+  developerId                     String               @db.ObjectId
+  developer                       DeveloperProfile     @relation("DeveloperCandidates", fields: [developerId], references: [id])
+  
+  level                           DevLevel             // Snapshot
+  assignedAt                      DateTime
+  acceptanceDeadline              DateTime             // = assignedAt + 15m
+  
+  responseStatus                  ResponseStatus       @default(pending)
+  respondedAt                     DateTime?            // Optional
+  
+  usualResponseTimeMsSnapshot     Int                  // For UI
+  statusTextForClient             String               @default("developer is checking")
+  
+  isFirstAccepted                 Boolean              @default(false) // Marks first acceptor
+  invalidatedAt                   DateTime?            // When batch replaced
+
+  @@index([batchId], map: "idx_assignment_candidates_batchId")
+  @@index([projectId], map: "idx_assignment_candidates_projectId")
+  @@index([developerId], map: "idx_assignment_candidates_developerId")
+  @@index([responseStatus], map: "idx_assignment_candidates_responseStatus")
+  @@index([acceptanceDeadline], map: "idx_assignment_candidates_deadline")
+}
+
+/* ===== Files ===== */
+model File {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  ownerId      String   @db.ObjectId
+  owner        User     @relation("UserFiles", fields: [ownerId], references: [id])
+  
+  type         FileType
+  storageKey   String   // S3/GCS path
+  checksum     String   // Integrity
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  projectAgreements Project[] @relation("ProjectAgreementFiles")
+
+  @@index([ownerId], map: "idx_files_ownerId")
+  @@index([type], map: "idx_files_type")
+  @@index([uploadedAt], map: "idx_files_uploadedAt")
+}
+
+/* ===== Contact Reveal Events ===== */
+model ContactRevealEvent {
+  id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+  
+  projectId           String             @db.ObjectId
+  project             Project            @relation("ProjectContactReveals", fields: [projectId], references: [id])
+  
+  clientId            String             @db.ObjectId
+  client              ClientProfile      @relation("ClientContactReveals", fields: [clientId], references: [id])
+  
+  developerId         String             @db.ObjectId // Revealed party
+  developer           DeveloperProfile   @relation("DeveloperContactReveals", fields: [developerId], references: [id])
+  
+  batchId             String             @db.ObjectId // Related batch
+  batch               AssignmentBatch    @relation("BatchContactReveals", fields: [batchId], references: [id])
+  
+  channel             RevealChannel
+  revealedAt          DateTime           @default(now())
+  countsAgainstLimit  Boolean            @default(true) // Subscription quota
+  ip                  String
+  userAgent           String
+
+  @@index([projectId], map: "idx_contact_reveals_projectId")
+  @@index([clientId], map: "idx_contact_reveals_clientId")
+  @@index([developerId], map: "idx_contact_reveals_developerId")
+  @@index([batchId], map: "idx_contact_reveals_batchId")
+  @@index([revealedAt], map: "idx_contact_reveals_revealedAt")
+}
+
+/* ===== Reviews ===== */
+model Review {
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
+  
+  type                ReviewType       // Direction
+  
+  fromUserId          String           @db.ObjectId // Reviewer
+  fromUser            User             @relation("UserReviewsGiven", fields: [fromUserId], references: [id])
+  
+  toUserId            String           @db.ObjectId // Reviewee
+  toUser              User             @relation("UserReviewsReceived", fields: [toUserId], references: [id])
+  
+  projectId           String           @db.ObjectId // Context
+  project             Project          @relation("ProjectReviews", fields: [projectId], references: [id])
+  
+  rating              Int              // 1-5
+  comment             String
+  
+  moderationStatus    ModerationStatus @default(published)
+  moderatedByAdminId  String?          @db.ObjectId // Admin
+  moderatedByAdmin    User?            @relation("UserModeratedReviews", fields: [moderatedByAdminId], references: [id])
+  moderatedAt         DateTime?        // Optional
+
+  createdAt           DateTime         @default(now())
+
+  @@index([projectId], map: "idx_reviews_projectId")
+  @@index([fromUserId], map: "idx_reviews_fromUserId")
+  @@index([toUserId], map: "idx_reviews_toUserId")
+  @@index([type], map: "idx_reviews_type")
+  @@index([moderationStatus], map: "idx_reviews_moderationStatus")
+  @@index([rating], map: "idx_reviews_rating")
+  @@index([createdAt], map: "idx_reviews_createdAt")
+}
+
+/* ===== Rotation Cursors ===== */
+model RotationCursor {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  skillId           String   @db.ObjectId
+  skill             Skill    @relation("SkillToRotationCursors", fields: [skillId], references: [id])
+  
+  level             DevLevel
+  
+  lastDeveloperId   String?  @db.ObjectId // Alternative to offset
+  lastDeveloper     DeveloperProfile? @relation("DeveloperToRotationCursors", fields: [lastDeveloperId], references: [id])
+  
+  updatedAt         DateTime @updatedAt
+
+  @@unique([skillId, level], map: "uq_rotation_cursors_skill_level")
+  @@index([skillId], map: "idx_rotation_cursors_skillId")
+  @@index([level], map: "idx_rotation_cursors_level")
+  @@index([lastDeveloperId], map: "idx_rotation_cursors_lastDeveloperId")
 }

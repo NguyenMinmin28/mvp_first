@@ -12,7 +12,7 @@ import {
 } from "@/ui/components/dropdown-menu";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings, Plus, Inbox, DollarSign, FolderOpen } from "lucide-react";
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -43,10 +43,45 @@ export function Header({ user }: HeaderProps) {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-6">
           <Link href="/">
             <Icons.logo className="h-8 w-8 text-primary" />
           </Link>
+          
+          {/* Navigation Links */}
+                  {mounted && user?.role === "CLIENT" && (
+          <nav className="hidden md:flex items-center gap-4">
+            <Link href="/projects">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                My Projects
+              </Button>
+            </Link>
+            <Link href="/projects/new">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Post Project
+              </Button>
+            </Link>
+            <Link href="/pricing">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Pricing
+              </Button>
+            </Link>
+          </nav>
+        )}
+          
+          {mounted && user?.role === "DEVELOPER" && (
+            <nav className="hidden md:flex items-center gap-4">
+              <Link href="/inbox">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Inbox className="h-4 w-4" />
+                  Inbox
+                </Button>
+              </Link>
+            </nav>
+          )}
         </div>
 
         {/* Right side - Mode toggle and User dropdown */}

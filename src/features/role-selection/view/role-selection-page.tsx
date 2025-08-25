@@ -50,6 +50,8 @@ export default function CompleteProfilePage() {
   const handleRoleSelect = async (role: UserRole) => {
     setIsLoading(true);
     try {
+      console.log("🔍 Starting role selection for:", role);
+      
       // Update user role and create profile
       const response = await fetch("/api/user/update-role", {
         method: "POST",
@@ -57,17 +59,25 @@ export default function CompleteProfilePage() {
         body: JSON.stringify({ role }),
       });
 
+      console.log("🔍 API response status:", response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("❌ API error:", errorData);
         throw new Error(
           errorData.error || "Failed to update role and create profile"
         );
       }
 
       const result = await response.json();
+      console.log("✅ API success:", result);
+
+      // Add small delay to ensure database transaction completes
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Update session
       await updateSession();
+      console.log("✅ Session updated");
 
       setSelectedRole(role);
 
@@ -79,12 +89,14 @@ export default function CompleteProfilePage() {
       // Redirect to home page
       router.push("/");
     } catch (error) {
-      console.error("Error updating role and creating profile:", error);
+      console.error("❌ Error updating role and creating profile:", error);
       toast.error(
         error instanceof Error
           ? error.message
           : "An error occurred while updating role and creating profile"
       );
+      // Don't update session or redirect on error
+      return;
     } finally {
       setIsLoading(false);
     }
