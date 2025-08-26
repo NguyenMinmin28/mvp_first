@@ -48,11 +48,13 @@ export function ProjectManagementPage({ projects }: ProjectManagementPageProps) 
         return <Clock className="h-4 w-4" />;
       case "assigning":
         return <RefreshCw className="h-4 w-4" />;
-      case "assigned":
+      case "accepted":
+        return <CheckCircle className="h-4 w-4" />;
+      case "in_progress":
         return <CheckCircle className="h-4 w-4" />;
       case "completed":
         return <CheckCircle className="h-4 w-4" />;
-      case "cancelled":
+      case "canceled":
         return <XCircle className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
@@ -65,11 +67,13 @@ export function ProjectManagementPage({ projects }: ProjectManagementPageProps) 
         return "bg-yellow-100 text-yellow-800";
       case "assigning":
         return "bg-blue-100 text-blue-800";
-      case "assigned":
+      case "accepted":
+        return "bg-green-100 text-green-800";
+      case "in_progress":
         return "bg-green-100 text-green-800";
       case "completed":
         return "bg-purple-100 text-purple-800";
-      case "cancelled":
+      case "canceled":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -82,11 +86,13 @@ export function ProjectManagementPage({ projects }: ProjectManagementPageProps) 
         return "Submitted";
       case "assigning":
         return "Finding Developers";
-      case "assigned":
+      case "accepted":
         return "Developer Assigned";
+      case "in_progress":
+        return "In Progress";
       case "completed":
         return "Completed";
-      case "cancelled":
+      case "canceled":
         return "Cancelled";
       default:
         return status;
@@ -141,14 +147,8 @@ export function ProjectManagementPage({ projects }: ProjectManagementPageProps) 
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Projects</h1>
-          <p className="text-muted-foreground">
-            Manage and track your project assignments
-          </p>
-        </div>
+      {/* New Project Button */}
+      <div className="flex justify-end">
         <Link href="/projects/new">
           <Button className="flex items-center gap-2">
             <Plus className="h-4 w-4" />

@@ -16,10 +16,8 @@ import {
   XCircle,
   AlertTriangle,
   Users,
-  Award,
-  ArrowLeft
+  Award
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 
 interface ProjectData {
@@ -76,6 +74,16 @@ export default function ProjectAssignmentView({ projectId }: Props) {
   const [showRevealConfirm, setShowRevealConfirm] = useState(false);
   const [contactInfo, setContactInfo] = useState<{ whatsapp?: string; email: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Real-time countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchData = async (showLoadingToast = false) => {
     try {
@@ -199,16 +207,37 @@ export default function ProjectAssignmentView({ projectId }: Props) {
   };
 
   const formatTimeRemaining = (deadline: string) => {
-    const now = new Date().getTime();
+    const now = currentTime.getTime();
     const deadlineTime = new Date(deadline).getTime();
     const remaining = deadlineTime - now;
 
-    if (remaining <= 0) return "Expired";
+    if (remaining <= 0) return { text: "Expired", color: "text-red-500", urgent: false };
 
-    const minutes = Math.floor(remaining / (1000 * 60));
+    const totalMinutes = Math.floor(remaining / (1000 * 60));
+    const minutes = totalMinutes % 60;
     const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
     
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const isUrgent = totalMinutes < 5;
+    const color = isUrgent ? "text-red-500" : totalMinutes < 10 ? "text-yellow-500" : "text-green-500";
+    
+    // Format based on remaining time
+    let displayText;
+    if (totalMinutes >= 60) {
+      const hours = Math.floor(totalMinutes / 60);
+      const remainingMins = totalMinutes % 60;
+      displayText = `${hours}h ${remainingMins}m`;
+    } else if (totalMinutes > 0) {
+      displayText = `${totalMinutes}m ${seconds}s`;
+    } else {
+      displayText = `${seconds}s`;
+    }
+    
+    return {
+      text: displayText,
+      color,
+      urgent: isUrgent,
+      totalSeconds: Math.floor(remaining / 1000)
+    };
   };
 
   const formatResponseTime = (ms: number) => {
@@ -277,15 +306,6 @@ export default function ProjectAssignmentView({ projectId }: Props) {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Back to Projects */}
-      <div className="mb-6">
-        <Link href="/projects">
-          <Button variant="ghost" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Projects
-          </Button>
-        </Link>
-      </div>
 
       {/* Project Header */}
       <Card>
@@ -344,6 +364,35 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                   <p className="text-sm text-blue-700 dark:text-blue-300">
                     {pendingCandidates.length} developers are reviewing your project
                   </p>
+                  {pendingCandidates.length > 0 && (
+                    <div className="mt-2">
+                      {(() => {
+                        const earliestDeadline = pendingCandidates.reduce((earliest, candidate) => {
+                          const candidateDeadline = new Date(candidate.acceptanceDeadline).getTime();
+                          const earliestTime = earliest ? new Date(earliest).getTime() : Infinity;
+                          return candidateDeadline < earliestTime ? candidate.acceptanceDeadline : earliest;
+                        }, null as string | null);
+
+                        if (earliestDeadline) {
+                          const timeRemaining = formatTimeRemaining(earliestDeadline);
+                          return (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-blue-600" />
+                              <span className={`text-sm font-medium ${timeRemaining.color}`}>
+                                Batch expires in: {timeRemaining.text}
+                              </span>
+                              {timeRemaining.urgent && (
+                                <span className="text-xs text-red-600 font-semibold animate-pulse">
+                                  ⚠️ URGENT
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
                 </div>
               </div>
               {hasAcceptedCandidate && (
@@ -464,12 +513,17 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                           <span className={`${isLoser || isExpired || isRejected ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
                             Usual response: {formatResponseTime(candidate.usualResponseTimeMsSnapshot)}
                           </span>
-                          {candidate.responseStatus === "pending" && !isLoser && (
-                            <Badge variant="outline" className="text-xs">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatTimeRemaining(candidate.acceptanceDeadline)}
-                            </Badge>
-                          )}
+                                                  {candidate.responseStatus === "pending" && !isLoser && (
+                          (() => {
+                            const timeRemaining = formatTimeRemaining(candidate.acceptanceDeadline);
+                            return (
+                              <Badge variant="outline" className={`text-xs ${timeRemaining.color}`}>
+                                <Clock className="h-3 w-3 mr-1" />
+                                {timeRemaining.text}
+                              </Badge>
+                            );
+                          })()
+                        )}
                         </div>
 
                         {/* Status Text */}

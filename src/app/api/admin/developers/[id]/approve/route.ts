@@ -9,31 +9,35 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { action, reason } = await request.json();
+    const developerId = params.id;
+
+    if (!["approve", "reject"].includes(action)) {
       return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
+        { error: "Invalid action. Must be 'approve' or 'reject'" },
+        { status: 400 }
       );
     }
 
-    const developerId = params.id;
-
-    // Check if developer exists
     const developer = await prisma.developerProfile.findUnique({
       where: { id: developerId },
       include: {
         user: {
-          select: { name: true, email: true }
-        }
-      }
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!developer) {
@@ -43,29 +47,39 @@ export async function POST(
       );
     }
 
-    // Update approval status
+    const updateData: any = {
+      adminApprovalStatus: action === "approve" ? "approved" : "rejected",
+    };
+
+    if (action === "approve") {
+      updateData.approvedAt = new Date();
+    } else {
+      updateData.rejectedAt = new Date();
+      updateData.rejectedReason = reason || "No reason provided";
+    }
+
     const updatedDeveloper = await prisma.developerProfile.update({
       where: { id: developerId },
-      data: {
-        adminApprovalStatus: "approved",
-        updatedAt: new Date(),
-      }
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
-    console.log(`Admin ${session.user.email} approved developer ${developer.user.name} (${developer.user.email})`);
+    console.log(`✅ Admin ${session.user.email} ${action}ed developer ${developer.user.email}`);
 
     return NextResponse.json({
       success: true,
-      message: "Developer approved successfully",
-      developer: {
-        id: updatedDeveloper.id,
-        adminApprovalStatus: updatedDeveloper.adminApprovalStatus,
-        updatedAt: updatedDeveloper.updatedAt,
-      }
+      developer: updatedDeveloper,
+      message: `Developer ${action}ed successfully`,
     });
-
   } catch (error) {
-    console.error("Error approving developer:", error);
+    console.error("Error updating developer approval status:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

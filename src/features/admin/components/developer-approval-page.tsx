@@ -21,6 +21,7 @@ import {
   Shield
 } from "lucide-react";
 import { toast } from "sonner";
+import { Role } from "@prisma/client";
 
 interface DeveloperProfile {
   id: string;
@@ -54,7 +55,8 @@ interface AdminUser {
   name: string | null | undefined;
   email: string | null | undefined;
   image: string | null | undefined;
-  role: string;
+  phoneE164: string | undefined;
+  role: Role | undefined;
   isProfileCompleted: boolean | undefined;
 }
 
@@ -73,7 +75,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
       const response = await fetch("/api/admin/developers");
       if (response.ok) {
         const data = await response.json();
-        setDevelopers(data);
+        setDevelopers(data.developers || []);
       } else {
         toast.error("Failed to load developers");
       }
@@ -90,7 +92,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
   }, []);
 
   const handleApprovalAction = async (developerId: string, action: "approve" | "reject") => {
-    setProcessingIds(prev => new Set([...prev, developerId]));
+    setProcessingIds(prev => new Set(Array.from(prev).concat(developerId)));
 
     try {
       const response = await fetch(`/api/admin/developers/${developerId}/${action}`, {
@@ -298,7 +300,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
                                     <Phone className="h-4 w-4" />
                                     <span>{developer.user.phoneE164}</span>
                                     {developer.whatsAppVerified && (
-                                      <MessageSquare className="h-4 w-4 text-green-500" title="WhatsApp Verified" />
+                                      <MessageSquare className="h-4 w-4 text-green-500" />
                                     )}
                                   </div>
                                 )}

@@ -50,6 +50,16 @@ export default function DeveloperInbox() {
   const [invitations, setInvitations] = useState<InvitationCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Real-time countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchInvitations = async () => {
     try {
@@ -77,7 +87,11 @@ export default function DeveloperInbox() {
   }, []);
 
   const handleResponse = async (candidateId: string, action: "accept" | "reject") => {
-    setProcessingIds(prev => new Set([...prev, candidateId]));
+    setProcessingIds(prev => {
+      const newSet = new Set(prev);
+      newSet.add(candidateId);
+      return newSet;
+    });
 
     try {
       const response = await fetch(`/api/candidates/${candidateId}/${action}`, {
@@ -122,7 +136,7 @@ export default function DeveloperInbox() {
   };
 
   const formatTimeRemaining = (deadline: string) => {
-    const now = new Date().getTime();
+    const now = currentTime.getTime();
     const deadlineTime = new Date(deadline).getTime();
     const remaining = deadlineTime - now;
 
@@ -135,10 +149,23 @@ export default function DeveloperInbox() {
     const isUrgent = totalMinutes < 5;
     const color = isUrgent ? "text-red-500" : totalMinutes < 10 ? "text-yellow-500" : "text-green-500";
     
+    // Format based on remaining time
+    let displayText;
+    if (totalMinutes >= 60) {
+      const hours = Math.floor(totalMinutes / 60);
+      const remainingMins = totalMinutes % 60;
+      displayText = `${hours}h ${remainingMins}m`;
+    } else if (totalMinutes > 0) {
+      displayText = `${totalMinutes}m ${seconds}s`;
+    } else {
+      displayText = `${seconds}s`;
+    }
+    
     return {
-      text: `${totalMinutes}:${seconds.toString().padStart(2, '0')}`,
+      text: displayText,
       color,
-      urgent: isUrgent
+      urgent: isUrgent,
+      totalSeconds: Math.floor(remaining / 1000)
     };
   };
 
@@ -191,6 +218,35 @@ export default function DeveloperInbox() {
               <Clock className="h-5 w-5 text-blue-600" />
               Pending Invitations ({pendingInvitations.length})
             </CardTitle>
+            {pendingInvitations.length > 0 && (
+              <div className="mt-2">
+                {(() => {
+                  const earliestDeadline = pendingInvitations.reduce((earliest, invitation) => {
+                    const invitationDeadline = new Date(invitation.acceptanceDeadline).getTime();
+                    const earliestTime = earliest ? new Date(earliest).getTime() : Infinity;
+                    return invitationDeadline < earliestTime ? invitation.acceptanceDeadline : earliest;
+                  }, null as string | null);
+
+                  if (earliestDeadline) {
+                    const timeRemaining = formatTimeRemaining(earliestDeadline);
+                    return (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span className={`text-sm font-medium ${timeRemaining.color}`}>
+                          Earliest deadline: {timeRemaining.text}
+                        </span>
+                        {timeRemaining.urgent && (
+                          <span className="text-xs text-red-600 font-semibold animate-pulse">
+                            ⚠️ URGENT - Respond quickly!
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             {pendingInvitations.map((invitation) => {
@@ -224,7 +280,14 @@ export default function DeveloperInbox() {
                           <div className={`font-mono text-lg font-bold ${timeRemaining.color} ${timeRemaining.urgent ? 'animate-pulse' : ''}`}>
                             {timeRemaining.text}
                           </div>
-                          <div className="text-xs text-gray-500">remaining</div>
+                          <div className="text-xs text-gray-500">
+                            {timeRemaining.urgent ? '⚠️ URGENT' : 'remaining'}
+                          </div>
+                          {timeRemaining.urgent && (
+                            <div className="text-xs text-red-600 font-semibold mt-1">
+                              ⏰ Respond quickly!
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -328,7 +391,7 @@ export default function DeveloperInbox() {
                   <div className="flex items-center gap-2">
                     {getLevelBadge(invitation.level)}
                     {invitation.isFirstAccepted && (
-                      <Trophy className="h-4 w-4 text-yellow-500" title="Won Assignment" />
+                      <Trophy className="h-4 w-4 text-yellow-500" aria-label="Won Assignment" />
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">

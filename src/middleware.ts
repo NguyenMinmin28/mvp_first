@@ -48,9 +48,15 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // If accessing admin login page with token, redirect to admin dashboard
+    // If accessing admin login page with token, check if user is admin
     if (isAdminPublicRoute && token) {
-      return NextResponse.redirect(new URL("/admin", request.url));
+      if (token.role === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      } else {
+        // Non-admin user trying to access admin login, allow them to see the form
+        // The form will handle the role check
+        return NextResponse.next();
+      }
     }
 
     // If accessing other admin routes without token, redirect to admin login
@@ -73,8 +79,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If logged in and accessing login page
-  if (token && pathname.startsWith("/auth/")) {
+  // If logged in and accessing login page (but not admin login)
+  if (token && pathname.startsWith("/auth/") && !pathname.startsWith("/admin/")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

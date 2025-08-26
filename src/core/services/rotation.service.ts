@@ -223,6 +223,7 @@ export class RotationService {
         currentStatus: { in: ["available", "checking"] },
         level,
         userId: { not: clientUserId },
+        whatsappVerified: true, // Only include developers with verified WhatsApp
         skills: {
           some: { skillId },
         },

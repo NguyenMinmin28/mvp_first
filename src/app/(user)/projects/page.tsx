@@ -4,6 +4,7 @@ import { authOptions } from "@/features/auth/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/core/database/db";
 import { ProjectManagementPage } from "@/features/projects/components/project-management-page";
+import { UserLayout } from "@/features/shared/components/user-layout";
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
@@ -52,10 +53,26 @@ export default async function ProjectsPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Suspense fallback={<div>Loading...</div>}>
-        <ProjectManagementPage projects={projects} />
-      </Suspense>
-    </div>
+    <UserLayout user={session.user}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                My Projects
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
+                Manage and track your posted projects
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Suspense fallback={<div>Loading...</div>}>
+          <ProjectManagementPage projects={projects} />
+        </Suspense>
+      </div>
+    </UserLayout>
   );
 }

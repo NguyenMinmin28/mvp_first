@@ -94,6 +94,7 @@ export async function POST(
         developer: {
           id: project.contactRevealedDeveloper.id,
           name: project.contactRevealedDeveloper.user.name,
+          email: project.contactRevealedDeveloper.user.email,
           whatsappNumber: project.contactRevealedDeveloper.whatsappNumber,
           whatsappVerified: project.contactRevealedDeveloper.whatsappVerified,
           linkedinUrl: project.contactRevealedDeveloper.linkedinUrl,

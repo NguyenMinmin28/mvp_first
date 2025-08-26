@@ -6,73 +6,49 @@ import { prisma } from "@/core/database/db";
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get all developer profiles with user info and skills
     const developers = await prisma.developerProfile.findMany({
       include: {
         user: {
           select: {
             name: true,
             email: true,
-            phoneE164: true,
-          }
+          },
         },
         skills: {
           include: {
             skill: {
               select: {
                 name: true,
-                category: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
-        reviewsAggregate: {
+        _count: {
           select: {
-            averageRating: true,
-            totalReviews: true,
-          }
-        }
+            assignmentCandidates: true,
+          },
+        },
       },
-      orderBy: [
-        { adminApprovalStatus: "asc" }, // pending first
-        { createdAt: "desc" }           // newest first
-      ]
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    // Transform data for frontend
-    const transformedDevelopers = developers.map(dev => ({
-      id: dev.id,
-      userId: dev.userId,
-      level: dev.level,
-      adminApprovalStatus: dev.adminApprovalStatus,
-      currentStatus: dev.currentStatus,
-      whatsAppVerified: !!dev.whatsAppNumber, // Check if WhatsApp is set
-      createdAt: dev.createdAt,
-      updatedAt: dev.updatedAt,
-      user: dev.user,
-      skills: dev.skills,
-      reviewsAggregate: dev.reviewsAggregate
-    }));
-
-    return NextResponse.json(transformedDevelopers);
-
+    return NextResponse.json({
+      success: true,
+      developers,
+    });
   } catch (error) {
-    console.error("Error fetching developers:", error);
+    console.error("Error fetching developers for admin:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

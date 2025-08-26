@@ -60,10 +60,22 @@ export default function AdminLoginClient() {
         return;
       }
 
-      // Kiểm tra xem user có phải là admin không
-      // Điều này sẽ được xử lý trong middleware hoặc API route
-      toast.success("Admin login successful!");
-      router.push("/admin");
+      // Check if user is admin by making an API call
+      const userResponse = await fetch("/api/auth/me");
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        
+        if (userData.user?.role === "ADMIN") {
+          toast.success("Admin login successful!");
+          router.push("/admin");
+        } else {
+          setServerError("Access denied. Admin privileges required.");
+          // Sign out the user since they're not admin
+          await signIn("credentials", { redirect: false });
+        }
+      } else {
+        setServerError("Failed to verify admin status");
+      }
     } catch (error) {
       console.error("Admin login error:", error);
       setServerError("An error occurred during admin login");
