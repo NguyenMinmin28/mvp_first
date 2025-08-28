@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
@@ -69,10 +69,19 @@ interface Props {
 export default function ProjectAssignmentView({ projectId }: Props) {
   const [data, setData] = useState<AssignmentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pausePolling, setPausePolling] = useState(false);
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false);
   const [showRevealConfirm, setShowRevealConfirm] = useState(false);
-  const [contactInfo, setContactInfo] = useState<{ whatsapp?: string; email: string } | null>(null);
+  const [contactInfo, setContactInfo] = useState<{ 
+    whatsapp?: string; 
+    email: string; 
+    name: string;
+    linkedinUrl?: string;
+    level: string;
+    usualResponseTimeMs: number;
+  } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -85,16 +94,31 @@ export default function ProjectAssignmentView({ projectId }: Props) {
     return () => clearInterval(timer);
   }, []);
 
+  // Memoize computed state to avoid unnecessary re-renders
+  const { hasAccepted, hasPending, candidatesCount } = useMemo(() => {
+    if (!data?.candidates) return { hasAccepted: false, hasPending: false, candidatesCount: 0 };
+    return {
+      hasAccepted: data.candidates.some(c => c.responseStatus === "accepted"),
+      hasPending: data.candidates.some(c => c.responseStatus === "pending"),
+      candidatesCount: data.candidates.length,
+    };
+  }, [data?.candidates]);
+
   const fetchData = async (showLoadingToast = false) => {
+    if (isFetching) return;
     try {
+      setIsFetching(true);
       if (showLoadingToast) {
         toast.loading("Fetching latest data...", { id: "fetch-data" });
       }
       
+      const abortController = new AbortController();
       // Add cache-busting parameter to ensure fresh data
       const timestamp = new Date().getTime();
       const response = await fetch(`/api/projects/${projectId}/assignment?t=${timestamp}`, {
         cache: 'no-store',
+        signal: abortController.signal,
+        credentials: 'include',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
@@ -113,37 +137,57 @@ export default function ProjectAssignmentView({ projectId }: Props) {
           toast.dismiss("fetch-data");
         }
       }
-    } catch (error) {
-      console.error("Error fetching assignment data:", error);
-      toast.error("Something went wrong");
-      if (showLoadingToast) {
-        toast.dismiss("fetch-data");
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error("Error fetching assignment data:", error);
+        toast.error("Something went wrong");
+        if (showLoadingToast) {
+          toast.dismiss("fetch-data");
+        }
       }
     } finally {
       setIsLoading(false);
+      setIsFetching(false);
     }
   };
 
+  // A) Reset khi đổi project
   useEffect(() => {
-    // Reset states when projectId changes
     setData(null);
     setIsLoading(true);
     setContactInfo(null);
     setRefreshKey(0);
-    
-    fetchData();
-    
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    fetchData(); // load lần đầu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  // B) Polling động theo state + focus/visibility
+  useEffect(() => {
+    if (!projectId || pausePolling) return;
+    
+    let intervalId: NodeJS.Timeout | null = null;
+    const fast = data?.project.status === "assigning" && hasPending && !hasAccepted;
+    intervalId = setInterval(fetchData, fast ? 5000 : 30000);
+
+    // Refresh on tab focus/visibility change
+    const onFocus = () => fetchData();
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchData(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [projectId, data?.project.status, hasPending, hasAccepted, pausePolling]);
+
   const handleRefresh = async () => {
+    setPausePolling(true);
     setIsRefreshing(true);
     setShowRefreshConfirm(false);
 
     try {
-      // Show refreshing toast
       toast.loading("Refreshing batch...", { id: "refresh-batch" });
       
       const response = await fetch(`/api/projects/${projectId}/batches/refresh`, {
@@ -158,29 +202,25 @@ export default function ProjectAssignmentView({ projectId }: Props) {
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        toast.success("Batch refreshed successfully!", { id: "refresh-batch" });
-        
-        // Force refresh key to trigger re-render
-        setRefreshKey(prev => prev + 1);
-        
-        // Clear any existing data to force re-render
-        setData(null);
-        setIsLoading(true);
-        
-        // Fetch fresh data immediately
-        await fetchData(true);
-        
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to refresh batch", { id: "refresh-batch" });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "Failed to refresh batch");
       }
-    } catch (error) {
+
+      toast.success("Batch refreshed successfully!", { id: "refresh-batch" });
+      
+      // Force refresh key to trigger re-render
+      setRefreshKey(prev => prev + 1);
+      
+      // Fetch fresh data immediately
+      await fetchData(true);
+        
+    } catch (error: any) {
       console.error("Error refreshing batch:", error);
-      toast.error("Something went wrong", { id: "refresh-batch" });
+      toast.error(error.message || "Something went wrong", { id: "refresh-batch" });
     } finally {
       setIsRefreshing(false);
+      setPausePolling(false);
     }
   };
 
@@ -193,9 +233,17 @@ export default function ProjectAssignmentView({ projectId }: Props) {
       });
 
       if (response.ok) {
-        const contactData = await response.json();
-        setContactInfo(contactData);
-        toast.success("Contact information revealed!");
+        const result = await response.json();
+        const developer = result.data.developer;
+        setContactInfo({
+          email: developer.email,
+          whatsapp: developer.whatsappNumber,
+          name: developer.name,
+          linkedinUrl: developer.linkedinUrl,
+          level: developer.level,
+          usualResponseTimeMs: developer.usualResponseTimeMs
+        });
+        toast.success(result.data.message || "Contact information revealed!");
       } else {
         const error = await response.json();
         toast.error(error.message || "Failed to reveal contact");
@@ -247,11 +295,29 @@ export default function ProjectAssignmentView({ projectId }: Props) {
     return `~${hours}h`;
   };
 
+  // Sort candidates within each level
+  const sortCandidates = (candidates: Candidate[]) => {
+    return [...candidates].sort((a, b) => {
+      const order = (status: string) => status === "accepted" ? 0 : status === "pending" ? 1 : 2;
+      const orderA = order(a.responseStatus);
+      const orderB = order(b.responseStatus);
+      
+      if (orderA !== orderB) return orderA - orderB;
+      
+      // If both pending, sort by earliest deadline first
+      if (a.responseStatus === "pending" && b.responseStatus === "pending") {
+        return new Date(a.acceptanceDeadline).getTime() - new Date(b.acceptanceDeadline).getTime();
+      }
+      
+      return 0;
+    });
+  };
+
   const groupCandidatesByLevel = (candidates: Candidate[]) => {
     return {
-      EXPERT: candidates.filter(c => c.level === "EXPERT"),
-      MID: candidates.filter(c => c.level === "MID"),
-      FRESHER: candidates.filter(c => c.level === "FRESHER"),
+      EXPERT: sortCandidates(candidates.filter(c => c.level === "EXPERT")),
+      MID: sortCandidates(candidates.filter(c => c.level === "MID")),
+      FRESHER: sortCandidates(candidates.filter(c => c.level === "FRESHER")),
     };
   };
 
@@ -301,11 +367,29 @@ export default function ProjectAssignmentView({ projectId }: Props) {
 
   const { project, candidates, skills } = data;
   const groupedCandidates = groupCandidatesByLevel(candidates);
-  const hasAcceptedCandidate = candidates.some(c => c.responseStatus === "accepted");
   const pendingCandidates = candidates.filter(c => c.responseStatus === "pending");
 
+  // Improved reveal gating with better UX feedback
+  const canReveal = project.contactRevealEnabled && hasAccepted && !contactInfo;
+  const revealDisabledReason = !project.contactRevealEnabled 
+    ? "Contact reveal not yet enabled" 
+    : !hasAccepted 
+    ? "Waiting for a developer to accept your project"
+    : contactInfo 
+    ? "Contact already revealed" 
+    : undefined;
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 relative">
+      {/* Searching overlay to avoid flicker during polling */}
+      {isFetching && project.status === "assigning" && candidatesCount === 0 && (
+        <div className="absolute inset-0 z-10 bg-white/70 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex items-center gap-3 p-3 rounded-md bg-white dark:bg-gray-900 shadow border">
+            <LoadingSpinner size="sm" />
+            <span className="text-sm text-gray-700 dark:text-gray-200" aria-live="polite">Finding developers...</span>
+          </div>
+        </div>
+      )}
 
       {/* Project Header */}
       <Card>
@@ -333,13 +417,15 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                 onClick={() => setShowRefreshConfirm(true)}
                 disabled={isRefreshing}
                 className="flex items-center gap-2"
+                title={isRefreshing ? "Currently refreshing..." : "Generate new batch (will invalidate current pending invites)"}
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
               <Button
                 onClick={() => setShowRevealConfirm(true)}
-                disabled={!project.contactRevealEnabled || !!contactInfo}
+                disabled={!canReveal}
+                title={revealDisabledReason}
                 className="flex items-center gap-2"
               >
                 <Eye className="h-4 w-4" />
@@ -359,9 +445,9 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                 <Users className="h-5 w-5 text-blue-600" />
                 <div>
                   <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                    Assignment in Progress
+                    {isFetching && candidatesCount === 0 ? 'Searching for developers…' : 'Assignment in Progress'}
                   </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <p className="text-sm text-blue-700 dark:text-blue-300" aria-live="polite">
                     {pendingCandidates.length} developers are reviewing your project
                   </p>
                   {pendingCandidates.length > 0 && (
@@ -395,7 +481,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                   )}
                 </div>
               </div>
-              {hasAcceptedCandidate && (
+              {hasAccepted && (
                 <Badge className="bg-green-500 text-white">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Accepted
@@ -425,7 +511,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                 groupedCandidates[level].map((candidate) => {
                   // Race condition logic
                   const isWinner = candidate.responseStatus === "accepted";
-                  const isLoser = hasAcceptedCandidate && candidate.responseStatus === "pending";
+                  const isLoser = hasAccepted && candidate.responseStatus === "pending";
                   const isExpired = candidate.responseStatus === "expired";
                   const isRejected = candidate.responseStatus === "rejected";
                   
@@ -468,7 +554,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                   }
 
                   return (
-                    <Card key={`${candidate.id}-${refreshKey}`} className={cardClassName}>
+                    <Card key={candidate.id} className={cardClassName}>
                       <CardContent className="pt-4 space-y-3">
                         {/* Status Badge for Race Condition */}
                         {statusBadge}
@@ -566,11 +652,53 @@ export default function ProjectAssignmentView({ projectId }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm"><strong>Email:</strong> {contactInfo.email}</p>
-                {contactInfo.whatsapp && (
-                  <p className="text-sm"><strong>WhatsApp:</strong> {contactInfo.whatsapp}</p>
-                )}
+              <div className="space-y-3">
+                <div className="border-b pb-2">
+                  <h4 className="font-semibold text-lg">{contactInfo.name}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {contactInfo.level} Developer • Response time: ~{Math.floor(contactInfo.usualResponseTimeMs / (1000 * 60))}min
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    <strong>Email:</strong>{" "}
+                    <a 
+                      href={`mailto:${contactInfo.email}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {contactInfo.email}
+                    </a>
+                  </p>
+                  
+                  {contactInfo.whatsapp && (
+                    <p className="text-sm">
+                      <strong>WhatsApp:</strong>{" "}
+                      <a 
+                        href={`https://wa.me/${contactInfo.whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {contactInfo.whatsapp}
+                      </a>
+                    </p>
+                  )}
+                  
+                  {contactInfo.linkedinUrl && (
+                    <p className="text-sm">
+                      <strong>LinkedIn:</strong>{" "}
+                      <a 
+                        href={contactInfo.linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        View Profile
+                      </a>
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-800 rounded">
                 <p>Please reach out to discuss project details and next steps.</p>

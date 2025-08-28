@@ -19,9 +19,16 @@ export const env = createEnv({
     // Google OAuth
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),
+
+    // PayPal
+    PAYPAL_CLIENT_ID: z.string().min(1),
+    PAYPAL_CLIENT_SECRET: z.string().min(1),
+    PAYPAL_WEBHOOK_ID: z.string().min(1),
+    PAYPAL_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().min(1),
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.string().min(1),
   },
   runtimeEnv: {
     // Server
@@ -35,8 +42,13 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID,
+    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET,
+    PAYPAL_WEBHOOK_ID: process.env.PAYPAL_WEBHOOK_ID,
+    PAYPAL_MODE: process.env.PAYPAL_MODE,
 
     // Client
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
   },
 });

@@ -22,7 +22,6 @@ enum UserStatus {
 
 enum PaymentProvider {
   paypal
-  razorpay
 }
 
 enum SubscriptionStatus {
@@ -231,10 +230,19 @@ model Subscription {
   providerSubscriptionId  String
 
   status                  SubscriptionStatus
-
+  
+  // Enhanced subscription lifecycle
   startAt                 DateTime
   currentPeriodStart      DateTime
   currentPeriodEnd        DateTime
+  cancelAtPeriodEnd       Boolean              @default(false)
+  canceledAt              DateTime?
+  cancelReason            String?
+  
+  // Trial support
+  trialStart              DateTime?
+  trialEnd                DateTime?
+  isInTrial               Boolean              @default(false)
 
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
@@ -245,6 +253,8 @@ model Subscription {
 
   @@index([clientId], map: "idx_subscriptions_clientId")
   @@index([packageId], map: "idx_subscriptions_packageId")
+  @@index([status], map: "idx_subscriptions_status")
+  @@index([currentPeriodEnd], map: "idx_subscriptions_period_end")
   @@unique([provider, providerSubscriptionId], map: "uq_subscriptions_provider_external_id")
 
 }
@@ -267,11 +277,62 @@ model Payment {
   
   status                  PaymentStatus        @default(created)
   
+  // Payment lifecycle
+  capturedAt              DateTime?
+  failedAt                DateTime?
+  refundedAt              DateTime?
+  
+  // Metadata
+  metadata                Json?                // Store PayPal payment details
+  
   createdAt               DateTime             @default(now())
 
   @@index([subscriptionId], map: "idx_payments_subscriptionId")
   @@index([clientId], map: "idx_payments_clientId")
   @@index([status], map: "idx_payments_status")
+  @@index([provider, providerPaymentId], map: "idx_payments_provider_external")
+  @@index([capturedAt], map: "idx_payments_captured")
+}
+
+/* ===== Webhook Events ===== */
+model WebhookEvent {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  
+  provider          PaymentProvider
+  providerEventId   String          // PayPal event.id
+  eventType         String          // BILLING.SUBSCRIPTION.ACTIVATED, etc.
+  
+  resourceType      String?         // subscription, payment, etc.
+  resourceId        String?         // PayPal resource ID
+  
+  data              Json            // Raw webhook payload
+  processed         Boolean         @default(false)
+  processedAt       DateTime?
+  
+  errorMessage      String?         // If processing failed
+  retryCount        Int             @default(0)
+  
+  receivedAt        DateTime        @default(now())
+
+  @@unique([provider, providerEventId], map: "uq_webhook_events_provider_event")
+  @@index([provider], map: "idx_webhook_events_provider")
+  @@index([eventType], map: "idx_webhook_events_type")
+  @@index([processed], map: "idx_webhook_events_processed")
+  @@index([receivedAt], map: "idx_webhook_events_received")
+}
+
+/* ===== Cron Job Runs ===== */
+model CronRun {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  job          String
+  status       String    @default("started") // started | succeeded | failed
+  success      Boolean?  // convenience flag
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  details      Json?
+
+  @@index([job], map: "idx_cron_runs_job")
+  @@index([startedAt], map: "idx_cron_runs_startedAt")
 }
 
 /* ===== Subscription Usage ===== */
@@ -293,20 +354,31 @@ model SubscriptionUsage {
 }
 
 model Package {
-  id                      String    @id @default(auto()) @map("_id") @db.ObjectId
+  id                      String          @id @default(auto()) @map("_id") @db.ObjectId
   name                    String
   priceUSD                Float
   projectsPerMonth        Int
   contactClicksPerProject Int
   features                String[]
-  isPopular               Boolean   @default(false)
-  active                  Boolean   @default(true)
+  isPopular               Boolean         @default(false)
+  active                  Boolean         @default(true)
+  
+  // PayPal specific fields
+  provider                PaymentProvider @default(paypal)
+  providerPlanId          String?         // PayPal plan_id
+  interval                String          @default("monthly") // "monthly", "yearly"
+  
+  // Free trial configuration
+  trialPeriodDays         Int?            @default(0)
+  trialProjectsCount      Int?            @default(1) // Free trial: 1 project
 
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
 
   @@unique([name], map: "uq_packages_name")
+  @@unique([provider, providerPlanId], map: "uq_packages_provider_plan")
   @@index([active], map: "idx_packages_active")
+  @@index([provider], map: "idx_packages_provider")
 
   subscriptions Subscription[] @relation("PackageToSubscriptions")
 }

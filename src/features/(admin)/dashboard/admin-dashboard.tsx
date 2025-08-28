@@ -619,6 +619,76 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* System Monitoring */}
+          <Card>
+            <CardHeader>
+              <CardTitle>System Monitoring</CardTitle>
+              <CardDescription>Monitor and test system health</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">PayPal Reconciliation</p>
+                    <p className="text-sm text-muted-foreground">Sync subscription states</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/cron/reconcile-subscriptions?test=true', {
+                          method: 'GET',
+                          headers: {
+                            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'test-secret'}`
+                          }
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                          alert(`Reconciliation completed successfully!\nProcessed: ${result.data.processed}\nUpdated: ${result.data.updated}\nErrors: ${result.data.errors}`);
+                        } else {
+                          alert(`Reconciliation failed: ${result.error}`);
+                        }
+                      } catch (error) {
+                        alert(`Error running reconciliation: ${error}`);
+                      }
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Test Now
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Health Check</p>
+                    <p className="text-sm text-muted-foreground">System status overview</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/cron/reconcile-subscriptions');
+                        const result = await response.json();
+                        if (result.success) {
+                          alert(`System Health: ${result.health.status}\nRecent Webhooks: ${result.health.details.recentWebhooks}\nFailed Webhooks: ${result.health.details.failedWebhooks}`);
+                        } else {
+                          alert(`Health check failed: ${result.error}`);
+                        }
+                      } catch (error) {
+                        alert(`Error checking health: ${error}`);
+                      }
+                    }}
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    Check Health
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

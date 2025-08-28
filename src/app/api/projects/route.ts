@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import { RotationService } from "@/core/services/rotation.service";
+import { billingService } from "@/modules/billing/billing.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +46,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user can post project (billing quota check)
+    const quotaCheck = await billingService.canPostProject(clientProfile.id);
+    
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Project limit reached",
+          message: quotaCheck.reason || "You have reached your project posting limit for this period.",
+          code: "QUOTA_EXCEEDED",
+          remaining: quotaCheck.remaining,
+        },
+        { status: 402 } // Payment Required
+      );
+    }
+
     // Verify skills exist
     const validSkills = await prisma.skill.findMany({
       where: { id: { in: skillsRequired } },
@@ -69,6 +85,14 @@ export async function POST(request: NextRequest) {
         postedAt: new Date(),
       },
     });
+
+    // Increment project usage after successful creation
+    try {
+      await billingService.incrementProjectUsage(clientProfile.id);
+    } catch (usageError) {
+      console.error("Failed to increment project usage:", usageError);
+      // Don't fail the project creation if usage tracking fails
+    }
 
     // Generate initial batch using rotation service
     try {

@@ -85,6 +85,12 @@ export async function POST(
 
     const subscriptionId = params.id;
     const body: CreatePaymentRequest = await request.json();
+    if (body.provider !== "paypal") {
+      return NextResponse.json(
+        { error: "Only PayPal payments are supported" },
+        { status: 400 }
+      );
+    }
 
     // Verify the subscription belongs to the user
     const subscription = await db.subscription.findFirst({

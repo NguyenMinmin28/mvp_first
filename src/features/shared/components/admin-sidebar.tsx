@@ -14,6 +14,9 @@ import {
   X,
   ChevronRight,
   LogOut,
+  CreditCard,
+  Clock,
+  List,
 } from "lucide-react";
 import { adminRoutes } from "@/core/config/routes";
 import { Role } from "@prisma/client";
@@ -50,6 +53,24 @@ const navigationItems = [
     href: "/admin/developers",
     icon: Users,
     description: "Review and approve developers",
+  },
+  {
+    name: "Transactions",
+    href: "/admin/transactions",
+    icon: CreditCard,
+    description: "View all user payments (read-only)",
+  },
+  {
+    name: "Usage Logs",
+    href: "/admin/usage-transactions",
+    icon: List,
+    description: "Project/contact usage changes",
+  },
+  {
+    name: "Cron Runs",
+    href: "/admin/cron-runs",
+    icon: Clock,
+    description: "History of scheduled jobs",
   },
 ];
 

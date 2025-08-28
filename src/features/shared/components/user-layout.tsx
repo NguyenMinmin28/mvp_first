@@ -2,8 +2,6 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSessionRefresh } from "@/core/hooks/use-session-refresh";
-import { SessionRefreshNotice } from "@/ui/components/session-refresh-notice";
 
 // Dynamically import Header to avoid SSR issues
 const Header = dynamic(
@@ -34,9 +32,6 @@ export function UserLayout({
 }: UserLayoutProps) {
   const [mounted, setMounted] = useState(false);
 
-  // Use session refresh hook to automatically refresh user data on navigation
-  const { isRefreshing } = useSessionRefresh();
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -52,9 +47,6 @@ export function UserLayout({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Session Refresh Notice */}
-      <SessionRefreshNotice isRefreshing={isRefreshing} />
-
       {/* Header */}
       <Header user={user} />
 

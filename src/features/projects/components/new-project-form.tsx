@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
@@ -29,7 +29,10 @@ export default function NewProjectForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [skillSearch, setSkillSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isLoadingSkills, setIsLoadingSkills] = useState(true);
+  const [quotaStatus, setQuotaStatus] = useState<{ hasActiveSubscription: boolean; remaining?: { projects?: number } } | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Load available skills
   useEffect(() => {
@@ -50,62 +53,113 @@ export default function NewProjectForm() {
     fetchSkills();
   }, []);
 
-  const filteredSkills = availableSkills.filter(skill =>
-    skill.name.toLowerCase().includes(skillSearch.toLowerCase()) &&
-    !formData.skillsRequired.includes(skill.id)
-  );
+  // Prefetch quota usage to inform user before submit
+  useEffect(() => {
+    const fetchQuota = async () => {
+      try {
+        const res = await fetch("/api/billing/quotas", { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        setQuotaStatus({ hasActiveSubscription: !!data.hasActiveSubscription, remaining: data.remaining });
+      } catch {}
+    };
+    fetchQuota();
+  }, []);
 
-  const selectedSkills = availableSkills.filter(skill =>
-    formData.skillsRequired.includes(skill.id)
-  );
-
-  const addSkill = (skillId: string) => {
-    if (!formData.skillsRequired.includes(skillId)) {
-      setFormData(prev => ({
-        ...prev,
-        skillsRequired: [...prev.skillsRequired, skillId]
-      }));
+  // Auto-open upgrade modal when no remaining project slots
+  useEffect(() => {
+    if (quotaStatus && quotaStatus.remaining?.projects === 0) {
+      setShowUpgradeModal(true);
     }
+  }, [quotaStatus]);
+
+  // Debounce search to avoid frequent re-renders
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(skillSearch), 200);
+    return () => clearTimeout(id);
+  }, [skillSearch]);
+
+  const filteredSkills = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    const selected = new Set(formData.skillsRequired);
+    return availableSkills.filter((skill) =>
+      skill.name.toLowerCase().includes(q) && !selected.has(skill.id)
+    );
+  }, [availableSkills, debouncedSearch, formData.skillsRequired]);
+
+  const selectedSkills = useMemo(() => {
+    const selected = new Set(formData.skillsRequired);
+    return availableSkills.filter((skill) => selected.has(skill.id));
+  }, [availableSkills, formData.skillsRequired]);
+
+  const addSkill = useCallback((skillId: string) => {
+    setFormData((prev) => {
+      if (prev.skillsRequired.includes(skillId)) return prev;
+      return { ...prev, skillsRequired: [...prev.skillsRequired, skillId] };
+    });
     setSkillSearch("");
-  };
+  }, []);
 
-  const removeSkill = (skillId: string) => {
-    setFormData(prev => ({
+  const removeSkill = useCallback((skillId: string) => {
+    setFormData((prev) => ({
       ...prev,
-      skillsRequired: prev.skillsRequired.filter(id => id !== skillId)
+      skillsRequired: prev.skillsRequired.filter((id) => id !== skillId),
     }));
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (isSubmitting) return;
     if (!formData.title.trim() || !formData.description.trim() || formData.skillsRequired.length === 0) {
       toast.error("Please fill in all required fields");
       return;
     }
-
+    if (quotaStatus && quotaStatus.remaining?.projects === 0) {
+      setShowUpgradeModal(true);
+      toast.error("You've reached your project limit", {
+        description: "Upgrade your plan to post more projects.",
+      });
+      return;
+    }
     setShowDisclaimer(true);
-  };
+  }, [formData.description, formData.skillsRequired.length, formData.title, isSubmitting, quotaStatus]);
 
-  const confirmSubmit = async () => {
+  const confirmSubmit = useCallback(async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     setShowDisclaimer(false);
 
     try {
       const response = await fetch("/api/projects", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         const project = await response.json();
         toast.success("Project posted successfully!");
-        router.push(`/projects/${project.id}`);
+        const target = `/projects/${project.id}`;
+        // Prefetch to avoid transition flicker, then navigate
+        router.prefetch?.(target);
+        router.push(target);
       } else {
-        const error = await response.json();
+        // Show upgrade modal on quota/payment limits
+        if (response.status === 402) {
+          setShowUpgradeModal(true);
+        }
+        let error: any = {};
+        try { error = await response.json(); } catch {}
+        if (error.code === "FREE_LIMIT_EXCEEDED" || error.code === "PROJECT_QUOTA_EXCEEDED" || response.status === 402) {
+          toast.error("You've reached your project limit", {
+            description: "Please upgrade your plan to post more projects.",
+            action: {
+              label: "View Plans",
+              onClick: () => router.push("/pricing")
+            }
+          });
+          return;
+        }
         toast.error(error.message || "Failed to post project");
       }
     } catch (error) {
@@ -114,9 +168,11 @@ export default function NewProjectForm() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [formData, isSubmitting, router]);
 
-  const isFormValid = formData.title.trim() && formData.description.trim() && formData.skillsRequired.length > 0;
+  const isFormValid = useMemo(() => (
+    !!formData.title.trim() && !!formData.description.trim() && formData.skillsRequired.length > 0
+  ), [formData.description, formData.skillsRequired.length, formData.title]);
 
   return (
     <>
@@ -260,11 +316,36 @@ export default function NewProjectForm() {
                 Posting Project...
               </>
             ) : (
-              "Post Project"
+              (quotaStatus && quotaStatus.remaining?.projects === 0)
+                ? "Upgrade to Post"
+                : "Post Project"
             )}
           </Button>
         </div>
       </form>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                You’ve reached your project limit
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Upgrade your plan to post more projects and continue matching with developers.
+              </p>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowUpgradeModal(false)}>Close</Button>
+                <Button className="flex-1" onClick={() => (window.location.href = "/pricing")}>View Plans</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Disclaimer Modal */}
       {showDisclaimer && (

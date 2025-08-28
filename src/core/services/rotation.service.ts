@@ -28,6 +28,8 @@ export class RotationService {
   };
 
   private static readonly ACCEPTANCE_DEADLINE_MINUTES = 15;
+  // Allow developers to appear in multiple active batches concurrently up to this limit
+  private static readonly MAX_PENDING_ACTIVE_INVITES_PER_DEV = 3;
 
   /**
    * Main entry point for generating assignment batch
@@ -206,7 +208,7 @@ export class RotationService {
     // First try to get rotation cursor
     const cursor = await this.getRotationCursor(tx, skillId, level);
 
-    // Precompute developers who are pending in any active batch to avoid $size queries on Mongo
+    // Precompute developers who are pending in active batches and count per developer
     const pendingActive = await tx.assignmentCandidate.findMany({
       where: {
         responseStatus: "pending",
@@ -214,26 +216,38 @@ export class RotationService {
       },
       select: { developerId: true },
     });
-    const pendingActiveDeveloperIds = Array.from(new Set(pendingActive.map((c: any) => c.developerId)));
+    const pendingCounts = new Map<string, number>();
+    for (const c of pendingActive) {
+      const id = c.developerId as string;
+      pendingCounts.set(id, (pendingCounts.get(id) || 0) + 1);
+    }
+    // Exclude only developers who are already at or above the per-dev pending invite limit
+    const overLimitDeveloperIds: string[] = [];
+    Array.from(pendingCounts.entries()).forEach(([devId, count]) => {
+      if (count >= RotationService.MAX_PENDING_ACTIVE_INVITES_PER_DEV) {
+        overLimitDeveloperIds.push(devId);
+      }
+    });
 
     // Build base query for eligible developers
     const eligibleDevs = await tx.developerProfile.findMany({
       where: {
         adminApprovalStatus: "approved",
-        currentStatus: { in: ["available", "checking"] },
+        currentStatus: { in: ["available", "checking", "busy", "away"] },
         level,
         userId: { not: clientUserId },
-        whatsappVerified: true, // Only include developers with verified WhatsApp
+        // Allow unverified WhatsApp to broaden the pool
         skills: {
           some: { skillId },
         },
-        // Avoid developers with pending response in any active batch
-        id: { notIn: pendingActiveDeveloperIds },
-        // Don't re-invite developers who were already candidates for this project
+        // Avoid only developers who already reached the concurrent pending limit
+        id: { notIn: overLimitDeveloperIds },
+        // Don't re-invite developers who are currently pending/accepted for this project; allow rejected/invalidated to be re-invited on refresh
         NOT: {
           assignmentCandidates: {
             some: {
               projectId: projectId,
+              responseStatus: { in: ["pending", "accepted"] },
             },
           },
         },
