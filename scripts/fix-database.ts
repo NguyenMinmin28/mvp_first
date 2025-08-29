@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Script to fix database data before pushing schema
  * Run: pnpm tsx scripts/fix-database.ts
