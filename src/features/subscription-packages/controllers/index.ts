@@ -17,7 +17,7 @@ import {
   toggleSubscriptionPackageActive,
   toggleSubscriptionPackagePopular,
   getSubscriptionPackageStats,
-} from "@/features/subscription-packages/services/subscription-packages.service";
+} from "@/features/subscription-packages/controllers/service";
 
 // Define context type for type safety
 type Variables = {

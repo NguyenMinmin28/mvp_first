@@ -15,7 +15,7 @@ async function fixDatabase() {
     const users = await prisma.user.findMany({
       select: {
         id: true,
-        phoneNumber: true,
+        phoneE164: true,
         email: true,
         name: true,
       },
@@ -24,7 +24,7 @@ async function fixDatabase() {
     console.log("📊 Current users:", users);
 
     // 2. Fix users with null phoneNumber
-    const usersWithNullPhone = users.filter((u) => u.phoneNumber === null);
+    const usersWithNullPhone = users.filter((u) => u.phoneE164 === null);
 
     if (usersWithNullPhone.length > 0) {
       console.log(
@@ -39,7 +39,7 @@ async function fixDatabase() {
 
         await prisma.user.update({
           where: { id: user.id },
-          data: { phoneNumber: uniquePhone },
+          data: { phoneE164: uniquePhone },
         });
       }
 
@@ -52,7 +52,7 @@ async function fixDatabase() {
     const finalUsers = await prisma.user.findMany({
       select: {
         id: true,
-        phoneNumber: true,
+        phoneE164: true,
         email: true,
         name: true,
       },

@@ -460,8 +460,6 @@ export function DeveloperProfileManagement() {
       <Pagination
         currentPage={pagination.currentPage}
         totalPages={pagination.totalPages}
-        totalItems={pagination.totalItems}
-        itemsPerPage={pagination.itemsPerPage}
         onPageChange={handlePageChange}
       />
 

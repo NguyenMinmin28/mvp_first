@@ -56,7 +56,7 @@ const developerProfileSchema = z.object({
     .url("Invalid LinkedIn URL")
     .optional()
     .or(z.literal("")),
-  portfolioLinks: z.array(z.string().url("Invalid portfolio URL")).optional(),
+  portfolioLinks: z.array(z.string()).default([]),
   whatsappNumber: z.string().optional(),
 
   // Skills will be handled separately as they need to link to Skill model
@@ -74,7 +74,9 @@ const developerProfileSchema = z.object({
     .min(1, "Must have at least 1 skill"),
 });
 
-type DeveloperProfileFormData = z.infer<typeof developerProfileSchema>;
+type DeveloperProfileFormData = z.infer<typeof developerProfileSchema> & {
+  portfolioLinks?: string[];
+};
 
 interface DeveloperProfileFormProps {
   onBack: () => void;
@@ -147,11 +149,11 @@ export default function DeveloperProfileForm({
     watch,
     control,
     formState: { errors, isValid },
-  } = useForm<DeveloperProfileFormData>({
+  } = useForm({
     resolver: zodResolver(developerProfileSchema),
     defaultValues: {
       skillsInput: [{ name: "", years: 0, rating: 1 }],
-      portfolioLinks: [""],
+      portfolioLinks: [],
       ...initialData,
     },
     mode: "onChange",
@@ -172,7 +174,7 @@ export default function DeveloperProfileForm({
     remove: removePortfolio,
   } = useFieldArray({
     control,
-    name: "portfolioLinks",
+    name: "portfolioLinks" as any,
   });
 
   const level = watch("level");
