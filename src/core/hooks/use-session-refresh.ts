@@ -10,13 +10,20 @@ import { useEffect, useRef, useState } from "react";
  */
 export function useSessionRefresh() {
   const { data: session, update } = useSession();
-  const pathname = usePathname();
-  const lastPathname = useRef(pathname);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Only use usePathname on the client side to avoid SSR issues
+  const pathname = mounted ? usePathname() : null;
+  const lastPathname = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only refresh if we've actually changed pages
-    if (lastPathname.current !== pathname) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only refresh if we're mounted, have a pathname, and we've actually changed pages
+    if (mounted && pathname && lastPathname.current !== pathname) {
       console.log("🔄 Page navigation detected, refreshing session...");
 
       setIsRefreshing(true);
@@ -29,7 +36,7 @@ export function useSessionRefresh() {
       // Update the last pathname
       lastPathname.current = pathname;
     }
-  }, [pathname, update]);
+  }, [pathname, update, mounted]);
 
   return { session, update, isRefreshing };
 }

@@ -12,20 +12,35 @@ import {
 } from "@/ui/components/dropdown-menu";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { LogOut, User, Settings, Plus, Inbox, DollarSign, FolderOpen, Menu, X } from "lucide-react";
+import { LogOut, User, Settings, Plus, Inbox, DollarSign, FolderOpen, Menu, X, Bell, ChevronDown } from "lucide-react";
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePortal } from "@/features/shared/portal-context";
+import { PortalLoginModal } from "@/features/shared/components/portal-login-modal";
 
 interface HeaderProps {
-  user: UserType;
+  user?: UserType;
 }
 
 export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Use portal context with fallback
+  const portalContext = usePortal();
+
+  const { 
+    activePortal, 
+    setActivePortal, 
+    showLoginModal, 
+    setShowLoginModal, 
+    pendingPortal,
+    setPendingPortal,
+    showLoginModalForPortal
+  } = portalContext;
 
   useEffect(() => {
     setMounted(true);
@@ -40,229 +55,468 @@ export function Header({ user }: HeaderProps) {
       .slice(0, 2);
   };
 
+  // Check if user is authenticated (using NextAuth session)
+  const isAuthenticated = !!user?.id;
+  
+  // Get user role from session
+  const userRole = user?.role as string | undefined;
+
+  // Auto-sync portal with user role
+  useEffect(() => {
+    if (mounted && isAuthenticated && userRole) {
+      if (userRole === "CLIENT" && activePortal !== "client") {
+        setActivePortal("client");
+      } else if (userRole === "DEVELOPER" && activePortal !== "freelancer") {
+        setActivePortal("freelancer");
+      }
+    }
+  }, [mounted, isAuthenticated, userRole, activePortal, setActivePortal]);
+
+  const handleLoginClick = () => {
+    console.log("Login clicked for portal:", pendingPortal);
+    setShowLoginModal(false);
+    setPendingPortal(null);
+    // Redirect to login page with portal parameter
+    router.push(`/auth/signin?portal=${pendingPortal}`);
+  };
+
+  const handlePortalSwitch = (targetPortal: "client" | "freelancer") => {
+    if (!isAuthenticated) {
+      // Case 4: Chưa đăng nhập -> chuyển về trang đăng nhập
+      showLoginModalForPortal(targetPortal);
+      return;
+    }
+
+    // Case 3: Đã có role và bấm vào role của chính họ -> chuyển về dashboard
+    if (userRole === "CLIENT" && targetPortal === "client") {
+      setActivePortal("client");
+      router.push("/client-dashboard");
+      return;
+    } else if (userRole === "DEVELOPER" && targetPortal === "freelancer") {
+      setActivePortal("freelancer");
+      router.push("/inbox");
+      return;
+    }
+
+    // Case 1 & 2: Kiểm tra role và xử lý chuyển đổi
+    const isClientRole = userRole === "CLIENT";
+    const isDeveloperRole = userRole === "DEVELOPER";
+    
+    if (targetPortal === "client" && isDeveloperRole) {
+      // Case 1: Developer bấm vào Client -> logout và chuyển về trang đăng nhập
+      setActivePortal("client");
+    } else if (targetPortal === "freelancer" && isClientRole) {
+      // Case 2: Client bấm vào Freelancer -> logout và chuyển về trang đăng nhập  
+      setActivePortal("freelancer");
+    } else if (targetPortal === "client" && isClientRole) {
+      // Client bấm vào Client -> chuyển đổi portal và về dashboard
+      setActivePortal("client");
+      router.push("/client-dashboard");
+    } else if (targetPortal === "freelancer" && isDeveloperRole) {
+      // Developer bấm vào Freelancer -> chuyển đổi portal và về inbox
+      setActivePortal("freelancer");
+      router.push("/inbox");
+    } else {
+      // Role không khớp -> logout và chuyển về trang đăng nhập
+      setActivePortal(targetPortal);
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <div className="flex items-center gap-6">
-          <Link href="/">
-            <Icons.logo className="h-8 w-8 text-primary" />
-          </Link>
-          
-          {/* Navigation Links */}
-                  {mounted && user?.role === "CLIENT" && (
-          <nav className="hidden md:flex items-center gap-4">
-            <Link href="/projects">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <FolderOpen className="h-4 w-4" />
-                My Projects
-              </Button>
+    <>
+      <header className={`sticky top-0 z-50 w-full ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}>
+        <div className="container flex h-16 items-center justify-between px-4">
+          {/* Logo */}
+          <div className="flex items-center gap-6">
+            <Link href="/">
+              <span className="text-xl font-extrabold tracking-wide">LOGO</span>
             </Link>
-            <Link href="/projects/new">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Post Project
-              </Button>
-            </Link>
-            <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Pricing
-              </Button>
-            </Link>
-          </nav>
-        )}
-          
-          {mounted && user?.role === "DEVELOPER" && (
+            
+            {/* Portal Switch */}
+            <div className="hidden md:flex items-center gap-2 text-sm">
+              <button
+                className={`px-3 py-1 rounded-full border ${activePortal === "client" ? "bg-black text-white" : !isAuthenticated ? "text-white border-white/40" : "text-black"}`}
+                onClick={() => handlePortalSwitch("client")}
+              >
+                Client {user?.id && userRole === "CLIENT" && "✓"}
+              </button>
+              <button
+                className={`px-3 py-1 rounded-full border ${activePortal === "freelancer" ? "bg-black text-white" : !isAuthenticated ? "text-white border-white/40" : "text-black"}`}
+                onClick={() => handlePortalSwitch("freelancer")}
+              >
+                Freelancer {user?.id && userRole === "DEVELOPER" && "✓"}
+              </button>
+            </div>
+            
+            {/* Navigation Links - Show based on user role */}
+            {isAuthenticated && mounted && userRole === "CLIENT" && (
             <nav className="hidden md:flex items-center gap-4">
-              <Link href="/inbox">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  <Inbox className="h-4 w-4" />
-                  Inbox
+              <Link href="/my-projects">
+                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                  <FolderOpen className="h-4 w-4" />
+                  My Projects
                 </Button>
               </Link>
+              {/* Removed Post Project link as requested */}
+              <Link href="/pricing">
+                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                  <DollarSign className="h-4 w-4" />
+                  Pricing
+                </Button>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                    About <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/about">About us</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/newsroom">Newsroom</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/investors">Investor Relation</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/blog">Blog</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
           )}
-        </div>
-
-        {/* Right side - Mode toggle, Mobile menu, and User dropdown */}
-        <div className="flex items-center gap-4">
-          {/* Only render ModeToggle after mounting to prevent hydration issues */}
-          {mounted && <ModeToggle />}
-
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
+            
+            {isAuthenticated && mounted && userRole === "DEVELOPER" && (
+              <nav className="hidden md:flex items-center gap-4">
+                <Link href="/inbox">
+                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                    <Inbox className="h-4 w-4" />
+                    Inbox
+                  </Button>
+                </Link>
+                <Link href="/pricing">
+                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                    <DollarSign className="h-4 w-4" />
+                    Pricing
+                  </Button>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                      About <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link href="/about">About us</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/newsroom">Newsroom</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/investors">Investor Relation</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/blog">Blog</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </nav>
             )}
-          </Button>
 
-          {/* User Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-10 w-10 rounded-full"
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={user?.image || undefined}
-                    alt={user?.name || user?.email || "User"}
-                  />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user?.name
-                      ? getUserInitials(user.name)
-                      : user?.email?.charAt(0).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <div className="flex items-center justify-start gap-2 p-2">
-                <div className="flex flex-col space-y-1 leading-none">
-                  {user?.name && <p className="font-medium">{user.name}</p>}
-                  <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    {user?.email}
-                  </p>
-                </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={async () => {
-                try {
-                  await signOut({ callbackUrl: '/' });
-                } catch (error) {
-                  console.error('Sign out error:', error);
-                  // Fallback: redirect to home page
-                  router.push('/');
-                }
-              }}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+            {!isAuthenticated && (
+              <nav className="hidden md:flex items-center gap-8">
+                <Link href="/pricing" className="text-sm hover:opacity-80">Price</Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 text-sm">
+                      About <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link href="/about">About us</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/newsroom">Newsroom</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/investors">Investor Relation</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/blog">Blog</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </nav>
+            )}
+          </div>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
-          <div className="fixed top-16 left-0 right-0 bg-background border-b border-border/40 p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="space-y-4">
-              {/* User Info */}
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={user?.image || undefined}
-                    alt={user?.name || user?.email || "User"}
-                  />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user?.name
-                      ? getUserInitials(user.name)
-                      : user?.email?.charAt(0).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  {user?.name && <p className="font-medium text-sm">{user.name}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    {user?.email}
-                  </p>
-                </div>
-              </div>
+          {/* Right side */}
+          <div className="flex items-center gap-6">
+            {isAuthenticated && <ModeToggle />}
 
-              {/* Navigation Links */}
-              {mounted && user?.role === "CLIENT" && (
-                <div className="space-y-2">
-                  <Link href="/projects" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <FolderOpen className="h-4 w-4 mr-3" />
-                      My Projects
-                    </Button>
-                  </Link>
-                  <Link href="/projects/new" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start">
-                      <Plus className="h-4 w-4 mr-3" />
-                      Post Project
-                    </Button>
-                  </Link>
-                  <Link href="/pricing" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <DollarSign className="h-4 w-4 mr-3" />
-                      Pricing
-                    </Button>
-                  </Link>
-                </div>
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`md:hidden ${!isAuthenticated ? "text-white" : "text-black"}`}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
               )}
-              
-              {mounted && user?.role === "DEVELOPER" && (
-                <div className="space-y-2">
-                  <Link href="/inbox" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start">
-                      <Inbox className="h-4 w-4 mr-3" />
-                      Inbox
-                    </Button>
-                  </Link>
-                </div>
-              )}
+            </Button>
 
-              {/* User Actions */}
-              <div className="space-y-2 pt-4 border-t border-border/40">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start"
-                  onClick={() => {
-                    router.push("/profile");
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  <User className="h-4 w-4 mr-3" />
-                  Profile
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Settings className="h-4 w-4 mr-3" />
-                  Settings
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  onClick={async () => {
+            {/* Public right actions */}
+            {!isAuthenticated && (
+              <div className="hidden md:flex items-center gap-6">
+                <div className="relative">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                </div>
+                <Link href="/help" className="text-sm">Help</Link>
+                <Link href="/auth/signin" className="text-sm">Log in</Link>
+                <Link href="/auth/signup" className="inline-flex items-center h-9 px-4 rounded-full bg-white text-black text-sm">Sign up</Link>
+              </div>
+            )}
+
+            {/* Authenticated right actions */}
+            {isAuthenticated && (
+              <div className="hidden md:flex items-center gap-6">
+                <button className="relative inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-white hover:text-black">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                </button>
+                <Link href="/help" className="text-sm hover:bg-white hover:text-black px-3 py-1.5 rounded-full">Help</Link>
+              </div>
+            )}
+
+            {/* User Dropdown - Only show if authenticated to current portal */}
+            {isAuthenticated && user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user.image || undefined} alt={user.name || user.email || "User"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {user.name ? getUserInitials(user.name) : user.email?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      {user.name && <p className="font-medium">{user.name}</p>}
+                      <p className="w-[200px] truncate text-sm text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={async () => {
                     try {
                       await signOut({ callbackUrl: '/' });
                     } catch (error) {
                       console.error('Sign out error:', error);
                       router.push('/');
                     }
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  <LogOut className="h-4 w-4 mr-3" />
-                  Log out
-                </Button>
-              </div>
-            </div>
+                  }}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
+
+        {/* Greeting bar when authenticated */}
+        {isAuthenticated && user && (
+          <div className="w-full bg-black text-white">
+            <div className="container px-4 py-2 text-sm">
+              {`Welcome back, ${user.name || user.email || "there"}`}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200">
+            <div className="container px-4 py-4 space-y-4">
+              {/* Portal Switch Mobile */}
+              <div className="flex items-center gap-2 text-sm">
+                <button
+                  className={`px-3 py-2 rounded-full border ${activePortal === "client" ? "bg-black text-white" : "text-black border-gray-300"}`}
+                  onClick={() => handlePortalSwitch("client")}
+                >
+                  Client {user?.id && userRole === "CLIENT" && "✓"}
+                </button>
+                <button
+                  className={`px-3 py-2 rounded-full border ${activePortal === "freelancer" ? "bg-black text-white" : "text-black border-gray-300"}`}
+                  onClick={() => handlePortalSwitch("freelancer")}
+                >
+                  Freelancer {user?.id && userRole === "DEVELOPER" && "✓"}
+                </button>
+              </div>
+
+              {/* Navigation Links Mobile */}
+              {isAuthenticated && userRole === "CLIENT" && (
+                <nav className="space-y-2">
+                  <Link href="/my-projects" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4" />
+                      My Projects
+                    </div>
+                  </Link>
+                  <Link href="/pricing" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Pricing
+                    </div>
+                  </Link>
+                  <div className="py-2">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span>About</span>
+                    </div>
+                    <div className="ml-6 mt-2 space-y-1">
+                      <Link href="/about" className="block py-1 text-sm text-gray-600 hover:text-black">About us</Link>
+                      <Link href="/how-clevrs-work" className="block py-1 text-sm text-gray-600 hover:text-black">How Clevrs Work</Link>
+                      <Link href="/newsroom" className="block py-1 text-sm text-gray-600 hover:text-black">Newsroom</Link>
+                      <Link href="/investors" className="block py-1 text-sm text-gray-600 hover:text-black">Investor Relation</Link>
+                      <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
+                    </div>
+                  </div>
+                </nav>
+              )}
+
+              {isAuthenticated && userRole === "DEVELOPER" && (
+                <nav className="space-y-2">
+                  <Link href="/inbox" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <Inbox className="h-4 w-4" />
+                      Inbox
+                    </div>
+                  </Link>
+                  <Link href="/pricing" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Pricing
+                    </div>
+                  </Link>
+                  <div className="py-2">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span>About</span>
+                    </div>
+                    <div className="ml-6 mt-2 space-y-1">
+                      <Link href="/about" className="block py-1 text-sm text-gray-600 hover:text-black">About us</Link>
+                      <Link href="/how-clevrs-work" className="block py-1 text-sm text-gray-600 hover:text-black">How Clevrs Work</Link>
+                      <Link href="/newsroom" className="block py-1 text-sm text-gray-600 hover:text-black">Newsroom</Link>
+                      <Link href="/investors" className="block py-1 text-sm text-gray-600 hover:text-black">Investor Relation</Link>
+                      <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
+                    </div>
+                  </div>
+                </nav>
+              )}
+
+              {!isAuthenticated && (
+                <nav className="space-y-2">
+                  <Link href="/pricing" className="block py-2 text-gray-700 hover:text-black">Price</Link>
+                  <div className="py-2">
+                    <div className="text-gray-700">About</div>
+                    <div className="ml-4 mt-2 space-y-1">
+                      <Link href="/about" className="block py-1 text-sm text-gray-600 hover:text-black">About us</Link>
+                      <Link href="/how-clevrs-work" className="block py-1 text-sm text-gray-600 hover:text-black">How Clevrs Work</Link>
+                      <Link href="/newsroom" className="block py-1 text-sm text-gray-600 hover:text-black">Newsroom</Link>
+                      <Link href="/investors" className="block py-1 text-sm text-gray-600 hover:text-black">Investor Relation</Link>
+                      <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
+                    </div>
+                  </div>
+                </nav>
+              )}
+
+              {/* Mobile Actions */}
+              {isAuthenticated && (
+                <div className="pt-4 border-t border-gray-200 space-y-2">
+                  <Link href="/help" className="block py-2 text-gray-700 hover:text-black">Help</Link>
+                  <button className="w-full text-left py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Profile
+                    </div>
+                  </button>
+                  <button className="w-full text-left py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </div>
+                  </button>
+                  <button 
+                    className="w-full text-left py-2 text-red-600 hover:text-red-800"
+                    onClick={async () => {
+                      try {
+                        await signOut({ callbackUrl: '/' });
+                      } catch (error) {
+                        console.error('Sign out error:', error);
+                        router.push('/');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {!isAuthenticated && (
+                <div className="pt-4 border-t border-gray-200 space-y-2">
+                  <Link href="/help" className="block py-2 text-gray-700 hover:text-black">Help</Link>
+                  <Link href="/auth/signin" className="block py-2 text-gray-700 hover:text-black">Log in</Link>
+                  <Link href="/auth/signup" className="block py-2 px-4 rounded-full bg-black text-white text-center">Sign up</Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Portal Login Modal */}
+      {pendingPortal && (
+        <PortalLoginModal
+          isOpen={showLoginModal}
+          onClose={() => {
+            setShowLoginModal(false);
+            setPendingPortal(null);
+          }}
+          portal={pendingPortal}
+          onLogin={handleLoginClick}
+        />
       )}
-    </header>
+    </>
   );
 }

@@ -24,7 +24,8 @@
     "fix:database": "tsx scripts/fix-database.ts",
     "setup:deployment": "./scripts/setup-deployment.sh",
     "update-prisma": "./scripts/update-prisma.sh",
-    "prisma:update": "./scripts/update-prisma.sh"
+    "prisma:update": "./scripts/update-prisma.sh",
+    "cron:local": "tsx scripts/run-local-cron.ts"
   },
   "dependencies": {
     "@auth/core": "^0.40.0",

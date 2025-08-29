@@ -4,10 +4,14 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuthRedirect } from "@/core/hooks/use-auth-redirect";
 
 export default function SignUpCallbackPage() {
   const { data: session, update: updateSession } = useSession();
   const router = useRouter();
+
+  // Use auth redirect hook
+  useAuthRedirect();
 
   useEffect(() => {
     const handleGoogleSignUpCallback = async () => {
@@ -35,7 +39,7 @@ export default function SignUpCallbackPage() {
           console.log("User already has correct role:", pendingRole);
           localStorage.removeItem("pendingRole");
           toast.success("Đăng ký thành công!");
-          router.push("/role-selection");
+          // Redirect will be handled by useAuthRedirect hook
           return;
         }
 

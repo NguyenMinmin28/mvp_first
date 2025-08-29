@@ -14,16 +14,20 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "50");
+  const job = searchParams.get("job");
   const skip = (page - 1) * limit;
 
   try {
+    const whereClause = job ? { job } : {};
+    
     const [cronRuns, total] = await Promise.all([
       (prisma as any).cronRun.findMany({
+        where: whereClause,
         skip,
         take: limit,
         orderBy: { startedAt: "desc" }
       }),
-      (prisma as any).cronRun.count()
+      (prisma as any).cronRun.count({ where: whereClause })
     ]);
 
     const runs = cronRuns.map((run: any) => ({

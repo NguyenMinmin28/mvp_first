@@ -5,6 +5,118 @@ import { prisma } from "@/core/database/db";
 import { RotationService } from "@/core/services/rotation.service";
 import { billingService } from "@/modules/billing/billing.service";
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Get user's projects based on role
+    let projects = [];
+    
+    if (session.user.role === "CLIENT") {
+      // Get client's projects
+      const clientProfile = await prisma.clientProfile.findUnique({
+        where: { userId: session.user.id }
+      });
+
+      if (clientProfile) {
+        projects = await prisma.project.findMany({
+          where: { clientId: clientProfile.id },
+          orderBy: { postedAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            status: true,
+            postedAt: true,
+            budgetMin: true,
+            currency: true,
+            skillsRequired: true
+          }
+        });
+      }
+    } else if (session.user.role === "DEVELOPER") {
+      // Get developer's assigned projects
+      const developerProfile = await prisma.developerProfile.findUnique({
+        where: { userId: session.user.id }
+      });
+
+      if (developerProfile) {
+        const assignments = await prisma.assignmentCandidate.findMany({
+          where: { developerId: developerProfile.id },
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                postedAt: true,
+                budgetMin: true,
+                currency: true,
+                skillsRequired: true
+              }
+            }
+          },
+          orderBy: { assignedAt: "desc" },
+          take: 20
+        });
+        
+        projects = assignments.map((assignment: any) => ({
+          ...assignment.project,
+          assignmentStatus: assignment.responseStatus
+        }));
+      }
+    }
+
+    // Transform projects to match the expected format
+    const transformedProjects = projects.map((project: any) => {
+      let status: "recent" | "in_progress" | "completed" = "recent";
+      
+      // In Progress: projects that are not completed and not canceled
+      if (project.status === "submitted" || project.status === "assigning" || 
+          project.status === "accepted" || project.status === "in_progress") {
+        status = "in_progress";
+      } else if (project.status === "completed") {
+        status = "completed";
+      }
+      // draft and canceled projects will remain as "recent" (or could be filtered out)
+
+      return {
+        id: project.id,
+        name: project.title,
+        description: project.description,
+        status: status,
+        date: project.postedAt ? project.postedAt.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }) : "Unknown",
+        budget: project.budgetMin,
+        currency: project.currency,
+        skills: project.skillsRequired
+      };
+    });
+
+    return NextResponse.json({
+      projects: transformedProjects
+    });
+
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,7 +136,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, skillsRequired } = body;
+    const { title, description, skillsRequired, budget, currency } = body;
 
     // Validation
     if (!title?.trim() || !description?.trim() || !Array.isArray(skillsRequired) || skillsRequired.length === 0) {
@@ -75,15 +187,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Create project
+    const data: any = {
+      clientId: clientProfile.id,
+      title: title.trim(),
+      description: description.trim(),
+      skillsRequired: skillsRequired,
+      status: "submitted",
+      postedAt: new Date(),
+    };
+    if (budget) data.budgetMin = Number(budget);
+    if (currency) data.currency = String(currency).toUpperCase();
+
     const project = await prisma.project.create({
-      data: {
-        clientId: clientProfile.id,
-        title: title.trim(),
-        description: description.trim(),
-        skillsRequired: skillsRequired,
-        status: "submitted",
-        postedAt: new Date(),
-      },
+      data,
     });
 
     // Increment project usage after successful creation

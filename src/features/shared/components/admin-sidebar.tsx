@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -81,8 +81,15 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+  
+  // Only use usePathname on the client side to avoid SSR issues
+  const pathname = mounted ? usePathname() : null;
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Use external state if provided, otherwise use internal state
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
@@ -137,7 +144,7 @@ export function AdminSidebar({
         {/* Navigation Menu */}
         <nav className="p-4 space-y-2">
           {navigationItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = mounted && pathname === item.href;
             return (
               <Link
                 key={item.name}

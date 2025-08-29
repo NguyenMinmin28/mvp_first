@@ -45,7 +45,7 @@ export async function GET(
     }
 
     // Get current batch candidates
-    let candidates = [];
+    let candidates: any[] = [];
     if (project.currentBatchId) {
       candidates = await prisma.assignmentCandidate.findMany({
         where: {
@@ -69,7 +69,9 @@ export async function GET(
                     }
                   }
                 }
-              }
+              },
+              // expose optional public fields for card
+              _count: false
             }
           }
         },
@@ -100,6 +102,14 @@ export async function GET(
         status: project.status,
         contactRevealEnabled: project.contactRevealEnabled,
         currentBatchId: project.currentBatchId,
+        budget: (project as any).budget,
+        budgetMin: (project as any).budgetMin,
+        budgetMax: (project as any).budgetMax,
+        currency: (project as any).currency,
+        expectedStartAt: (project as any).expectedStartAt,
+        expectedEndAt: (project as any).expectedEndAt,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
       },
       candidates: candidates.map(candidate => ({
         id: candidate.id,
@@ -115,7 +125,10 @@ export async function GET(
           id: candidate.developer.id,
           user: candidate.developer.user,
           level: candidate.developer.level,
-          skills: candidate.developer.skills.map(skill => ({
+          location: (candidate.developer as any).location ?? null,
+          hourlyRateUsd: (candidate.developer as any).hourlyRateUsd ?? null,
+          experienceYears: (candidate.developer as any).experienceYears ?? null,
+          skills: candidate.developer.skills.map((skill: any) => ({
             skill: { name: skill.skill.name },
             years: skill.years
           }))

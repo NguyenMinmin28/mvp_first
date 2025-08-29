@@ -15,9 +15,15 @@ export default async function CompleteProfile() {
     redirect("/auth/signin");
   }
 
-  // Redirect to home if profile already completed
-  if (user.isProfileCompleted) {
-    redirect("/");
+  // Redirect based on role if profile already completed
+  if (user.isProfileCompleted && user.role) {
+    if (user.role === "CLIENT") {
+      redirect("/client-dashboard");
+    } else if (user.role === "DEVELOPER") {
+      redirect("/inbox");
+    } else if (user.role === "ADMIN") {
+      redirect("/admin");
+    }
   }
 
   return <CompleteProfilePage />;

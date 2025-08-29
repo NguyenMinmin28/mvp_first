@@ -69,7 +69,7 @@ export default function SignUpClient() {
   } = useFormSubmit({
     onSuccess: async (data: any) => {
       setServerError(null); // Clear any existing errors
-      router.push("/");
+      router.push("/role-selection");
     },
     onError: (error) => {
       console.error("Sign up error:", error);
@@ -91,7 +91,7 @@ export default function SignUpClient() {
     try {
       const result = await signIn("google", {
         redirect: false,
-        callbackUrl: "/",
+        callbackUrl: "/role-selection",
       });
 
       if (result?.error) {
@@ -107,7 +107,7 @@ export default function SignUpClient() {
 
       if (result?.ok) {
         setServerError(null); // Clear any existing errors
-        router.push("/");
+        router.push("/role-selection");
       }
     } catch (error) {
       console.error("Google sign up error:", error);

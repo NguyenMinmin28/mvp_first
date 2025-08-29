@@ -395,6 +395,9 @@ model DeveloperProfile {
   level                DevLevel
   linkedinUrl          String?
   portfolioLinks       String[]              // URLs
+  // Additional optional public fields for marketplace cards
+  location             String?
+  hourlyRateUsd        Int?                  // USD per hour
 
   adminApprovalStatus  AdminApprovalStatus   @default(draft)
   approvedAt           DateTime?
@@ -479,9 +482,14 @@ model Project {
   
   skillsRequired              String[]             @db.ObjectId // Array of skill IDs
   
-  budgetMin                   Float?               // Optional
-  budgetMax                   Float?               // Optional
+  // Budget: prefer single value; min/max kept for backward compatibility
+  budget                      Float?
+  budgetMin                   Float?               // Legacy
+  budgetMax                   Float?               // Legacy
   currency                    String               @default("USD")
+  // Timeline (optional)
+  expectedStartAt             DateTime?
+  expectedEndAt               DateTime?
   
   status                      ProjectStatus        @default(draft)
   postedAt                    DateTime?

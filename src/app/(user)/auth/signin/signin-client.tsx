@@ -22,6 +22,7 @@ import { ErrorDisplay, FieldError } from "@/ui/components/error-display";
 import { Mail, Eye, EyeOff, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Icons } from "@/features/shared/components/icons";
+import { useAuthRedirect } from "@/core/hooks/use-auth-redirect";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -42,6 +43,9 @@ export default function SignInClient() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Use auth redirect hook
+  useAuthRedirect();
 
   // Xử lý error query parameter từ URL
   useEffect(() => {
@@ -84,14 +88,12 @@ export default function SignInClient() {
         password: data.password,
         redirect: false,
       });
-
-      if (result?.error) {
+      const credError = (result as any)?.error as string | undefined;
+      if (credError) {
         setServerError("Invalid email or password");
         return;
       }
-
-      toast.success("Sign in successful!");
-      router.push("/");
+      // Redirect will be handled by useAuthRedirect hook
     } catch (error) {
       console.error("Sign in error:", error);
       setServerError("An error occurred during sign in");
@@ -107,11 +109,11 @@ export default function SignInClient() {
     try {
       const result = await signIn("google", {
         redirect: false,
-        callbackUrl: "/",
       });
 
-      if (result?.error) {
-        if (result.error === "AccessDenied") {
+      const googleError = (result as any)?.error as string | undefined;
+      if (googleError) {
+        if (googleError === "AccessDenied") {
           setServerError(
             "This Google account has not been registered. Please register first."
           );
@@ -121,11 +123,7 @@ export default function SignInClient() {
         setIsLoading(false);
         return;
       }
-
-      if (result?.ok) {
-        setServerError(null); // Clear any existing errors
-        router.push("/");
-      }
+      // Redirect will be handled by useAuthRedirect hook
     } catch (error) {
       console.error("Google sign in error:", error);
       setServerError("An error occurred during Google sign in");
@@ -134,158 +132,82 @@ export default function SignInClient() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            Welcome back
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Sign in to your account
-          </p>
+    <main className="min-h-screen bg-white">
+      {/* Top black bar with LOGO */}
+      <div className="w-full h-14 bg-black flex items-center">
+        <div className="max-w-4xl mx-auto w-full px-4">
+          <span className="text-white font-semibold tracking-wide">LOGO</span>
         </div>
+      </div>
 
-        {/* Server Error Display */}
-        {serverError && (
-          <div className="mb-4">
-            <ErrorDisplay
-              error={serverError}
-              onDismiss={() => setServerError(null)}
-            />
-            {serverError.includes("has not been registered") && (
-              <div className="mt-3 text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  You need to register an account before signing in
-                </p>
-                <Link
-                  href="/auth/signup"
-                  className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-                >
-                  Go to Sign Up →
-                </Link>
+      {/* Centered form */}
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="flex justify-center py-16">
+          <div className="w-full max-w-md">
+            {/* Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-semibold text-gray-900">Sign in</h1>
+            </div>
+
+            {/* Server Error Display */}
+            {serverError && (
+              <div className="mb-4">
+                <ErrorDisplay error={serverError} onDismiss={() => setServerError(null)} />
               </div>
             )}
-          </div>
-        )}
 
-        {/* Google Sign In Button */}
-        <Button
-          onClick={handleGoogleSignIn}
-          disabled={isLoading}
-          variant="outline"
-          className="w-full mb-4"
-        >
-          {mounted ? (
-            <Icons.google className="w-4 h-4 mr-2" />
-          ) : (
-            <div className="w-4 h-4 mr-2 bg-current rounded" />
-          )}
-          Continue with Google
-        </Button>
+            {/* Inputs */}
+            <div className="space-y-3">
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter email"
+                {...register("email")}
+                className={`${errors.email ? "border-red-500" : ""} appearance-none !bg-white dark:!bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
+                style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
+              />
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                {...register("password")}
+                className={`${errors.password ? "border-red-500" : ""} appearance-none !bg-white dark:!bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
+                style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
+              />
+            </div>
 
-        {/* Divider */}
-        <div className="relative mb-4">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-300 dark:border-gray-600" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-2 text-gray-500 dark:text-gray-400">
-              Or continue with email
-            </span>
-          </div>
-        </div>
-
-        {/* Email Sign In Form */}
-        <Card className="border-0 shadow-none bg-transparent">
-          <CardContent className="p-0">
-            <form
-              onSubmit={handleSubmit(handleEmailSignIn)}
-              className="space-y-3"
+            {/* Continue button */}
+            <Button
+              type="button"
+              onClick={handleSubmit(handleEmailSignIn)}
+              disabled={!isValid || isLoading}
+              className="w-full mt-4 bg-black text-white hover:bg-black/90 disabled:opacity-100"
             >
-              {/* Email */}
-              <div className="space-y-1">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@example.com"
-                  {...register("email")}
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                <FieldError error={errors.email?.message} />
-              </div>
+              {isLoading ? "Loading..." : "Continue"}
+            </Button>
 
-              {/* Password */}
-              <div className="space-y-1">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    {...register("password")}
-                    className={errors.password ? "border-red-500" : ""}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <FieldError error={errors.password?.message} />
-              </div>
+            {/* Divider */}
+            <div className="flex items-center my-6">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="mx-4 text-xs text-gray-900">or</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
 
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={!isValid || isLoading}
-                className="w-full mt-4"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign in
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Sign Up Link */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/auth/signup"
-              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+            {/* Google button */}
+            <Button
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+              variant="outline"
+              className="w-full bg-gray-100 hover:bg-gray-100 text-gray-800 border-0"
             >
-              Sign up now
-            </Link>
-          </p>
-        </div>
-
-        {/* Mode Toggle */}
-        <div className="absolute top-4 right-4">
-          <ModeToggle />
+              {mounted ? (
+                <Icons.google className="w-4 h-4 mr-2" />
+              ) : (
+                <div className="w-4 h-4 mr-2 bg-current rounded" />
+              )}
+              Continue with Google
+            </Button>
+          </div>
         </div>
       </div>
     </main>

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ExpiryService } from "@/core/services/expiry.service";
+import { prisma } from "@/core/database/db";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,14 +15,55 @@ export async function POST(request: NextRequest) {
 
     console.log("🔄 Cron job triggered: expire-candidates");
 
-    const result = await ExpiryService.expirePendingCandidates();
-
-    console.log("✅ Cron job completed:", result);
-
-    return NextResponse.json({
-      success: true,
-      data: result,
+    const correlationId = logger.generateCorrelationId();
+    
+    // Create cron run record
+    const cronRecord = await (prisma as any).cronRun.create({
+      data: {
+        job: "expire-candidates",
+        status: "started",
+        success: null,
+        details: { correlationId }
+      }
     });
+
+    try {
+      const result = await ExpiryService.expirePendingCandidates();
+      
+      // Update cron run record with success
+      await (prisma as any).cronRun.update({
+        where: { id: cronRecord.id },
+        data: {
+          status: "succeeded",
+          success: true,
+          finishedAt: new Date(),
+          details: { correlationId, ...result }
+        }
+      });
+
+      console.log("✅ Cron job completed:", result);
+
+      return NextResponse.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      // Update cron run record with failure
+      await (prisma as any).cronRun.update({
+        where: { id: cronRecord.id },
+        data: {
+          status: "failed",
+          success: false,
+          finishedAt: new Date(),
+          details: { 
+            correlationId, 
+            error: error instanceof Error ? error.message : String(error) 
+          }
+        }
+      });
+      
+      throw error;
+    }
 
   } catch (error) {
     console.error("❌ Error in cron job:", error);

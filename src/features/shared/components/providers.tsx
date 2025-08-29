@@ -1,6 +1,7 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { PortalProvider } from "@/features/shared/portal-context";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -14,7 +15,7 @@ export function Providers({ children }: ProvidersProps) {
       refetchOnWindowFocus={true} // Refresh when user focuses on window
       refetchWhenOffline={false}
     >
-      {children}
+      <PortalProvider>{children}</PortalProvider>
     </SessionProvider>
   );
 }

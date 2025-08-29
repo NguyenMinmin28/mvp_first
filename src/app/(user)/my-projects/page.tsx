@@ -1,0 +1,23 @@
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/features/auth/auth";
+import { redirect } from "next/navigation";
+import MyProjectsPage from "@/features/client/components/my-projects-page";
+import { UserLayout } from "@/features/shared/components/user-layout";
+
+export default async function MyProjects() {
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.id) {
+    redirect("/auth/signin");
+  }
+
+  if (session.user.role !== "CLIENT") {
+    redirect("/");
+  }
+
+  return (
+    <UserLayout user={session.user}>
+      <MyProjectsPage />
+    </UserLayout>
+  );
+}

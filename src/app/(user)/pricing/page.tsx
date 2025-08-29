@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
-import { PricingPage } from "@/features/billing/components/pricing-page";
+import SimplePricingPage from "@/features/pricing/components/simple-pricing-page";
 import { UserLayout } from "@/features/shared/components/user-layout";
 
 export default async function Pricing() {
@@ -46,7 +46,7 @@ export default async function Pricing() {
 
   return (
     <UserLayout user={session?.user}>
-      <PricingPage currentSubscription={currentSubscription} />
+      <SimplePricingPage />
     </UserLayout>
   );
 }

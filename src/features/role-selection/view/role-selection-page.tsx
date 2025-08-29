@@ -29,7 +29,16 @@ export default function CompleteProfilePage() {
     console.log("🔍 Complete Profile - Current session:", session?.user);
 
     if (session?.user?.role && session?.user?.isProfileCompleted) {
-      router.push("/");
+      // Redirect based on role instead of home
+      if (session.user.role === "CLIENT") {
+        router.push("/client-dashboard");
+      } else if (session.user.role === "DEVELOPER") {
+        router.push("/inbox");
+      } else if (session.user.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
       return;
     }
 
@@ -86,8 +95,14 @@ export default function CompleteProfilePage() {
         `Role ${role === "CLIENT" ? "Client" : "Developer"} selected and profile created successfully!`
       );
 
-      // Redirect to home page
-      router.push("/");
+      // Redirect based on selected role
+      if (role === "CLIENT") {
+        router.push("/client-dashboard");
+      } else if (role === "DEVELOPER") {
+        router.push("/inbox");
+      } else {
+        router.push("/");
+      }
     } catch (error) {
       console.error("❌ Error updating role and creating profile:", error);
       toast.error(

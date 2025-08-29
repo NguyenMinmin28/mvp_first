@@ -1,51 +1,62 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/features/auth/auth";
+import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { prisma } from "@/core/database/db";
 import { UserLayout } from "@/features/shared/components/user-layout";
-import { LoadingSpinner } from "@/ui/components/loading-spinner";
-import ProjectAssignmentView from "@/features/projects/components/project-assignment-view";
+import ProjectDetailPage from "@/features/client/components/project-detail-page";
 
-interface Props {
-  params: { id: string };
+interface ProjectDetailPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default function ProjectPage({ params }: Props) {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    if (!session) {
-      router.push("/auth/signin");
-      return;
-    }
-
-    if (session.user?.role !== "CLIENT") {
-      router.push("/");
-      return;
-    }
-  }, [session, status, router]);
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+export default async function ProjectDetail({ params }: ProjectDetailPageProps) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.id) {
+    redirect("/auth/signin");
   }
 
-  if (!session || session.user?.role !== "CLIENT") {
-    return null;
+  if (session.user.role !== "CLIENT") {
+    redirect("/");
+  }
+
+  // Get project details
+  const clientProfile = await prisma.clientProfile.findUnique({
+    where: { userId: session.user.id }
+  });
+
+  if (!clientProfile) {
+    redirect("/");
+  }
+
+  const project = await prisma.project.findFirst({
+    where: {
+      id: params.id,
+      clientId: clientProfile.id
+    },
+    include: {
+      assignmentCandidates: {
+        include: {
+          developer: {
+            include: {
+              user: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!project) {
+    notFound();
   }
 
   return (
     <UserLayout user={session.user}>
-      <div className="container mx-auto px-4 py-8">
-        <ProjectAssignmentView projectId={params.id} />
-      </div>
+      <ProjectDetailPage project={project} />
     </UserLayout>
   );
 }

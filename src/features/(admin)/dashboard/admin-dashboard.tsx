@@ -33,6 +33,7 @@ import { Input } from "@/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { AdminProjectAssignmentModal } from "@/features/admin/components/admin-project-assignment-modal";
+import { UserCronManagement } from "@/features/admin/components/user-cron-management";
 
 interface AdminDashboardProps {
   user: {
@@ -251,10 +252,11 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       description="Manage projects, developers, and system settings"
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="developers">Developers</TabsTrigger>
+          <TabsTrigger value="cron">Cron Jobs</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -582,6 +584,11 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        {/* Cron Jobs Tab */}
+        <TabsContent value="cron" className="space-y-6">
+          <UserCronManagement />
         </TabsContent>
 
         {/* Settings Tab */}

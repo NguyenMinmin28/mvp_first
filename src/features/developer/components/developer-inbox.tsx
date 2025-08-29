@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
+import { RoleMismatchNotice } from "@/ui/components/role-mismatch-notice";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { 
   Clock, 
   CheckCircle, 
@@ -47,6 +50,11 @@ interface InvitationCandidate {
 }
 
 export default function DeveloperInbox() {
+  const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const userRole = session?.user?.role as string | undefined;
+  const targetPortal = searchParams.get("targetPortal") as string | undefined;
+  
   const [invitations, setInvitations] = useState<InvitationCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -210,6 +218,9 @@ export default function DeveloperInbox() {
 
   return (
     <div className="space-y-6">
+      {/* Role Mismatch Notice */}
+      <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
+      
       {/* Pending Invitations */}
       {pendingInvitations.length > 0 && (
         <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">

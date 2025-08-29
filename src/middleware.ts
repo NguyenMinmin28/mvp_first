@@ -10,8 +10,8 @@ import {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Routes that require authentication
-  const protectedRoutes = [userRoutes.HOME, userRoutes.PROFILE];
+  // Routes that require authentication (home is now public)
+  const protectedRoutes = [userRoutes.PROFILE];
 
   // Routes that don't require profile completion check
   const publicRoutes = [
@@ -53,9 +53,14 @@ export async function middleware(request: NextRequest) {
       if (token.role === "ADMIN") {
         return NextResponse.redirect(new URL("/admin", request.url));
       } else {
-        // Non-admin user trying to access admin login, allow them to see the form
-        // The form will handle the role check
-        return NextResponse.next();
+        // Non-admin user trying to access admin login, redirect to appropriate dashboard
+        if (token.role === "CLIENT") {
+          return NextResponse.redirect(new URL("/client-dashboard", request.url));
+        } else if (token.role === "DEVELOPER") {
+          return NextResponse.redirect(new URL("/inbox", request.url));
+        } else {
+          return NextResponse.redirect(new URL("/", request.url));
+        }
       }
     }
 
@@ -79,9 +84,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If logged in and accessing login page (but not admin login)
+  // If logged in and accessing auth pages (but not admin login), redirect based on role
   if (token && pathname.startsWith("/auth/") && !pathname.startsWith("/admin/")) {
-    return NextResponse.redirect(new URL("/", request.url));
+    // Redirect authenticated users away from auth pages based on their role
+    if (token.role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    } else if (token.role === "CLIENT") {
+      return NextResponse.redirect(new URL("/client-dashboard", request.url));
+    } else if (token.role === "DEVELOPER") {
+      return NextResponse.redirect(new URL("/inbox", request.url));
+    } else {
+      return NextResponse.redirect(new URL("/role-selection", request.url));
+    }
   }
 
   // If user has token but no role and is not on role-selection page, redirect to role-selection
@@ -89,9 +103,39 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/role-selection", request.url));
   }
 
-  // If user has role and isProfileCompleted and is on role-selection page, redirect to home
-  if (token && token.role && token.isProfileCompleted && pathname === "/role-selection") {
+  // If user already has a role and is on role-selection, redirect based on role
+  if (token && token.role && pathname === "/role-selection") {
+    // Only redirect if user has completed profile
+    if (token.isProfileCompleted) {
+      if (token.role === "CLIENT") {
+        return NextResponse.redirect(new URL("/client-dashboard", request.url));
+      } else if (token.role === "DEVELOPER") {
+        return NextResponse.redirect(new URL("/inbox", request.url));
+      } else if (token.role === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      } else {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    }
+    // If user has role but profile not completed, allow access to role-selection
     return NextResponse.next();
+  }
+
+  // Handle portal-specific redirects for authenticated users on home page
+  if (token && token.role && pathname === "/") {
+    // Only redirect if user has completed profile
+    if (token.isProfileCompleted) {
+      if (token.role === "CLIENT") {
+        return NextResponse.redirect(new URL("/client-dashboard", request.url));
+      } else if (token.role === "DEVELOPER") {
+        return NextResponse.redirect(new URL("/inbox", request.url));
+      } else if (token.role === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+    } else {
+      // User has role but profile not completed, redirect to role-selection
+      return NextResponse.redirect(new URL("/role-selection", request.url));
+    }
   }
 
   return NextResponse.next();
