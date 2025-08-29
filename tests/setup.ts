@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Global test setup
 import { beforeAll, afterAll } from '@jest/globals';
 import { config } from 'dotenv';
