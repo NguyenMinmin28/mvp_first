@@ -123,7 +123,7 @@ export class RotationService {
       );
 
       await tx.assignmentCandidate.createMany({
-        data: candidates.map((candidate) => ({
+        data: candidates.map((candidate: any) => ({
           batchId: batch.id,
           projectId,
           developerId: candidate.developerId,
@@ -267,7 +267,7 @@ export class RotationService {
     // Apply fair ordering
     const orderedDevs = await this.applyFairOrdering(eligibleDevs, cursor);
 
-    return orderedDevs.slice(0, maxCount).map((dev) => ({
+    return orderedDevs.slice(0, maxCount).map((dev: any) => ({
       developerId: dev.id,
       level: dev.level,
       skillIds: [skillId],
@@ -350,7 +350,7 @@ export class RotationService {
 
     const responseTimes = recentCandidates
       .filter((c) => c.respondedAt && c.assignedAt)
-      .map((c) => c.respondedAt.getTime() - c.assignedAt.getTime());
+      .map((c: any) => c.respondedAt.getTime() - c.assignedAt.getTime());
 
     if (responseTimes.length === 0) return 60000; // Default 60s
 

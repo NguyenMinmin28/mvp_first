@@ -51,7 +51,7 @@ export class ReconciliationJob {
         const batch = subscriptions.slice(i, i + batchSize);
         
         await Promise.allSettled(
-          batch.map(async (subscription) => {
+          batch.map(async (subscription: any) => {
             try {
               processed++;
               const wasUpdated = await this.reconcileSubscription(subscription.providerSubscriptionId, correlationId);

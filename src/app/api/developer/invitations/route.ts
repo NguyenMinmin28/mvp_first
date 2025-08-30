@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     // Get skills for each invitation
     const invitationsWithSkills = await Promise.all(
-      invitations.map(async (invitation) => {
+      invitations.map(async (invitation: any) => {
         const skills = await prisma.skill.findMany({
           where: {
             id: { in: invitation.batch.project.skillsRequired }

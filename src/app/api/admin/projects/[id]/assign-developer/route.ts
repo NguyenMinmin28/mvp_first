@@ -98,7 +98,7 @@ export async function POST(
     });
 
     const skillIdToName = Object.fromEntries(
-      skillNames.map(skill => [skill.id, skill.name])
+      skillNames.map((skill: any) => [skill.id, skill.name])
     );
 
     const projectSkillNames = project.skillsRequired.map(id => skillIdToName[id] || id);
