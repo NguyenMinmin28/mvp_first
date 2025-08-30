@@ -303,7 +303,7 @@ export default function DeveloperInbox() {
                       </div>
 
                       {/* Project Description */}
-                      <p className="text-gray-700  line-clamp-3">
+                      <p className="text-gray-700 line-clamp-3">
                         {invitation.batch.project.description}
                       </p>
 

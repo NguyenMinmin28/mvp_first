@@ -3,6 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
+import { Shield } from "lucide-react";
+import { CheckCircle } from "lucide-react";
+import { Clock } from "lucide-react";
 
 interface VerificationTabProps {
   profileData: any;
@@ -75,77 +78,54 @@ export default function VerificationTab({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Document Upload Section - Blurred for now */}
-        <div className="p-4 border-2 border-dashed border-gray-300  rounded-lg blur-sm pointer-events-none">
-          <div className="text-center">
-            <p className="text-sm text-gray-600  mb-2">
-              Upload verification documents (ID, certificates, etc.)
-            </p>
-            <Button variant="outline" disabled={!isEditing}>
-              Choose Files
-            </Button>
-            <p className="text-xs text-gray-500 mt-2">
-              Supported formats: PDF, JPG, PNG (Max 5MB each)
-            </p>
+        <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg blur-sm pointer-events-none">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="h-5 w-5 text-gray-400" />
+            <h4 className="font-semibold text-gray-400">Profile Verification</h4>
           </div>
+          <p className="text-sm text-gray-600 mb-2">
+            Complete your profile to unlock verification features
+          </p>
         </div>
 
         {/* Admin Approval Status - Blurred for now */}
-        <div className="p-4 bg-gray-50  rounded-lg blur-sm pointer-events-none">
-          <h4 className="font-medium mb-2">Approval Status</h4>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Current Status:</span>
-              <Badge
-                variant={
-                  profileData.adminApprovalStatus === "approved"
-                    ? "default"
-                    : profileData.adminApprovalStatus === "pending"
-                      ? "secondary"
-                      : profileData.adminApprovalStatus === "rejected"
-                        ? "destructive"
-                        : "outline"
-                }
-              >
-                {(profileData.adminApprovalStatus || "draft").toUpperCase()}
-              </Badge>
-            </div>
-            {profileData.adminApprovalStatus === "rejected" && (
-              <div className="mt-2 p-2 bg-red-50  border border-red-200  rounded">
-                <p className="text-sm text-red-600">
-                  Your profile was rejected. Please review and resubmit.
-                </p>
-              </div>
-            )}
+        <div className="p-4 bg-gray-50 rounded-lg blur-sm pointer-events-none">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle className="h-5 w-5 text-gray-400" />
+            <h4 className="font-semibold text-gray-400">Verification Status</h4>
           </div>
+          <p className="text-sm text-gray-600">
+            Your verification status will appear here once you complete your profile
+          </p>
         </div>
 
         {/* Submit Button for Draft Status */}
         {(profileData.adminApprovalStatus === "draft" ||
           !profileData.adminApprovalStatus) && (
-          <div className="p-4 bg-blue-50  border border-blue-200  rounded">
-            <p className="text-sm text-blue-600  mb-3">
-              Complete your profile and upload verification documents to submit
-              for admin approval.
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-sm text-blue-600 mb-3">
+              Your profile is currently under review by our team. This usually takes 1-2 business days.
             </p>
-            <Button
-              onClick={handleSubmitForApproval}
-              className="w-full"
-              disabled={!isEditing}
-            >
-              Submit for Approval
-            </Button>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              This will change your status to PENDING for admin review
-            </p>
+            <div className="flex items-center gap-2 text-sm text-blue-700">
+              <Clock className="h-4 w-4" />
+              <span>Submitted on {new Date().toLocaleDateString()}</span>
+            </div>
           </div>
         )}
 
         {/* Coming Soon Notice */}
-        <div className="p-4 bg-yellow-50  border border-yellow-200  rounded">
-          <p className="text-sm text-yellow-700  text-center">
-            🚧 This feature is under development and will be available soon! 🚧
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+          <p className="text-sm text-yellow-700 text-center">
+            Your profile has been approved! You can now receive project invitations.
           </p>
         </div>
+        {profileData.adminApprovalStatus === "rejected" && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+              <p className="text-sm text-red-600">
+                Your profile was rejected. Please review and resubmit.
+              </p>
+            </div>
+        )}
       </CardContent>
     </Card>
   );

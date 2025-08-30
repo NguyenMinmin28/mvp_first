@@ -105,7 +105,7 @@ export default function WhatsAppTab({
 
             {/* Verification Status Badge */}
             {profileData.whatsappVerified && (
-              <div className="flex items-center gap-2 p-3 bg-green-50  border border-green-200  rounded-lg">
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <Badge
                   variant="default"
@@ -113,8 +113,8 @@ export default function WhatsAppTab({
                 >
                   Verified
                 </Badge>
-                <span className="text-sm text-green-700 font-medium">
-                  WhatsApp number verified successfully
+                <span className="text-sm font-medium text-green-800">
+                  WhatsApp number verified successfully!
                 </span>
               </div>
             )}
@@ -122,7 +122,7 @@ export default function WhatsAppTab({
 
           {/* OTP Verification Input */}
           {showOtpInput && (
-            <div className="p-6 border-2 border-blue-200  rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50   shadow-inner">
+            <div className="p-6 border-2 border-blue-200 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 shadow-inner">
               <div className="flex items-center gap-2 mb-4">
                 <Shield className="h-5 w-5 text-blue-600" />
                 <Label
@@ -163,7 +163,7 @@ export default function WhatsAppTab({
                   Cancel
                 </Button>
               </div>
-              <p className="text-sm text-blue-700  flex items-center gap-2">
+              <p className="text-sm text-blue-700 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Enter the 6-digit code sent to your WhatsApp number
               </p>

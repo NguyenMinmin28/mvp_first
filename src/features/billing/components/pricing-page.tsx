@@ -81,7 +81,7 @@ export function PricingPage({ currentSubscription }: PricingPageProps) {
       case "basic":
         return "border-blue-300 bg-blue-100/50";
       case "standard":
-        return "border-purple-300 bg-purple-100/50  ring-2 ring-purple-500";
+        return "border-purple-300 bg-purple-100/50 ring-2 ring-purple-500";
       case "premium":
         return "border-yellow-300 bg-yellow-100/50";
       default:
@@ -119,20 +119,15 @@ export function PricingPage({ currentSubscription }: PricingPageProps) {
 
       {/* Current Subscription Alert */}
       {currentSubscription && (
-        <div className="mb-8 p-4 bg-green-100/80  border border-green-300  rounded-lg">
-          <div className="flex items-center justify-between">
+        <div className="mb-8 p-4 bg-green-100/80 border border-green-300 rounded-lg">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
             <div>
-              <h3 className="font-semibold text-green-800">
-                Current Plan: {currentSubscription.package.name}
-              </h3>
-              <p className="text-green-700">
-                ${currentSubscription.package.priceUSD}/month • 
-                {currentSubscription.isInTrial ? " In Trial Period" : ` Renews ${new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}`}
+              <h3 className="font-semibold text-green-900">Free Trial Active</h3>
+              <p className="text-sm text-green-700">
+                You're currently on the free trial. Post your first project with full features!
               </p>
             </div>
-            <Badge variant="outline" className="bg-green-200 text-green-800">
-              Active
-            </Badge>
           </div>
         </div>
       )}
@@ -172,7 +167,7 @@ export function PricingPage({ currentSubscription }: PricingPageProps) {
 
               <CardContent>
                 {/* Key Stats */}
-                <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-background/80  rounded-lg border">
+                <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-background/80 rounded-lg border">
                   <div className="text-center">
                     <div className="font-bold text-lg text-foreground">{pkg.projectsPerMonth}</div>
                     <div className="text-sm text-foreground/70">Projects/month</div>

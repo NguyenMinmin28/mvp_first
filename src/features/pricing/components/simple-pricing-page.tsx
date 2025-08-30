@@ -39,7 +39,7 @@ const plans: Plan[] = [
   },
   {
     id: "pro",
-    name: "Pro  Plan",
+    name: "Pro Plan",
     price: "$99.95",
     period: "/monthly",
     features: [

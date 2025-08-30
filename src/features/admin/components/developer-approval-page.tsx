@@ -265,8 +265,8 @@ export default function DeveloperApprovalPage({ user }: Props) {
             ) : filteredDevelopers.length === 0 ? (
               <div className="text-center py-12">
                 <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900  mb-2">
-                  No developers found
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No Developers Found
                 </h3>
                 <p className="text-gray-600">
                   {filter === "pending" 

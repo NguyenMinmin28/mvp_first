@@ -383,10 +383,10 @@ export default function ProjectAssignmentView({ projectId }: Props) {
     <div className="max-w-7xl mx-auto space-y-6 relative">
       {/* Searching overlay to avoid flicker during polling */}
       {isFetching && project.status === "assigning" && candidatesCount === 0 && (
-        <div className="absolute inset-0 z-10 bg-white/70  backdrop-blur-sm flex items-center justify-center">
-          <div className="flex items-center gap-3 p-3 rounded-md bg-white  shadow border">
+        <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex items-center gap-3 p-3 rounded-md bg-white shadow border">
             <LoadingSpinner size="sm" />
-            <span className="text-sm text-gray-700" aria-live="polite">Finding developers...</span>
+            <span className="text-sm font-medium">Processing...</span>
           </div>
         </div>
       )}
@@ -397,7 +397,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl">{project.title}</CardTitle>
-              <p className="text-gray-600  mt-2">{project.description}</p>
+              <p className="text-gray-600 mt-2">{project.description}</p>
               <div className="flex items-center gap-2 mt-4">
                 <Badge variant="outline" className="capitalize">
                   {project.status.replace('_', ' ')}
@@ -700,7 +700,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                   )}
                 </div>
               </div>
-              <div className="text-xs text-gray-600  p-3 bg-gray-50  rounded">
+              <div className="text-xs text-gray-600 p-3 bg-gray-50 rounded">
                 <p>Please reach out to discuss project details and next steps.</p>
               </div>
               <Button onClick={() => setContactInfo(null)} className="w-full">
@@ -766,7 +766,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
             <CardContent className="space-y-4">
               <div className="text-sm space-y-2">
                 <p>You are about to reveal the developer's contact information.</p>
-                <div className="text-xs text-gray-600  p-3 bg-gray-50  rounded">
+                <div className="text-xs text-gray-600 p-3 bg-gray-50 rounded">
                   <p><strong>Note:</strong> This action will be logged and may count towards your contact reveal quota in paid plans.</p>
                 </div>
               </div>

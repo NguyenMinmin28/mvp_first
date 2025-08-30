@@ -14,19 +14,18 @@ export function ProfileCompletionNotice({
   return (
     <div
       className={cn(
-        "bg-blue-50 border border-blue-200 rounded-lg p-4  
+        "bg-blue-50 border border-blue-200 rounded-lg p-4",
         className
       )}
     >
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-blue-600  mt-0.5 flex-shrink-0" />
-
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-blue-800  mb-1">
-            Hoàn thành hồ sơ
+        <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+        <div className="flex-1">
+          <h3 className="text-sm font-medium text-blue-800 mb-1">
+            Complete Your Profile
           </h3>
-          <p className="text-sm text-blue-700  mb-3">
-            Bạn cần hoàn thành hồ sơ để sử dụng đầy đủ tính năng của ứng dụng.
+          <p className="text-sm text-blue-700 mb-3">
+            Please complete your profile to access all features and receive project invitations.
           </p>
 
           {onCompleteProfile && (

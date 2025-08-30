@@ -297,7 +297,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
           <h2 className="text-2xl font-bold text-gray-900">
             Profile Information
           </h2>
-          <p className="text-gray-600  mt-1">
+          <p className="text-gray-600 mt-1">
             Manage your personal and professional information
           </p>
         </div>

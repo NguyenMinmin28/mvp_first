@@ -8,6 +8,10 @@ import { Badge } from "@/ui/components/badge";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { toast } from "sonner";
 import { SubscriptionWithPackage } from "@/core/types/subscription.types";
+import { CreditCard } from "lucide-react";
+import { CheckCircle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 interface BillingTabProps {
   userRole: "CLIENT" | "DEVELOPER" | undefined;
@@ -174,26 +178,14 @@ export default function BillingTab({ userRole }: BillingTabProps) {
             </div>
           ) : subscriptions.length === 0 ? (
             <div className="text-center py-8">
-              <div className="mx-auto w-16 h-16 bg-gray-100  rounded-full flex items-center justify-center mb-4">
-                <svg
-                  className="w-8 h-8 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+              <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <CreditCard className="w-12 h-12 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900  mb-2">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No Active Subscription
               </h3>
-              <p className="text-gray-600  mb-4">
-                You don&apos;t have any active subscriptions at the moment.
+              <p className="text-gray-600 max-w-md mx-auto">
+                You're currently on the free plan. Upgrade to unlock more features and higher limits.
               </p>
               <Button onClick={() => window.open("/pricing", "_blank")}>
                 Choose a Plan
@@ -334,26 +326,14 @@ export default function BillingTab({ userRole }: BillingTabProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="mx-auto w-16 h-16 bg-gray-100  rounded-full flex items-center justify-center mb-4">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900  mb-2">
-              Billing History
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Subscription Active
             </h3>
-            <p className="text-gray-600  mb-4">
-              View your past invoices and payment history.
+            <p className="text-gray-600 mb-4">
+              Your subscription is active and working properly.
             </p>
             <Button
               variant="outline"
