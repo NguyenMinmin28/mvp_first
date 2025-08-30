@@ -145,13 +145,13 @@ export function DataTable<T extends Record<string, any>>({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b bg-gray-50 
+              <tr className="border-b bg-gray-50">
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`px-4 py-3 text-left text-sm font-medium text-gray-700  ${
+                    className={`px-4 py-3 text-left text-sm font-medium text-gray-700 ${
                       column.sortable
-                        ? "cursor-pointer hover:bg-gray-100 
+                        ? "cursor-pointer hover:bg-gray-100"
                         : ""
                     } ${column.width || ""}`}
                     onClick={() => column.sortable && handleSort(column.key)}
@@ -209,7 +209,7 @@ export function DataTable<T extends Record<string, any>>({
                         {column.render ? (
                           column.render(item[column.key], item)
                         ) : (
-                          <span className="text-gray-900 
+                          <span className="text-gray-900">
                             {item[column.key] || "-"}
                           </span>
                         )}
