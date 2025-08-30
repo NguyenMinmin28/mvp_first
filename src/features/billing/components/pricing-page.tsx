@@ -79,13 +79,13 @@ export function PricingPage({ currentSubscription }: PricingPageProps) {
   const getPackageColor = (packageName: string) => {
     switch (packageName.toLowerCase()) {
       case "basic":
-        return "border-blue-300 bg-blue-100/50 
+        return "border-blue-300 bg-blue-100/50";
       case "standard":
         return "border-purple-300 bg-purple-100/50  ring-2 ring-purple-500";
       case "premium":
-        return "border-yellow-300 bg-yellow-100/50 
+        return "border-yellow-300 bg-yellow-100/50";
       default:
-        return "border-gray-300 bg-gray-100/50 
+        return "border-gray-300 bg-gray-100/50";
     }
   };
 
@@ -122,15 +122,15 @@ export function PricingPage({ currentSubscription }: PricingPageProps) {
         <div className="mb-8 p-4 bg-green-100/80  border border-green-300  rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-green-800 
+              <h3 className="font-semibold text-green-800">
                 Current Plan: {currentSubscription.package.name}
               </h3>
-              <p className="text-green-700 
+              <p className="text-green-700">
                 ${currentSubscription.package.priceUSD}/month • 
                 {currentSubscription.isInTrial ? " In Trial Period" : ` Renews ${new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}`}
               </p>
             </div>
-            <Badge variant="outline" className="bg-green-200  text-green-800 
+            <Badge variant="outline" className="bg-green-200 text-green-800">
               Active
             </Badge>
           </div>

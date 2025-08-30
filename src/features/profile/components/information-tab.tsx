@@ -294,7 +294,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 
+          <h2 className="text-2xl font-bold text-gray-900">
             Profile Information
           </h2>
           <p className="text-gray-600  mt-1">

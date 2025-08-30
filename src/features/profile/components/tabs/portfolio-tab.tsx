@@ -24,7 +24,7 @@ export default function PortfolioTab({
     <Card>
       <CardHeader>
         <CardTitle>Portfolio Links</CardTitle>
-        <p className="text-sm text-gray-600 
+        <p className="text-sm text-gray-600">
           Add links to your projects, GitHub, or other portfolio materials
         </p>
       </CardHeader>

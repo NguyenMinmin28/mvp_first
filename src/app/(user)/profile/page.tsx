@@ -1,3 +1,5 @@
+"use client";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -71,7 +73,7 @@ export default function ProfilePage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 
+              <h1 className="text-3xl font-bold text-gray-900">
                 Profile Settings
               </h1>
               <p className="text-gray-600  mt-2">

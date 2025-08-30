@@ -44,7 +44,7 @@ export default function WhatsAppTab({
   return (
     <div className="space-y-6">
       {/* Main WhatsApp Card */}
-      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-gray-50  
+      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
         <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white pb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-full">
@@ -127,7 +127,7 @@ export default function WhatsAppTab({
                 <Shield className="h-5 w-5 text-blue-600" />
                 <Label
                   htmlFor="otpCode"
-                  className="text-base font-semibold text-blue-900 
+                  className="text-base font-semibold text-blue-900"
                 >
                   Enter Verification Code
                 </Label>
@@ -171,24 +171,24 @@ export default function WhatsAppTab({
           )}
 
           {/* WhatsApp Verification Status */}
-          <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100   rounded-xl border border-gray-200 
-            <h4 className="font-semibold text-gray-900  mb-4 flex items-center gap-2">
+          <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Shield className="h-5 w-5 text-gray-600" />
               Verification Status
             </h4>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-white  rounded-lg border border-gray-200 
-                <span className="text-sm font-medium text-gray-700 
+              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                <span className="text-sm font-medium text-gray-700">
                   WhatsApp Number:
                 </span>
-                <span className="text-sm font-semibold text-gray-900 
+                <span className="text-sm font-semibold text-gray-900">
                   {profileData.whatsappNumber || (
                     <span className="text-gray-500 italic">Not set</span>
                   )}
                 </span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-white  rounded-lg border border-gray-200 
-                <span className="text-sm font-medium text-gray-700 
+              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                <span className="text-sm font-medium text-gray-700">
                   Verification Status:
                 </span>
                 <Badge

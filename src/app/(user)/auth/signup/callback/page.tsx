@@ -94,7 +94,7 @@ export default function SignUpCallbackPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50    flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-lg text-gray-600 
+        <p className="mt-4 text-lg text-gray-600">
           Đang hoàn tất đăng ký...
         </p>
       </div>

@@ -89,13 +89,13 @@ export default function AdminLoginClient() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-red-100  rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900  mb-1">
             Admin Access
           </h1>
-          <p className="text-sm text-gray-600 
+          <p className="text-sm text-gray-600">
             Sign in to admin panel
           </p>
         </div>
@@ -187,7 +187,7 @@ export default function AdminLoginClient() {
         {/* Admin Notice */}
         <div className="text-center mt-6">
           <div className="bg-red-50  border border-red-200  rounded-lg p-4">
-            <p className="text-sm text-red-800 
+            <p className="text-sm text-red-800">
               <strong>Admin Access Only:</strong> This login is restricted to authorized administrators only.
             </p>
           </div>
