@@ -281,14 +281,14 @@ export class RotationService {
   private static async applyFairOrdering(devs: any[], cursor: any): Promise<any[]> {
     if (cursor?.lastDeveloperId) {
       // Find position of last developer and rotate from there
-      const lastIndex = devs.findIndex((dev) => dev.id === cursor.lastDeveloperId);
+              const lastIndex = devs.findIndex((dev: any) => dev.id === cursor.lastDeveloperId);
       if (lastIndex >= 0) {
         return [...devs.slice(lastIndex + 1), ...devs.slice(0, lastIndex + 1)];
       }
     }
 
     // Fallback: sort by fairness metrics
-    return devs.sort((a, b) => {
+            return devs.sort((a: any, b: any) => {
       const aLastResponse = a.assignmentCandidates[0]?.respondedAt || new Date(0);
       const bLastResponse = b.assignmentCandidates[0]?.respondedAt || new Date(0);
       

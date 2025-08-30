@@ -70,13 +70,13 @@ export async function GET(request: NextRequest) {
     });
 
     const skillIdToName = Object.fromEntries(
-      skillNames.map(skill => [skill.id, skill.name])
+      skillNames.map((skill: any) => [skill.id, skill.name])
     );
 
     // Replace skill IDs with skill names in projects
-    const projectsWithSkillNames = projects.map(project => ({
+    const projectsWithSkillNames = projects.map((project: any) => ({
       ...project,
-      skillsRequired: project.skillsRequired.map(id => skillIdToName[id] || id)
+      skillsRequired: project.skillsRequired.map((id: any) => skillIdToName[id] || id)
     }));
 
     return NextResponse.json({

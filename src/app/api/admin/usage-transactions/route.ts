@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       prisma.subscriptionUsage.count()
     ]);
 
-    const transactions = usageTransactions.map(usage => ({
+    const transactions = usageTransactions.map((usage: any) => ({
       id: usage.id,
       clientEmail: usage.subscription.client.user.email,
       clientName: usage.subscription.client.user.name,

@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 const app = new Hono().basePath("/api");
 
 // Add debug middleware
-app.use("*", async (c, next) => {
+app.use("*", async (c: any, next: any) => {
   console.log(`${c.req.method} ${c.req.url}`);
   await next();
 });
