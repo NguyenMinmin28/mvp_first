@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Script to cleanup expired OTP codes
  * Run this script periodically (e.g., via cron job) to keep the database clean

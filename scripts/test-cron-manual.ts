@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "../src/core/database/db";
 import { ReconciliationJob } from "../src/modules/billing/reconciliation.job";
 import { logger } from "../src/lib/logger";

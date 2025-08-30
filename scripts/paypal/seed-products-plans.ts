@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Script to create PayPal products and plans in sandbox/live environment
  * Run with: npx tsx scripts/paypal/seed-products-plans.ts

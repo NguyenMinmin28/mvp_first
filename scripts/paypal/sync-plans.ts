@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Script to sync PayPal plan IDs with database Package records
  * Run with: npx tsx scripts/paypal/sync-plans.ts

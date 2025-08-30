@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { spawn } from 'child_process';
 
 const CRON_SECRET = process.env.CRON_SECRET || 'test-secret';

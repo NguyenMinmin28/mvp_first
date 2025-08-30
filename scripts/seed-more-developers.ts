@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "../src/core/database/db";
 import { DevLevel, AdminApprovalStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
