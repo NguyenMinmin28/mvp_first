@@ -202,7 +202,7 @@ export function UserCronManagement() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {cronJobs.map((job) => (
+                    {cronJobs.map((job: any) => (
           <Card key={job.path} className={!job.isEnabled ? 'opacity-60' : ''}>
             <CardHeader>
               <div className="flex items-center justify-between">

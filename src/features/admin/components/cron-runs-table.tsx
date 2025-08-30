@@ -299,7 +299,7 @@ export function CronRunsTable() {
                   </tr>
                 </thead>
                 <tbody>
-                  {runs.map((run) => (
+                  {runs.map((run: any) => (
                     <tr key={run.id} className="border-b hover:bg-muted/50">
                       <td className="p-2">
                         <div className="font-medium">{run.job}</div>

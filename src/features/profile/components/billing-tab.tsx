@@ -201,7 +201,7 @@ export default function BillingTab({ userRole }: BillingTabProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {subscriptions.map((subscription) => (
+              {subscriptions.map((subscription: any) => (
                 <div
                   key={subscription.id}
                   className="border rounded-lg p-4 space-y-4"
@@ -240,7 +240,7 @@ export default function BillingTab({ userRole }: BillingTabProps) {
                         </span>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {subscription.package.features.map(
-                            (feature, index) => (
+                            (feature: any, index: number) => (
                               <Badge
                                 key={index}
                                 variant="outline"

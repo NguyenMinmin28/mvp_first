@@ -48,7 +48,7 @@ export default async function AdminTransactionsPage() {
             </tr>
           </thead>
           <tbody>
-            {payments.map((p) => (
+            {payments.map((p: any) => (
               <tr key={p.id} className="border-t">
                 <td className="p-3 whitespace-nowrap">{new Date(p.createdAt).toLocaleString()}</td>
                 <td className="p-3">

@@ -150,7 +150,7 @@ export function UsageTransactionsTable() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((transaction) => (
+                  {transactions.map((transaction: any) => (
                     <tr key={transaction.id} className="border-b hover:bg-muted/50">
                       <td className="p-2">
                         <div>
