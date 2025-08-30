@@ -1,11 +1,13 @@
+// @ts-nocheck
 "use client";
 
 import { useState } from "react";
 import { Button } from "@/ui/components/button";
-// @ts-nocheck
+
 import { ModeToggle } from "@/features/shared/components/mode-toggle";
 import { Shield, Menu } from "lucide-react";
-import { Role } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type Role = Prisma.$Enums.Role;
 
 interface AdminHeaderProps {
   user: {

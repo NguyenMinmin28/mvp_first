@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { Role } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type Role = Prisma.$Enums.Role;
 import "next-auth";
 import "next-auth/jwt";
 

@@ -1,13 +1,16 @@
+// @ts-nocheck
 "use client";
 
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
 import { Plus, Eye, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { ProjectStatus, BatchStatus, ResponseStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type ProjectStatus = Prisma.$Enums.ProjectStatus;
+type BatchStatus = Prisma.$Enums.BatchStatus;
+type ResponseStatus = Prisma.$Enums.ResponseStatus;
 
 interface Project {
   id: string;

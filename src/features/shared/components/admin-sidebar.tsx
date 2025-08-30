@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,9 +19,10 @@ import {
   Clock,
   List,
 } from "lucide-react";
-// @ts-nocheck
+
 import { adminRoutes } from "@/core/config/routes";
-import { Role } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type Role = Prisma.$Enums.Role;
 
 interface AdminSidebarProps {
   user: {

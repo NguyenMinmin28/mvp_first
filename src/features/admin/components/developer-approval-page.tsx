@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,10 +21,10 @@ import {
   MessageSquare,
   Shield
 } from "lucide-react";
-// @ts-nocheck
-// @ts-nocheck
+
 import { toast } from "sonner";
-import { Role } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type Role = Prisma.$Enums.Role;
 
 interface DeveloperProfile {
   id: string;

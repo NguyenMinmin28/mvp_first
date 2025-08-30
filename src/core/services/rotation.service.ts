@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { prisma } from "@/core/database/db";
-import { DevLevel } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+type DevLevel = Prisma.$Enums.DevLevel;
 
 export interface BatchSelectionCriteria {
   fresherCount: number;
