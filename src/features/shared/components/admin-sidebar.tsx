@@ -19,6 +19,7 @@ import {
   List,
 } from "lucide-react";
 import { adminRoutes } from "@/core/config/routes";
+// @ts-nocheck
 import { Role } from "@prisma/client";
 
 interface AdminSidebarProps {

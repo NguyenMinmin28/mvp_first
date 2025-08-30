@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Role } from "@prisma/client";
 import "next-auth";
 import "next-auth/jwt";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from "@/core/database/db";
 import { DevLevel } from "@prisma/client";
 

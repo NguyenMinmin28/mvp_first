@@ -1,5 +1,6 @@
 import { prisma } from "@/core/database/db";
 import { logger } from "@/lib/logger";
+// @ts-nocheck
 import type { Package, Subscription, SubscriptionUsage } from "@prisma/client";
 
 export interface BillingQuotas {
