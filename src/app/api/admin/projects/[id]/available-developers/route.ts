@@ -46,10 +46,10 @@ export async function GET(
     });
 
     const skillIdToName = Object.fromEntries(
-      skillNames.map(skill => [skill.id, skill.name])
+      skillNames.map((skill: any) => [skill.id, skill.name])
     );
 
-    const projectSkills = project.skillsRequired.map(id => skillIdToName[id] || id);
+    const projectSkills = project.skillsRequired.map((id: any) => skillIdToName[id] || id);
 
     if (!project) {
       return NextResponse.json(
@@ -102,8 +102,8 @@ export async function GET(
     });
 
     // Group by level and add skill match info
-    const developersWithMatchInfo = availableDevelopers.map(dev => {
-      const matchingSkills = dev.skills.filter(skill => 
+    const developersWithMatchInfo = availableDevelopers.map((dev: any) => {
+      const matchingSkills = dev.skills.filter((skill: any) => 
         projectSkills.includes(skill.skill.name)
       );
       
@@ -114,7 +114,7 @@ export async function GET(
         level: dev.level,
         currentStatus: dev.currentStatus,
         usualResponseTimeMs: dev.usualResponseTimeMs,
-        matchingSkills: matchingSkills.map(s => ({
+        matchingSkills: matchingSkills.map((s: any) => ({
           name: s.skill.name,
           years: s.years,
           category: s.skill.category,

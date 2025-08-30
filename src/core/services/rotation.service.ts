@@ -349,12 +349,12 @@ export class RotationService {
     if (recentCandidates.length === 0) return 60000; // Default 60s instead of 0
 
     const responseTimes = recentCandidates
-      .filter((c) => c.respondedAt && c.assignedAt)
+      .filter((c: any) => c.respondedAt && c.assignedAt)
       .map((c: any) => c.respondedAt.getTime() - c.assignedAt.getTime());
 
     if (responseTimes.length === 0) return 60000; // Default 60s
 
-    return Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length);
+    return Math.round(responseTimes.reduce((sum: any, time: any) => sum + time, 0) / responseTimes.length);
   }
 
   /**

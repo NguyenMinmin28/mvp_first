@@ -26,12 +26,12 @@ export async function middleware(request: NextRequest) {
   const adminPublicRoutes = ["/admin/login"];
 
   // Check if current route requires authentication
-  const isProtectedRoute = protectedRoutes.some((route) => pathname === route);
-  const isPublicRoute = publicRoutes.some((route) =>
+  const isProtectedRoute = protectedRoutes.some((route: any) => pathname === route);
+  const isPublicRoute = publicRoutes.some((route: any) =>
     pathname.startsWith(route)
   );
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
-  const isAdminPublicRoute = adminPublicRoutes.some((route) =>
+  const isAdminRoute = adminRoutes.some((route: any) => pathname.startsWith(route));
+  const isAdminPublicRoute = adminPublicRoutes.some((route: any) =>
     pathname.startsWith(route)
   );
 

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     // Calculate remaining quotas
     const remaining = {
       projects: Math.max(0, quotas.projectsPerMonth - quotas.projectsUsed),
-      contactClicks: Object.entries(quotas.contactClicksUsed).reduce((acc, [projectId, used]) => {
+      contactClicks: Object.entries(quotas.contactClicksUsed).reduce((acc: any, [projectId, used]: any) => {
         acc[projectId] = Math.max(0, quotas.contactClicksPerProject - used);
         return acc;
       }, {} as Record<string, number>)
