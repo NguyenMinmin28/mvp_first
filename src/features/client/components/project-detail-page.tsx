@@ -425,8 +425,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             <div className="text-center py-8">
               <p className="text-gray-600 mb-4">
                 {freelancers.length === 0 
-                  ? "Chưa có ứng viên nào cho project này"
-                  : `Không có ứng viên ${activeFilter} level nào`
+                  ? "No freelancers found for this project"
+                  : `No freelancers found for this project`
                 }
               </p>
               <div className="flex gap-2 justify-center">
@@ -434,7 +434,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                   Refresh
                 </Button>
                 <Button onClick={generateNewBatch} variant="default" className="bg-black text-white">
-                  Tìm Thêm Ứng Viên
+                  Find More Freelancers
                 </Button>
               </div>
             </div>
