@@ -209,19 +209,19 @@ export default function DeveloperProfileForm({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50    py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 py-8 px-4">
       <div className="w-full max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 rounded-full bg-green-100 
-              <Code2 className="h-8 w-8 text-green-600  />
+            <div className="p-3 rounded-full bg-green-100">
+              <Code2 className="h-8 w-8 text-green-600" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900  mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Complete Developer Profile
           </h1>
-          <p className="text-lg text-gray-600 
+          <p className="text-lg text-gray-600">
             Create a professional profile to attract potential clients
           </p>
         </div>
