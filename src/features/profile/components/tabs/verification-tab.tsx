@@ -69,7 +69,7 @@ export default function VerificationTab({
             {(profileData.adminApprovalStatus || "draft").toUpperCase()}
           </Badge>
         </div>
-        <p className="text-sm text-gray-600 
+        <p className="text-sm text-gray-600">
           Upload documents for admin verification and approval
         </p>
       </CardHeader>
@@ -111,7 +111,7 @@ export default function VerificationTab({
             </div>
             {profileData.adminApprovalStatus === "rejected" && (
               <div className="mt-2 p-2 bg-red-50  border border-red-200  rounded">
-                <p className="text-sm text-red-600 
+                <p className="text-sm text-red-600">
                   Your profile was rejected. Please review and resubmit.
                 </p>
               </div>
