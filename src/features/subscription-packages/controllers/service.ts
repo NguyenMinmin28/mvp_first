@@ -1,9 +1,9 @@
 import { prisma as db } from "@/core/database/db";
-import type { Prisma } from "@prisma/client";
+// import type { Prisma } from "@prisma/client";
 
 export async function getAllSubscriptionPackages(
   filters?: { active?: boolean; isPopular?: boolean; minPrice?: number; maxPrice?: number },
-  sort?: { field: keyof Prisma.PackageOrderByWithRelationInput; order: "asc" | "desc" }
+  sort?: { field: string; order: "asc" | "desc" }
 ) {
   return db.package.findMany({
     where: {

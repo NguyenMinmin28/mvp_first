@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+// import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma as db } from "@/core/database/db";
@@ -68,7 +68,7 @@ export async function GET(
           periodStart: currentPeriodStart,
           periodEnd: currentPeriodEnd,
           projectsPostedCount: 0,
-          contactClicksByProject: {} as Prisma.InputJsonValue,
+          contactClicksByProject: {} as any,
         },
       });
     }
@@ -165,7 +165,7 @@ export async function POST(
         where: { id: usage.id },
         data: {
           projectsPostedCount: body.projectsPostedCount !== undefined ? body.projectsPostedCount : usage.projectsPostedCount,
-          contactClicksByProject: (body.contactClicksByProject as Prisma.InputJsonValue | undefined) ?? (usage.contactClicksByProject as unknown as Prisma.InputJsonValue),
+          contactClicksByProject: (body.contactClicksByProject as any | undefined) ?? (usage.contactClicksByProject as any),
         },
       });
       usage = updatedUsage;
