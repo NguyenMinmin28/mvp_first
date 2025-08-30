@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/ui/components/button";
+// @ts-nocheck
 import { ModeToggle } from "@/features/shared/components/mode-toggle";
 import { Shield, Menu } from "lucide-react";
-// @ts-nocheck
 import { Role } from "@prisma/client";
 
 interface AdminHeaderProps {

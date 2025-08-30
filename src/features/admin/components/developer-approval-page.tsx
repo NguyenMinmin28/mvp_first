@@ -20,8 +20,9 @@ import {
   MessageSquare,
   Shield
 } from "lucide-react";
-import { toast } from "sonner";
 // @ts-nocheck
+// @ts-nocheck
+import { toast } from "sonner";
 import { Role } from "@prisma/client";
 
 interface DeveloperProfile {

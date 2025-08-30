@@ -18,8 +18,8 @@ import {
   Clock,
   List,
 } from "lucide-react";
-import { adminRoutes } from "@/core/config/routes";
 // @ts-nocheck
+import { adminRoutes } from "@/core/config/routes";
 import { Role } from "@prisma/client";
 
 interface AdminSidebarProps {

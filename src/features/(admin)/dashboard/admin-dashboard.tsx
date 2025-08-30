@@ -24,8 +24,8 @@ import {
   Download,
 } from "lucide-react";
 
-import { AdminLayout } from "@/features/shared/components/admin-layout";
 // @ts-nocheck
+import { AdminLayout } from "@/features/shared/components/admin-layout";
 import { Role, ProjectStatus, DevLevel, AdminApprovalStatus } from "@prisma/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";

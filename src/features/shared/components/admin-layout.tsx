@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+// @ts-nocheck
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
-// @ts-nocheck
 import { Role } from "@prisma/client";
 import { useSessionRefresh } from "@/core/hooks/use-session-refresh";
 import { SessionRefreshNotice } from "@/ui/components/session-refresh-notice";

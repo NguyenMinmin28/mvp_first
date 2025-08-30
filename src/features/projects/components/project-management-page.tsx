@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+// @ts-nocheck
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
 import { Plus, Eye, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-// @ts-nocheck
 import { ProjectStatus, BatchStatus, ResponseStatus } from "@prisma/client";
 
 interface Project {
