@@ -373,7 +373,7 @@ export default function DeveloperProfileForm({
                     <Badge
                       key={skill}
                       variant="outline"
-                      className="cursor-pointer hover:bg-blue-50 
+                      className="cursor-pointer hover:bg-blue-50"
                       onClick={() => addPopularSkill(skill)}
                     >
                       <Plus className="mr-1 h-3 w-3" />

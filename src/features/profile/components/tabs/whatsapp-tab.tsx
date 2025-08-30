@@ -65,7 +65,7 @@ export default function WhatsAppTab({
           <div className="space-y-3">
             <Label
               htmlFor="whatsappNumber"
-              className="text-sm font-medium text-gray-700  flex items-center gap-2"
+              className="text-sm font-medium text-gray-700 flex items-center gap-2"
             >
               <Phone className="h-4 w-4 text-green-600" />
               WhatsApp Number
@@ -89,7 +89,7 @@ export default function WhatsAppTab({
                   onClick={onWhatsAppVerification}
                   variant="outline"
                   disabled={isLoading || !profileData.whatsappNumber}
-                  className="h-12 px-6 border-2 border-green-200 hover:border-green-300 hover:bg-green-50  transition-all duration-200"
+                  className="h-12 px-6 border-2 border-green-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
                 >
                   {isLoading ? (
                     <LoadingSpinner size="sm" />
@@ -113,7 +113,7 @@ export default function WhatsAppTab({
                 >
                   Verified
                 </Badge>
-                <span className="text-sm text-green-700  font-medium">
+                <span className="text-sm text-green-700 font-medium">
                   WhatsApp number verified successfully
                 </span>
               </div>
@@ -158,7 +158,7 @@ export default function WhatsAppTab({
                 <Button
                   variant="outline"
                   onClick={onCancelOtp}
-                  className="h-12 px-6 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50  transition-all duration-200"
+                  className="h-12 px-6 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200"
                 >
                   Cancel
                 </Button>
