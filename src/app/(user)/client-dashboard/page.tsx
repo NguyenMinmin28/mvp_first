@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ClientDashboard from "@/features/client/components/client-dashboard";

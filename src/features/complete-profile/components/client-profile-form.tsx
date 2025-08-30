@@ -96,19 +96,19 @@ export default function ClientProfileForm({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50    flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
-              <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            <div className="p-3 rounded-full bg-blue-100 
+              <Building2 className="h-8 w-8 text-blue-600  />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-gray-900  mb-2">
             Complete Client Profile
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <p className="text-lg text-gray-600 
             Provide information so we can connect you with suitable developers
           </p>
         </div>
@@ -153,7 +153,7 @@ export default function ClientProfileForm({
                   placeholder="e.g. ABC Technology Co., Ltd"
                   {...register("companyName")}
                 />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500 
                   Leave blank if you are an individual recruiter
                 </p>
               </div>
@@ -222,17 +222,17 @@ export default function ClientProfileForm({
         </Card>
 
         {/* Info Card */}
-        <Card className="mt-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+        <Card className="mt-6 bg-blue-50  border-blue-200 
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
-              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 rounded-lg bg-blue-100 
+                <Building2 className="h-5 w-5 text-blue-600  />
               </div>
               <div>
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                <h3 className="font-semibold text-blue-900  mb-1">
                   Next you can:
                 </h3>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                <ul className="text-sm text-blue-700  space-y-1">
                   <li>• Post your first project</li>
                   <li>• Browse available developers</li>
                   <li>• Set up payment methods</li>

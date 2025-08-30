@@ -217,7 +217,7 @@ export function AdminProjectAssignmentModal({
                   key={developer.id}
                   className={`border rounded-lg p-4 cursor-pointer transition-colors ${
                     selectedDeveloper?.id === developer.id
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                      ? "border-blue-500 bg-blue-50 
                       : "border-border hover:border-blue-300"
                   }`}
                   onClick={() => setSelectedDeveloper(developer)}

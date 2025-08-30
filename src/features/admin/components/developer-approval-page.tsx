@@ -123,10 +123,10 @@ export default function DeveloperApprovalPage({ user }: Props) {
 
   const getStatusBadge = (status: string) => {
     const colors = {
-      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      approved: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-      draft: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+      pending: "bg-yellow-100 text-yellow-800",
+      approved: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
+      draft: "bg-gray-100 text-gray-800",
     };
 
     const icons = {
@@ -146,9 +146,9 @@ export default function DeveloperApprovalPage({ user }: Props) {
 
   const getLevelBadge = (level: string) => {
     const colors = {
-      EXPERT: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-      MID: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      FRESHER: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      EXPERT: "bg-purple-100 text-purple-800",
+      MID: "bg-blue-100 text-blue-800",
+      FRESHER: "bg-green-100 text-green-800",
     };
 
     return (
@@ -187,7 +187,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
+                  <p className="text-sm font-medium text-gray-600">Total Developers</p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-500" />
@@ -199,7 +199,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending</p>
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
                   <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
                 </div>
                 <Clock className="h-8 w-8 text-yellow-500" />
@@ -211,7 +211,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Approved</p>
+                  <p className="text-sm font-medium text-gray-600">Approved</p>
                   <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />
@@ -223,7 +223,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rejected</p>
+                  <p className="text-sm font-medium text-gray-600">Rejected</p>
                   <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
                 </div>
                 <XCircle className="h-8 w-8 text-red-500" />
@@ -265,10 +265,10 @@ export default function DeveloperApprovalPage({ user }: Props) {
             ) : filteredDevelopers.length === 0 ? (
               <div className="text-center py-12">
                 <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-medium text-gray-900  mb-2">
                   No developers found
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600">
                   {filter === "pending" 
                     ? "No pending applications at the moment." 
                     : `No ${filter} developers found.`}
@@ -293,7 +293,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
                                 {getStatusBadge(developer.adminApprovalStatus)}
                               </div>
                               
-                              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="space-y-1 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
                                   <Mail className="h-4 w-4" />
                                   <span>{developer.user.email}</span>
@@ -318,7 +318,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
 
                           {/* Skills */}
                           <div className="space-y-2">
-                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Skills:</p>
+                            <p className="text-sm font-medium text-gray-600">Skills</p>
                             <div className="flex flex-wrap gap-2">
                               {developer.skills.map((skill, idx) => (
                                 <Badge key={idx} variant="outline" className="text-xs">
@@ -373,7 +373,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
                                 variant="outline"
                                 onClick={() => handleApprovalAction(developer.id, "reject")}
                                 disabled={isProcessing}
-                                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
                               >
                                 {isProcessing ? (
                                   <LoadingSpinner size="sm" className="mr-2" />

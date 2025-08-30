@@ -178,15 +178,15 @@ export default function NewProjectForm() {
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Quick Setup Info */}
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+        <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 mb-4">
               <Clock className="h-5 w-5 text-blue-600" />
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+              <h3 className="font-semibold text-blue-900">
                 Quick Setup (Under 60 seconds)
               </h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800 dark:text-blue-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-800">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
                 <span>Choose skills needed</span>
@@ -283,7 +283,7 @@ export default function NewProjectForm() {
                         key={skill.id}
                         type="button"
                         onClick={() => addSkill(skill.id)}
-                        className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                        className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100  rounded"
                       >
                         <span className="font-medium">{skill.name}</span>
                         <span className="text-gray-500 ml-2">({skill.category})</span>
@@ -335,7 +335,7 @@ export default function NewProjectForm() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+              <p className="text-sm text-gray-600">
                 Upgrade your plan to post more projects and continue matching with developers.
               </p>
               <div className="flex gap-2 pt-2">
@@ -360,7 +360,7 @@ export default function NewProjectForm() {
             <CardContent className="space-y-4">
               <div className="text-sm space-y-2">
                 <p>Before posting your project:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
+                <ul className="list-disc list-inside space-y-1 text-gray-600">
                   <li>You'll receive a mix of Expert, Mid-level, and Fresher developers</li>
                   <li>Developers have 15 minutes to respond to your invitation</li>
                   <li>You can refresh the batch if needed (previous candidates become invalid)</li>

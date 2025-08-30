@@ -69,15 +69,15 @@ export default function VerificationTab({
             {(profileData.adminApprovalStatus || "draft").toUpperCase()}
           </Badge>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-gray-600 
           Upload documents for admin verification and approval
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Document Upload Section - Blurred for now */}
-        <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg blur-sm pointer-events-none">
+        <div className="p-4 border-2 border-dashed border-gray-300  rounded-lg blur-sm pointer-events-none">
           <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-sm text-gray-600  mb-2">
               Upload verification documents (ID, certificates, etc.)
             </p>
             <Button variant="outline" disabled={!isEditing}>
@@ -90,7 +90,7 @@ export default function VerificationTab({
         </div>
 
         {/* Admin Approval Status - Blurred for now */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg blur-sm pointer-events-none">
+        <div className="p-4 bg-gray-50  rounded-lg blur-sm pointer-events-none">
           <h4 className="font-medium mb-2">Approval Status</h4>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -110,8 +110,8 @@ export default function VerificationTab({
               </Badge>
             </div>
             {profileData.adminApprovalStatus === "rejected" && (
-              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                <p className="text-sm text-red-600 dark:text-red-400">
+              <div className="mt-2 p-2 bg-red-50  border border-red-200  rounded">
+                <p className="text-sm text-red-600 
                   Your profile was rejected. Please review and resubmit.
                 </p>
               </div>
@@ -122,8 +122,8 @@ export default function VerificationTab({
         {/* Submit Button for Draft Status */}
         {(profileData.adminApprovalStatus === "draft" ||
           !profileData.adminApprovalStatus) && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
-            <p className="text-sm text-blue-600 dark:text-blue-400 mb-3">
+          <div className="p-4 bg-blue-50  border border-blue-200  rounded">
+            <p className="text-sm text-blue-600  mb-3">
               Complete your profile and upload verification documents to submit
               for admin approval.
             </p>
@@ -141,8 +141,8 @@ export default function VerificationTab({
         )}
 
         {/* Coming Soon Notice */}
-        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
-          <p className="text-sm text-yellow-700 dark:text-yellow-300 text-center">
+        <div className="p-4 bg-yellow-50  border border-yellow-200  rounded">
+          <p className="text-sm text-yellow-700  text-center">
             🚧 This feature is under development and will be available soon! 🚧
           </p>
         </div>

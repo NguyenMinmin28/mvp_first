@@ -238,7 +238,7 @@ export function PayPalButtons({ packageId, packageName, price, planId, isCurrent
                     }
                   </p>
                   {!isCurrentPlan && (
-                    <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                    <p className="text-xs text-amber-600 bg-amber-50  p-2 rounded">
                       ⚠️ This will replace your current subscription
                     </p>
                   )}

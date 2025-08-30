@@ -18,17 +18,17 @@ export function ErrorDisplay({
 
   const variantStyles = {
     default:
-      "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300",
+      "bg-blue-50 border-blue-200 text-blue-800",
     destructive:
-      "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300",
+      "bg-red-50 border-red-200 text-red-800",
     warning:
-      "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300",
+      "bg-yellow-50 border-yellow-200 text-yellow-800",
   };
 
   const iconColors = {
-    default: "text-blue-600 dark:text-blue-400",
-    destructive: "text-red-600 dark:text-red-400",
-    warning: "text-yellow-600 dark:text-yellow-400",
+    default: "text-blue-600",
+    destructive: "text-red-600",
+    warning: "text-yellow-600",
   };
 
   return (
@@ -51,7 +51,7 @@ export function ErrorDisplay({
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className="flex-shrink-0 p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          className="flex-shrink-0 p-1 rounded-md hover:bg-black/5  transition-colors"
           aria-label="Dismiss error"
         >
           <X className="h-4 w-4" />
@@ -70,7 +70,7 @@ export function FieldError({ error, className }: FieldErrorProps) {
   if (!error) return null;
 
   return (
-    <p className={cn("text-sm text-red-500 dark:text-red-400", className)}>
+    <p className={cn("text-sm text-red-500", className)}>
       {error}
     </p>
   );

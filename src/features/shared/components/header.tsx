@@ -2,7 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { Icons } from "@/features/shared/components/icons";
-import { ModeToggle } from "@/features/shared/components/mode-toggle";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -265,7 +265,6 @@ export function Header({ user }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-6">
-            {isAuthenticated && <ModeToggle />}
 
             {/* Mobile Menu Button */}
             <Button

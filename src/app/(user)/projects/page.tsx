@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { Suspense } from "react";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
@@ -59,10 +62,10 @@ export default async function ProjectsPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-gray-900">
                 My Projects
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
+              <p className="text-gray-600 mt-2">
                 Manage and track your posted projects
               </p>
             </div>

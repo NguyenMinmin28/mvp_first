@@ -17,7 +17,7 @@ import {
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
-import { ModeToggle } from "@/features/shared/components/mode-toggle";
+
 import { ErrorDisplay, FieldError } from "@/ui/components/error-display";
 import { Mail, Eye, EyeOff, LogIn } from "lucide-react";
 import { toast } from "sonner";
@@ -163,7 +163,7 @@ export default function SignInClient() {
                 type="email"
                 placeholder="Enter email"
                 {...register("email")}
-                className={`${errors.email ? "border-red-500" : ""} appearance-none !bg-white dark:!bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
+                className={`${errors.email ? "border-red-500" : ""} appearance-none !bg-white  focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
                 style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
               />
               <Input
@@ -171,7 +171,7 @@ export default function SignInClient() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter password"
                 {...register("password")}
-                className={`${errors.password ? "border-red-500" : ""} appearance-none !bg-white dark:!bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
+                className={`${errors.password ? "border-red-500" : ""} appearance-none !bg-white  focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
                 style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
               />
             </div>

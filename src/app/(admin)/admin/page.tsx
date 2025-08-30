@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { Metadata } from "next";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { redirect } from "next/navigation";

@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/ui/components/select";
 import { Badge } from "@/ui/components/badge";
-import { ModeToggle } from "@/features/shared/components/mode-toggle";
+
 import { ErrorDisplay, FieldError } from "@/ui/components/error-display";
 import { Mail, Eye, EyeOff, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -116,14 +116,14 @@ export default function SignUpClient() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">
             Create account
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600">
             Join the freelancer community today
           </p>
         </div>
@@ -137,12 +137,12 @@ export default function SignUpClient() {
             />
             {serverError.includes("has not been registered") && (
               <div className="mt-3 text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <p className="text-sm text-gray-600 mb-2">
                   You need to register an account before signing in
                 </p>
                 <Link
                   href="/auth/signin"
-                  className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                  className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500"
                 >
                   Go to Sign In →
                 </Link>
@@ -189,10 +189,10 @@ export default function SignUpClient() {
         {/* Divider */}
         <div className="relative mb-4">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+            <span className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-2 text-gray-500 dark:text-gray-400">
+            <span className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-2 text-gray-500">
               Or continue with email
             </span>
           </div>
@@ -321,20 +321,15 @@ export default function SignUpClient() {
 
         {/* Sign In Link */}
         <div className="text-center mt-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600">
             Already have an account?{" "}
             <Link
               href="/auth/signin"
-              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+              className="font-medium text-blue-600 hover:text-blue-500"
             >
               Sign in
             </Link>
           </p>
-        </div>
-
-        {/* Mode Toggle */}
-        <div className="absolute top-4 right-4">
-          <ModeToggle />
         </div>
       </div>
     </main>

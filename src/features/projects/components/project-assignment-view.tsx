@@ -332,10 +332,10 @@ export default function ProjectAssignmentView({ projectId }: Props) {
 
   const getLevelColor = (level: string) => {
     switch (level) {
-      case "EXPERT": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      case "MID": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "FRESHER": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      case "EXPERT": return "bg-purple-100 text-purple-800";
+      case "MID": return "bg-blue-100 text-blue-800";
+      case "FRESHER": return "bg-green-100 text-green-800";
+      default: return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -383,10 +383,10 @@ export default function ProjectAssignmentView({ projectId }: Props) {
     <div className="max-w-7xl mx-auto space-y-6 relative">
       {/* Searching overlay to avoid flicker during polling */}
       {isFetching && project.status === "assigning" && candidatesCount === 0 && (
-        <div className="absolute inset-0 z-10 bg-white/70 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex items-center gap-3 p-3 rounded-md bg-white dark:bg-gray-900 shadow border">
+        <div className="absolute inset-0 z-10 bg-white/70  backdrop-blur-sm flex items-center justify-center">
+          <div className="flex items-center gap-3 p-3 rounded-md bg-white  shadow border">
             <LoadingSpinner size="sm" />
-            <span className="text-sm text-gray-700 dark:text-gray-200" aria-live="polite">Finding developers...</span>
+            <span className="text-sm text-gray-700" aria-live="polite">Finding developers...</span>
           </div>
         </div>
       )}
@@ -397,7 +397,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl">{project.title}</CardTitle>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">{project.description}</p>
+              <p className="text-gray-600  mt-2">{project.description}</p>
               <div className="flex items-center gap-2 mt-4">
                 <Badge variant="outline" className="capitalize">
                   {project.status.replace('_', ' ')}
@@ -438,16 +438,16 @@ export default function ProjectAssignmentView({ projectId }: Props) {
 
       {/* Assignment Status */}
       {project.status === "assigning" && (
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+        <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-blue-600" />
                 <div>
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                  <h3 className="font-semibold text-blue-900">
                     {isFetching && candidatesCount === 0 ? 'Searching for developers…' : 'Assignment in Progress'}
                   </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300" aria-live="polite">
+                  <p className="text-sm text-blue-700" aria-live="polite">
                     {pendingCandidates.length} developers are reviewing your project
                   </p>
                   {pendingCandidates.length > 0 && (
@@ -520,7 +520,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                   let statusBadge = null;
                   
                   if (isWinner) {
-                    cardClassName += " border-green-500 bg-green-50 dark:bg-green-950";
+                    cardClassName += " border-green-500 bg-green-50";
                     statusBadge = (
                       <Badge className="bg-green-500 text-white text-xs mb-2">
                         <Award className="h-3 w-3 mr-1" />
@@ -528,7 +528,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                       </Badge>
                     );
                   } else if (isLoser) {
-                    cardClassName += " opacity-60 bg-gray-100 dark:bg-gray-800";
+                    cardClassName += " opacity-60 bg-gray-100";
                     statusBadge = (
                       <Badge variant="secondary" className="text-xs mb-2">
                         <XCircle className="h-3 w-3 mr-1" />
@@ -536,7 +536,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                       </Badge>
                     );
                   } else if (isExpired) {
-                    cardClassName += " opacity-50 bg-gray-50 dark:bg-gray-900";
+                    cardClassName += " opacity-50 bg-gray-50";
                     statusBadge = (
                       <Badge variant="outline" className="text-gray-500 text-xs mb-2">
                         <Clock className="h-3 w-3 mr-1" />
@@ -544,7 +544,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                       </Badge>
                     );
                   } else if (isRejected) {
-                    cardClassName += " opacity-50 bg-red-50 dark:bg-red-950";
+                    cardClassName += " opacity-50 bg-red-50";
                     statusBadge = (
                       <Badge variant="outline" className="text-red-500 text-xs mb-2">
                         <XCircle className="h-3 w-3 mr-1" />
@@ -579,7 +579,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
 
                         {/* Skills */}
                         <div className="space-y-1">
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Skills:</p>
+                          <p className="text-xs font-medium text-gray-600">Skills:</p>
                           <div className="flex flex-wrap gap-1">
                             {candidate.developer.skills.slice(0, 3).map((skill, idx) => (
                               <Badge key={idx} variant="outline" className={`text-xs ${isLoser || isExpired || isRejected ? 'opacity-50' : ''}`}>
@@ -596,7 +596,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
 
                         {/* Response Time & Status */}
                         <div className="flex justify-between items-center text-xs">
-                          <span className={`${isLoser || isExpired || isRejected ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                          <span className={`${isLoser || isExpired || isRejected ? 'text-gray-400' : 'text-gray-600'}`}>
                             Usual response: {formatResponseTime(candidate.usualResponseTimeMsSnapshot)}
                           </span>
                                                   {candidate.responseStatus === "pending" && !isLoser && (
@@ -615,14 +615,14 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                         {/* Status Text */}
                         <p className={`text-xs text-center p-2 rounded ${
                           isWinner 
-                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                            ? 'bg-green-100 text-green-800'
                             : isLoser 
-                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                            ? 'bg-gray-200 text-gray-600'
                             : isExpired
-                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                            ? 'bg-gray-100 text-gray-500'
                             : isRejected
-                            ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                            : 'bg-gray-50 dark:bg-gray-800'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-50'
                         }`}>
                           {isWinner 
                             ? "🎉 This developer accepted your project!" 
@@ -655,7 +655,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
               <div className="space-y-3">
                 <div className="border-b pb-2">
                   <h4 className="font-semibold text-lg">{contactInfo.name}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600">
                     {contactInfo.level} Developer • Response time: ~{Math.floor(contactInfo.usualResponseTimeMs / (1000 * 60))}min
                   </p>
                 </div>
@@ -700,7 +700,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                   )}
                 </div>
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-800 rounded">
+              <div className="text-xs text-gray-600  p-3 bg-gray-50  rounded">
                 <p>Please reach out to discuss project details and next steps.</p>
               </div>
               <Button onClick={() => setContactInfo(null)} className="w-full">
@@ -766,7 +766,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
             <CardContent className="space-y-4">
               <div className="text-sm space-y-2">
                 <p>You are about to reveal the developer's contact information.</p>
-                <div className="text-xs text-gray-600 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-800 rounded">
+                <div className="text-xs text-gray-600  p-3 bg-gray-50  rounded">
                   <p><strong>Note:</strong> This action will be logged and may count towards your contact reveal quota in paid plans.</p>
                 </div>
               </div>

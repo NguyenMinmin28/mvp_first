@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { prisma } from "@/core/database/db";
 import { Metadata } from "next";
 import { getServerSessionUser } from "@/features/auth/auth-server";

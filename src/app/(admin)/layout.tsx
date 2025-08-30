@@ -6,7 +6,7 @@ import { Inter } from "next/font/google";
 import { siteConfig } from "@/core/config/site";
 import { cn } from "@/core/utils/utils";
 import { Providers } from "@/features/shared/components/providers";
-import { ThemeProvider } from "@/features/shared/components/theme-provider";
+import { PortalProvider } from "@/features/shared/portal-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -64,7 +64,7 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function RootLayout({ children }: AdminLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
@@ -75,14 +75,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         )}
       >
         <Providers>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
+          <PortalProvider>
             {children}
-          </ThemeProvider>
+          </PortalProvider>
         </Providers>
       </body>
     </html>

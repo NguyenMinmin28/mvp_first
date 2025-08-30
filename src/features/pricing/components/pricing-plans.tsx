@@ -58,7 +58,7 @@ const plans: PricingPlan[] = [
     responseTimeGuarantee: "15 minutes",
     support: "Email support",
     icon: <Users className="h-6 w-6" />,
-    gradient: "from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950",
+    gradient: "from-blue-50 to-indigo-50  
     buttonText: "Get Started"
   },
   {
@@ -84,7 +84,7 @@ const plans: PricingPlan[] = [
     responseTimeGuarantee: "10 minutes",
     support: "Priority email support",
     icon: <Star className="h-6 w-6" />,
-    gradient: "from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950",
+    gradient: "from-purple-50 to-pink-50  
     buttonText: "Most Popular"
   },
   {
@@ -110,7 +110,7 @@ const plans: PricingPlan[] = [
     responseTimeGuarantee: "5 minutes",
     support: "24/7 phone + chat",
     icon: <Crown className="h-6 w-6" />,
-    gradient: "from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950",
+    gradient: "from-amber-50 to-orange-50  
     buttonText: "Contact Sales"
   }
 ];
@@ -140,11 +140,11 @@ export default function PricingPlans() {
   return (
     <div className="space-y-8">
       {/* Free Trial Banner */}
-      <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+      <Card className="border-green-200 bg-green-50  
         <CardContent className="pt-6">
           <div className="flex items-center justify-center gap-3">
             <Sparkles className="h-5 w-5 text-green-600" />
-            <h3 className="font-semibold text-green-900 dark:text-green-100 text-lg">
+            <h3 className="font-semibold text-green-900  text-lg">
               🎉 Free Trial: Post 1 project with full features - No credit card required
             </h3>
           </div>
@@ -153,7 +153,7 @@ export default function PricingPlans() {
 
       {/* Billing Toggle */}
       <div className="flex justify-center">
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center bg-gray-100  rounded-lg p-1">
           <Button
             variant={billingPeriod === "monthly" ? "default" : "ghost"}
             size="sm"
@@ -186,8 +186,8 @@ export default function PricingPlans() {
               key={plan.id} 
               className={`relative overflow-hidden transition-all hover:shadow-lg ${
                 isPopular 
-                  ? 'border-purple-200 shadow-lg scale-105 dark:border-purple-700' 
-                  : 'border-gray-200 dark:border-gray-700'
+                  ? 'border-purple-200 shadow-lg scale-105  
+                  : 'border-gray-200 
               }`}
             >
               {isPopular && (
@@ -200,17 +200,17 @@ export default function PricingPlans() {
                 <div className="text-center space-y-2">
                   <div className="flex justify-center">{plan.icon}</div>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <p className="text-gray-600 dark:text-gray-400">{plan.description}</p>
+                  <p className="text-gray-600 
                   
                   <div className="py-4">
                     <div className="flex items-baseline justify-center gap-1">
                       <span className="text-4xl font-bold">${displayPrice}</span>
-                      <span className="text-gray-600 dark:text-gray-400">
+                      <span className="text-gray-600 
                         /{billingPeriod === "yearly" ? "year" : "month"}
                       </span>
                     </div>
                     {billingPeriod === "yearly" && (
-                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                      <p className="text-sm text-green-600  mt-1">
                         Save ${(plan.price * 12) - displayPrice} per year
                       </p>
                     )}
@@ -220,12 +220,12 @@ export default function PricingPlans() {
 
               <CardContent className="pt-6 space-y-6">
                 {/* Key Metrics */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50  rounded-lg">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">
                       {plan.projectsPerMonth === 999 ? "∞" : plan.projectsPerMonth}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-xs text-gray-600 
                       Projects/month
                     </div>
                   </div>
@@ -233,7 +233,7 @@ export default function PricingPlans() {
                     <div className="text-2xl font-bold text-green-600">
                       {plan.contactRevealsPerProject === 999 ? "∞" : plan.contactRevealsPerProject}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-xs text-gray-600 
                       Reveals/project
                     </div>
                   </div>
@@ -302,28 +302,28 @@ export default function PricingPlans() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">How does the rotation system work?</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 
                 Our fair rotation ensures equal opportunities for all developers. You get a mix of Expert, Mid-level, and Fresher developers for each project, with response guarantees.
               </p>
             </div>
             
             <div>
               <h4 className="font-semibold mb-2">What happens after the free trial?</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 
                 After your free project, choose a plan to continue posting projects. No automatic charges - you control when to upgrade.
               </p>
             </div>
 
             <div>
               <h4 className="font-semibold mb-2">Can I change plans anytime?</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 
                 Yes! Upgrade or downgrade your plan anytime. Changes take effect on your next billing cycle.
               </p>
             </div>
 
             <div>
               <h4 className="font-semibold mb-2">What currencies do you support?</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 
                 Currently USD, with plans to support EUR, GBP, and other major currencies soon.
               </p>
             </div>
@@ -332,10 +332,10 @@ export default function PricingPlans() {
       </Card>
 
       {/* Enterprise CTA */}
-      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border-indigo-200 dark:border-indigo-800">
+      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50   border-indigo-200 
         <CardContent className="pt-6 text-center">
           <h3 className="text-xl font-semibold mb-2">Need a custom solution?</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-gray-600  mb-4">
             Enterprise plans with custom quotas, dedicated support, and API access available.
           </p>
           <Button variant="outline" size="lg">

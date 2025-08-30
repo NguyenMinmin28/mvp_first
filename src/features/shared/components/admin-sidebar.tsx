@@ -125,20 +125,20 @@ export function AdminSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-full w-64 transform bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "fixed left-0 top-0 z-40 h-full w-64 transform bg-white  border-r border-gray-200  shadow-lg transition-transform duration-300 ease-in-out lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Sidebar Header */}
-        <div className="flex h-20 items-center gap-3 p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+        <div className="flex h-20 items-center gap-3 p-6 border-b border-gray-200">
+          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
             <Shield className="w-6 h-6 text-red-600" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-gray-900">
               Admin Panel
             </h2>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
+            <p className="text-xs text-gray-600">
               {user.name || user.email}
             </p>
           </div>
@@ -156,21 +156,21 @@ export function AdminSidebar({
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 group",
                   isActive
-                    ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-r-2 border-red-500"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    ? "bg-red-50 text-red-700 border-r-2 border-red-500"
+                    : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <item.icon
                   className={cn(
                     "w-5 h-5 transition-colors duration-200",
                     isActive
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                      ? "text-red-600"
+                      : "text-gray-500 group-hover:text-gray-700"
                   )}
                 />
                 <div className="flex-1">
                   <div className="font-medium">{item.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                  <div className="text-xs text-gray-500">
                     {item.description}
                   </div>
                 </div>
@@ -186,11 +186,11 @@ export function AdminSidebar({
         </nav>
 
         {/* Sidebar Footer - Logout Button */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
           <button
             onClick={handleSignOut}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg border border-red-200 hover:bg-red-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" />

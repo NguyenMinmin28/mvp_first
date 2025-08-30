@@ -209,19 +209,19 @@ export default function DeveloperProfileForm({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50    py-8 px-4">
       <div className="w-full max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
-              <Code2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            <div className="p-3 rounded-full bg-green-100 
+              <Code2 className="h-8 w-8 text-green-600  />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-gray-900  mb-2">
             Complete Developer Profile
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <p className="text-lg text-gray-600 
             Create a professional profile to attract potential clients
           </p>
         </div>
@@ -373,7 +373,7 @@ export default function DeveloperProfileForm({
                     <Badge
                       key={skill}
                       variant="outline"
-                      className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950"
+                      className="cursor-pointer hover:bg-blue-50 
                       onClick={() => addPopularSkill(skill)}
                     >
                       <Plus className="mr-1 h-3 w-3" />
@@ -567,17 +567,17 @@ export default function DeveloperProfileForm({
         </form>
 
         {/* Info Card */}
-        <Card className="mt-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+        <Card className="mt-6 bg-green-50  border-green-200 
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900">
-                <Code2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <div className="p-2 rounded-lg bg-green-100 
+                <Code2 className="h-5 w-5 text-green-600  />
               </div>
               <div>
-                <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                <h3 className="font-semibold text-green-900  mb-1">
                   After completion:
                 </h3>
-                <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                <ul className="text-sm text-green-700  space-y-1">
                   <li>• Profile will be sent to admin for approval</li>
                   <li>• You can update information anytime</li>
                   <li>• Set online/offline status</li>

@@ -193,9 +193,9 @@ export default function DeveloperInbox() {
 
   const getLevelBadge = (level: string) => {
     const colors = {
-      EXPERT: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-      MID: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      FRESHER: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      EXPERT: "bg-purple-100 text-purple-800",
+      MID: "bg-blue-100 text-blue-800",
+      FRESHER: "bg-green-100 text-green-800",
     };
     
     return (
@@ -223,7 +223,7 @@ export default function DeveloperInbox() {
       
       {/* Pending Invitations */}
       {pendingInvitations.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+        <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-blue-600" />
@@ -278,7 +278,7 @@ export default function DeveloperInbox() {
                             {getLevelBadge(invitation.level)}
                           </div>
                           
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Building2 className="h-4 w-4" />
                             <span>{invitation.batch.project.client.user.name}</span>
                             {invitation.batch.project.client.companyName && (
@@ -303,14 +303,14 @@ export default function DeveloperInbox() {
                       </div>
 
                       {/* Project Description */}
-                      <p className="text-gray-700 dark:text-gray-300 line-clamp-3">
+                      <p className="text-gray-700  line-clamp-3">
                         {invitation.batch.project.description}
                       </p>
 
                       {/* Skills */}
                       {invitation.skills && invitation.skills.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                          <p className="text-xs font-medium text-gray-600">
                             Required Skills:
                           </p>
                           <div className="flex flex-wrap gap-1">
@@ -350,7 +350,7 @@ export default function DeveloperInbox() {
                           variant="outline"
                           onClick={() => handleResponse(invitation.id, "reject")}
                           disabled={isProcessing || timeRemaining.text === "Expired"}
-                          className="flex-1 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                          className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
                         >
                           {isProcessing ? (
                             <LoadingSpinner size="sm" className="mr-2" />
@@ -362,7 +362,7 @@ export default function DeveloperInbox() {
                       </div>
 
                       {timeRemaining.urgent && (
-                        <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950 rounded text-red-700 dark:text-red-300 text-xs">
+                        <div className="flex items-center gap-2 p-2 bg-red-50 rounded text-red-700 text-xs">
                           <AlertTriangle className="h-4 w-4" />
                           <span>⚠️ Urgent: Less than 5 minutes remaining!</span>
                         </div>
@@ -392,7 +392,7 @@ export default function DeveloperInbox() {
                   {getStatusIcon(invitation.responseStatus)}
                   <div>
                     <h4 className="font-medium">{invitation.batch.project.title}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-gray-600">
                       {invitation.batch.project.client.user.name}
                     </p>
                   </div>
@@ -420,10 +420,10 @@ export default function DeveloperInbox() {
         <Card>
           <CardContent className="py-12 text-center">
             <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               No invitations yet
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Project invitations will appear here when clients select you for their projects.
             </p>
           </CardContent>

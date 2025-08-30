@@ -202,8 +202,8 @@ export default function MyProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">My Projects</h1>
-          <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mt-1">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">My Projects</h1>
+          <p className="text-sm lg:text-base text-gray-600 mt-1">
             Manage and track all your projects
           </p>
         </div>
@@ -328,10 +328,10 @@ export default function MyProjectsPage() {
             <Card>
               <CardContent className="p-6 lg:p-8 text-center">
                 <FileText className="h-8 w-8 lg:h-12 lg:w-12 text-gray-400 mx-auto mb-3 lg:mb-4" />
-                <h3 className="text-base lg:text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h3 className="text-base lg:text-lg font-medium text-gray-900  mb-2">
                   No projects found
                 </h3>
-                <p className="text-sm lg:text-base text-gray-500 dark:text-gray-400 mb-3 lg:mb-4">
+                <p className="text-sm lg:text-base text-gray-500  mb-3 lg:mb-4">
                   {searchTerm || statusFilter !== "all" 
                     ? "Try adjusting your search or filters"
                     : "Get started by creating your first project"
@@ -359,7 +359,7 @@ export default function MyProjectsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 lg:gap-3 mb-2">
-                            <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white truncate">
+                            <h3 className="text-base lg:text-lg font-semibold text-gray-900  truncate">
                               {project.name}
                             </h3>
                             <Badge className={`${getStatusColor(project.status)} text-xs lg:text-sm`}>
@@ -371,7 +371,7 @@ export default function MyProjectsPage() {
                           </div>
                           
                           {project.description && (
-                            <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mb-2 lg:mb-3 line-clamp-2">
+                            <p className="text-sm lg:text-base text-gray-600  mb-2 lg:mb-3 line-clamp-2">
                               {project.description}
                             </p>
                           )}

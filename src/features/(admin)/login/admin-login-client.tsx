@@ -16,7 +16,7 @@ import {
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
-import { ModeToggle } from "@/features/shared/components/mode-toggle";
+
 import { ErrorDisplay, FieldError } from "@/ui/components/error-display";
 import { Mail, Eye, EyeOff, LogIn, Shield } from "lucide-react";
 import { toast } from "sonner";
@@ -85,17 +85,17 @@ export default function AdminLoginClient() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50    flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-red-100  rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-red-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+          <h1 className="text-2xl font-bold text-gray-900  mb-1">
             Admin Access
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600 
             Sign in to admin panel
           </p>
         </div>
@@ -186,17 +186,14 @@ export default function AdminLoginClient() {
 
         {/* Admin Notice */}
         <div className="text-center mt-6">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <p className="text-sm text-red-800 dark:text-red-200">
+          <div className="bg-red-50  border border-red-200  rounded-lg p-4">
+            <p className="text-sm text-red-800 
               <strong>Admin Access Only:</strong> This login is restricted to authorized administrators only.
             </p>
           </div>
         </div>
 
-        {/* Mode Toggle */}
-        <div className="absolute top-4 right-4">
-          <ModeToggle />
-        </div>
+
       </div>
     </main>
   );

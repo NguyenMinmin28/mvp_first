@@ -98,7 +98,7 @@ export function WhatsAppSignIn({ onSuccess, onError }: WhatsAppSignInProps) {
     return (
       <div className="space-y-4">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-16 h-16 bg-green-100  rounded-full flex items-center justify-center mb-4">
             <Smartphone className="w-8 h-8 text-green-600" />
           </div>
           <h3 className="text-lg font-semibold">Verify Your Phone</h3>
@@ -108,10 +108,10 @@ export function WhatsAppSignIn({ onSuccess, onError }: WhatsAppSignInProps) {
         </div>
 
         {showDemoCode && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
+          <div className="bg-blue-50  border border-blue-200  rounded-lg p-3">
+            <p className="text-sm text-blue-800  text-center">
               <strong>Demo Mode:</strong> Use verification code:{" "}
-              <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
+              <code className="bg-blue-100  px-2 py-1 rounded">
                 123456
               </code>
             </p>
@@ -158,7 +158,7 @@ export function WhatsAppSignIn({ onSuccess, onError }: WhatsAppSignInProps) {
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+        <div className="mx-auto w-16 h-16 bg-green-100  rounded-full flex items-center justify-center mb-4">
           <MessageCircle className="w-8 h-8 text-green-600" />
         </div>
         <h3 className="text-lg font-semibold">Sign in with WhatsApp</h3>

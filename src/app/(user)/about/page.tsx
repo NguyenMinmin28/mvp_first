@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import HeroAbout from "@/features/about/hero-about";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { UserLayout } from "@/features/shared/components/user-layout";

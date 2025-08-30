@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { redirect } from "next/navigation";
 import CompleteProfilePage from "@/features/role-selection/view/role-selection-page";

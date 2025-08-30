@@ -99,10 +99,10 @@ export default function ClientDashboard() {
         {/* Left Section - Project Post / Find Freelancer */}
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Project Post
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Post your project and find the perfect freelancer
             </p>
           </div>
@@ -203,7 +203,7 @@ export default function ClientDashboard() {
 
               {/* Login Link */}
               <div className="text-center">
-                <a href="/auth/signin" className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <a href="/auth/signin" className="text-sm text-gray-500 hover:text-gray-700">
                   Log in to see your recent activity
                 </a>
               </div>
@@ -214,10 +214,10 @@ export default function ClientDashboard() {
         {/* Right Section - Team */}
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-2xl font-bold text-gray-900  mb-2">
               Team
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Choose your team level
             </p>
           </div>
@@ -231,7 +231,7 @@ export default function ClientDashboard() {
                     <Heart className="h-6 w-6 text-red-600" />
                   </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Favourite</h3>
+                <h3 className="font-semibold text-gray-900">Favourite</h3>
               </CardContent>
             </Card>
 
@@ -243,7 +243,7 @@ export default function ClientDashboard() {
                     <Sprout className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Starter</h3>
+                <h3 className="font-semibold text-gray-900">Starter</h3>
               </CardContent>
             </Card>
 
@@ -255,7 +255,7 @@ export default function ClientDashboard() {
                     <Palmtree className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Mid</h3>
+                <h3 className="font-semibold text-gray-900">Mid</h3>
               </CardContent>
             </Card>
 
@@ -267,7 +267,7 @@ export default function ClientDashboard() {
                     <TreePine className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Expert</h3>
+                <h3 className="font-semibold text-gray-900">Expert</h3>
               </CardContent>
             </Card>
           </div>
@@ -279,7 +279,7 @@ export default function ClientDashboard() {
 
       {/* Plan for later section */}
       <div className="mt-16">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+        <h2 className="text-3xl font-bold text-gray-900  mb-8">
           Plan for later
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

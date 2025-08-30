@@ -44,7 +44,7 @@ export default function WhatsAppTab({
   return (
     <div className="space-y-6">
       {/* Main WhatsApp Card */}
-      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+      <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-gray-50  
         <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white pb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-full">
@@ -65,7 +65,7 @@ export default function WhatsAppTab({
           <div className="space-y-3">
             <Label
               htmlFor="whatsappNumber"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
+              className="text-sm font-medium text-gray-700  flex items-center gap-2"
             >
               <Phone className="h-4 w-4 text-green-600" />
               WhatsApp Number
@@ -89,7 +89,7 @@ export default function WhatsAppTab({
                   onClick={onWhatsAppVerification}
                   variant="outline"
                   disabled={isLoading || !profileData.whatsappNumber}
-                  className="h-12 px-6 border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200"
+                  className="h-12 px-6 border-2 border-green-200 hover:border-green-300 hover:bg-green-50  transition-all duration-200"
                 >
                   {isLoading ? (
                     <LoadingSpinner size="sm" />
@@ -105,7 +105,7 @@ export default function WhatsAppTab({
 
             {/* Verification Status Badge */}
             {profileData.whatsappVerified && (
-              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center gap-2 p-3 bg-green-50  border border-green-200  rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <Badge
                   variant="default"
@@ -113,7 +113,7 @@ export default function WhatsAppTab({
                 >
                   Verified
                 </Badge>
-                <span className="text-sm text-green-700 dark:text-green-300 font-medium">
+                <span className="text-sm text-green-700  font-medium">
                   WhatsApp number verified successfully
                 </span>
               </div>
@@ -122,12 +122,12 @@ export default function WhatsAppTab({
 
           {/* OTP Verification Input */}
           {showOtpInput && (
-            <div className="p-6 border-2 border-blue-200 dark:border-blue-800 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 shadow-inner">
+            <div className="p-6 border-2 border-blue-200  rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50   shadow-inner">
               <div className="flex items-center gap-2 mb-4">
                 <Shield className="h-5 w-5 text-blue-600" />
                 <Label
                   htmlFor="otpCode"
-                  className="text-base font-semibold text-blue-900 dark:text-blue-100"
+                  className="text-base font-semibold text-blue-900 
                 >
                   Enter Verification Code
                 </Label>
@@ -158,12 +158,12 @@ export default function WhatsAppTab({
                 <Button
                   variant="outline"
                   onClick={onCancelOtp}
-                  className="h-12 px-6 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200"
+                  className="h-12 px-6 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50  transition-all duration-200"
                 >
                   Cancel
                 </Button>
               </div>
-              <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <p className="text-sm text-blue-700  flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Enter the 6-digit code sent to your WhatsApp number
               </p>
@@ -171,24 +171,24 @@ export default function WhatsAppTab({
           )}
 
           {/* WhatsApp Verification Status */}
-          <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100   rounded-xl border border-gray-200 
+            <h4 className="font-semibold text-gray-900  mb-4 flex items-center gap-2">
               <Shield className="h-5 w-5 text-gray-600" />
               Verification Status
             </h4>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="flex items-center justify-between p-3 bg-white  rounded-lg border border-gray-200 
+                <span className="text-sm font-medium text-gray-700 
                   WhatsApp Number:
                 </span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <span className="text-sm font-semibold text-gray-900 
                   {profileData.whatsappNumber || (
                     <span className="text-gray-500 italic">Not set</span>
                   )}
                 </span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="flex items-center justify-between p-3 bg-white  rounded-lg border border-gray-200 
+                <span className="text-sm font-medium text-gray-700 
                   Verification Status:
                 </span>
                 <Badge
