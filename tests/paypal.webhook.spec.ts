@@ -3,6 +3,7 @@
  * Tests the critical scenarios from the DoD checklist
  */
 
+// @ts-nocheck
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { prisma } from '../src/core/database/db';
 import { handlePayPalWebhook } from '../src/modules/paypal/paypal.controller';

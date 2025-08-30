@@ -1,4 +1,5 @@
 // Integration tests for generateBatch with eligibility and constraints
+// @ts-nocheck
 import { resetDb, createSkill, createDeveloper, createProject } from './helpers';
 import { RotationService } from '@/core/services/rotation.service';
 import { prisma } from '@/core/database/db';

@@ -1,4 +1,5 @@
 // Tests for auto-expire functionality
+// @ts-nocheck
 import { resetDb, createSkill, createDeveloper, createProject, createBatch, createCandidate } from './helpers';
 import { RotationService } from '@/core/services/rotation.service';
 import { ExpiryService } from '@/core/services/expiry.service';

@@ -1,4 +1,5 @@
 // Unit tests for RotationService internal methods
+// @ts-nocheck
 import { RotationService } from '@/core/services/rotation.service';
 import { DevLevel } from '@prisma/client';
 

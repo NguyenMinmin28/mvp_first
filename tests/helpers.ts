@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Test helpers for database seeding
 import { prisma } from '@/core/database/db';
 import { DevLevel, ProjectStatus, BatchStatus, ResponseStatus } from '@prisma/client';

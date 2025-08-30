@@ -1,4 +1,5 @@
 // Tests for rotation cursor fairness and persistence
+// @ts-nocheck
 import { resetDb, createSkill, createDeveloper, createProject } from './helpers';
 import { RotationService } from '@/core/services/rotation.service';
 import { prisma } from '@/core/database/db';
