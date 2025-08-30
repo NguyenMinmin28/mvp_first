@@ -101,11 +101,11 @@ export async function POST(
       skillNames.map((skill: any) => [skill.id, skill.name])
     );
 
-    const projectSkillNames = project.skillsRequired.map(id => skillIdToName[id] || id);
+    const projectSkillNames = project.skillsRequired.map((id: any) => skillIdToName[id] || id);
 
     // Check if developer has any of the required skills (optional check for admin)
-    const developerSkillNames = developer.skills.map(s => s.skill.name);
-    const hasRequiredSkills = projectSkillNames.some(skill => 
+    const developerSkillNames = developer.skills.map((s: any) => s.skill.name);
+    const hasRequiredSkills = projectSkillNames.some((skill: any) => 
       developerSkillNames.includes(skill)
     );
 
