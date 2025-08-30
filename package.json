@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:no-cache": "next dev --turbo",
-    "build": "next build",
+    "build": "prisma generate --schema ./database/prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
@@ -26,6 +26,9 @@
     "update-prisma": "./scripts/update-prisma.sh",
     "prisma:update": "./scripts/update-prisma.sh",
     "cron:local": "tsx scripts/run-local-cron.ts"
+  },
+  "prisma": {
+    "schema": "./database/prisma/schema.prisma"
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
