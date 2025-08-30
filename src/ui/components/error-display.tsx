@@ -18,7 +18,7 @@ export function ErrorDisplay({
 
   const variantStyles = {
     default:
-      "bg-blue-50 border-blue-200 text-blue-800",
+      "bg-blue-50 border-blue-200 text-blue-900",
     destructive:
       "bg-red-50 border-red-200 text-red-800",
     warning:
