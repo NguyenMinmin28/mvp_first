@@ -36,7 +36,7 @@ export async function POST(
     // Perform the contact reveal operation
     const result = await incrementUsageAfterSuccess(
       async () => {
-        return await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx: any) => {
           // 1. Find and validate project
           const project = await tx.project.findUnique({
             where: { id: projectId },

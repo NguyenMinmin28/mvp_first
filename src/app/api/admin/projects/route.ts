@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Resolve skill IDs to skill names for all projects
-    const allSkillIds = Array.from(new Set(projects.flatMap(p => p.skillsRequired)));
+    const allSkillIds = Array.from(new Set(projects.flatMap((p: any) => p.skillsRequired)));
     const skillNames = await prisma.skill.findMany({
       where: {
         id: { in: allSkillIds }

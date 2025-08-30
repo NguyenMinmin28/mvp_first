@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Use transaction to ensure both operations succeed or fail together
     console.log("🔍 Starting database transaction...");
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: any) => {
       console.log("🔍 Inside transaction...");
       
       // Check if profile already exists

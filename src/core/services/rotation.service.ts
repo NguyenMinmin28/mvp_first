@@ -41,13 +41,13 @@ export class RotationService {
     let attempt = 0;
     while (true) {
       try {
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
           return await this._generateBatchWithTx(tx, projectId, customSelection);
         });
         // Post-commit cursor updates to avoid transaction aborts
         try {
           const skillsRequired = Array.from(
-            new Set(result.candidates.flatMap((c) => c.skillIds))
+            new Set(result.candidates.flatMap((c: any) => c.skillIds))
           );
           if (skillsRequired.length > 0) {
             await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
@@ -223,7 +223,7 @@ export class RotationService {
     }
     // Exclude only developers who are already at or above the per-dev pending invite limit
     const overLimitDeveloperIds: string[] = [];
-    Array.from(pendingCounts.entries()).forEach(([devId, count]) => {
+    Array.from(pendingCounts.entries()).forEach(([devId, count]: any) => {
       if (count >= RotationService.MAX_PENDING_ACTIVE_INVITES_PER_DEV) {
         overLimitDeveloperIds.push(devId);
       }
@@ -533,7 +533,7 @@ export class RotationService {
     message: string;
     project?: any;
   }> {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       // 1. Find and validate candidate with project info
       const candidate = await tx.assignmentCandidate.findUnique({
         where: { id: candidateId },
@@ -644,7 +644,7 @@ export class RotationService {
     success: boolean;
     message: string;
   }> {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: any) => {
       // 1. Find and validate candidate
       const candidate = await tx.assignmentCandidate.findUnique({
         where: { id: candidateId },
@@ -702,7 +702,7 @@ export class RotationService {
     projectId: string,
     customSelection?: Partial<BatchSelectionCriteria>
   ): Promise<BatchGenerationResult> {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Get current batch
       const project = await tx.project.findUnique({
         where: { id: projectId },
@@ -735,7 +735,7 @@ export class RotationService {
 
     // Post-commit cursor updates
     try {
-      const skillsRequired = Array.from(new Set(result.candidates.flatMap((c) => c.skillIds)));
+      const skillsRequired = Array.from(new Set(result.candidates.flatMap((c: any) => c.skillIds)));
       if (skillsRequired.length > 0) {
         await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
       }
