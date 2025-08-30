@@ -116,7 +116,7 @@ export async function POST(
     }
 
     // Use transaction to ensure data consistency
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Update project status to accepted
       const updatedProject = await tx.project.update({
         where: { id: projectId },
