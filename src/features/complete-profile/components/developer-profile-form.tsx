@@ -567,17 +567,17 @@ export default function DeveloperProfileForm({
         </form>
 
         {/* Info Card */}
-        <Card className="mt-6 bg-green-50  border-green-200 
+        <Card className="mt-6 bg-green-50 border-green-200">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
-              <div className="p-2 rounded-lg bg-green-100 
-                <Code2 className="h-5 w-5 text-green-600  />
+              <div className="p-2 rounded-lg bg-green-100">
+                <Code2 className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-green-900  mb-1">
+                <h3 className="font-semibold text-green-900 mb-1">
                   After completion:
                 </h3>
-                <ul className="text-sm text-green-700  space-y-1">
+                <ul className="text-sm text-green-700 space-y-1">
                   <li>• Profile will be sent to admin for approval</li>
                   <li>• You can update information anytime</li>
                   <li>• Set online/offline status</li>

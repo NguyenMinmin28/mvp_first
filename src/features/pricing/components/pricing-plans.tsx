@@ -140,7 +140,7 @@ export default function PricingPlans() {
   return (
     <div className="space-y-8">
       {/* Free Trial Banner */}
-      <Card className="border-green-200 bg-green-50  
+      <Card className="border-green-200 bg-green-50  "
         <CardContent className="pt-6">
           <div className="flex items-center justify-center gap-3">
             <Sparkles className="h-5 w-5 text-green-600" />
@@ -200,12 +200,12 @@ export default function PricingPlans() {
                 <div className="text-center space-y-2">
                   <div className="flex justify-center">{plan.icon}</div>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <p className="text-gray-600 
+                  <p className="text-gray-600 "
                   
                   <div className="py-4">
                     <div className="flex items-baseline justify-center gap-1">
                       <span className="text-4xl font-bold">${displayPrice}</span>
-                      <span className="text-gray-600 
+                      <span className="text-gray-600 "
                         /{billingPeriod === "yearly" ? "year" : "month"}
                       </span>
                     </div>
@@ -225,7 +225,7 @@ export default function PricingPlans() {
                     <div className="text-2xl font-bold text-blue-600">
                       {plan.projectsPerMonth === 999 ? "∞" : plan.projectsPerMonth}
                     </div>
-                    <div className="text-xs text-gray-600 
+                    <div className="text-xs text-gray-600 "
                       Projects/month
                     </div>
                   </div>
@@ -233,7 +233,7 @@ export default function PricingPlans() {
                     <div className="text-2xl font-bold text-green-600">
                       {plan.contactRevealsPerProject === 999 ? "∞" : plan.contactRevealsPerProject}
                     </div>
-                    <div className="text-xs text-gray-600 
+                    <div className="text-xs text-gray-600 "
                       Reveals/project
                     </div>
                   </div>
@@ -302,28 +302,28 @@ export default function PricingPlans() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">How does the rotation system work?</h4>
-              <p className="text-sm text-gray-600 
+              <p className="text-sm text-gray-600 "
                 Our fair rotation ensures equal opportunities for all developers. You get a mix of Expert, Mid-level, and Fresher developers for each project, with response guarantees.
               </p>
             </div>
             
             <div>
               <h4 className="font-semibold mb-2">What happens after the free trial?</h4>
-              <p className="text-sm text-gray-600 
+              <p className="text-sm text-gray-600 "
                 After your free project, choose a plan to continue posting projects. No automatic charges - you control when to upgrade.
               </p>
             </div>
 
             <div>
               <h4 className="font-semibold mb-2">Can I change plans anytime?</h4>
-              <p className="text-sm text-gray-600 
+              <p className="text-sm text-gray-600 "
                 Yes! Upgrade or downgrade your plan anytime. Changes take effect on your next billing cycle.
               </p>
             </div>
 
             <div>
               <h4 className="font-semibold mb-2">What currencies do you support?</h4>
-              <p className="text-sm text-gray-600 
+              <p className="text-sm text-gray-600 "
                 Currently USD, with plans to support EUR, GBP, and other major currencies soon.
               </p>
             </div>
@@ -332,7 +332,7 @@ export default function PricingPlans() {
       </Card>
 
       {/* Enterprise CTA */}
-      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50   border-indigo-200 
+      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50   border-indigo-200 "
         <CardContent className="pt-6 text-center">
           <h3 className="text-xl font-semibold mb-2">Need a custom solution?</h3>
           <p className="text-gray-600  mb-4">

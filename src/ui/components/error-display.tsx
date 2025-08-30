@@ -51,7 +51,7 @@ export function ErrorDisplay({
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className="flex-shrink-0 p-1 rounded-md hover:bg-black/5  transition-colors"
+          className="flex-shrink-0 p-1 rounded-md hover:bg-black/5 transition-colors"
           aria-label="Dismiss error"
         >
           <X className="h-4 w-4" />

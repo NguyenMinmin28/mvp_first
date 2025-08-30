@@ -63,7 +63,7 @@ export default function RoleSelection({
           <h1 className="text-3xl font-bold text-gray-900  mb-2">
             Welcome to the platform!
           </h1>
-          <p className="text-lg text-gray-600 
+          <p className="text-lg text-gray-600 "
             Choose the role that fits you to complete your profile
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function RoleSelection({
                 <CardHeader>
                   <div className="flex items-center space-x-3">
                     <div className="p-2 rounded-lg bg-white  shadow-sm">
-                      <Icon className="h-6 w-6 text-blue-600  />
+                      <Icon className="h-6 w-6 text-blue-600  />"
                     </div>
                     <div>
                       <CardTitle className="text-xl">{role.title}</CardTitle>
@@ -104,7 +104,7 @@ export default function RoleSelection({
                     {role.features.map((feature, index) => (
                       <li
                         key={index}
-                        className="flex items-center text-sm text-gray-600 
+                        className="flex items-center text-sm text-gray-600 "
                       >
                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-3 flex-shrink-0" />
                         {feature}

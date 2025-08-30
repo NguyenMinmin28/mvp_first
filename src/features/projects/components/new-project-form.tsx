@@ -283,7 +283,7 @@ export default function NewProjectForm() {
                         key={skill.id}
                         type="button"
                         onClick={() => addSkill(skill.id)}
-                        className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100  rounded"
+                        className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100 rounded"
                       >
                         <span className="font-medium">{skill.name}</span>
                         <span className="text-gray-500 ml-2">({skill.category})</span>
