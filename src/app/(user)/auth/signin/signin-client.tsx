@@ -37,6 +37,7 @@ export default function SignInClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [hasFallbackRedirected, setHasFallbackRedirected] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -96,6 +97,18 @@ export default function SignInClient() {
         return;
       }
       
+      // Fallback redirect logic for admin users
+      if (result?.ok && !hasFallbackRedirected) {
+        // Wait a bit for session to update
+        setTimeout(() => {
+          const currentSession = session;
+          if (currentSession?.user?.role === "ADMIN" && !hasFallbackRedirected) {
+            console.log("🔍 Fallback redirect for admin user");
+            setHasFallbackRedirected(true);
+            window.location.href = "https://mvp-first1.vercel.app/admin";
+          }
+        }, 1000);
+      }
       // Redirect will be handled by useAuthRedirect hook
     } catch (error) {
       console.error("Sign in error:", error);
@@ -127,6 +140,18 @@ export default function SignInClient() {
         return;
       }
       
+      // Fallback redirect logic for admin users
+      if (result?.ok && !hasFallbackRedirected) {
+        // Wait a bit for session to update
+        setTimeout(() => {
+          const currentSession = session;
+          if (currentSession?.user?.role === "ADMIN" && !hasFallbackRedirected) {
+            console.log("🔍 Fallback redirect for admin user (Google)");
+            setHasFallbackRedirected(true);
+            window.location.href = "https://mvp-first1.vercel.app/admin";
+          }
+        }, 1000);
+      }
       // Redirect will be handled by useAuthRedirect hook
     } catch (error) {
       console.error("Google sign in error:", error);

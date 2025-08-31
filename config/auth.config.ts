@@ -9,8 +9,6 @@ import GoogleProvider from "next-auth/providers/google"
 
 export default {
   adapter: PrismaAdapter(prisma),
-  // Add debug logging for production
-  debug: process.env.NODE_ENV === "development",
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -312,10 +310,6 @@ export default {
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/signin", // Redirect về trang signin khi có lỗi
   },
-  // Add production URL configuration
-  ...(process.env.NODE_ENV === "production" && {
-    url: process.env.NEXTAUTH_URL,
-    secret: process.env.NEXTAUTH_SECRET,
-  }),
 } satisfies NextAuthOptions
