@@ -31,15 +31,22 @@ export function useAuthRedirect() {
       console.log("🔍 Auth Redirect - Already on target page, skipping redirect");
       return;
     }
+
+    const user = session.user;
+    const userRole = user.role as string | undefined;
     
-    // Skip redirect if on auth pages (let middleware handle it)
+    // For admin users, always redirect from auth pages
+    if (userRole === "ADMIN" && currentPath.startsWith("/auth/")) {
+      console.log("🔍 Auth Redirect - Admin user on auth page, redirecting to admin");
+      router.replace("/admin");
+      return;
+    }
+    
+    // Skip redirect for other users on auth pages (let middleware handle it)
     if (currentPath.startsWith("/auth/")) {
       console.log("🔍 Auth Redirect - On auth page, letting middleware handle redirect");
       return;
     }
-
-    const user = session.user;
-    const userRole = user.role as string | undefined;
     
     // Don't redirect if we're already on the correct page for admin
     if (userRole === "ADMIN" && currentPath.startsWith("/admin")) {
