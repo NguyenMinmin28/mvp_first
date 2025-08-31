@@ -23,6 +23,7 @@ import { Mail, Eye, EyeOff, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Icons } from "@/features/shared/components/icons";
 import { useAuthRedirect } from "@/core/hooks/use-auth-redirect";
+import { useSession } from "next-auth/react";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -43,6 +44,7 @@ export default function SignInClient() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
 
   // Use auth redirect hook
   useAuthRedirect();
@@ -93,6 +95,18 @@ export default function SignInClient() {
         setServerError("Invalid email or password");
         return;
       }
+      
+      // Fallback redirect logic for admin users
+      if (result?.ok) {
+        // Wait a bit for session to update
+        setTimeout(() => {
+          const currentSession = session;
+          if (currentSession?.user?.role === "ADMIN") {
+            console.log("🔍 Fallback redirect for admin user");
+            router.replace("/admin");
+          }
+        }, 1000);
+      }
       // Redirect will be handled by useAuthRedirect hook
     } catch (error) {
       console.error("Sign in error:", error);
@@ -123,10 +137,23 @@ export default function SignInClient() {
         setIsLoading(false);
         return;
       }
+      
+      // Fallback redirect logic for admin users
+      if (result?.ok) {
+        // Wait a bit for session to update
+        setTimeout(() => {
+          const currentSession = session;
+          if (currentSession?.user?.role === "ADMIN") {
+            console.log("🔍 Fallback redirect for admin user (Google)");
+            router.replace("/admin");
+          }
+        }, 1000);
+      }
       // Redirect will be handled by useAuthRedirect hook
     } catch (error) {
       console.error("Google sign in error:", error);
       setServerError("An error occurred during Google sign in");
+    } finally {
       setIsLoading(false);
     }
   };

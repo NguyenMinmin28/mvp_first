@@ -13,9 +13,11 @@ export function useAuthRedirect() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setPortalAsLoggedIn } = usePortal();
+  const portalContext = usePortal();
 
   useEffect(() => {
+    console.log("🔍 Auth Redirect - Status:", status, "Session:", !!session, "User:", session?.user?.email, "Role:", session?.user?.role);
+    
     // Only run when session is loaded and user is authenticated
     if (status === "loading" || !session?.user) return;
 
@@ -25,7 +27,7 @@ export function useAuthRedirect() {
     const portal = searchParams.get("portal") as "client" | "freelancer" | null;
     const callbackUrl = searchParams.get("callbackUrl");
 
-    console.log("🔍 Auth Redirect - User:", user.email, "Role:", userRole, "Profile Completed:", isProfileCompleted, "Portal:", portal);
+    console.log("🔍 Auth Redirect - User:", user.email, "Role:", userRole, "Profile Completed:", isProfileCompleted, "Portal:", portal, "Callback URL:", callbackUrl);
 
     // If there's a specific callback URL, use it
     if (callbackUrl) {
@@ -58,7 +60,11 @@ export function useAuthRedirect() {
     if (userRole === "CLIENT") {
       console.log("🔍 Auth Redirect - Client user");
       // Auto-set portal to client for CLIENT role
-      setPortalAsLoggedIn("client");
+      try {
+        portalContext.setPortalAsLoggedIn("client");
+      } catch (error) {
+        console.warn("🔍 Auth Redirect - Failed to set portal:", error);
+      }
       
       if (portal === "client") {
         // Client logging in to client portal
@@ -77,7 +83,11 @@ export function useAuthRedirect() {
     if (userRole === "DEVELOPER") {
       console.log("🔍 Auth Redirect - Developer user");
       // Auto-set portal to freelancer for DEVELOPER role
-      setPortalAsLoggedIn("freelancer");
+      try {
+        portalContext.setPortalAsLoggedIn("freelancer");
+      } catch (error) {
+        console.warn("🔍 Auth Redirect - Failed to set portal:", error);
+      }
       
       if (portal === "freelancer") {
         // Developer logging in to freelancer portal
@@ -96,5 +106,5 @@ export function useAuthRedirect() {
     // Fallback - redirect to role selection
     console.log("🔍 Auth Redirect - Fallback, redirecting to role selection");
     router.replace("/role-selection");
-  }, [session, status, router, searchParams, setPortalAsLoggedIn]);
+  }, [session, status, router, searchParams, portalContext]);
 }

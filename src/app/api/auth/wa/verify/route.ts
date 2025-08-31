@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { OtpService } from "@/core/services/otp.service";
 import { WhatsAppService } from "@/core/services/whatsapp.service";

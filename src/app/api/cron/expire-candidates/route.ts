@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { ExpiryService } from "@/core/services/expiry.service";
 import { prisma } from "@/core/database/db";

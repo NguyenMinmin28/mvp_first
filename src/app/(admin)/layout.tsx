@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import "@/ui/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
@@ -75,8 +78,9 @@ export default function RootLayout({ children }: AdminLayoutProps) {
         )}
       >
         <Providers>
-          {/* Temporarily disable PortalProvider for admin routes */}
-          {children}
+          <PortalProvider>
+            {children}
+          </PortalProvider>
         </Providers>
       </body>
     </html>
