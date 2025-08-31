@@ -68,7 +68,11 @@ export async function middleware(request: NextRequest) {
     // Redirect authenticated users away from auth pages based on their role
     if (token?.role === "ADMIN") {
       console.log("🔍 Middleware - Admin user on auth page, redirecting to admin");
-      return NextResponse.redirect(new URL("/admin", request.url));
+      // Use absolute URL for production
+      const adminUrl = process.env.NODE_ENV === "production" 
+        ? `${process.env.NEXTAUTH_URL}/admin`
+        : new URL("/admin", request.url).toString();
+      return NextResponse.redirect(adminUrl);
     } else if (token?.role === "CLIENT") {
       return NextResponse.redirect(new URL("/client-dashboard", request.url));
     } else if (token?.role === "DEVELOPER") {

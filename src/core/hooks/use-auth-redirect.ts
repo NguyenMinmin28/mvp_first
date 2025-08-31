@@ -17,7 +17,7 @@ export function useAuthRedirect() {
   const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    console.log("🔍 Auth Redirect - Status:", status, "Session:", !!session, "User:", session?.user?.email, "Role:", session?.user?.role, "HasRedirected:", hasRedirected);
+    console.log("🔍 Auth Redirect - Status:", status, "Session:", !!session, "User:", session?.user?.email, "Role:", session?.user?.role, "HasRedirected:", hasRedirected, "Environment:", process.env.NODE_ENV);
     
     // Only run when session is loaded and user is authenticated
     if (status === "loading" || !session?.user || hasRedirected) return;
@@ -65,7 +65,21 @@ export function useAuthRedirect() {
     // Check role and redirect accordingly (only if profile is completed)
     if (userRole === "ADMIN") {
       console.log("🔍 Auth Redirect - Admin user, redirecting to admin dashboard");
-      router.replace("/admin");
+      // Use window.location for production to ensure proper redirect
+      if (process.env.NODE_ENV === "production") {
+        console.log("🔍 Auth Redirect - Production environment, using window.location");
+        window.location.href = "/admin";
+        
+        // Add fallback in case window.location doesn't work
+        setTimeout(() => {
+          if (window.location.pathname !== "/admin") {
+            console.log("🔍 Auth Redirect - Fallback redirect for production");
+            window.location.replace("/admin");
+          }
+        }, 1000);
+      } else {
+        router.replace("/admin");
+      }
       return;
     }
 
