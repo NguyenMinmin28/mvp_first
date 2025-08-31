@@ -53,7 +53,24 @@ export function useAuthRedirect() {
     // Check role and redirect accordingly (only if profile is completed)
     if (userRole === "ADMIN") {
       console.log("🔍 Auth Redirect - Admin user, redirecting to admin dashboard");
-      router.replace("/admin");
+      try {
+        console.log("🔍 Auth Redirect - About to call router.replace('/admin')");
+        router.replace("/admin");
+        console.log("🔍 Auth Redirect - router.replace('/admin') called successfully");
+        
+        // Add a fallback in case router doesn't work
+        setTimeout(() => {
+          if (window.location.pathname !== "/admin") {
+            console.log("🔍 Auth Redirect - Router didn't work, using window.location fallback");
+            window.location.href = "/admin";
+          }
+        }, 2000);
+      } catch (error) {
+        console.error("🔍 Auth Redirect - Error during redirect:", error);
+        // Fallback to window.location
+        console.log("🔍 Auth Redirect - Using window.location fallback");
+        window.location.href = "/admin";
+      }
       return;
     }
 

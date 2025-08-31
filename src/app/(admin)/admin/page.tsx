@@ -12,16 +12,27 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
-  const user = await getServerSessionUser();
+  try {
+    console.log("🔍 Admin page - Starting to get user session");
+    const user = await getServerSessionUser();
+    console.log("🔍 Admin page - User session:", user?.email, user?.role);
 
-  if (!user) {
-    redirect("/admin/login");
+    if (!user) {
+      console.log("🔍 Admin page - No user, redirecting to login");
+      redirect("/auth/signin");
+    }
+
+    // Kiểm tra xem user có phải là admin không
+    if (user.role !== "ADMIN") {
+      console.log("🔍 Admin page - User is not admin, redirecting to home");
+      redirect("/");
+    }
+
+    console.log("🔍 Admin page - Rendering AdminDashboard");
+    return <AdminDashboard user={user} />;
+  } catch (error) {
+    console.error("🔍 Admin page - Error:", error);
+    // Fallback to signin page
+    redirect("/auth/signin");
   }
-
-  // Kiểm tra xem user có phải là admin không
-  if (user.role !== "ADMIN") {
-    redirect("/");
-  }
-
-  return <AdminDashboard user={user} />;
 }

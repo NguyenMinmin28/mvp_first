@@ -103,7 +103,7 @@ export default function SignInClient() {
           const currentSession = session;
           if (currentSession?.user?.role === "ADMIN") {
             console.log("🔍 Fallback redirect for admin user");
-            router.replace("/admin");
+            window.location.href = "/admin";
           }
         }, 1000);
       }
@@ -145,7 +145,7 @@ export default function SignInClient() {
           const currentSession = session;
           if (currentSession?.user?.role === "ADMIN") {
             console.log("🔍 Fallback redirect for admin user (Google)");
-            router.replace("/admin");
+            window.location.href = "/admin";
           }
         }, 1000);
       }
