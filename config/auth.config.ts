@@ -37,6 +37,10 @@ export default {
       },
       async authorize(credentials) {
         console.log("🔐 Email/Password authorize called with:", credentials)
+        console.log("🔐 Environment check - NEXTAUTH_URL:", process.env.NEXTAUTH_URL)
+        console.log("🔐 Environment check - NEXTAUTH_SECRET:", !!process.env.NEXTAUTH_SECRET)
+        console.log("🔐 Environment check - DATABASE_URL:", !!process.env.DATABASE_URL)
+        console.log("🔐 Environment check - NODE_ENV:", process.env.NODE_ENV)
 
         if (!credentials?.email || !credentials?.password) {
           console.log("❌ Missing email or password")
@@ -44,6 +48,7 @@ export default {
         }
 
         try {
+          console.log("🔐 Attempting database connection...")
           // Find user by email
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
@@ -57,6 +62,8 @@ export default {
               image: true,
             },
           })
+
+          console.log("🔐 Database query result:", !!user)
 
           if (!user || !user.passwordHash) {
             console.log("❌ User not found or no password set")
@@ -85,6 +92,7 @@ export default {
           }
         } catch (error) {
           console.error("Email/Password authorization error:", error)
+          console.error("Database connection error details:", error)
           return null
         }
       },
