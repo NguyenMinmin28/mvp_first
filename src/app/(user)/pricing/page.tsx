@@ -1,5 +1,5 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// Cache pricing for 30 minutes
+export const revalidate = 1800;
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";

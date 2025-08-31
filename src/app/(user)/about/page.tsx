@@ -1,5 +1,5 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// Static page - cache for 1 hour
+export const revalidate = 3600;
 
 import HeroAbout from "@/features/about/hero-about";
 import { getServerSessionUser } from "@/features/auth/auth-server";

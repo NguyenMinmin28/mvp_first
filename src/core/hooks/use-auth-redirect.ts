@@ -75,7 +75,8 @@ export function useAuthRedirect() {
           console.log("🔍 Auth Redirect - Current path after 2s:", currentPath);
           if (currentPath !== "/admin") {
             console.log("🔍 Auth Redirect - Router didn't work, using window.location fallback");
-            window.location.href = "/admin";
+            // Force redirect to admin
+            window.location.href = "https://mvp-first1.vercel.app/admin";
           }
         }, 2000);
         
@@ -85,7 +86,8 @@ export function useAuthRedirect() {
           console.log("🔍 Auth Redirect - Current path after 5s:", currentPath);
           if (currentPath !== "/admin") {
             console.log("🔍 Auth Redirect - Final fallback, forcing navigation");
-            window.location.replace("/admin");
+            // Force redirect with replace
+            window.location.replace("https://mvp-first1.vercel.app/admin");
           }
         }, 5000);
       } catch (error) {

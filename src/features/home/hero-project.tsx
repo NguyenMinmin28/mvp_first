@@ -35,7 +35,10 @@ export function HeroProject() {
     const fetchSkills = async () => {
       setIsLoadingSkills(true);
       try {
-        const res = await fetch("/api/skills", { cache: "no-store" });
+        const res = await fetch("/api/skills", { 
+          cache: "force-cache",
+          next: { revalidate: 3600 } // Cache for 1 hour
+        });
         if (res.ok) setAvailableSkills(await res.json());
       } finally {
         setIsLoadingSkills(false);

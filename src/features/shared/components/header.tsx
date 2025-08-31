@@ -19,6 +19,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePortal } from "@/features/shared/portal-context";
 import { PortalLoginModal } from "@/features/shared/components/portal-login-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/components/dialog";
 
 interface HeaderProps {
   user?: UserType;
@@ -28,6 +36,8 @@ export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [pendingLogoutPortal, setPendingLogoutPortal] = useState<"client" | "freelancer" | null>(null);
   
   // Use portal context with fallback
   const portalContext = usePortal();
@@ -103,11 +113,15 @@ export function Header({ user }: HeaderProps) {
     const isDeveloperRole = userRole === "DEVELOPER";
     
     if (targetPortal === "client" && isDeveloperRole) {
-      // Case 1: Developer bấm vào Client -> logout và chuyển về trang đăng nhập
-      setActivePortal("client");
+      // Case 1: Developer bấm vào Client -> hiển thị modal xác nhận
+      setPendingLogoutPortal("client");
+      setShowLogoutConfirm(true);
+      return;
     } else if (targetPortal === "freelancer" && isClientRole) {
-      // Case 2: Client bấm vào Freelancer -> logout và chuyển về trang đăng nhập  
-      setActivePortal("freelancer");
+      // Case 2: Client bấm vào Freelancer -> hiển thị modal xác nhận
+      setPendingLogoutPortal("freelancer");
+      setShowLogoutConfirm(true);
+      return;
     } else if (targetPortal === "client" && isClientRole) {
       // Client bấm vào Client -> chuyển đổi portal và về dashboard
       setActivePortal("client");
@@ -122,6 +136,20 @@ export function Header({ user }: HeaderProps) {
     }
   };
 
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    if (pendingLogoutPortal) {
+      setActivePortal(pendingLogoutPortal);
+      setPendingLogoutPortal(null);
+      signOut({ callbackUrl: `/auth/signin?portal=${pendingLogoutPortal}` });
+    }
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutConfirm(false);
+    setPendingLogoutPortal(null);
+  };
+
   return (
     <>
       <header className={`sticky top-0 z-50 w-full ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}>
@@ -129,7 +157,11 @@ export function Header({ user }: HeaderProps) {
           {/* Logo */}
           <div className="flex items-center gap-6">
             <Link href="/">
-              <span className="text-xl font-extrabold tracking-wide">LOGO</span>
+              <img 
+                src={!isAuthenticated ? "/images/home/clervelogo.png" : "/images/home/clervelogoblack.png"}
+                alt="Clevrs" 
+                className="h-8 w-auto"
+              />
             </Link>
             
             {/* Portal Switch */}
@@ -516,6 +548,26 @@ export function Header({ user }: HeaderProps) {
           onLogin={handleLoginClick}
         />
       )}
+
+      {/* Logout Confirmation Modal */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm logout</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to logout and login with {pendingLogoutPortal === "client" ? "Client" : "Freelancer"} account?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={handleCancelLogout}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmLogout}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

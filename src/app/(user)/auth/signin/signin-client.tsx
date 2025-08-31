@@ -105,7 +105,7 @@ export default function SignInClient() {
           if (currentSession?.user?.role === "ADMIN" && !hasFallbackRedirected) {
             console.log("🔍 Fallback redirect for admin user");
             setHasFallbackRedirected(true);
-            window.location.href = "/admin";
+            window.location.href = "https://mvp-first1.vercel.app/admin";
           }
         }, 1000);
       }
@@ -148,7 +148,7 @@ export default function SignInClient() {
           if (currentSession?.user?.role === "ADMIN" && !hasFallbackRedirected) {
             console.log("🔍 Fallback redirect for admin user (Google)");
             setHasFallbackRedirected(true);
-            window.location.href = "/admin";
+            window.location.href = "https://mvp-first1.vercel.app/admin";
           }
         }, 1000);
       }
@@ -166,7 +166,11 @@ export default function SignInClient() {
       {/* Top black bar with LOGO */}
       <div className="w-full h-14 bg-black flex items-center">
         <div className="max-w-4xl mx-auto w-full px-4">
-          <span className="text-white font-semibold tracking-wide">LOGO</span>
+          <img 
+            src="/images/home/clervelogo.png" 
+            alt="Clevrs" 
+            className="h-6 w-auto"
+          />
         </div>
       </div>
 

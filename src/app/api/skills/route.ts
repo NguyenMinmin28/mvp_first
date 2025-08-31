@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/core/database/db";
 
+// Cache skills for 1 hour
+export const revalidate = 3600;
+
 export async function GET() {
   try {
     const skills = await prisma.skill.findMany({

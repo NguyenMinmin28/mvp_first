@@ -16,6 +16,8 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
+  console.log("🔍 Middleware - Pathname:", pathname, "Token:", !!token, "Role:", token?.role);
+
   // Routes that require authentication (home is now public)
   const protectedRoutes = [userRoutes.PROFILE];
 
@@ -36,16 +38,20 @@ export async function middleware(request: NextRequest) {
 
   // Handle admin routes
   if (isAdminRoute) {
+    console.log("🔍 Middleware - Admin route detected");
     // For admin routes, check authentication and role
     if (!token) {
+      console.log("🔍 Middleware - No token, redirecting to signin");
       return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
 
     if (token?.role !== "ADMIN") {
+      console.log("🔍 Middleware - User is not admin, redirecting to home");
       // Redirect non-admin users to home page instead of creating loops
       return NextResponse.redirect(new URL("/", request.url));
     }
 
+    console.log("🔍 Middleware - Admin access granted");
     return NextResponse.next();
   }
 
@@ -58,8 +64,10 @@ export async function middleware(request: NextRequest) {
 
   // If logged in and accessing user auth pages, redirect based on role
   if (token && pathname.startsWith("/auth/")) {
+    console.log("🔍 Middleware - Auth page with token, role:", token?.role);
     // Redirect authenticated users away from auth pages based on their role
     if (token?.role === "ADMIN") {
+      console.log("🔍 Middleware - Admin user on auth page, redirecting to admin");
       return NextResponse.redirect(new URL("/admin", request.url));
     } else if (token?.role === "CLIENT") {
       return NextResponse.redirect(new URL("/client-dashboard", request.url));

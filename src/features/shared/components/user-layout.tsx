@@ -10,10 +10,13 @@ const Header = dynamic(
   {
     ssr: false,
     loading: () => (
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200">
         <div className="container flex h-16 items-center justify-between px-4">
-          <div className="h-8 w-8 bg-muted animate-pulse rounded" />
-          <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+          <div className="h-8 w-32 bg-gray-200 animate-pulse rounded" />
+          <div className="flex gap-2">
+            <div className="h-8 w-16 bg-gray-200 animate-pulse rounded-full" />
+            <div className="h-8 w-20 bg-gray-200 animate-pulse rounded-full" />
+          </div>
         </div>
       </header>
     ),
@@ -59,11 +62,15 @@ export function UserLayout({
         <footer className="bg-black text-white">
           <div className="container mx-auto px-4 sm:px-6 py-12">
             <div className="mb-10">
-              <div className="text-2xl font-extrabold">LOGO</div>
+              <img 
+                src="/images/home/clervelogo.png" 
+                alt="Clevrs" 
+                className="h-8 w-auto mb-2"
+              />
               <a href="/help" className="mt-2 inline-block underline text-sm text-gray-300">Visit Help Center</a>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 text-gray-300">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8 text-gray-300">
               <div>
                 <h4 className="font-semibold text-white mb-3">Company</h4>
                 <ul className="space-y-2 text-sm">
@@ -97,13 +104,7 @@ export function UserLayout({
                   <li><a href="#" className="hover:underline">Cities</a></li>
                 </ul>
               </div>
-              <div>
-                <h4 className="font-semibold text-white mb-3">Apps</h4>
-                <div className="space-y-2 text-sm">
-                  <a href="#" className="inline-block rounded border border-gray-700 px-3 py-2">Get it on Google Play</a>
-                  <a href="#" className="inline-block rounded border border-gray-700 px-3 py-2">Download on the App Store</a>
-                </div>
-              </div>
+
             </div>
 
             <div className="mt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-gray-400 text-sm">
@@ -120,6 +121,17 @@ export function UserLayout({
                 <a href="#" className="hover:underline">Terms</a>
               </div>
               <p className="md:ml-auto">© 2025 Clevrs</p>
+            </div>
+            
+            {/* Apps Section */}
+            <div className="mt-6 flex justify-start">
+              <a href="#" className="inline-block">
+                <img 
+                  src="/images/home/picgoapp.png" 
+                  alt="Download on Google Play and App Store" 
+                  className="h-12 w-auto"
+                />
+              </a>
             </div>
           </div>
         </footer>

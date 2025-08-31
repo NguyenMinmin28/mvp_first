@@ -24,6 +24,15 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: "/api/skills",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, s-maxage=3600",
+          },
+        ],
+      },
+      {
         source: "/api/:path*",
         headers: [
           {
@@ -40,6 +49,15 @@ const nextConfig = {
             value: process.env.NODE_ENV === "development" 
               ? "no-cache, no-store, must-revalidate" 
               : "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
