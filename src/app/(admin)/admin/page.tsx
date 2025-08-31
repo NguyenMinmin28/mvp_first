@@ -32,6 +32,14 @@ export default async function AdminPage() {
     return <AdminDashboard user={user} />;
   } catch (error) {
     console.error("🔍 Admin page - Error:", error);
+    
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error("🔍 Admin page - Error name:", error.name);
+      console.error("🔍 Admin page - Error message:", error.message);
+      console.error("🔍 Admin page - Error stack:", error.stack);
+    }
+    
     // Fallback to signin page
     redirect("/auth/signin");
   }

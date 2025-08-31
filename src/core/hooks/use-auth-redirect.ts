@@ -71,11 +71,23 @@ export function useAuthRedirect() {
         
         // Add a fallback in case router doesn't work
         setTimeout(() => {
-          if (window.location.pathname !== "/admin") {
+          const currentPath = window.location.pathname;
+          console.log("🔍 Auth Redirect - Current path after 2s:", currentPath);
+          if (currentPath !== "/admin") {
             console.log("🔍 Auth Redirect - Router didn't work, using window.location fallback");
             window.location.href = "/admin";
           }
         }, 2000);
+        
+        // Add another fallback after 5 seconds
+        setTimeout(() => {
+          const currentPath = window.location.pathname;
+          console.log("🔍 Auth Redirect - Current path after 5s:", currentPath);
+          if (currentPath !== "/admin") {
+            console.log("🔍 Auth Redirect - Final fallback, forcing navigation");
+            window.location.replace("/admin");
+          }
+        }, 5000);
       } catch (error) {
         console.error("🔍 Auth Redirect - Error during redirect:", error);
         // Fallback to window.location

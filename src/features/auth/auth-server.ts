@@ -3,21 +3,30 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "./auth";
 
 export async function getServerSessionUser() {
-  const session = await getServerSession(authOptions);
+  try {
+    console.log("🔍 getServerSessionUser - Starting to get session");
+    const session = await getServerSession(authOptions);
+    console.log("🔍 getServerSessionUser - Session result:", !!session, session?.user?.email, session?.user?.role);
 
-  if (!session?.user) {
+    if (!session?.user) {
+      console.log("🔍 getServerSessionUser - No session or user");
+      return null;
+    }
+
+    console.log("🔍 getServerSessionUser - Returning user:", session.user.email, session.user.role);
+    return {
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      image: session.user.image,
+      phoneE164: session.user.phoneE164,
+      role: session.user.role,
+      isProfileCompleted: session.user.isProfileCompleted,
+    };
+  } catch (error) {
+    console.error("🔍 getServerSessionUser - Error:", error);
     return null;
   }
-
-  return {
-    id: session.user.id,
-    name: session.user.name,
-    email: session.user.email,
-    image: session.user.image,
-    phoneE164: session.user.phoneE164,
-    role: session.user.role,
-    isProfileCompleted: session.user.isProfileCompleted,
-  };
 }
 
 export async function requireServerAuth() {
