@@ -29,6 +29,8 @@ const adminLoginSchema = z.object({
 type AdminLoginFormData = z.infer<typeof adminLoginSchema>;
 
 export default function AdminLoginClient() {
+  console.log("🔍 ADMIN LOGIN CLIENT RENDERING");
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -67,7 +69,8 @@ export default function AdminLoginClient() {
         
         if (userData.user?.role === "ADMIN") {
           toast.success("Admin login successful!");
-          router.push("/admin");
+          // Use window.location to avoid middleware redirect loops
+          window.location.href = "/admin";
         } else {
           setServerError("Access denied. Admin privileges required.");
           // Sign out the user since they're not admin

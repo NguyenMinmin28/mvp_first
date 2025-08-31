@@ -22,7 +22,7 @@ export default async function AdminLayoutPage({ children }: AdminLayoutPageProps
     const user = await requireServerAuth();
     
     // Check if user has admin role
-    if (user.role !== "admin") {
+    if (user.role !== "ADMIN") {
       redirect("/auth/signin");
     }
 

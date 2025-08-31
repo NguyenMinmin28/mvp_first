@@ -10,6 +10,12 @@ import {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Get token from cookie
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
   // Routes that require authentication (home is now public)
   const protectedRoutes = [userRoutes.PROFILE];
 
@@ -21,56 +27,22 @@ export async function middleware(request: NextRequest) {
     "/role-selection", // Add role-selection to public routes
   ];
 
-  // Admin routes
-  const adminRoutes = Object.values(adminRoutesConfig);
-  const adminPublicRoutes = ["/admin/login"];
-
   // Check if current route requires authentication
   const isProtectedRoute = protectedRoutes.some((route: any) => pathname === route);
   const isPublicRoute = publicRoutes.some((route: any) =>
     pathname.startsWith(route)
   );
-  const isAdminRoute = adminRoutes.some((route: any) => pathname.startsWith(route));
-  const isAdminPublicRoute = adminPublicRoutes.some((route: any) =>
-    pathname.startsWith(route)
-  );
-
-  // Get token from cookie
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  const isAdminRoute = pathname.startsWith("/admin"); // Simplified admin route check
 
   // Handle admin routes
   if (isAdminRoute) {
-    // If accessing admin login page without token, allow access
-    if (isAdminPublicRoute && !token) {
-      return NextResponse.next();
-    }
-
-    // If accessing admin login page with token, check if user is admin
-    if (isAdminPublicRoute && token) {
-      if (token.role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin", request.url));
-      } else {
-        // Non-admin user trying to access admin login, redirect to appropriate dashboard
-        if (token.role === "CLIENT") {
-          return NextResponse.redirect(new URL("/client-dashboard", request.url));
-        } else if (token.role === "DEVELOPER") {
-          return NextResponse.redirect(new URL("/inbox", request.url));
-        } else {
-          return NextResponse.redirect(new URL("/", request.url));
-        }
-      }
-    }
-
-    // If accessing other admin routes without token, redirect to admin login
+    // For admin routes, check authentication and role
     if (!token) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
 
-    // If accessing admin route with token, check if user is admin
-    if (token.role !== "ADMIN") {
+    if (token?.role !== "ADMIN") {
+      // Redirect non-admin users to home page instead of creating loops
       return NextResponse.redirect(new URL("/", request.url));
     }
 
@@ -84,14 +56,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If logged in and accessing auth pages (but not admin login), redirect based on role
-  if (token && pathname.startsWith("/auth/") && !pathname.startsWith("/admin/")) {
+  // If logged in and accessing user auth pages, redirect based on role
+  if (token && pathname.startsWith("/auth/")) {
     // Redirect authenticated users away from auth pages based on their role
-    if (token.role === "ADMIN") {
+    if (token?.role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin", request.url));
-    } else if (token.role === "CLIENT") {
+    } else if (token?.role === "CLIENT") {
       return NextResponse.redirect(new URL("/client-dashboard", request.url));
-    } else if (token.role === "DEVELOPER") {
+    } else if (token?.role === "DEVELOPER") {
       return NextResponse.redirect(new URL("/inbox", request.url));
     } else {
       return NextResponse.redirect(new URL("/role-selection", request.url));
@@ -99,19 +71,20 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user has token but no role and is not on role-selection page, redirect to role-selection
-  if (token && !token.role && pathname !== "/role-selection") {
+  // BUT EXCLUDE ADMIN ROUTES FROM THIS LOGIC
+  if (token && !token?.role && pathname !== "/role-selection" && !pathname.startsWith("/admin/")) {
     return NextResponse.redirect(new URL("/role-selection", request.url));
   }
 
   // If user already has a role and is on role-selection, redirect based on role
-  if (token && token.role && pathname === "/role-selection") {
+  if (token && token?.role && pathname === "/role-selection") {
     // Only redirect if user has completed profile
-    if (token.isProfileCompleted) {
-      if (token.role === "CLIENT") {
+    if (token?.isProfileCompleted) {
+      if (token?.role === "CLIENT") {
         return NextResponse.redirect(new URL("/client-dashboard", request.url));
-      } else if (token.role === "DEVELOPER") {
+      } else if (token?.role === "DEVELOPER") {
         return NextResponse.redirect(new URL("/inbox", request.url));
-      } else if (token.role === "ADMIN") {
+      } else if (token?.role === "ADMIN") {
         return NextResponse.redirect(new URL("/admin", request.url));
       } else {
         return NextResponse.redirect(new URL("/", request.url));
@@ -122,14 +95,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle portal-specific redirects for authenticated users on home page
-  if (token && token.role && pathname === "/") {
+  if (token && token?.role && pathname === "/") {
     // Only redirect if user has completed profile
-    if (token.isProfileCompleted) {
-      if (token.role === "CLIENT") {
+    if (token?.isProfileCompleted) {
+      if (token?.role === "CLIENT") {
         return NextResponse.redirect(new URL("/client-dashboard", request.url));
-      } else if (token.role === "DEVELOPER") {
+      } else if (token?.role === "DEVELOPER") {
         return NextResponse.redirect(new URL("/inbox", request.url));
-      } else if (token.role === "ADMIN") {
+      } else if (token?.role === "ADMIN") {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
     } else {

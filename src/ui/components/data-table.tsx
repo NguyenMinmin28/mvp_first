@@ -142,14 +142,14 @@ export function DataTable<T extends Record<string, any>>({
       </CardHeader>
 
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
           <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b bg-gray-50">
+            <thead className="bg-gray-100 border-b-4 border-gray-400">
+              <tr>
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`px-4 py-3 text-left text-sm font-medium text-gray-700 ${
+                    className={`px-4 py-3 text-left text-sm font-bold text-gray-800 border-r-2 border-gray-400 ${
                       column.sortable
                         ? "cursor-pointer hover:bg-gray-100"
                         : ""
@@ -199,13 +199,18 @@ export function DataTable<T extends Record<string, any>>({
                 filteredData.map((item, index) => (
                   <tr
                     key={index}
-                    className={`border-b hover:bg-gray-50  ${
+                    className={`border-b-2 border-gray-300 hover:bg-gray-100 ${
                       onRowClick ? "cursor-pointer" : ""
                     }`}
                     onClick={() => onRowClick?.(item)}
                   >
-                    {columns.map((column) => (
-                      <td key={column.key} className="px-4 py-3 text-sm">
+                    {columns.map((column, colIndex) => (
+                      <td 
+                        key={column.key} 
+                        className={`px-4 py-3 text-sm border-r-2 border-gray-300 ${
+                          colIndex === columns.length - 1 ? '' : 'border-r-2 border-gray-300'
+                        }`}
+                      >
                         {column.render ? (
                           column.render(item[column.key], item)
                         ) : (

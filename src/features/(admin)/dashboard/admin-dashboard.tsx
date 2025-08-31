@@ -269,53 +269,53 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         <TabsContent value="overview" className="space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-sm font-bold text-gray-800">Total Projects</CardTitle>
+                <FileText className="h-4 w-4 text-gray-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalProjects}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-gray-900">{stats.totalProjects}</div>
+                <p className="text-xs text-gray-600">
                   {stats.activeProjects} active
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Developers</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-sm font-bold text-gray-800">Total Developers</CardTitle>
+                <Users className="h-4 w-4 text-gray-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalDevelopers}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-gray-900">{stats.totalDevelopers}</div>
+                <p className="text-xs text-gray-600">
                   {stats.approvedDevelopers} approved
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-sm font-bold text-gray-800">Pending Approvals</CardTitle>
+                <Clock className="h-4 w-4 text-gray-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingApprovals}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-gray-900">{stats.pendingApprovals}</div>
+                <p className="text-xs text-gray-600">
                   Developer applications
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed Projects</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-sm font-bold text-gray-800">Completed Projects</CardTitle>
+                <CheckCircle className="h-4 w-4 text-gray-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.completedProjects}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-gray-900">{stats.completedProjects}</div>
+                <p className="text-xs text-gray-600">
                   Successfully delivered
                 </p>
               </CardContent>
@@ -324,18 +324,18 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
           {/* Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Projects</CardTitle>
-                <CardDescription>Latest project activities</CardDescription>
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-gray-800 font-bold">Recent Projects</CardTitle>
+                <CardDescription className="text-gray-600">Latest project activities</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4">
                 <div className="space-y-4">
                   {projects.slice(0, 5).map((project) => (
-                    <div key={project.id} className="flex items-center justify-between">
+                    <div key={project.id} className="flex items-center justify-between p-2 border-b border-gray-200 last:border-b-0">
                       <div>
-                        <p className="font-medium">{project.title}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-medium text-gray-900">{project.title}</p>
+                        <p className="text-sm text-gray-600">
                           {project.client.user.name || project.client.user.email}
                         </p>
                       </div>
@@ -348,21 +348,21 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Approvals</CardTitle>
-                <CardDescription>Developers awaiting approval</CardDescription>
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-gray-800 font-bold">Pending Approvals</CardTitle>
+                <CardDescription className="text-gray-600">Developers awaiting approval</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4">
                 <div className="space-y-4">
                   {developers
                     .filter(d => d.adminApprovalStatus === "pending")
                     .slice(0, 5)
                     .map((developer) => (
-                      <div key={developer.id} className="flex items-center justify-between">
+                      <div key={developer.id} className="flex items-center justify-between p-2 border-b border-gray-200 last:border-b-0">
                         <div>
-                          <p className="font-medium">{developer.user.name}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="font-medium text-gray-900">{developer.user.name}</p>
+                          <p className="text-sm text-gray-600">
                             {developer.user.email}
                           </p>
                         </div>
@@ -395,31 +395,46 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             </Button>
           </div>
 
-          <div className="grid gap-6">
-            {filteredProjects.map((project) => (
-              <Card key={project.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{project.title}</CardTitle>
-                      <CardDescription>{project.description}</CardDescription>
-                    </div>
-                    <Badge className={getStatusColor(project.status)}>
-                      {getStatusText(project.status)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm font-medium">Client</p>
-                      <p className="text-sm text-muted-foreground">
-                        {project.client.user.name || project.client.user.email}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Skills Required</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
+          <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-100 border-b-4 border-gray-400">
+                <tr>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Project</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Client</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Skills Required</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Stats</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Current Batch</th>
+                  <th className="text-left p-3 font-bold text-gray-800">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProjects.map((project) => (
+                  <tr key={project.id} className="border-b-2 border-gray-300 hover:bg-gray-100">
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div>
+                        <div className="font-medium">{project.title}</div>
+                        <div className="text-sm text-muted-foreground">{project.description}</div>
+                        <div className="mt-1">
+                          <Badge className={getStatusColor(project.status)}>
+                            {getStatusText(project.status)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div>
+                        <div className="font-medium">
+                          {project.client.user.name || project.client.user.email}
+                        </div>
+                        {project.contactRevealEnabled && (
+                          <div className="text-xs text-green-600">
+                            Contact revealed ({project.contactRevealsCount} times)
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div className="flex flex-wrap gap-1">
                         {project.skillsRequired.slice(0, 3).map((skill) => (
                           <Badge key={skill} variant="secondary" className="text-xs">
                             {skill}
@@ -431,55 +446,42 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                           </Badge>
                         )}
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Stats</p>
-                      <p className="text-sm text-muted-foreground">
-                        {project._count.assignmentBatches} batches, {project._count.assignmentCandidates} candidates
-                      </p>
-                      {project.contactRevealEnabled && (
-                        <p className="text-sm text-green-600">
-                          Contact revealed ({project.contactRevealsCount} times)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {project.currentBatch && (
-                    <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <p className="text-sm font-medium mb-2">Current Batch</p>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Status:</span> {project.currentBatch.status}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Candidates:</span> {project.currentBatch.candidates.length}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Accepted:</span>{" "}
-                          {project.currentBatch.candidates.filter(c => c.responseStatus === "accepted").length}
-                        </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div className="text-sm">
+                        <div>{project._count.assignmentBatches} batches</div>
+                        <div>{project._count.assignmentCandidates} candidates</div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2 mt-4 pt-4 border-t">
-                    {project.status === "assigning" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAssignDeveloper(project)}
-                        className="flex-1"
-                      >
-                        <Users className="h-4 w-4 mr-2" />
-                        Assign Developer
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      {project.currentBatch ? (
+                        <div className="text-sm">
+                          <div><span className="text-muted-foreground">Status:</span> {project.currentBatch.status}</div>
+                          <div><span className="text-muted-foreground">Candidates:</span> {project.currentBatch.candidates.length}</div>
+                          <div><span className="text-muted-foreground">Accepted:</span>{" "}
+                            {project.currentBatch.candidates.filter(c => c.responseStatus === "accepted").length}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No active batch</span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {project.status === "assigning" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignDeveloper(project)}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Assign Developer
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </TabsContent>
 
@@ -501,93 +503,97 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             </Button>
           </div>
 
-          <div className="grid gap-6">
-            {filteredDevelopers.map((developer) => (
-              <Card key={developer.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{developer.user.name}</CardTitle>
-                      <CardDescription>{developer.user.email}</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge className={getApprovalStatusColor(developer.adminApprovalStatus)}>
-                        {developer.adminApprovalStatus}
-                      </Badge>
-                      <Badge className={getLevelColor(developer.level)}>
-                        {developer.level}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm font-medium">Status</p>
-                      <p className="text-sm text-muted-foreground capitalize">
-                        {developer.currentStatus}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">WhatsApp</p>
-                      <p className="text-sm text-muted-foreground">
-                        {developer.whatsappVerified ? "✅ Verified" : "❌ Not verified"}
-                      </p>
-                      {developer.whatsappNumber && (
-                        <p className="text-xs text-muted-foreground">
-                          {developer.whatsappNumber}
-                        </p>
+          <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-100 border-b-4 border-gray-400">
+                <tr>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Developer</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Status</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">WhatsApp</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Response Time</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Assignments</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Skills</th>
+                  <th className="text-left p-3 font-bold text-gray-800">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDevelopers.map((developer) => (
+                  <tr key={developer.id} className="border-b-2 border-gray-300 hover:bg-gray-100">
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div>
+                        <div className="font-medium">{developer.user.name}</div>
+                        <div className="text-sm text-muted-foreground">{developer.user.email}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge className={getApprovalStatusColor(developer.adminApprovalStatus)}>
+                            {developer.adminApprovalStatus}
+                          </Badge>
+                          <Badge className={getLevelColor(developer.level)}>
+                            {developer.level}
+                          </Badge>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <span className="capitalize">{developer.currentStatus}</span>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div>
+                        <span className={developer.whatsappVerified ? "text-green-600" : "text-red-600"}>
+                          {developer.whatsappVerified ? "✅ Verified" : "❌ Not verified"}
+                        </span>
+                        {developer.whatsappNumber && (
+                          <div className="text-xs text-muted-foreground">
+                            {developer.whatsappNumber}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      ~{Math.floor(developer.usualResponseTimeMs / 60000)}m
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      {developer._count.assignmentCandidates} total
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div className="flex flex-wrap gap-1">
+                        {developer.skills.slice(0, 3).map((skill) => (
+                          <Badge key={skill.skill.name} variant="secondary" className="text-xs">
+                            {skill.skill.name}
+                          </Badge>
+                        ))}
+                        {developer.skills.length > 3 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{developer.skills.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      {developer.adminApprovalStatus === "pending" && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleDeveloperAction(developer.id, "approve")}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeveloperAction(developer.id, "reject", "Insufficient documentation")}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
                       )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Response Time</p>
-                      <p className="text-sm text-muted-foreground">
-                        ~{Math.floor(developer.usualResponseTimeMs / 60000)}m
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Assignments</p>
-                      <p className="text-sm text-muted-foreground">
-                        {developer._count.assignmentCandidates} total
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <p className="text-sm font-medium mb-2">Skills</p>
-                    <div className="flex flex-wrap gap-1">
-                      {developer.skills.map((skill) => (
-                        <Badge key={skill.skill.name} variant="secondary" className="text-xs">
-                          {skill.skill.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Admin Actions */}
-                  {developer.adminApprovalStatus === "pending" && (
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleDeveloperAction(developer.id, "approve")}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeveloperAction(developer.id, "reject", "Insufficient documentation")}
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </TabsContent>
 

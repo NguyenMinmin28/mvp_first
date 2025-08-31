@@ -287,37 +287,37 @@ export function CronRunsTable() {
               No cron runs found
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Job</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Started</th>
-                    <th className="text-left p-2">Duration</th>
-                    <th className="text-left p-2">Details</th>
+            <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-100 border-b-4 border-gray-400">
+                  <tr>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Job</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Status</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Started</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Duration</th>
+                    <th className="text-left p-3 font-bold text-gray-800">Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   {runs.map((run: any) => (
-                    <tr key={run.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2">
+                    <tr key={run.id} className="border-b-2 border-gray-300 hover:bg-gray-100">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <div className="font-medium">{run.job}</div>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         {getStatusBadge(run.status, run.success)}
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <div className="text-sm">
                           {formatDate(run.startedAt)}
                         </div>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <div className="text-sm">
                           {formatDuration(run.duration)}
                         </div>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3">
                         <div className="text-sm text-muted-foreground max-w-xs">
                           {run.details ? (
                             <details className="cursor-pointer">

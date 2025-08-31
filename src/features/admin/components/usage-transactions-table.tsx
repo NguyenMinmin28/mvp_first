@@ -137,22 +137,22 @@ export function UsageTransactionsTable() {
               No usage transactions found
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Client</th>
-                    <th className="text-left p-2">Package</th>
-                    <th className="text-left p-2">Period</th>
-                    <th className="text-left p-2">Projects Posted</th>
-                    <th className="text-left p-2">Contact Clicks</th>
-                    <th className="text-left p-2">Created</th>
+            <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-100 border-b-4 border-gray-400">
+                  <tr>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Client</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Package</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Period</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Projects Posted</th>
+                    <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Contact Clicks</th>
+                    <th className="text-left p-3 font-bold text-gray-800">Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {transactions.map((transaction: any) => (
-                    <tr key={transaction.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2">
+                    <tr key={transaction.id} className="border-b-2 border-gray-300 hover:bg-gray-100">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <div>
                           <div className="font-medium">{transaction.clientName || "N/A"}</div>
                           <div className="text-sm text-muted-foreground">
@@ -160,10 +160,10 @@ export function UsageTransactionsTable() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <Badge variant="secondary">{transaction.packageName}</Badge>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <div className="text-sm">
                           <div>{formatDate(transaction.periodStart)}</div>
                           <div className="text-muted-foreground">
@@ -171,17 +171,17 @@ export function UsageTransactionsTable() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <Badge variant="outline">
                           {transaction.projectsPostedCount}
                         </Badge>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3 border-r-2 border-gray-300">
                         <Badge variant="outline">
                           {getTotalContactClicks(transaction.contactClicksByProject)}
                         </Badge>
                       </td>
-                      <td className="p-2">
+                      <td className="p-3">
                         <div className="text-sm text-muted-foreground">
                           {formatDate(transaction.createdAt)}
                         </div>

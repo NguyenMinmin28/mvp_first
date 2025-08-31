@@ -75,9 +75,8 @@ export default function RootLayout({ children }: AdminLayoutProps) {
         )}
       >
         <Providers>
-          <PortalProvider>
-            {children}
-          </PortalProvider>
+          {/* Temporarily disable PortalProvider for admin routes */}
+          {children}
         </Providers>
       </body>
     </html>
