@@ -24,6 +24,7 @@ export function useAuthRedirect() {
 
     // Only redirect if we're on a page that needs redirect
     const currentPath = window.location.pathname;
+    console.log("🔍 Auth Redirect - Current path:", currentPath);
     if (currentPath === "/admin" || currentPath === "/client-dashboard" || currentPath === "/inbox" || currentPath === "/role-selection") {
       console.log("🔍 Auth Redirect - Already on target page, skipping redirect");
       return;
@@ -64,38 +65,7 @@ export function useAuthRedirect() {
     // Check role and redirect accordingly (only if profile is completed)
     if (userRole === "ADMIN") {
       console.log("🔍 Auth Redirect - Admin user, redirecting to admin dashboard");
-      try {
-        console.log("🔍 Auth Redirect - About to call router.replace('/admin')");
-        router.replace("/admin");
-        console.log("🔍 Auth Redirect - router.replace('/admin') called successfully");
-        
-        // Add a fallback in case router doesn't work
-        setTimeout(() => {
-          const currentPath = window.location.pathname;
-          console.log("🔍 Auth Redirect - Current path after 2s:", currentPath);
-          if (currentPath !== "/admin") {
-            console.log("🔍 Auth Redirect - Router didn't work, using window.location fallback");
-            // Force redirect to admin
-            window.location.href = "https://mvp-first1.vercel.app/admin";
-          }
-        }, 2000);
-        
-        // Add another fallback after 5 seconds
-        setTimeout(() => {
-          const currentPath = window.location.pathname;
-          console.log("🔍 Auth Redirect - Current path after 5s:", currentPath);
-          if (currentPath !== "/admin") {
-            console.log("🔍 Auth Redirect - Final fallback, forcing navigation");
-            // Force redirect with replace
-            window.location.replace("https://mvp-first1.vercel.app/admin");
-          }
-        }, 5000);
-      } catch (error) {
-        console.error("🔍 Auth Redirect - Error during redirect:", error);
-        // Fallback to window.location
-        console.log("🔍 Auth Redirect - Using window.location fallback");
-        window.location.href = "/admin";
-      }
+      router.replace("/admin");
       return;
     }
 

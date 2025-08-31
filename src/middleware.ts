@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  console.log("🔍 Middleware - Pathname:", pathname, "Token:", !!token, "Role:", token?.role);
+  console.log("🔍 Middleware - Pathname:", pathname, "Token:", !!token, "Role:", token?.role, "URL:", request.url);
 
   // Routes that require authentication (home is now public)
   const protectedRoutes = [userRoutes.PROFILE];

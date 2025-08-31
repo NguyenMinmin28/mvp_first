@@ -310,6 +310,5 @@ export default {
   },
   pages: {
     signIn: "/auth/signin",
-    error: "/auth/signin", // Redirect về trang signin khi có lỗi
   },
 } satisfies NextAuthOptions
