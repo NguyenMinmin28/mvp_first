@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePortal } from "@/features/shared/portal-context";
@@ -14,12 +14,20 @@ export function useAuthRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const portalContext = usePortal();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    console.log("🔍 Auth Redirect - Status:", status, "Session:", !!session, "User:", session?.user?.email, "Role:", session?.user?.role);
+    console.log("🔍 Auth Redirect - Status:", status, "Session:", !!session, "User:", session?.user?.email, "Role:", session?.user?.role, "HasRedirected:", hasRedirected);
     
     // Only run when session is loaded and user is authenticated
-    if (status === "loading" || !session?.user) return;
+    if (status === "loading" || !session?.user || hasRedirected) return;
+
+    // Only redirect if we're on a page that needs redirect
+    const currentPath = window.location.pathname;
+    if (currentPath === "/admin" || currentPath === "/client-dashboard" || currentPath === "/inbox" || currentPath === "/role-selection") {
+      console.log("🔍 Auth Redirect - Already on target page, skipping redirect");
+      return;
+    }
 
     const user = session.user;
     const userRole = user.role as string | undefined;
@@ -28,6 +36,9 @@ export function useAuthRedirect() {
     const callbackUrl = searchParams.get("callbackUrl");
 
     console.log("🔍 Auth Redirect - User:", user.email, "Role:", userRole, "Profile Completed:", isProfileCompleted, "Portal:", portal, "Callback URL:", callbackUrl);
+
+    // Mark as redirected to prevent infinite loops
+    setHasRedirected(true);
 
     // If there's a specific callback URL, use it
     if (callbackUrl) {
@@ -123,5 +134,5 @@ export function useAuthRedirect() {
     // Fallback - redirect to role selection
     console.log("🔍 Auth Redirect - Fallback, redirecting to role selection");
     router.replace("/role-selection");
-  }, [session, status, router, searchParams, portalContext]);
+  }, [session, status, router, searchParams, portalContext, hasRedirected]);
 }
