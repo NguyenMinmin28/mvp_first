@@ -32,34 +32,34 @@ const plans: Plan[] = [
     cta: "CHOOSE YOUR PLAN",
     providerPlanId: "P-BASIC-PLAN-ID", // Sẽ được thay thế bằng real plan ID
   },
-  {
-    id: "plus",
-    name: "Plus Plan",
-    price: "$19.95",
-    priceNumber: 19.95,
-    period: "/monthly",
-    features: [
-      "Post up to 10 projects per month.",
-      "Contact up to 10 freelancer per project",
-      "Get notified when freelancers show interest",
-    ],
-    cta: "CHOOSE YOUR PLAN",
-    providerPlanId: "P-PLUS-PLAN-ID", // Sẽ được thay thế bằng real plan ID
-  },
-  {
-    id: "pro",
-    name: "Pro Plan",
-    price: "$99.95",
-    priceNumber: 99.95,
-    period: "/monthly",
-    features: [
-      "Unlimited project postings",
-      "Unlimited contacts per project.",
-      "Get notified when freelancers show interest",
-    ],
-    cta: "CHOOSE YOUR PLAN",
-    providerPlanId: "P-PRO-PLAN-ID", // Sẽ được thay thế bằng real plan ID
-  },
+      {
+      id: "plus",
+      name: "Plus Plan",
+      price: "$19.95",
+      priceNumber: 19.95,
+      period: "/monthly",
+      features: [
+        "Post up to 10 projects per month.",
+        "Contact up to 10 freelancer per project",
+        "Get notified when freelancers show interest",
+      ],
+      cta: "CHOOSE YOUR PLAN",
+      providerPlanId: "P-2L869865T2585332XNC24EXA",
+    },
+      {
+      id: "pro",
+      name: "Pro Plan",
+      price: "$99.95",
+      priceNumber: 99.95,
+      period: "/monthly",
+      features: [
+        "Unlimited project postings",
+        "Unlimited contacts per project.",
+        "Get notified when freelancers show interest",
+      ],
+      cta: "CHOOSE YOUR PLAN",
+      providerPlanId: "P-6BH23931L7595043MNC24EXQ",
+    },
 ];
 
 export default function SimplePricingPage() {
