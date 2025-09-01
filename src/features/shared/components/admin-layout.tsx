@@ -39,7 +39,7 @@ export function AdminLayout({
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-            <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 overflow-x-hidden" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
       {/* Header */}
       <AdminHeader user={user} onToggleSidebar={toggleSidebar} />
       <SessionRefreshNotice isRefreshing={isRefreshing} />
@@ -51,8 +51,10 @@ export function AdminLayout({
       />
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-20">
-        <div className="container mx-auto px-4 py-8">{children}</div>
+      <main className="pt-20 lg:ml-64" style={{ display: 'block', paddingTop: '3rem', marginLeft: '15rem' }}>
+        <div className="w-full max-w-6xl px-1 sm:px-2 lg:px-4 py-4" style={{ padding: '1rem 0.25rem', width: '100%' }}>
+          {children}
+        </div>
       </main>
     </div>
   );

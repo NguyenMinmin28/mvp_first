@@ -256,8 +256,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       title="Admin Dashboard"
       description="Manage projects, developers, and system settings"
     >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 w-full" style={{ width: '100%' }}>
+        <TabsList className="flex w-full justify-center flex-wrap gap-2" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="developers">Developers</TabsTrigger>
@@ -266,9 +266,9 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6 w-full" style={{ width: '100%' }}>
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 w-full" style={{ width: '100%' }}>
             <Card className="border-4 border-gray-300 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gray-50 border-b-2 border-gray-200">
                 <CardTitle className="text-sm font-bold text-gray-800">Total Projects</CardTitle>
@@ -323,7 +323,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
           </div>
 
           {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6 w-full" style={{ width: '100%' }}>
             <Card className="border-4 border-gray-300 shadow-lg">
               <CardHeader className="bg-gray-50 border-b-2 border-gray-200">
                 <CardTitle className="text-gray-800 font-bold">Recent Projects</CardTitle>
@@ -395,8 +395,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             </Button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
-            <table className="w-full border-collapse">
+          <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg w-full" style={{ width: '100%' }}>
+            <table className="w-full border-collapse" style={{ width: '100%' }}>
               <thead className="bg-gray-100 border-b-4 border-gray-400">
                 <tr>
                   <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Project</th>
