@@ -18,7 +18,7 @@ export default function Together() {
           </div>
           <div className="flex md:justify-end">
             <img
-              src="/images/home/clervelogoblack.png"
+              src="/images/about/logo.png"
               alt="Clevrs Logo"
               className="w-52 h-52 md:w-[520px] md:h-[520px] object-contain"
             />

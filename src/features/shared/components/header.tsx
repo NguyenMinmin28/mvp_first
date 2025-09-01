@@ -12,7 +12,7 @@ import {
 } from "@/ui/components/dropdown-menu";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { LogOut, User, Settings, Plus, Inbox, DollarSign, FolderOpen, Menu, X, Bell, ChevronDown } from "lucide-react";
+import { LogOut, User, Settings, Plus, Inbox, DollarSign, FolderOpen, Menu, X, Bell, ChevronDown, Zap } from "lucide-react";
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -220,6 +220,12 @@ export function Header({ user }: HeaderProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Link href="/ideas">
+                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                  <Zap className="h-4 w-4" />
+                  Idea Spark
+                </Button>
+              </Link>
             </nav>
           )}
             
@@ -237,60 +243,67 @@ export function Header({ user }: HeaderProps) {
                     Pricing
                   </Button>
                 </Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
-                      About <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuItem asChild>
-                      <Link href="/about">About us</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/newsroom">Newsroom</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/investors">Investor Relation</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/blog">Blog</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </nav>
-            )}
+                              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                    About <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/about">About us</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/newsroom">Newsroom</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/investors">Investor Relation</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/blog">Blog</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Link href="/ideas">
+                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                  <Zap className="h-4 w-4" />
+                  Idea Spark
+                </Button>
+              </Link>
+            </nav>
+          )}
 
             {!isAuthenticated && (
               <nav className="hidden md:flex items-center gap-8">
                 <Link href="/pricing" className="text-sm hover:opacity-80">Price</Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 text-sm">
-                      About <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuItem asChild>
-                      <Link href="/about">About us</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/newsroom">Newsroom</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/investors">Investor Relation</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/blog">Blog</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 text-sm">
+                    About <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/about">About us</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/newsroom">Newsroom</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/investors">Investor Relation</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/blog">Blog</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Link href="/ideas" className="text-sm hover:opacity-80">Idea Spark</Link>
               </nav>
             )}
           </div>
@@ -441,6 +454,12 @@ export function Header({ user }: HeaderProps) {
                       <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
                     </div>
                   </div>
+                  <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Idea Spark
+                    </div>
+                  </Link>
                 </nav>
               )}
 
@@ -470,6 +489,12 @@ export function Header({ user }: HeaderProps) {
                       <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
                     </div>
                   </div>
+                  <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Idea Spark
+                    </div>
+                  </Link>
                 </nav>
               )}
 
@@ -486,6 +511,12 @@ export function Header({ user }: HeaderProps) {
                       <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
                     </div>
                   </div>
+                  <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Idea Spark
+                    </div>
+                  </Link>
                 </nav>
               )}
 

@@ -1,6 +1,6 @@
 // Core subscription types derived from Prisma schema
 
-export type PaymentProvider = "paypal";
+export type PaymentProvider = "paypal" | "internal";
 
 export type SubscriptionStatus = "active" | "past_due" | "canceled";
 

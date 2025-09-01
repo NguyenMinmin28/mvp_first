@@ -42,26 +42,65 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
-    const user = await db.user.create({
-      data: {
-        name,
-        email,
-        passwordHash: hashedPassword,
-        emailVerified: new Date(), // Auto-verify for now, you can add email verification later
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        isProfileCompleted: true,
-      },
-    });
+          // Create user and assign Basic Plan in a transaction
+      const result = await db.$transaction(async (tx) => {
+        // Create user
+        const user = await tx.user.create({
+          data: {
+            name,
+            email,
+            passwordHash: hashedPassword,
+            emailVerified: new Date(), // Auto-verify for now, you can add email verification later
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            isProfileCompleted: true,
+          },
+        });
+
+        // Create client profile
+        const clientProfile = await tx.clientProfile.create({
+          data: {
+            userId: user.id,
+          },
+        });
+
+        // Tìm Basic Plan package
+        const basicPackage = await tx.package.findFirst({
+          where: {
+            name: "Basic Plan",
+            priceUSD: 0
+          }
+        });
+
+        // Nếu có Basic Plan, tạo subscription
+        if (basicPackage) {
+          await tx.subscription.create({
+            data: {
+              clientId: clientProfile.id,
+              packageId: basicPackage.id,
+              status: 'active',
+              provider: 'paypal',
+              providerSubscriptionId: `basic-${user.id}-${Date.now()}`,
+              startAt: new Date(),
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+              cancelAtPeriodEnd: false,
+              trialStart: null,
+              trialEnd: null
+            }
+          });
+        }
+
+        return user;
+      });
 
     const response: ApiResponse = {
       success: true,
-      data: user,
-      message: "Account created successfully",
+      data: result,
+      message: "Account created successfully with Basic Plan access",
     };
 
     return NextResponse.json(response, { status: 201 });

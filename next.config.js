@@ -13,6 +13,14 @@ const nextConfig = {
   // Image optimization
   images: {
     formats: ["image/webp", "image/avif"],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
 
   // Skip ESLint during production builds to avoid blocking deploys

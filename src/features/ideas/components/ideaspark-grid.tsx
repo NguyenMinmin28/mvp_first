@@ -1,0 +1,293 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { Button } from "@/ui/components/button";
+import { 
+  FileText, 
+  TrendingUp, 
+  MousePointer, 
+  Code, 
+  Megaphone, 
+  Video, 
+  PenTool, 
+  Music, 
+  Briefcase,
+  ThumbsUp,
+  Heart,
+  Send,
+  Eye
+} from "lucide-react";
+
+interface Idea {
+  id: string;
+  title: string;
+  summary: string;
+  cover?: {
+    id: string;
+    storageKey: string;
+  };
+  author: {
+    id: string;
+    name: string;
+    image?: string;
+  };
+  _count: {
+    likes: number;
+    comments: number;
+    bookmarks: number;
+  };
+  createdAt: string;
+}
+
+interface IdeaSparkGridProps {
+  initialIdeas?: Idea[];
+}
+
+const categories = [
+  { id: "post-idea", label: "Post Idea", icon: FileText, color: "bg-blue-500" },
+  { id: "trending", label: "Trending", icon: TrendingUp, color: "bg-orange-500" },
+  { id: "graphics-design", label: "Graphics & Design", icon: MousePointer, color: "bg-purple-500" },
+  { id: "programming-tech", label: "Programming & Tech", icon: Code, color: "bg-green-500" },
+  { id: "digital-marketing", label: "Digital Marketing", icon: Megaphone, color: "bg-red-500" },
+  { id: "video-animation", label: "Video & Animation", icon: Video, color: "bg-pink-500" },
+  { id: "writing-translation", label: "Writing & Translation", icon: PenTool, color: "bg-indigo-500" },
+  { id: "music-audio", label: "Music & Audio", icon: Music, color: "bg-yellow-500" },
+  { id: "business", label: "Business", icon: Briefcase, color: "bg-gray-500" },
+];
+
+export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
+  const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
+  const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("trending");
+  const [userInteractions, setUserInteractions] = useState<Record<string, { liked: boolean; bookmarked: boolean }>>({});
+
+  useEffect(() => {
+    if (initialIdeas.length === 0) {
+      fetchIdeas();
+    }
+  }, []);
+
+  const fetchIdeas = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/ideas?status=APPROVED&limit=6');
+      if (response.ok) {
+        const data = await response.json();
+        setIdeas(data.ideas || []);
+      }
+    } catch (error) {
+      console.error('Error fetching ideas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async (ideaId: string) => {
+    try {
+      const response = await fetch(`/api/ideas/${ideaId}/like`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const { liked, likeCount } = await response.json();
+        setUserInteractions(prev => ({
+          ...prev,
+          [ideaId]: { ...prev[ideaId], liked }
+        }));
+        setIdeas(prev => prev.map(idea => 
+          idea.id === ideaId 
+            ? { ...idea, _count: { ...idea._count, likes: likeCount } }
+            : idea
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  const handleBookmark = async (ideaId: string) => {
+    try {
+      const response = await fetch(`/api/ideas/${ideaId}/bookmark`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const { bookmarked, bookmarkCount } = await response.json();
+        setUserInteractions(prev => ({
+          ...prev,
+          [ideaId]: { ...prev[ideaId], bookmarked }
+        }));
+        setIdeas(prev => prev.map(idea => 
+          idea.id === ideaId 
+            ? { ...idea, _count: { ...idea._count, bookmarks: bookmarkCount } }
+            : idea
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+    }
+  };
+
+  const handleShare = (ideaId: string) => {
+    // Implement share functionality
+    if (navigator.share) {
+      navigator.share({
+        title: 'Check out this idea!',
+        url: `${window.location.origin}/ideas/${ideaId}`,
+      });
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(`${window.location.origin}/ideas/${ideaId}`);
+    }
+  };
+
+  const getDefaultCoverImage = (index: number) => {
+    const defaultImages = [
+      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=300&fit=crop", // Music/Ed Sheeran style
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500&h=300&fit=crop", // Colorful burst/abstract
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500&h=300&fit=crop", // Autumn variations
+      "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=500&h=300&fit=crop", // Space/astronaut
+      "https://images.unsplash.com/photo-1558655146-d09347e92766?w=500&h=300&fit=crop", // Idea/brainstorming
+      "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=500&h=300&fit=crop"  // Abstract art
+    ];
+    return defaultImages[index] || defaultImages[0];
+  };
+
+  return (
+    <div className="bg-white">
+      {/* Navigation Categories */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-3 gap-3">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap ${
+                  selectedCategory === category.id
+                    ? `${category.color} text-white shadow-md`
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <category.icon className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">{category.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Grid */}
+      <div className="container mx-auto px-4 py-8">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <>
+            {/* Ideas Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {ideas.map((idea, index) => (
+                <div key={idea.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+                  {/* Cover Image */}
+                  <div className="relative h-48 bg-gray-200 overflow-hidden">
+                    <Image
+                      src={getDefaultCoverImage(index)}
+                      alt={idea.title}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2">
+                      {idea.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                      {idea.summary}
+                    </p>
+
+                    {/* Interaction Buttons */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => handleLike(idea.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                            userInteractions[idea.id]?.liked
+                              ? 'text-red-500 bg-red-50'
+                              : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+                          }`}
+                        >
+                          <ThumbsUp className="h-4 w-4" />
+                          <span className="text-sm font-medium">{idea._count.likes}</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleBookmark(idea.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                            userInteractions[idea.id]?.bookmarked
+                              ? 'text-pink-500 bg-pink-50'
+                              : 'text-gray-500 hover:text-pink-500 hover:bg-pink-50'
+                          }`}
+                        >
+                          <Heart className="h-4 w-4" />
+                          <span className="text-sm font-medium">{idea._count.bookmarks}</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleShare(idea.id)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition-all duration-200"
+                        >
+                          <Send className="h-4 w-4" />
+                          <span className="text-sm font-medium">Share</span>
+                        </button>
+                      </div>
+
+                      {/* View Details */}
+                      <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
+                        <Eye className="h-4 w-4" />
+                        <span className="text-sm font-medium">View</span>
+                      </button>
+                    </div>
+
+                    {/* Author Info */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
+                          <Image
+                            src={`https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face`}
+                            alt={idea.author.name}
+                            width={32}
+                            height={32}
+                            className="object-cover"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{idea.author.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(idea.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* View More Stories */}
+            <div className="text-center">
+              <Button 
+                size="lg"
+                className="text-lg font-semibold px-8 py-4 bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-all duration-300"
+              >
+                VIEW MORE STORIES
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
