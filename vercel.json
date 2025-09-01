@@ -2,11 +2,19 @@
   "crons": [
     {
       "path": "/api/cron/reconcile-subscriptions",
-      "schedule": "0 2 * * *"
+      "schedule": "0 */5 * * * *"
     },
     {
       "path": "/api/cron/expire-candidates",
-      "schedule": "0 3 * * *"
+      "schedule": "0 0 * * * *"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/webhooks/whatsapp/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/webhooks/paypal/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }

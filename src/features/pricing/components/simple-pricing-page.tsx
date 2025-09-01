@@ -62,7 +62,11 @@ const plans: Plan[] = [
     },
 ];
 
-export default function SimplePricingPage() {
+interface SimplePricingPageProps {
+  currentSubscription?: any;
+}
+
+export default function SimplePricingPage({ currentSubscription }: SimplePricingPageProps) {
   const { data: session } = useSession();
 
   const handlePlanSelection = (plan: Plan) => {
@@ -94,14 +98,18 @@ export default function SimplePricingPage() {
 
     // Plus Plan và Pro Plan - hiển thị PayPal buttons
     if (session && (plan.id === "plus" || plan.id === "pro")) {
+      // Kiểm tra xem user có đang subscribe plan này không
+      const isCurrentPlan = currentSubscription?.package?.name === plan.name;
+      const hasActiveSubscription = !!currentSubscription;
+      
       return (
         <PayPalButtons
           packageId={plan.id}
           packageName={plan.name}
           price={plan.priceNumber}
           planId={plan.providerPlanId}
-          isCurrentPlan={false}
-          hasActiveSubscription={false}
+          isCurrentPlan={isCurrentPlan}
+          hasActiveSubscription={hasActiveSubscription}
         />
       );
     }
@@ -124,15 +132,24 @@ export default function SimplePricingPage() {
           Upgrade your plan
         </h1>
 
-        {/* Free Plan Notice */}
+        {/* Current Subscription Banner */}
         {session && (
           <div className="mb-8 p-4 bg-green-100/80 border border-green-300 rounded-lg max-w-2xl mx-auto">
             <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
-                <h3 className="font-semibold text-green-900">Basic Plan Included</h3>
+                <h3 className="font-semibold text-green-900">
+                  {currentSubscription?.package?.name || "Basic Plan"} {currentSubscription ? "Active" : "Included"}
+                </h3>
                 <p className="text-sm text-green-700">
-                  You already have access to Basic Plan features. Upgrade to unlock more projects and contacts!
+                  {currentSubscription 
+                    ? `You're currently subscribed to ${currentSubscription.package.name}. ${
+                        currentSubscription.package.name === "Basic Plan" 
+                          ? "Enjoy your free access!" 
+                          : "Manage your subscription in your profile."
+                      }`
+                    : "You already have access to Basic Plan features. Upgrade to unlock more projects and contacts!"
+                  }
                 </p>
               </div>
             </div>

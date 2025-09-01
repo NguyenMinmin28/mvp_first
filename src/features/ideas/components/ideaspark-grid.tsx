@@ -156,40 +156,56 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
     <div className="bg-white">
       {/* Navigation Categories */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center py-3 gap-3">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap ${
-                  selectedCategory === category.id
-                    ? `${category.color} text-white shadow-md`
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <category.icon className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">{category.label}</span>
-              </button>
-            ))}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Mobile: Horizontal scroll with padding for better UX */}
+          <div className="relative">
+            <div className="flex items-center py-2 sm:py-3 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
+              {/* Add left padding for mobile scroll */}
+              <div className="flex-shrink-0 w-2 sm:hidden"></div>
+              
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    selectedCategory === category.id
+                      ? `${category.color} text-white shadow-md`
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <category.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="text-xs font-medium leading-tight">{category.label}</span>
+                </button>
+              ))}
+              
+              {/* Add right padding for mobile scroll */}
+              <div className="flex-shrink-0 w-2 sm:hidden"></div>
+            </div>
+            
+            {/* Mobile scroll indicator */}
+            <div className="hidden sm:hidden absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-gradient-to-l from-white to-transparent pointer-events-none">
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content Grid */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="flex items-center justify-center py-16 sm:py-20">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-500"></div>
           </div>
         ) : (
           <>
             {/* Ideas Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
               {ideas.map((idea, index) => (
-                <div key={idea.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+                <div key={idea.id} className="bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
                   {/* Cover Image */}
-                  <div className="relative h-48 bg-gray-200 overflow-hidden">
+                  <div className="relative h-32 sm:h-40 lg:h-48 bg-gray-200 overflow-hidden">
                     <Image
                       src={getDefaultCoverImage(index)}
                       alt={idea.title}
@@ -200,61 +216,61 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                   </div>
 
                   {/* Content */}
-                  <div className="p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2">
+                  <div className="p-4 sm:p-6">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 line-clamp-2">
                       {idea.title}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                    <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-3">
                       {idea.summary}
                     </p>
 
                     {/* Interaction Buttons */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                      <div className="flex items-center gap-2 sm:gap-4">
                         <button
                           onClick={() => handleLike(idea.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                             userInteractions[idea.id]?.liked
                               ? 'text-red-500 bg-red-50'
                               : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
                           }`}
                         >
-                          <ThumbsUp className="h-4 w-4" />
-                          <span className="text-sm font-medium">{idea._count.likes}</span>
+                          <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm font-medium">{idea._count.likes}</span>
                         </button>
 
                         <button
                           onClick={() => handleBookmark(idea.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                             userInteractions[idea.id]?.bookmarked
                               ? 'text-pink-500 bg-pink-50'
                               : 'text-gray-500 hover:text-pink-500 hover:bg-pink-50'
                           }`}
                         >
-                          <Heart className="h-4 w-4" />
+                          <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="text-sm font-medium">{idea._count.bookmarks}</span>
                         </button>
 
                         <button
                           onClick={() => handleShare(idea.id)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition-all duration-200"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition-all duration-200"
                         >
-                          <Send className="h-4 w-4" />
-                          <span className="text-sm font-medium">Share</span>
+                          <Send className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm font-medium">Share</span>
                         </button>
                       </div>
 
                       {/* View Details */}
-                      <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
-                        <Eye className="h-4 w-4" />
+                      <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         <span className="text-sm font-medium">View</span>
                       </button>
                     </div>
 
                     {/* Author Info */}
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 overflow-hidden">
                           <Image
                             src={`https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face`}
                             alt={idea.author.name}
@@ -264,7 +280,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                           />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{idea.author.name}</p>
+                          <p className="text-xs sm:text-sm font-medium text-gray-900">{idea.author.name}</p>
                           <p className="text-xs text-gray-500">
                             {new Date(idea.createdAt).toLocaleDateString()}
                           </p>
@@ -280,7 +296,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
             <div className="text-center">
               <Button 
                 size="lg"
-                className="text-lg font-semibold px-8 py-4 bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-all duration-300"
+                className="text-base sm:text-lg font-semibold px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-all duration-300"
               >
                 VIEW MORE STORIES
               </Button>

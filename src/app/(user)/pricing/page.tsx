@@ -49,7 +49,7 @@ export default async function Pricing() {
 
   return (
     <UserLayout user={session?.user}>
-      <SimplePricingPage />
+      <SimplePricingPage currentSubscription={currentSubscription} />
     </UserLayout>
   );
 }
