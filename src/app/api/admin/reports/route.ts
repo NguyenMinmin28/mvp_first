@@ -5,10 +5,7 @@ import { IdeaSparkService } from "@/core/services/ideaspark.service";
 
 const ideaSparkService = new IdeaSparkService();
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -26,21 +23,20 @@ export async function POST(
     //   );
     // }
 
-    const body = await request.json();
-    const { adminTags } = body;
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const limit = parseInt(searchParams.get("limit") || "50");
 
-    const idea = await ideaSparkService.approveIdea(
-      params.id,
-      session.user.id,
-      adminTags
-    );
+    const reports = await ideaSparkService.getReports(status as any, limit);
 
-    return NextResponse.json(idea);
+    return NextResponse.json({ reports });
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error fetching reports:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to fetch reports" },
       { status: 500 }
     );
   }
 }
+
+

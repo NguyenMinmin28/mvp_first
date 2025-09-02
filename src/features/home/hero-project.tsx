@@ -39,7 +39,12 @@ export function HeroProject() {
           cache: "force-cache",
           next: { revalidate: 3600 } // Cache for 1 hour
         });
-        if (res.ok) setAvailableSkills(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableSkills(Array.isArray(data?.skills) ? data.skills : []);
+        } else {
+          setAvailableSkills([]);
+        }
       } finally {
         setIsLoadingSkills(false);
       }
@@ -50,19 +55,22 @@ export function HeroProject() {
   const filteredSkills = useMemo(() => {
     const q = skillQuery.toLowerCase();
     const selected = new Set(skills);
-    return availableSkills
+    const list = Array.isArray(availableSkills) ? availableSkills : [];
+    return list
       .filter((s) => s.name.toLowerCase().includes(q) && !selected.has(s.id))
       .slice(0, 10);
   }, [availableSkills, skillQuery, skills]);
 
   const unfilteredTopSkills = useMemo(() => {
     const selected = new Set(skills);
-    return availableSkills.filter((s) => !selected.has(s.id)).slice(0, 10);
+    const list = Array.isArray(availableSkills) ? availableSkills : [];
+    return list.filter((s) => !selected.has(s.id)).slice(0, 10);
   }, [availableSkills, skills]);
 
   const selectedSkills = useMemo(() => {
     const selected = new Set(skills);
-    return availableSkills.filter((s) => selected.has(s.id));
+    const list = Array.isArray(availableSkills) ? availableSkills : [];
+    return list.filter((s) => selected.has(s.id));
   }, [availableSkills, skills]);
 
   const addSkill = useCallback((id: string) => {

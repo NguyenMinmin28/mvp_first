@@ -27,20 +27,29 @@ export async function POST(
     // }
 
     const body = await request.json();
-    const { adminTags } = body;
+    const { reason } = body;
 
-    const idea = await ideaSparkService.approveIdea(
+    if (!reason) {
+      return NextResponse.json(
+        { error: "Reason is required" },
+        { status: 400 }
+      );
+    }
+
+    const idea = await ideaSparkService.takedownIdea(
       params.id,
       session.user.id,
-      adminTags
+      reason
     );
 
     return NextResponse.json(idea);
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error takedown idea:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to takedown idea" },
       { status: 500 }
     );
   }
 }
+
+

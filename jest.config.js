@@ -17,6 +17,10 @@ module.exports = {
     prefix: '<rootDir>/',
   }),
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  moduleNameMapper: {
+    ...(pathsToModuleNameMapper(compilerOptions.paths || {}, { prefix: '<rootDir>/' })),
+    '^next-auth/next$': '<rootDir>/tests/__mocks__/next-auth-next.ts',
+  },
   testTimeout: 30000, // 30s for DB operations
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

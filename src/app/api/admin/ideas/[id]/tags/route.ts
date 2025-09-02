@@ -5,7 +5,7 @@ import { IdeaSparkService } from "@/core/services/ideaspark.service";
 
 const ideaSparkService = new IdeaSparkService();
 
-export async function POST(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -29,7 +29,14 @@ export async function POST(
     const body = await request.json();
     const { adminTags } = body;
 
-    const idea = await ideaSparkService.approveIdea(
+    if (!adminTags || !Array.isArray(adminTags)) {
+      return NextResponse.json(
+        { error: "Admin tags array is required" },
+        { status: 400 }
+      );
+    }
+
+    const idea = await ideaSparkService.updateIdeaTags(
       params.id,
       session.user.id,
       adminTags
@@ -37,10 +44,12 @@ export async function POST(
 
     return NextResponse.json(idea);
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error updating idea tags:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to update idea tags" },
       { status: 500 }
     );
   }
 }
+
+

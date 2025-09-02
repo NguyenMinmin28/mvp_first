@@ -36,24 +36,44 @@ export default function ClientDashboard() {
   const [skills, setSkills] = useState<string[]>([]);
   const [skillOpen, setSkillOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [skillsLoading, setSkillsLoading] = useState(true);
 
   useEffect(() => {
     const fetchSkills = async () => {
+      setSkillsLoading(true);
       try {
         const res = await fetch("/api/skills", { cache: "no-store" });
-        if (res.ok) setAvailableSkills(await res.json());
-      } catch {}
+        if (res.ok) {
+          const data = await res.json();
+          // Đảm bảo data.skills là array
+          if (data && Array.isArray(data.skills)) {
+            setAvailableSkills(data.skills);
+          } else {
+            console.error('Skills API returned invalid data:', data);
+            setAvailableSkills([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching skills:', error);
+        setAvailableSkills([]);
+      } finally {
+        setSkillsLoading(false);
+      }
     };
     fetchSkills();
   }, []);
 
   const filteredSkills = useMemo(() => {
     const selected = new Set(skills);
+    // Đảm bảo availableSkills là array
+    if (!Array.isArray(availableSkills)) return [];
     return availableSkills.filter((s) => !selected.has(s.id));
   }, [availableSkills, skills]);
 
   const selectedSkills = useMemo(() => {
     const selected = new Set(skills);
+    // Đảm bảo availableSkills là array
+    if (!Array.isArray(availableSkills)) return [];
     return availableSkills.filter((s) => selected.has(s.id));
   }, [availableSkills, skills]);
 
@@ -62,7 +82,7 @@ export default function ClientDashboard() {
 
   const handleFindFreelancer = async () => {
     if (isSubmitting) return;
-    if (skills.length === 0) {
+    if (!Array.isArray(skills) || skills.length === 0) {
       alert("Please select at least one technology");
       return;
     }
@@ -122,7 +142,7 @@ export default function ClientDashboard() {
               {/* Technologies (multi-select dropdown, no free typing) */}
               <div className="space-y-2">
                 <Label>Technologies</Label>
-                {selectedSkills.length > 0 && (
+                {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {selectedSkills.map((s) => (
                       <Badge key={s.id} className="px-3 py-1 cursor-pointer" onClick={() => removeSkill(s.id)}>
@@ -138,12 +158,14 @@ export default function ClientDashboard() {
                     className="w-full justify-between"
                     onClick={() => setSkillOpen((v) => !v)}
                   >
-                    {selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Select technologies"}
+                    {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Select technologies"}
                     <span className="ml-2">▾</span>
                   </Button>
                   {skillOpen && (
                     <div className="absolute z-10 mt-2 w-full max-h-64 overflow-auto rounded-md border bg-white shadow">
-                      {filteredSkills.length === 0 ? (
+                      {skillsLoading ? (
+                        <div className="p-2 text-sm text-gray-500">Loading skills...</div>
+                      ) : !Array.isArray(filteredSkills) || filteredSkills.length === 0 ? (
                         <div className="p-2 text-sm text-gray-500">No options</div>
                       ) : (
                         filteredSkills.map((s) => (
@@ -151,7 +173,7 @@ export default function ClientDashboard() {
                             <input
                               type="checkbox"
                               className="h-4 w-4"
-                              checked={skills.includes(s.id)}
+                              checked={Array.isArray(skills) && skills.includes(s.id)}
                               onChange={(e) => (e.target.checked ? addSkill(s.id) : removeSkill(s.id))}
                             />
                             <span>{s.name}</span>

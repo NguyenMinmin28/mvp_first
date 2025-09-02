@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { IdeaSparkService } from "@/core/services/ideaspark.service";
 type IdeaStatus = string;
@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("q");
     const cursor = searchParams.get("cursor");
     const limit = parseInt(searchParams.get("limit") || "20");
+    const skillIdsParam = searchParams.get("skillIds");
+    const skillIds = skillIdsParam ? skillIdsParam.split(",").filter(Boolean) : undefined;
 
     const result = await ideaSparkService.getIdeasForWall({
       status: status as any,
@@ -22,6 +24,7 @@ export async function GET(request: NextRequest) {
       search: search || undefined,
       cursor: cursor || undefined,
       limit,
+      skillIds,
     });
 
     return NextResponse.json(result);
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, summary, body: ideaBody, coverFileId } = body;
+    const { title, summary, body: ideaBody, coverFileId, skillIds } = body;
 
     if (!title || !summary) {
       return NextResponse.json(
@@ -60,6 +63,7 @@ export async function POST(request: NextRequest) {
       summary,
       body: ideaBody,
       coverFileId,
+      skillIds,
     });
 
     return NextResponse.json(idea, { status: 201 });

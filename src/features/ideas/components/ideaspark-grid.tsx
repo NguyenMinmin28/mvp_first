@@ -61,6 +61,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("trending");
   const [userInteractions, setUserInteractions] = useState<Record<string, { liked: boolean; bookmarked: boolean }>>({});
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (initialIdeas.length === 0) {
@@ -68,18 +69,69 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
     }
   }, []);
 
-  const fetchIdeas = async () => {
+  const fetchIdeas = async (opts?: { append?: boolean; cursor?: string; categoryId?: string }) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ideas?status=APPROVED&limit=6');
+      let skillIdsParam = "";
+      // Map UI category id to Skill.category in DB
+      const categoryMap: Record<string, string> = {
+        "graphics-design": "Graphics & Design",
+        "programming-tech": "Programming & Tech",
+        "digital-marketing": "Digital Marketing",
+        "video-animation": "Video & Animation",
+        "writing-translation": "Writing & Translation",
+        "music-audio": "Music & Audio",
+        "business": "Business",
+      };
+
+      const catId = opts?.categoryId ?? selectedCategory;
+
+      if (catId && catId !== "trending" && catId !== "post-idea") {
+        const categoryName = categoryMap[catId];
+        if (categoryName) {
+          const skillsRes = await fetch(`/api/skills?category=${encodeURIComponent(categoryName)}`, { cache: "no-store" });
+          if (skillsRes.ok) {
+            const skillsData = await skillsRes.json();
+            const skillIds: string[] = Array.isArray(skillsData.skills) ? skillsData.skills.map((s: any) => s.id) : [];
+            if (skillIds.length > 0) {
+              skillIdsParam = `&skillIds=${encodeURIComponent(skillIds.join(","))}`;
+            }
+          }
+        }
+      }
+
+      const cursorParam = opts?.cursor ? `&cursor=${encodeURIComponent(opts.cursor)}` : "";
+      const response = await fetch(`/api/ideas?status=APPROVED&limit=6${cursorParam}${skillIdsParam}`);
       if (response.ok) {
         const data = await response.json();
-        setIdeas(data.ideas || []);
+        setNextCursor(data.nextCursor);
+        if (opts?.append) {
+          setIdeas(prev => [...prev, ...(data.ideas || [])]);
+        } else {
+          setIdeas(data.ideas || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching ideas:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCategoryClick = async (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    if (categoryId === "post-idea") {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/ideas/submit';
+      }
+      return;
+    }
+    await fetchIdeas({ append: false, cursor: undefined, categoryId });
+  };
+
+  const handleViewMore = async () => {
+    if (nextCursor) {
+      await fetchIdeas({ append: true, cursor: nextCursor });
     }
   };
 
@@ -166,7 +218,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
               {categories.map((category) => (
                 <button
                   key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => handleCategoryClick(category.id)}
                   className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                     selectedCategory === category.id
                       ? `${category.color} text-white shadow-md`
@@ -297,6 +349,8 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
               <Button 
                 size="lg"
                 className="text-base sm:text-lg font-semibold px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-all duration-300"
+                onClick={handleViewMore}
+                disabled={!nextCursor}
               >
                 VIEW MORE STORIES
               </Button>

@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { Button } from "@/ui/components/button";
-import { Zap, TrendingUp, Users, Lightbulb } from "lucide-react";
+import { Zap, TrendingUp, Users, Lightbulb, LogIn } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export function IdeaSparkHero() {
   return (
@@ -25,7 +26,11 @@ export function IdeaSparkHero() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Button size="lg" className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <Button 
+                size="lg" 
+                className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={() => window.location.href = '/ideas/submit'}
+              >
                 Post idea
               </Button>
             </div>

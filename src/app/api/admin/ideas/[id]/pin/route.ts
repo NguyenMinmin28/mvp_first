@@ -26,21 +26,19 @@ export async function POST(
     //   );
     // }
 
-    const body = await request.json();
-    const { adminTags } = body;
-
-    const idea = await ideaSparkService.approveIdea(
+    const idea = await ideaSparkService.togglePinIdea(
       params.id,
-      session.user.id,
-      adminTags
+      session.user.id
     );
 
     return NextResponse.json(idea);
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error toggling idea pin:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to toggle idea pin" },
       { status: 500 }
     );
   }
 }
+
+

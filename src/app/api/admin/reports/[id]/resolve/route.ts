@@ -27,20 +27,30 @@ export async function POST(
     // }
 
     const body = await request.json();
-    const { adminTags } = body;
+    const { action, note } = body;
 
-    const idea = await ideaSparkService.approveIdea(
+    if (!action || !['dismiss', 'warn', 'takedown'].includes(action)) {
+      return NextResponse.json(
+        { error: "Valid action is required: dismiss, warn, or takedown" },
+        { status: 400 }
+      );
+    }
+
+    const report = await ideaSparkService.resolveReport(
       params.id,
       session.user.id,
-      adminTags
+      action as any,
+      note
     );
 
-    return NextResponse.json(idea);
+    return NextResponse.json(report);
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error resolving report:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to resolve report" },
       { status: 500 }
     );
   }
 }
+
+

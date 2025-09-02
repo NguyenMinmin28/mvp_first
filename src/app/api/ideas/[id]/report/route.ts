@@ -18,29 +18,30 @@ export async function POST(
       );
     }
 
-    // TODO: Check if user is admin
-    // if (session.user.role !== "ADMIN") {
-    //   return NextResponse.json(
-    //     { error: "Admin access required" },
-    //     { status: 403 }
-    //   );
-    // }
-
     const body = await request.json();
-    const { adminTags } = body;
+    const { reason } = body;
 
-    const idea = await ideaSparkService.approveIdea(
-      params.id,
-      session.user.id,
-      adminTags
-    );
+    if (!reason) {
+      return NextResponse.json(
+        { error: "Reason is required" },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(idea);
+    const report = await ideaSparkService.reportIdea({
+      ideaId: params.id,
+      reporterId: session.user.id,
+      reason,
+    });
+
+    return NextResponse.json(report, { status: 201 });
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error reporting idea:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to report idea" },
       { status: 500 }
     );
   }
 }
+
+

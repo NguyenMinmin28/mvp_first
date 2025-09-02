@@ -7,11 +7,11 @@ export async function resetDb() {
   // Clean up data between tests
   // Note: Order matters due to foreign key constraints
   await prisma.assignmentCandidate.deleteMany({});
+  await prisma.contactRevealEvent.deleteMany({});
   // Unlink current batch from projects to avoid relation violations
   await prisma.project.updateMany({ data: { currentBatchId: null } });
   await prisma.assignmentBatch.deleteMany({});
   await prisma.project.deleteMany({});
-  await prisma.contactRevealEvent.deleteMany({});
   await (prisma as any).rotationCursor.deleteMany({});
   await prisma.developerSkill.deleteMany({});
   await prisma.developerProfile.deleteMany({});

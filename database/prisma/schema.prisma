@@ -146,12 +146,25 @@ enum IdeaApprovalAction {
   TAG_REMOVED
   FEATURED
   ARCHIVED
+  PINNED
+  UNPINNED
+  COMMENTS_LOCKED
+  COMMENTS_UNLOCKED
+  TAKEDOWN
 }
 
 enum SparkEventType {
   IDEA_APPROVED
   IDEA_LIKED
   WEEKLY_SPOTLIGHT
+  COMMENT_RECEIVED
+  CONNECT_RECEIVED
+}
+
+enum ReportStatus {
+  OPEN
+  CLOSED
+  RESOLVED
 }
 
 /**
@@ -192,8 +205,9 @@ model User {
   ideaBookmarks      IdeaBookmark[]
   ideaComments       IdeaComment[]
   ideaConnects       IdeaConnect[]       @relation("IdeaConnectFrom")
-  ideaApprovalEvents IdeaApprovalEvent[]
+  ideaApprovalEvents IdeaApprovalEvent[] @relation("IdeaApprovalAdmin")
   sparkPointLedger   SparkPointLedger[]
+  ideaReports        IdeaReport[]        @relation("IdeaReportReporter")
 
   @@index([lastLoginAt])
 }
@@ -536,6 +550,7 @@ model Skill {
   // Relations
   developerSkills DeveloperSkill[] @relation("SkillToDeveloperSkills")
   rotationCursors RotationCursor[] @relation("SkillToRotationCursors")
+  ideaSkills      IdeaSkill[] @relation("IdeaSkillSkills")
 
   @@index([category], map: "idx_skills_category")
 }
@@ -808,14 +823,22 @@ model Idea {
 
   status    IdeaStatus     @default(PENDING)
   adminTags IdeaAdminTag[]
+  
+  // Thêm fields mới
+  rejectedReason String? // lý do từ chối
+  isSpotlight    Boolean @default(false) // có phải spotlight tuần này không
+  isPinned       Boolean @default(false) // admin có pin không
+  isLocked       Boolean @default(false) // admin có khóa comment không
 
   likeCount     Int @default(0)
   commentCount  Int @default(0)
   bookmarkCount Int @default(0)
+  connectCount  Int @default(0)
 
   approvedAt DateTime?
   rejectedAt DateTime?
   featuredAt DateTime? // spotlight tuần hiện hành (nếu có)
+  deletedAt  DateTime? // soft delete
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -825,9 +848,14 @@ model Idea {
   comments  IdeaComment[]
   bookmarks IdeaBookmark[]
   connects  IdeaConnect[]
+  reports   IdeaReport[]
+  skills    IdeaSkill[] @relation("IdeaSkills")
+  spotlights IdeaSpotlight[] @relation("IdeaSpotlights")
 
   @@index([status, createdAt(sort: Desc)])
   @@index([authorId, createdAt(sort: Desc)])
+  @@index([isSpotlight, createdAt(sort: Desc)])
+  @@index([title, summary]) // full-text search
 }
 
 model IdeaLike {
@@ -840,6 +868,7 @@ model IdeaLike {
 
   @@unique([ideaId, userId]) // 1 user chỉ like 1 lần
   @@index([userId])
+  @@index([ideaId, createdAt(sort: Desc)])
 }
 
 model IdeaBookmark {
@@ -852,6 +881,7 @@ model IdeaBookmark {
 
   @@unique([ideaId, userId])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([ideaId, createdAt(sort: Desc)])
 }
 
 model IdeaComment {
@@ -860,6 +890,8 @@ model IdeaComment {
   userId    String   @db.ObjectId
   content   String
   parentId  String?  @db.ObjectId // hỗ trợ reply theo luồng
+  isHelpful Boolean  @default(false) // admin mark helpful
+  deletedAt DateTime? // soft delete
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   User      User     @relation(fields: [userId], references: [id])
@@ -867,6 +899,7 @@ model IdeaComment {
 
   @@index([ideaId, createdAt(sort: Desc)])
   @@index([parentId])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model IdeaConnect {
@@ -883,6 +916,37 @@ model IdeaConnect {
 
   @@unique([ideaId, fromUserId]) // chặn spam: 1 người connect 1 idea 1 lần
   @@index([toUserId, status, createdAt])
+  @@index([ideaId, createdAt(sort: Desc)])
+}
+
+model IdeaReport {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  ideaId     String        @db.ObjectId
+  reporterId String        @db.ObjectId
+  reason     String        // lý do report
+  status     ReportStatus  @default(OPEN)
+  adminNote  String?       // ghi chú admin
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+  User       User          @relation("IdeaReportReporter", fields: [reporterId], references: [id])
+  Idea       Idea          @relation(fields: [ideaId], references: [id])
+
+  @@index([ideaId, createdAt(sort: Desc)])
+  @@index([reporterId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model IdeaSkill {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  ideaId   String @db.ObjectId
+  skillId  String @db.ObjectId
+  createdAt DateTime @default(now())
+  Idea     Idea   @relation("IdeaSkills", fields: [ideaId], references: [id])
+  Skill    Skill  @relation("IdeaSkillSkills", fields: [skillId], references: [id])
+
+  @@unique([ideaId, skillId])
+  @@index([skillId])
+  @@index([ideaId])
 }
 
 model IdeaApprovalEvent {
@@ -892,10 +956,10 @@ model IdeaApprovalEvent {
   action    IdeaApprovalAction
   note      String?
   createdAt DateTime           @default(now())
-  User      User?              @relation(fields: [userId], references: [id])
-  userId    String?            @db.ObjectId
+  User      User?              @relation("IdeaApprovalAdmin", fields: [adminId], references: [id])
 
   @@index([ideaId, createdAt(sort: Desc)])
+  @@index([adminId, createdAt(sort: Desc)])
 }
 
 model SparkPointLedger {
@@ -904,10 +968,12 @@ model SparkPointLedger {
   ideaId    String?        @db.ObjectId
   type      SparkEventType
   points    Int            @default(0)
+  meta      Json?          // thông tin bổ sung (rank, reason, etc.)
   createdAt DateTime       @default(now())
   User      User           @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt(sort: Desc)])
+  @@index([type, createdAt(sort: Desc)])
 }
 
 // (tuỳ chọn) Spotlight tách bảng nếu muốn xếp hạng top trong tuần
@@ -917,7 +983,11 @@ model IdeaSpotlight {
   ideaId    String   @db.ObjectId
   rank      Int      @default(0)
   createdAt DateTime @default(now())
+  
+  // Relations
+  Idea      Idea     @relation("IdeaSpotlights", fields: [ideaId], references: [id])
 
   @@unique([weekStart, ideaId])
   @@index([weekStart, rank])
+  @@index([ideaId, weekStart(sort: Desc)])
 }

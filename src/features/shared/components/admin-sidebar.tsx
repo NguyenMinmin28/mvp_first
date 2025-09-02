@@ -18,6 +18,9 @@ import {
   CreditCard,
   Clock,
   List,
+  Lightbulb,
+  MessageSquare,
+  TrendingUp,
 } from "lucide-react";
 
 import { adminRoutes } from "@/core/config/routes";
@@ -56,6 +59,12 @@ const navigationItems = [
     href: "/admin/developers",
     icon: Users,
     description: "Review and approve developers",
+  },
+  {
+    name: "IdeaSpark Management",
+    href: "/admin/ideaspark",
+    icon: Lightbulb,
+    description: "Manage ideas, approvals & reports",
   },
   {
     name: "Transactions",

@@ -26,21 +26,19 @@ export async function POST(
     //   );
     // }
 
-    const body = await request.json();
-    const { adminTags } = body;
-
-    const idea = await ideaSparkService.approveIdea(
+    const idea = await ideaSparkService.toggleLockComments(
       params.id,
-      session.user.id,
-      adminTags
+      session.user.id
     );
 
     return NextResponse.json(idea);
   } catch (error) {
-    console.error("Error approving idea:", error);
+    console.error("Error toggling comments lock:", error);
     return NextResponse.json(
-      { error: "Failed to approve idea" },
+      { error: "Failed to toggle comments lock" },
       { status: 500 }
     );
   }
 }
+
+
