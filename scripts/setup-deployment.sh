@@ -21,7 +21,7 @@ case $PLATFORM in
   "crons": [
     {
       "path": "/api/cron/reconcile-subscriptions",
-      "schedule": "0 */5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
