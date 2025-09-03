@@ -111,10 +111,34 @@ interface Developer {
   };
 }
 
+interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverUrl: string;
+  status: string;
+  type: string;
+  category?: {
+    name: string;
+  };
+  author: {
+    name: string;
+  };
+  views: number;
+  clicks: number;
+  isFeatured: boolean;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [projects, setProjects] = useState<Project[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
@@ -126,9 +150,10 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
   const fetchAdminData = async () => {
     try {
-      const [projectsRes, developersRes] = await Promise.all([
+      const [projectsRes, developersRes, blogPostsRes] = await Promise.all([
         fetch("/api/admin/projects"),
         fetch("/api/admin/developers"),
+        fetch("/api/admin/blog/posts"),
       ]);
 
       if (projectsRes.ok) {
@@ -139,6 +164,11 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       if (developersRes.ok) {
         const developersData = await developersRes.json();
         setDevelopers(developersData.developers || []);
+      }
+
+      if (blogPostsRes.ok) {
+        const blogPostsData = await blogPostsRes.json();
+        setBlogPosts(blogPostsData.posts || []);
       }
     } catch (error) {
       console.error("Error fetching admin data:", error);
@@ -238,6 +268,9 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     totalDevelopers: developers.length,
     approvedDevelopers: developers.filter(d => d.adminApprovalStatus === "approved").length,
     pendingApprovals: developers.filter(d => d.adminApprovalStatus === "pending").length,
+    totalBlogPosts: blogPosts.length,
+    publishedPosts: blogPosts.filter(p => p.status === "PUBLISHED").length,
+    draftPosts: blogPosts.filter(p => p.status === "DRAFT").length,
   };
 
   if (isLoading) {
@@ -261,6 +294,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="developers">Developers</TabsTrigger>
+          <TabsTrigger value="blog">Blog Management</TabsTrigger>
           <TabsTrigger value="cron">Cron Jobs</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -317,6 +351,19 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                 <div className="text-2xl font-bold text-gray-900">{stats.completedProjects}</div>
                 <p className="text-xs text-gray-600">
                   Successfully delivered
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-4 border-gray-300 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gray-50 border-b-2 border-gray-200">
+                <CardTitle className="text-sm font-bold text-gray-800">Blog Posts</CardTitle>
+                <FileText className="h-4 w-4 text-gray-600" />
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-gray-900">{stats.totalBlogPosts}</div>
+                <p className="text-xs text-gray-600">
+                  {stats.publishedPosts} published, {stats.draftPosts} drafts
                 </p>
               </CardContent>
             </Card>
@@ -589,6 +636,149 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                           </Button>
                         </div>
                       )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* Blog Management Tab */}
+        <TabsContent value="blog" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search blog posts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={fetchAdminData}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button onClick={() => window.open('/admin/blog/new', '_blank')}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Post
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-100 border-b-4 border-gray-400">
+                <tr>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Post</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Author</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Category</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Status</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Stats</th>
+                  <th className="text-left p-3 font-bold text-gray-800 border-r-2 border-gray-400">Published</th>
+                  <th className="text-left p-3 font-bold text-gray-800">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {blogPosts
+                  .filter(post => 
+                    post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    post.author.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((post) => (
+                  <tr key={post.id} className="border-b-2 border-gray-300 hover:bg-gray-100">
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div>
+                        <div className="font-medium">{post.title}</div>
+                        <div className="text-sm text-muted-foreground">{post.excerpt}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {post.type}
+                          </Badge>
+                          {post.isFeatured && (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                              Featured
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div className="font-medium">{post.author.name}</div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      {post.category ? (
+                        <Badge variant="outline" className="text-xs">
+                          {post.category.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No category</span>
+                      )}
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <Badge className={
+                        post.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' :
+                        post.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+                        post.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }>
+                        {post.status}
+                      </Badge>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div className="text-sm">
+                        <div>👁️ {post.views} views</div>
+                        <div>🖱️ {post.clicks} clicks</div>
+                      </div>
+                    </td>
+                    <td className="p-3 border-r-2 border-gray-300">
+                      <div className="text-sm">
+                        {post.publishedAt ? (
+                          <div>{new Date(post.publishedAt).toLocaleDateString()}</div>
+                        ) : (
+                          <span className="text-muted-foreground">Not published</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/admin/blog/edit/${post.id}`, '_blank')}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/blog/${post.slug}`, '_blank')}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to delete this post?')) {
+                              try {
+                                const response = await fetch(`/api/admin/blog/posts/${post.id}`, {
+                                  method: 'DELETE',
+                                });
+                                if (response.ok) {
+                                  fetchAdminData();
+                                }
+                              } catch (error) {
+                                console.error('Error deleting post:', error);
+                              }
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

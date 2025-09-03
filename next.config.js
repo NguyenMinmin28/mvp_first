@@ -10,13 +10,19 @@ const nextConfig = {
     },
   }),
 
-  // Image optimization
+  // Image optimization - Allow all external images dynamically
   images: {
     formats: ["image/webp", "image/avif"],
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
+        hostname: '**',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
         port: '',
         pathname: '/**',
       },

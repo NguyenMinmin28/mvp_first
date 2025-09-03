@@ -61,6 +61,12 @@ const navigationItems = [
     description: "Review and approve developers",
   },
   {
+    name: "Blog Management",
+    href: "/admin/blog",
+    icon: MessageSquare,
+    description: "Create and manage blog posts",
+  },
+  {
     name: "IdeaSpark Management",
     href: "/admin/ideaspark",
     icon: Lightbulb,
@@ -95,8 +101,8 @@ export function AdminSidebar({
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   
-  // Only use usePathname on the client side to avoid SSR issues
-  const pathname = mounted ? usePathname() : null;
+  // Always call hooks in the same order
+  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
@@ -156,7 +162,7 @@ export function AdminSidebar({
         {/* Navigation Menu */}
         <nav className="p-4 space-y-2">
           {navigationItems.map((item) => {
-            const isActive = mounted && pathname === item.href;
+            const isActive = mounted && pathname && pathname === item.href;
             return (
               <Link
                 key={item.name}

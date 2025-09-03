@@ -69,14 +69,22 @@ export class IdeaSparkService {
    * Thêm skills cho idea
    */
   async addSkillsToIdea(ideaId: string, skillIds: string[]): Promise<void> {
-    const skillData = skillIds.map(skillId => ({
-      ideaId,
-      skillId,
-    }));
+    if (skillIds.length === 0) return;
 
-    await prisma.ideaSkill.createMany({
-      data: skillData,
+    // Xóa skills cũ trước
+    await prisma.ideaSkill.deleteMany({
+      where: { ideaId }
     });
+
+    // Thêm skills mới từng cái một
+    for (const skillId of skillIds) {
+      await prisma.ideaSkill.create({
+        data: {
+          ideaId,
+          skillId,
+        }
+      });
+    }
   }
 
   /**
