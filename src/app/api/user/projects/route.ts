@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       
       return {
         id: project.id,
-        name: project.name,
+        name: project.title,
         description: project.description,
         status: project.status === 'submitted' ? 'recent' : 
                 project.status === 'accepted' ? 'approved' :
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         date: project.createdAt.toISOString(),
         budget: project.budget,
         currency: project.currency,
-        skills: project.skills || [],
+        skills: project.skillsRequired || [],
         assignmentStatus: project._count.assignmentCandidates > 0 ? 'Has candidates' : 'No candidates',
         assignment: latestAssignment ? {
           id: latestAssignment.id,

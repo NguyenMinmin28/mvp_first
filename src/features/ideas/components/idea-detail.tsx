@@ -20,12 +20,12 @@ interface Idea {
   id: string;
   title: string;
   summary: string;
-  body?: string;
-  cover?: {
+  body: string | null;
+  cover: {
     id: string;
     storageKey: string;
-  };
-  coverUrl?: string;
+  } | null;
+  coverUrl: string | null;
   author: {
     id: string;
     name: string | null;
@@ -48,7 +48,7 @@ interface Idea {
     liked: boolean;
     bookmarked: boolean;
   };
-  createdAt: string;
+  createdAt: Date;
   status: string;
 }
 
