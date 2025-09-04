@@ -26,7 +26,7 @@ export default async function CompleteProfile() {
       // Send developers to appropriate page based on status
       if (!user.isProfileCompleted) {
         redirect("/onboarding/freelancer/basic-information");
-      } else if (user.adminApprovalStatus === "approved") {
+      } else if ((user as any).adminApprovalStatus === "approved") {
         redirect("/inbox");
       } else {
         redirect("/onboarding/freelancer/pending-approval");

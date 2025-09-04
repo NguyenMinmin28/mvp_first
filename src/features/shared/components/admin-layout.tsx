@@ -14,12 +14,13 @@ import { SessionRefreshNotice } from "@/ui/components/session-refresh-notice";
 interface AdminLayoutProps {
   user: {
     id: string;
-    name: string | null | undefined;
-    email: string | null | undefined;
-    image: string | null | undefined;
-    phoneE164: string | undefined;
-    role: Role | undefined;
-    isProfileCompleted: boolean | undefined;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    phoneE164?: string;
+    role?: Role | string;
+    isProfileCompleted?: boolean;
+    adminApprovalStatus?: string;
   };
   children: ReactNode;
   title?: string;

@@ -29,7 +29,7 @@ export default async function AdminPage() {
     }
 
     console.log("🔍 Admin page - Rendering AdminDashboard");
-    return <AdminDashboard user={user} />;
+    return <AdminDashboard user={user as any} />;
   } catch (error) {
     console.error("🔍 Admin page - Error:", error);
     

@@ -2,7 +2,18 @@ import { getServerSession } from "next-auth/next";
 
 import { authOptions } from "./auth";
 
-export async function getServerSessionUser() {
+export interface ServerSessionUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  phoneE164?: string;
+  role?: string;
+  isProfileCompleted?: boolean;
+  adminApprovalStatus?: string;
+}
+
+export async function getServerSessionUser(): Promise<ServerSessionUser | null> {
   try {
     console.log("🔍 getServerSessionUser - Starting to get session");
     const session = await getServerSession(authOptions);

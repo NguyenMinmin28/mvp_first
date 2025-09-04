@@ -23,5 +23,5 @@ export default async function AdminDevelopersPage() {
     redirect("/");
   }
 
-  return <DeveloperApprovalPage user={user} />;
+  return <DeveloperApprovalPage user={user as any} />;
 }
