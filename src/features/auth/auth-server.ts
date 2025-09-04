@@ -22,6 +22,9 @@ export async function getServerSessionUser() {
       phoneE164: session.user.phoneE164,
       role: session.user.role,
       isProfileCompleted: session.user.isProfileCompleted,
+      // Include developer admin approval status when available
+      // This exists on the session (populated from JWT callback)
+      adminApprovalStatus: (session.user as any)?.adminApprovalStatus,
     };
   } catch (error) {
     console.error("🔍 getServerSessionUser - Error:", error);
