@@ -31,15 +31,21 @@ export class IdeaSparkService {
     summary: string;
     body?: string;
     coverFileId?: string;
+    coverUrl?: string;
     skillIds?: string[];
   }): Promise<Idea> {
     const idea = await prisma.idea.create({
       data: {
-        authorId: data.authorId,
+        author: {
+          connect: { id: data.authorId }
+        },
         title: data.title,
         summary: data.summary,
         body: data.body,
-        coverFileId: data.coverFileId,
+        ...(data.coverFileId && { 
+          cover: { connect: { id: data.coverFileId } }
+        }),
+        ...(data.coverUrl && { coverUrl: data.coverUrl }),
         status: IdeaStatus.PENDING,
         adminTags: [],
       },
@@ -251,6 +257,7 @@ export class IdeaSparkService {
     summary?: string;
     body?: string;
     coverFileId?: string;
+    coverUrl?: string;
     skillIds?: string[];
   }, userId: string, isAdmin: boolean = false): Promise<Idea> {
     const idea = await prisma.idea.findUnique({

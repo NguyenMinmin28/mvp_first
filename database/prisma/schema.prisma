@@ -822,6 +822,7 @@ model Idea {
   body        String? // nội dung dài (tuỳ chọn)
   coverFileId String? @db.ObjectId
   cover       File?   @relation("IdeaCover", fields: [coverFileId], references: [id])
+  coverUrl    String? // direct image URL (like blog)
 
   status    IdeaStatus     @default(PENDING)
   adminTags IdeaAdminTag[]

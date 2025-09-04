@@ -56,6 +56,10 @@ export default function SignInClient() {
         setServerError(
           "This Google account has not been registered. Please register first."
         );
+      } else if (error === "OAuthAccountNotLinked") {
+        setServerError(
+          "This email is already registered with another sign-in method. Please sign in with email and password, then connect Google in your account settings."
+        );
       } else if (error === "Configuration") {
         setServerError(
           "Authentication configuration error. Please contact admin."

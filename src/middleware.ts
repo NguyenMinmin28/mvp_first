@@ -6,7 +6,7 @@ import { getToken } from "next-auth/jwt";
 const PUBLIC_ROUTES = [
   "/", "/pricing", "/about", "/blog", "/ceo-letter", "/help",
   "/auth/signin", "/auth/signup", 
-  "/role-selection"
+  "/role-selection", "/ideas"
 ];
 
 import {
@@ -27,6 +27,9 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/ideas") ||
+    pathname.startsWith("/api/skills") ||
+    pathname.startsWith("/api/blog") ||
     pathname.startsWith("/_next") || 
     pathname.startsWith("/images") ||
     pathname.includes(".") // Skip files with extensions

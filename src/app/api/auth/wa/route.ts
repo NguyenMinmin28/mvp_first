@@ -64,9 +64,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if in development mode AND we want to test real WhatsApp
+    // Bypass/Development modes
     const isDevelopment = process.env.NODE_ENV === "development";
     const forceWhatsAppTest = process.env.FORCE_WHATSAPP_TEST === "true";
+    const whatsappBypass = process.env.WHATSAPP_BYPASS === "true";
+
+    if (whatsappBypass) {
+      // Explicit bypass: always return the code so client can auto-fill and verify
+      return NextResponse.json({
+        success: true,
+        message: "Verification code prepared (Bypass Mode)",
+        phoneNumber: phoneE164,
+        bypass: true,
+        demoCode: otpResult.code,
+        expiresAt: otpResult.expiresAt,
+      });
+    }
 
     if (isDevelopment && !forceWhatsAppTest) {
       // In development, return the code for testing

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/ui/components/button";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { 
   FileText, 
   TrendingUp, 
@@ -27,6 +29,7 @@ interface Idea {
     id: string;
     storageKey: string;
   };
+  coverUrl?: string;
   author: {
     id: string;
     name: string;
@@ -57,6 +60,8 @@ const categories = [
 ];
 
 export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("trending");
@@ -121,6 +126,10 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
   const handleCategoryClick = async (categoryId: string) => {
     setSelectedCategory(categoryId);
     if (categoryId === "post-idea") {
+      if (!session?.user) {
+        router.push('/auth/signin?callbackUrl=/ideas/submit');
+        return;
+      }
       if (typeof window !== 'undefined') {
         window.location.href = '/ideas/submit';
       }
@@ -136,6 +145,11 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
   };
 
   const handleLike = async (ideaId: string) => {
+    if (!session?.user) {
+      router.push('/auth/signin?callbackUrl=/ideas');
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/ideas/${ideaId}/like`, {
         method: 'POST',
@@ -158,6 +172,11 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
   };
 
   const handleBookmark = async (ideaId: string) => {
+    if (!session?.user) {
+      router.push('/auth/signin?callbackUrl=/ideas');
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/ideas/${ideaId}/bookmark`, {
         method: 'POST',
@@ -258,12 +277,25 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                 <div key={idea.id} className="bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
                   {/* Cover Image */}
                   <div className="relative h-32 sm:h-40 lg:h-48 bg-gray-200 overflow-hidden">
-                    <Image
-                      src={getDefaultCoverImage(index)}
-                      alt={idea.title}
-                      fill
-                      className="object-cover"
-                    />
+                    {idea.coverUrl ? (
+                      <Image
+                        src={idea.coverUrl}
+                        alt={idea.title}
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = getDefaultCoverImage(index);
+                        }}
+                      />
+                    ) : (
+                      <Image
+                        src={getDefaultCoverImage(index)}
+                        alt={idea.title}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
 
@@ -279,29 +311,45 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                     {/* Interaction Buttons */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                       <div className="flex items-center gap-2 sm:gap-4">
-                        <button
-                          onClick={() => handleLike(idea.id)}
-                          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
-                            userInteractions[idea.id]?.liked
-                              ? 'text-red-500 bg-red-50'
-                              : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
-                          }`}
-                        >
-                          <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="text-xs sm:text-sm font-medium">{idea._count.likes}</span>
-                        </button>
+                        {session?.user ? (
+                          <>
+                            <button
+                              onClick={() => handleLike(idea.id)}
+                              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
+                                userInteractions[idea.id]?.liked
+                                  ? 'text-red-500 bg-red-50'
+                                  : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+                              }`}
+                            >
+                              <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="text-xs sm:text-sm font-medium">{idea._count.likes}</span>
+                            </button>
 
-                        <button
-                          onClick={() => handleBookmark(idea.id)}
-                          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
-                            userInteractions[idea.id]?.bookmarked
-                              ? 'text-pink-500 bg-pink-50'
-                              : 'text-gray-500 hover:text-pink-500 hover:bg-pink-50'
-                          }`}
-                        >
-                          <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="text-sm font-medium">{idea._count.bookmarks}</span>
-                        </button>
+                            <button
+                              onClick={() => handleBookmark(idea.id)}
+                              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
+                                userInteractions[idea.id]?.bookmarked
+                                  ? 'text-pink-500 bg-pink-50'
+                                  : 'text-gray-500 hover:text-pink-500 hover:bg-pink-50'
+                              }`}
+                            >
+                              <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="text-sm font-medium">{idea._count.bookmarks}</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-gray-400">
+                              <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="text-xs sm:text-sm font-medium">{idea._count.likes}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-gray-400">
+                              <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="text-sm font-medium">{idea._count.bookmarks}</span>
+                            </div>
+                          </>
+                        )}
 
                         <button
                           onClick={() => handleShare(idea.id)}
@@ -313,7 +361,16 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                       </div>
 
                       {/* View Details */}
-                      <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
+                      <button 
+                        onClick={() => {
+                          if (session?.user) {
+                            router.push(`/ideas/${idea.id}`);
+                          } else {
+                            router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/ideas/${idea.id}`)}`);
+                          }
+                        }}
+                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+                      >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         <span className="text-sm font-medium">View</span>
                       </button>

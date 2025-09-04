@@ -12,7 +12,7 @@ import {
 } from "@/ui/components/dropdown-menu";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { LogOut, User, Settings, Plus, Inbox, DollarSign, FolderOpen, Menu, X, Bell, ChevronDown, Zap } from "lucide-react";
+import { LogOut, User, Settings, Plus, FolderOpen, Menu, X, Bell, ChevronDown, Zap, DollarSign } from "lucide-react";
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -236,16 +236,10 @@ export function Header({ user }: HeaderProps) {
             
             {isAuthenticated && mounted && userRole === "DEVELOPER" && (
               <nav className="hidden md:flex items-center gap-4">
-                <Link href="/inbox">
+                <Link href="/ideas">
                   <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
-                    <Inbox className="h-4 w-4" />
-                    Inbox
-                  </Button>
-                </Link>
-                <Link href="/pricing">
-                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
-                    <DollarSign className="h-4 w-4" />
-                    Pricing
+                    <Zap className="h-4 w-4" />
+                    IdeaSpark
                   </Button>
                 </Link>
                               <DropdownMenu>
@@ -272,17 +266,12 @@ export function Header({ user }: HeaderProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Link href="/ideas">
-                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
-                  <Zap className="h-4 w-4" />
-                  Idea Spark
-                </Button>
-              </Link>
             </nav>
           )}
 
             {!isAuthenticated && (
               <nav className="hidden md:flex items-center gap-8">
+                <Link href="/ideas" className="text-sm hover:opacity-80">IdeaSpark</Link>
                 <Link href="/pricing" className="text-sm hover:opacity-80">Price</Link>
                               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -308,7 +297,6 @@ export function Header({ user }: HeaderProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Link href="/ideas" className="text-sm hover:opacity-80">Idea Spark</Link>
               </nav>
             )}
           </div>
@@ -470,16 +458,10 @@ export function Header({ user }: HeaderProps) {
 
               {isAuthenticated && userRole === "DEVELOPER" && (
                 <nav className="space-y-2">
-                  <Link href="/inbox" className="block py-2 text-gray-700 hover:text-black">
+                  <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">
                     <div className="flex items-center gap-2">
-                      <Inbox className="h-4 w-4" />
-                      Inbox
-                    </div>
-                  </Link>
-                  <Link href="/pricing" className="block py-2 text-gray-700 hover:text-black">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Pricing
+                      <Zap className="h-4 w-4" />
+                      IdeaSpark
                     </div>
                   </Link>
                   <div className="py-2">
@@ -494,17 +476,12 @@ export function Header({ user }: HeaderProps) {
                       <Link href="/blog" className="block py-1 text-sm text-gray-600 hover:text-black">Blog</Link>
                     </div>
                   </div>
-                  <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4" />
-                      Idea Spark
-                    </div>
-                  </Link>
                 </nav>
               )}
 
               {!isAuthenticated && (
                 <nav className="space-y-2">
+                  <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">IdeaSpark</Link>
                   <Link href="/pricing" className="block py-2 text-gray-700 hover:text-black">Price</Link>
                   <div className="py-2">
                     <div className="text-gray-700">About</div>

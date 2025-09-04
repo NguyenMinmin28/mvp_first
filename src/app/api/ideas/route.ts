@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, summary, body: ideaBody, coverFileId, skillIds } = body;
+    const { title, summary, body: ideaBody, coverFileId, coverUrl, skillIds } = body;
 
     if (!title || !summary) {
       return NextResponse.json(
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       summary,
       body: ideaBody,
       coverFileId,
+      coverUrl,
       skillIds,
     });
 

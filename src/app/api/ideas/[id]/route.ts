@@ -10,7 +10,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const idea = await ideaSparkService.getIdeaById(params.id);
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
+    const idea = await ideaSparkService.getIdeaById(params.id, userId);
     
     if (!idea) {
       return NextResponse.json(

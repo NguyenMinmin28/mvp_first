@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Bypass flow: accept any valid OTP record without external calls
+    const whatsappBypass = process.env.WHATSAPP_BYPASS === "true";
+
     // Verify OTP
     console.log("🔐 Verifying OTP for:", phoneE164);
     const otpResult = await OtpService.verifyOtp(phoneE164, verificationCode);
@@ -73,7 +76,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Verification successful",
+      message: whatsappBypass
+        ? "Verification successful (Bypass Mode)"
+        : "Verification successful",
       phoneNumber: phoneE164,
     });
   } catch (error) {

@@ -19,13 +19,20 @@ export async function POST(
       );
     }
 
-    const result = await ideaSparkService.toggleLike(params.id, session.user.id);
+    const body = await request.json();
+    const { message } = body;
+
+    const result = await ideaSparkService.connectWithAuthor({
+      ideaId: params.id,
+      fromUserId: session.user.id,
+      message,
+    });
     
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("Error toggling like:", error);
+  } catch (error: any) {
+    console.error("Error connecting with author:", error);
     return NextResponse.json(
-      { error: "Failed to toggle like" },
+      { error: error.message || "Failed to connect with author" },
       { status: 500 }
     );
   }

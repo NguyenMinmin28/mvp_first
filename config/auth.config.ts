@@ -13,6 +13,10 @@ export default {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // Allow linking a Google account to an existing email/password account
+      // that has the same verified email. This avoids OAuthAccountNotLinked errors
+      // when the user first registered via credentials.
+      allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
           prompt: "consent",

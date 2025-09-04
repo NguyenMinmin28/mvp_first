@@ -11,6 +11,7 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
+    
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -18,11 +19,8 @@ export async function POST(
       );
     }
 
-    const ideaId = params.id;
-    const userId = session.user.id;
-
-    const result = await ideaSparkService.toggleBookmark(ideaId, userId);
-
+    const result = await ideaSparkService.toggleBookmark(params.id, session.user.id);
+    
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error toggling bookmark:", error);

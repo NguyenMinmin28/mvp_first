@@ -4,8 +4,19 @@ import Image from "next/image";
 import { Button } from "@/ui/components/button";
 import { Zap, TrendingUp, Users, Lightbulb, LogIn } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export function IdeaSparkHero() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handlePostIdea = () => {
+    if (!session?.user) {
+      router.push('/auth/signin?callbackUrl=/ideas/submit');
+      return;
+    }
+    window.location.href = '/ideas/submit';
+  };
   return (
     <section className="relative bg-white flex items-start pt-4 sm:pt-6 lg:pt-8">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-7">
@@ -29,7 +40,7 @@ export function IdeaSparkHero() {
               <Button 
                 size="lg" 
                 className="bg-black hover:bg-gray-800 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                onClick={() => window.location.href = '/ideas/submit'}
+                onClick={handlePostIdea}
               >
                 Post idea
               </Button>

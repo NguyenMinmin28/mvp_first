@@ -36,6 +36,7 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
     title: "",
     summary: "",
     body: "",
+    coverUrl: "",
   });
 
   useEffect(() => {
@@ -98,7 +99,7 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
         console.log('Idea submitted successfully:', idea);
         toast.success('Idea submitted! Awaiting admin approval.');
         // Stay on page. Reset form for a clear UX.
-        setFormData({ title: "", summary: "", body: "" });
+        setFormData({ title: "", summary: "", body: "", coverUrl: "" });
         setSelectedSkills([]);
         if (onSuccess) onSuccess();
       } else {
@@ -184,6 +185,34 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
           <p className="text-sm text-gray-500 mt-1">
             {formData.summary.length}/200 characters
           </p>
+        </div>
+
+        {/* Cover Image URL */}
+        <div>
+          <Label htmlFor="coverUrl">Cover Image URL (Optional)</Label>
+          <Input
+            id="coverUrl"
+            type="url"
+            value={formData.coverUrl}
+            onChange={(e) => setFormData({ ...formData, coverUrl: e.target.value })}
+            placeholder="https://example.com/your-image.jpg"
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Paste a direct link to an image that represents your idea
+          </p>
+          {formData.coverUrl && (
+            <div className="mt-2">
+              <img
+                src={formData.coverUrl}
+                alt="Preview"
+                className="w-full max-w-xs h-32 object-cover rounded-lg border"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Skills */}
