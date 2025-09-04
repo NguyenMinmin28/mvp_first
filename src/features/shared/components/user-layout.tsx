@@ -1,27 +1,10 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import { ReactNode } from "react";
 import { Toaster } from "sonner";
 
-// Dynamically import Header to avoid SSR issues
-const Header = dynamic(
-  () => import("./header").then((mod) => ({ default: mod.Header })),
-  {
-    ssr: false,
-    loading: () => (
-      <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="h-8 w-32 bg-gray-200 animate-pulse rounded" />
-          <div className="flex gap-2">
-            <div className="h-8 w-16 bg-gray-200 animate-pulse rounded-full" />
-            <div className="h-8 w-20 bg-gray-200 animate-pulse rounded-full" />
-          </div>
-        </div>
-      </header>
-    ),
-  }
-);
+// Import Header normally to avoid SSR issues
+import { Header } from "./header";
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -34,21 +17,6 @@ export function UserLayout({
   user,
   showFooter = true,
 }: UserLayoutProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        <main className="flex-1">{children}</main>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}

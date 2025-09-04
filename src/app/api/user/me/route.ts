@@ -18,7 +18,13 @@ export async function GET(request: NextRequest) {
       where: { id: session.user.id },
       include: {
         clientProfile: true,
-        developerProfile: true,
+        developerProfile: {
+          include: {
+            skills: {
+              include: { skill: true },
+            },
+          },
+        },
       },
     });
 
@@ -41,19 +47,29 @@ export async function GET(request: NextRequest) {
         companyName: user.clientProfile.companyName,
         location: user.clientProfile.location,
       }),
-      ...(user.developerProfile && {
+      ...(user.developerProfile && ({
         photoUrl: user.developerProfile.photoUrl,
         bio: user.developerProfile.bio,
         experienceYears: user.developerProfile.experienceYears,
         level: user.developerProfile.level,
         linkedinUrl: user.developerProfile.linkedinUrl,
         portfolioLinks: user.developerProfile.portfolioLinks,
+        location: user.developerProfile.location,
+        // Optional fields may be missing if schema/migration not applied yet
+        age: (user.developerProfile as any).age,
+        hourlyRate: user.developerProfile.hourlyRateUsd,
         whatsappNumber: user.developerProfile.whatsappNumber,
         usualResponseTimeMs: user.developerProfile.usualResponseTimeMs,
         currentStatus: user.developerProfile.currentStatus,
         adminApprovalStatus: user.developerProfile.adminApprovalStatus,
         whatsappVerified: user.developerProfile.whatsappVerified,
-      }),
+        skills: Array.isArray(user.developerProfile.skills)
+          ? user.developerProfile.skills.map((ds) => ({
+              skillId: ds.skillId,
+              skillName: (ds as any).skill?.name,
+            }))
+          : [],
+      }) as any),
     };
 
     return NextResponse.json({

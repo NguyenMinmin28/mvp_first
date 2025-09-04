@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
+import { revalidatePath } from "next/cache";
 
 export async function POST(
   request: NextRequest,
@@ -18,7 +19,19 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { action, reason } = await request.json();
+    let action, reason;
+    try {
+      const body = await request.json();
+      action = body.action;
+      reason = body.reason;
+    } catch (error) {
+      console.error("Error parsing request JSON:", error);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+    
     const developerId = params.id;
 
     if (!["approve", "reject"].includes(action)) {
@@ -72,6 +85,11 @@ export async function POST(
     });
 
     console.log(`✅ Admin ${session.user.email} ${action}ed developer ${developer.user.email}`);
+
+    // Revalidate paths to ensure fresh data
+    revalidatePath("/onboarding/freelancer/pending-approval");
+    revalidatePath("/api/user/me");
+    revalidatePath("/inbox");
 
     return NextResponse.json({
       success: true,

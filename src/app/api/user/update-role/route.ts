@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
         where: { id: session.user.id },
         data: {
           role,
-          isProfileCompleted: true, // Mark profile as completed since we're creating the profile
+          // For CLIENT we can consider completed; for DEVELOPER keep false until admin approval
+          isProfileCompleted: role === "CLIENT",
         },
         select: {
           id: true,

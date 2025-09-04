@@ -9,6 +9,7 @@ import type { Prisma } from "@prisma/client";
 type Role = Prisma.$Enums.Role;
 import { useSessionRefresh } from "@/core/hooks/use-session-refresh";
 import { SessionRefreshNotice } from "@/ui/components/session-refresh-notice";
+// Removed ForceRefreshSession to prevent infinite session update loops
 
 interface AdminLayoutProps {
   user: {

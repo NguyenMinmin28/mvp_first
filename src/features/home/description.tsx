@@ -11,7 +11,7 @@ export default function Description() {
   ];
 
   return (
-    <section className="w-full py-10 md:py-14">
+    <section className="w-full mt-10 md:mt-16 pt-12 md:pt-16 pb-12 md:pb-16">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
         <h2 className="text-2xl md:text-3xl font-bold mb-6">What Makes Us Different</h2>
         <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

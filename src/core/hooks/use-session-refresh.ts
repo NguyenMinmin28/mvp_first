@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Custom hook to automatically refresh session when navigating between pages
@@ -10,33 +10,29 @@ import { useEffect, useRef, useState } from "react";
  */
 export function useSessionRefresh() {
   const { data: session, update } = useSession();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  
-  // Only use usePathname on the client side to avoid SSR issues
-  const pathname = mounted ? usePathname() : null;
+  const pathname = usePathname();
   const lastPathname = useRef<string | null>(null);
+  const isRefreshingRef = useRef(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!pathname) return;
+    if (lastPathname.current === pathname) return;
+    if (isRefreshingRef.current) return;
 
-  useEffect(() => {
-    // Only refresh if we're mounted, have a pathname, and we've actually changed pages
-    if (mounted && pathname && lastPathname.current !== pathname) {
-      console.log("🔄 Page navigation detected, refreshing session...");
+    // Mark refreshing and trigger update once per navigation
+    isRefreshingRef.current = true;
+    lastPathname.current = pathname;
+    console.log("🔄 Page navigation detected, refreshing session once...");
 
-      setIsRefreshing(true);
-
-      // Update session to get fresh data
-      update().finally(() => {
-        setIsRefreshing(false);
+    update()
+      .catch((e) => console.warn("Session refresh error:", e))
+      .finally(() => {
+        // Small timeout to debounce rapid route changes
+        setTimeout(() => {
+          isRefreshingRef.current = false;
+        }, 500);
       });
+  }, [pathname, update]);
 
-      // Update the last pathname
-      lastPathname.current = pathname;
-    }
-  }, [pathname, update, mounted]);
-
-  return { session, update, isRefreshing };
+  return { session, update, isRefreshing: isRefreshingRef.current };
 }

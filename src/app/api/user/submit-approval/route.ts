@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update profile status to pending
+    // Update profile status to pending and mark profile as completed
     const updatedProfile = await prisma.developerProfile.update({
       where: { userId },
       data: {
@@ -49,6 +50,18 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
     });
+
+    // Also update user's profile completion status
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isProfileCompleted: true,
+      },
+    });
+
+    // Revalidate paths to ensure fresh data
+    revalidatePath("/onboarding/freelancer/pending-approval");
+    revalidatePath("/api/user/me");
 
     return NextResponse.json({
       success: true,

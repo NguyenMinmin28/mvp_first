@@ -72,7 +72,7 @@ export class WhatsAppService {
       to: WhatsAppService.formatPhoneForWhatsApp(phoneNumber),
       type: "template",
       template: {
-        name: "otp_verification",
+        name: process.env.WHATSAPP_TEMPLATE_NAME || "otp_verification",
         language: { code: "en" }, // hoặc en_US / vi ... đúng với template đã duyệt
         components: [
           // {{1}} trong body

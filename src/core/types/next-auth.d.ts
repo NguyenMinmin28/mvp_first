@@ -14,6 +14,7 @@ declare module "next-auth" {
       phoneE164?: string;
       role?: Role;
       isProfileCompleted?: boolean;
+      adminApprovalStatus?: string;
     };
   }
 
@@ -25,6 +26,7 @@ declare module "next-auth" {
     phoneE164?: string;
     role?: Role;
     isProfileCompleted?: boolean;
+    adminApprovalStatus?: string;
   }
 }
 
@@ -34,5 +36,6 @@ declare module "next-auth/jwt" {
     phoneE164?: string;
     role?: Role;
     isProfileCompleted?: boolean;
+    adminApprovalStatus?: string;
   }
 }

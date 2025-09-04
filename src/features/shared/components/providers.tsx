@@ -10,9 +10,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider
-      // Refresh session more frequently to get fresh user data
-      refetchInterval={1 * 60} // 1 minute - more frequent updates
-      refetchOnWindowFocus={true} // Refresh when user focuses on window
+      // Reduce refresh frequency to prevent session instability
+      refetchInterval={5 * 60} // 5 minutes - less aggressive
+      refetchOnWindowFocus={false} // Disable to prevent constant refreshes
       refetchWhenOffline={false}
     >
       <PortalProvider>{children}</PortalProvider>

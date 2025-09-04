@@ -98,8 +98,15 @@ export default function DeveloperApprovalPage({ user }: Props) {
     setProcessingIds(prev => new Set(Array.from(prev).concat(developerId)));
 
     try {
-      const response = await fetch(`/api/admin/developers/${developerId}/${action}`, {
+      const response = await fetch(`/api/admin/developers/${developerId}/approve`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: action,
+          reason: action === "reject" ? "Rejected by admin" : undefined,
+        }),
       });
 
       if (response.ok) {

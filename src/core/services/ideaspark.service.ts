@@ -894,7 +894,7 @@ export class IdeaSparkService {
    * Lấy ideas của user
    */
   async getUserIdeas(userId: string, status?: IdeaStatus): Promise<Idea[]> {
-    const where: any = { authorId: userId, deletedAt: null };
+    const where: any = { authorId: userId };
     if (status) where.status = status;
 
     return prisma.idea.findMany({

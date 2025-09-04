@@ -238,7 +238,7 @@ export class RotationService {
         currentStatus: { in: ["available", "checking", "busy", "away"] },
         level,
         userId: { not: clientUserId },
-        // Allow unverified WhatsApp to broaden the pool
+        whatsappVerified: true, // Chỉ lấy những developer đã verify WhatsApp
         skills: {
           some: { skillId },
         },

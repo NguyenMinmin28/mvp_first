@@ -8,25 +8,36 @@ import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import DeveloperInbox from "@/features/developer/components/developer-inbox";
 import { Inbox } from "lucide-react";
 
+export const dynamic = "force-dynamic"; // Prevent SSG/ISR caching for auth pages
+
 export default function InboxPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "loading") return;
-
-    if (!session) {
-      router.push("/auth/signin");
+    // Let middleware handle auth - we only check specific redirect cases here
+    // Only proceed if authenticated
+    if (status !== "authenticated" || !session?.user) {
+      console.log("⏳ Not authenticated or loading, letting middleware handle auth");
       return;
     }
-
-    if (session.user?.role !== "DEVELOPER") {
+    
+    // Only DEVELOPER role is allowed here - for specific cases middleware might miss
+    if (session.user.role !== "DEVELOPER") {
+      console.log("🔍 User is not DEVELOPER, redirecting to home");
       router.push("/");
       return;
     }
+    
+    // Check approval status (middleware should handle this too but as backup)
+    const approvalStatus = (session.user as any).adminApprovalStatus;
+    if (approvalStatus !== "approved") {
+      console.log("🔍 Developer not approved, redirecting to pending page");
+      router.push("/onboarding/freelancer/pending-approval");
+    }
   }, [session, status, router]);
 
-  if (status === "loading") {
+  if (status !== "authenticated") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <div className="text-center">
@@ -44,7 +55,8 @@ export default function InboxPage() {
     );
   }
 
-  if (!session || session.user?.role !== "DEVELOPER") {
+  // Only render if authenticated and user is a DEVELOPER
+  if (!session?.user?.role || session.user.role !== "DEVELOPER") {
     return null;
   }
 

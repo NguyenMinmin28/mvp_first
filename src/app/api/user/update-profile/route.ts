@@ -60,16 +60,63 @@ export async function PUT(request: NextRequest) {
         developerUpdateData.currentStatus = body.currentStatus;
       if (body.portfolioLinks !== undefined)
         developerUpdateData.portfolioLinks = body.portfolioLinks;
+      if (body.photoUrl !== undefined)
+        developerUpdateData.photoUrl = body.photoUrl;
+      if (body.location !== undefined)
+        developerUpdateData.location = body.location;
+      // Coerce and validate number-like inputs
+      if (body.age !== undefined) {
+        const ageNum = typeof body.age === "string" ? parseInt(body.age, 10) : Number(body.age);
+        if (!Number.isNaN(ageNum)) developerUpdateData.age = ageNum;
+      }
+      const hrInput = body.hourlyRate ?? body.hourlyRateUsd;
+      if (hrInput !== undefined) {
+        const hrNum = typeof hrInput === "string" ? parseFloat(hrInput) : Number(hrInput);
+        if (!Number.isNaN(hrNum)) developerUpdateData.hourlyRateUsd = Math.round(hrNum);
+      }
 
       if (Object.keys(developerUpdateData).length > 0) {
-        await db.developerProfile.upsert({
-          where: { userId },
-          update: developerUpdateData,
-          create: {
-            userId,
-            ...developerUpdateData,
-          },
-        });
+        const existing = await db.developerProfile.findUnique({ where: { userId } });
+        if (existing) {
+          await db.developerProfile.update({ where: { userId }, data: developerUpdateData });
+        } else {
+          // Provide required defaults for new developer profiles
+          await db.developerProfile.create({
+            data: {
+              userId,
+              level: "FRESHER",
+              experienceYears: 0,
+              currentStatus: developerUpdateData.currentStatus ?? "available",
+              adminApprovalStatus: "draft",
+              ...developerUpdateData,
+            },
+          });
+        }
+      }
+
+      // Sync skills if provided
+      if (Array.isArray(body.skillIds)) {
+        const profile = await db.developerProfile.findUnique({ where: { userId } });
+        if (profile) {
+          const current = await db.developerSkill.findMany({
+            where: { developerProfileId: profile.id },
+            select: { id: true, skillId: true },
+          });
+          const currentIds = new Set(current.map((s) => s.skillId));
+          const incomingIds = new Set<string>(body.skillIds as string[]);
+
+          const toAdd = [...incomingIds].filter((id) => !currentIds.has(id));
+          const toRemove = current.filter((s) => !incomingIds.has(s.skillId)).map((s) => s.id);
+
+          if (toAdd.length > 0) {
+            await db.developerSkill.createMany({
+              data: toAdd.map((skillId: string) => ({ developerProfileId: profile.id, skillId })),
+            });
+          }
+          if (toRemove.length > 0) {
+            await db.developerSkill.deleteMany({ where: { id: { in: toRemove } } });
+          }
+        }
       }
     }
 

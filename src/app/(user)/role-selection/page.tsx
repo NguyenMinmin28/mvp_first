@@ -18,12 +18,19 @@ export default async function CompleteProfile() {
     redirect("/auth/signin");
   }
 
-  // Redirect based on role if profile already completed
-  if (user.isProfileCompleted && user.role) {
+  // If user already has a role, do not show role-selection
+  if (user.role) {
     if (user.role === "CLIENT") {
       redirect("/client-dashboard");
     } else if (user.role === "DEVELOPER") {
-      redirect("/inbox");
+      // Send developers to appropriate page based on status
+      if (!user.isProfileCompleted) {
+        redirect("/onboarding/freelancer/basic-information");
+      } else if (user.adminApprovalStatus === "approved") {
+        redirect("/inbox");
+      } else {
+        redirect("/onboarding/freelancer/pending-approval");
+      }
     } else if (user.role === "ADMIN") {
       redirect("/admin");
     }

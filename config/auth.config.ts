@@ -174,39 +174,55 @@ export default {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }: any) {
-      console.log("🔐 SignIn callback called:", { user, account, profile })
+  async signIn({ user, account, profile }: any) {
+    console.log("🔐 SignIn callback called:", { user, account, profile })
 
-      // Nếu là Google OAuth
-      if (account?.provider === "google") {
-        try {
-          // Kiểm tra xem user đã tồn tại trong database chưa
-          const existingUser = await prisma.user.findUnique({
-            where: { email: user.email! },
-            select: {
-              id: true,
-              role: true,
-              isProfileCompleted: true,
-            },
-          })
+    // Nếu là Google OAuth
+    if (account?.provider === "google") {
+      try {
+        // Kiểm tra xem user đã tồn tại trong database chưa
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          select: {
+            id: true,
+            role: true,
+            isProfileCompleted: true,
+          },
+        })
 
-          if (!existingUser) {
-            console.log("❌ Google user not found in database:", user.email)
-            // Từ chối đăng nhập - user phải đăng ký trước
-            return false
-          }
-
-          console.log("✅ Google user found in database:", existingUser)
-          return true
-        } catch (error) {
-          console.error("Error handling Google user:", error)
+        if (!existingUser) {
+          console.log("❌ Google user not found in database:", user.email)
+          // Từ chối đăng nhập - user phải đăng ký trước
           return false
         }
-      }
 
-      // Cho phép các provider khác (credentials, whatsapp)
-      return true
-    },
+        console.log("✅ Google user found in database:", existingUser)
+        return true
+      } catch (error) {
+        console.error("Error handling Google user:", error)
+        return false
+      }
+    }
+
+    // Cho phép các provider khác (credentials, whatsapp)
+    return true
+  },
+  
+  // Avoid login redirect loops
+  redirect({ url, baseUrl }) {
+    try {
+      const returnUrl = new URL(url, baseUrl);
+      if (returnUrl.origin === baseUrl) {
+        console.log("🔍 Valid redirect URL:", returnUrl.toString());
+        return returnUrl.toString();
+      }
+      console.log("🔍 Invalid redirect URL, using baseUrl:", baseUrl);
+      return baseUrl;
+    } catch (err) {
+      console.log("🔍 Error parsing redirect URL, using baseUrl:", baseUrl);
+      return baseUrl;
+    }
+  },
     session: async ({ session, token }: any) => {
       console.log("🔍 Session callback - token:", token)
       console.log("🔍 Session callback - session:", session)
@@ -232,62 +248,74 @@ export default {
         if (typeof token.isProfileCompleted === "boolean") {
           user.isProfileCompleted = token.isProfileCompleted
         }
+        if (token.adminApprovalStatus) {
+          user.adminApprovalStatus = token.adminApprovalStatus
+        }
         console.log("🔍 Final session user:", user)
       }
 
       console.log("🔍 Returning session:", session)
+      console.log("🔍 Session user role:", session?.user?.role)
       return session
     },
     jwt: async ({ user, token, trigger }: any) => {
       console.log("🔍 JWT callback - user:", user)
-      console.log("🔍 JWT callback - token:", trigger)
+      console.log("🔍 JWT callback - token:", token)
       console.log("🔍 JWT callback - trigger:", trigger)
 
-      // Always refresh user data from database for fresh data
-      // This ensures we get the latest user information on every request
-      if (token.sub) {
-        try {
-          console.log(
-            "🔄 JWT callback: Refreshing user data from database, trigger:",
-            trigger
-          )
-
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.sub },
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phoneE164: true,
-              role: true,
-              isProfileCompleted: true,
-            },
-          })
-
-          if (dbUser) {
-            console.log("🔄 JWT callback: Updated user data:", {
-              oldRole: token.role,
-              newRole: dbUser.role,
-              oldProfileStatus: token.isProfileCompleted,
-              newProfileStatus: dbUser.isProfileCompleted,
-            })
-
-            // Always update with fresh data from database
-            token.name = dbUser.name
-            token.email = dbUser.email
-            token.phoneE164 = dbUser.phoneE164
-            token.role = dbUser.role
-            token.isProfileCompleted = dbUser.isProfileCompleted
-            
-            // Force token update to ensure fresh data
-            token.iat = Math.floor(Date.now() / 1000)
-          }
-        } catch (error) {
-          console.error("Error fetching user data in JWT callback:", error)
-        }
+      // If no token.sub, return early to prevent session loss
+      if (!token.sub) {
+        console.log("❌ No token.sub, returning early");
+        return token;
       }
 
+      // Always fetch fresh user data to ensure token has latest info
+      try {
+        console.log("🔄 JWT callback: Fetching fresh user data from database")
+
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phoneE164: true,
+            role: true,
+            isProfileCompleted: true,
+            developerProfile: {
+              select: {
+                adminApprovalStatus: true,
+              },
+            },
+          },
+        })
+
+        if (dbUser) {
+          console.log("🔄 JWT callback: Fresh user data:", {
+            id: dbUser.id,
+            email: dbUser.email,
+            role: dbUser.role,
+            isProfileCompleted: dbUser.isProfileCompleted,
+            adminApprovalStatus: dbUser.developerProfile?.adminApprovalStatus
+          })
+
+          // Always update with fresh data from database
+          token.name = dbUser.name
+          token.email = dbUser.email
+          token.phoneE164 = dbUser.phoneE164
+          token.role = dbUser.role
+          token.isProfileCompleted = dbUser.isProfileCompleted
+          token.adminApprovalStatus = dbUser.developerProfile?.adminApprovalStatus
+        } else {
+          console.log("❌ JWT callback: User not found in database");
+        }
+      } catch (error) {
+        console.error("❌ JWT callback: Error fetching user data:", error)
+      }
+
+      // Also handle user object if it's available (on first login)
       if (user) {
+        console.log("🔍 JWT callback: Processing user object from login")
         // Store user ID in token.sub (NextAuth standard)
         // For database adapters, token.sub is automatically set
         if ("phoneE164" in user) {
@@ -301,13 +329,33 @@ export default {
         }
       }
 
-      console.log("🔍 Returning token:", token)
+      console.log("🔍 JWT callback: Final token:", {
+        sub: token.sub,
+        email: token.email,
+        role: token.role,
+        isProfileCompleted: token.isProfileCompleted,
+        adminApprovalStatus: token.adminApprovalStatus
+      })
+      
       return token
     },
   },
   session: {
-    strategy: "jwt",
-  },
+  strategy: "jwt",
+  maxAge: 30 * 24 * 60 * 60, // 30 days
+  updateAge: 24 * 60 * 60, // 24 hours
+},
+cookies: {
+  sessionToken: {
+    name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
+    options: {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production"
+    }
+  }
+},
   pages: {
     signIn: "/auth/signin",
     error: "/auth/signin", // Redirect về trang signin khi có lỗi

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { prisma } from "@/core/database/db";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -14,8 +15,18 @@ export async function PATCH(
     }
 
     const { id } = params;
-    const body = await request.json();
-    const { status, reason } = body;
+    let body, status, reason;
+    try {
+      body = await request.json();
+      status = body.status;
+      reason = body.reason;
+    } catch (error) {
+      console.error("Error parsing request JSON:", error);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
 
     if (!status || !["approved", "rejected"].includes(status)) {
       return NextResponse.json(
@@ -52,6 +63,11 @@ export async function PATCH(
         },
       },
     });
+
+    // Revalidate paths to ensure fresh data
+    revalidatePath("/onboarding/freelancer/pending-approval");
+    revalidatePath("/api/user/me");
+    revalidatePath("/inbox");
 
     return NextResponse.json({
       message: `Developer profile ${status} successfully`,

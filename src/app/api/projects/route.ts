@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
               select: {
                 id: true,
                 title: true,
+                description: true,
                 status: true,
                 postedAt: true,
                 budgetMin: true,
@@ -100,7 +101,8 @@ export async function GET(request: NextRequest) {
         }) : "Unknown",
         budget: project.budgetMin,
         currency: project.currency,
-        skills: project.skillsRequired
+        skills: project.skillsRequired,
+        assignmentStatus: project.assignmentStatus
       };
     });
 
@@ -136,12 +138,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, skillsRequired, budget, currency } = body;
+    const { title, description, skillsRequired, budget, currency, paymentMethod } = body;
 
     // Validation
     if (!title?.trim() || !description?.trim() || !Array.isArray(skillsRequired) || skillsRequired.length === 0) {
       return NextResponse.json(
         { error: "Title, description, and at least one skill are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate payment method if provided
+    if (paymentMethod && !["hourly", "fixed"].includes(paymentMethod)) {
+      return NextResponse.json(
+        { error: "Payment method must be either 'hourly' or 'fixed'" },
         { status: 400 }
       );
     }
@@ -193,10 +203,10 @@ export async function POST(request: NextRequest) {
       description: description.trim(),
       skillsRequired: skillsRequired,
       status: "submitted",
-      postedAt: new Date(),
     };
     if (budget) data.budgetMin = Number(budget);
     if (currency) data.currency = String(currency).toUpperCase();
+    if (paymentMethod) data.paymentMethod = String(paymentMethod);
 
     const project = await prisma.project.create({
       data,

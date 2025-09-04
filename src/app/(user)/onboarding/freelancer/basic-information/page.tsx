@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { getServerSessionUser } from "@/features/auth/auth-server";
-import { UserLayout } from "@/features/shared/components/user-layout";
+import { OnboardingLayout } from "@/features/onboarding/freelancer/onboarding-layout";
 import { StepSidebar } from "@/features/onboarding/freelancer/components/step-sidebar";
 import BasicInformationStep from "@/features/onboarding/freelancer/steps/basic-information";
 
@@ -18,14 +18,12 @@ export default async function FreelancerBasicInformationPage() {
   ];
 
   return (
-    <UserLayout user={user}>
-      <section className="w-full py-8">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-[320px,1fr] gap-8">
-          <StepSidebar steps={steps} activeStepId="basic" />
-          <BasicInformationStep />
-        </div>
-      </section>
-    </UserLayout>
+    <OnboardingLayout user={user}>
+      <div className="grid grid-cols-1 md:grid-cols-[320px,1fr] gap-8">
+        <StepSidebar steps={steps} activeStepId="basic" />
+        <BasicInformationStep />
+      </div>
+    </OnboardingLayout>
   );
 }
 

@@ -60,6 +60,18 @@ export default function CompleteProfilePage() {
     setIsLoading(true);
     try {
       console.log("🔍 Starting role selection for:", role);
+      // If user already has this role, skip API and just route
+      if (session?.user?.role === role) {
+        console.log("🔍 User already has role, skip update and redirect");
+        if (role === "CLIENT") {
+          router.push("/client-dashboard");
+        } else if (role === "DEVELOPER") {
+          router.push("/onboarding/freelancer/basic-information");
+        } else {
+          router.push("/");
+        }
+        return;
+      }
       
       // Update user role and create profile
       const response = await fetch("/api/user/update-role", {
@@ -99,7 +111,7 @@ export default function CompleteProfilePage() {
       if (role === "CLIENT") {
         router.push("/client-dashboard");
       } else if (role === "DEVELOPER") {
-        router.push("/inbox");
+        router.push("/onboarding/freelancer/basic-information");
       } else {
         router.push("/");
       }

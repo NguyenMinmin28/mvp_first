@@ -70,6 +70,11 @@ export function Header({ user }: HeaderProps) {
   
   // Get user role from session
   const userRole = user?.role as string | undefined;
+  
+  // Debug logging
+  console.log("🔍 Header - User:", user);
+  console.log("🔍 Header - User Role:", userRole);
+  console.log("🔍 Header - Is Authenticated:", isAuthenticated);
 
   // Auto-sync portal with user role
   useEffect(() => {
@@ -104,7 +109,7 @@ export function Header({ user }: HeaderProps) {
       return;
     } else if (userRole === "DEVELOPER" && targetPortal === "freelancer") {
       setActivePortal("freelancer");
-      router.push("/inbox");
+      router.push("/dashboard-user");
       return;
     }
 
@@ -127,9 +132,9 @@ export function Header({ user }: HeaderProps) {
       setActivePortal("client");
       router.push("/client-dashboard");
     } else if (targetPortal === "freelancer" && isDeveloperRole) {
-      // Developer bấm vào Freelancer -> chuyển đổi portal và về inbox
+      // Developer bấm vào Freelancer -> chuyển đổi portal và về dashboard
       setActivePortal("freelancer");
-      router.push("/inbox");
+      router.push("/dashboard-user");
     } else {
       // Role không khớp -> logout và chuyển về trang đăng nhập
       setActivePortal(targetPortal);

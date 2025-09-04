@@ -107,32 +107,12 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setActivePortal = async (p: Portal) => {
-    if (!mounted || isLoggingOut) return;
-    
-    // If switching to the same portal, just update state
-    if (p === activePortal) {
-      setActivePortalState(p);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, p);
-      } catch {}
-      return;
-    }
-    
-    // If switching to a different portal, logout first
-    setIsLoggingOut(true);
+    if (!mounted) return;
+    // Purely set portal without forcing logout to avoid loops
+    setActivePortalState(p);
     try {
-      await signOut({ redirect: false });
-      clearPortalToken("client");
-      clearPortalToken("freelancer");
-      // Redirect to login page after logout
-      if (mounted && router) {
-        router.push(`/auth/signin?portal=${p}`);
-      }
-      setIsLoggingOut(false);
-    } catch (error) {
-      console.error("Logout error:", error);
-      setIsLoggingOut(false);
-    }
+      window.localStorage.setItem(STORAGE_KEY, p);
+    } catch {}
   };
 
   const logoutFromPortal = (portal: Portal) => {

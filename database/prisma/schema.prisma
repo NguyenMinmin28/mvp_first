@@ -481,6 +481,7 @@ model DeveloperProfile {
   portfolioLinks  String[] // URLs
   // Additional optional public fields for marketplace cards
   location        String?
+  age             Int?
   hourlyRateUsd   Int? // USD per hour
 
   adminApprovalStatus AdminApprovalStatus @default(draft)
@@ -574,6 +575,7 @@ model Project {
   budgetMin       Float? // Legacy
   budgetMax       Float? // Legacy
   currency        String    @default("USD")
+  paymentMethod   String?   // "hourly" or "fixed"
   // Timeline (optional)
   expectedStartAt DateTime?
   expectedEndAt   DateTime?
