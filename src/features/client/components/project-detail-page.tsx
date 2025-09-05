@@ -7,6 +7,7 @@ import CandidateMetaRow from "@/features/client/components/candidate-meta-row";
 import { Badge } from "@/ui/components/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import ReviewSlideModal from "@/features/client/components/review-slide-modal";
+import DeveloperReviewsModal from "@/features/client/components/developer-reviews-modal";
 import { 
   Send,
   Star,
@@ -78,6 +79,14 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedDevelopers, setSelectedDevelopers] = useState<any[]>([]);
+  const [showDeveloperReviewsModal, setShowDeveloperReviewsModal] = useState(false);
+  const [selectedDeveloperForReviews, setSelectedDeveloperForReviews] = useState<{id: string, name: string} | null>(null);
+
+  // Handle opening developer reviews modal
+  const handleReadReviews = (developerId: string, developerName: string) => {
+    setSelectedDeveloperForReviews({ id: developerId, name: developerName });
+    setShowDeveloperReviewsModal(true);
+  };
 
   useEffect(() => {
     fetchFreelancers();
@@ -850,6 +859,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                         variant="outline"
                         size="sm"
                         className="text-xs lg:text-sm h-8 lg:h-9 border-black text-black font-medium hover:bg-black hover:text-white transition-colors"
+                        onClick={() => handleReadReviews(freelancer.developer.id, freelancer.developer.user.name)}
                       >
                         Read Reviews
                       </Button>
@@ -887,6 +897,20 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           onSubmit={handleSubmitReview}
         />
       )}
+
+      {/* Developer Reviews Modal */}
+      {showDeveloperReviewsModal && selectedDeveloperForReviews && (
+        <DeveloperReviewsModal
+          isOpen={showDeveloperReviewsModal}
+          onClose={() => {
+            setShowDeveloperReviewsModal(false);
+            setSelectedDeveloperForReviews(null);
+          }}
+          developerId={selectedDeveloperForReviews.id}
+          developerName={selectedDeveloperForReviews.name}
+        />
+      )}
+      
     </div>
   );
 }

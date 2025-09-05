@@ -8,15 +8,23 @@ import { Button } from "@/ui/components/button";
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/ui/components/dialog";
 import { Input } from "@/ui/components/input";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Star, MessageSquare } from "lucide-react";
 import { Checkbox } from "@/ui/components/checkbox";
+import DeveloperReviewModal from "@/features/client/components/developer-review-modal";
 
 interface ProfileSummaryProps {
   profile: any;
   hideControls?: boolean;
+  developerId?: string;
+  onReviewSubmitted?: () => void;
 }
 
-export default function ProfileSummary({ profile, hideControls = false }: ProfileSummaryProps) {
+interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+}
+
+export default function ProfileSummary({ profile, hideControls = false, developerId, onReviewSubmitted }: ProfileSummaryProps) {
   const [openEdit, setOpenEdit] = useState(false);
   const [name, setName] = useState<string>(profile?.name || "");
   const [location, setLocation] = useState<string>(profile?.location || "");
@@ -33,6 +41,59 @@ export default function ProfileSummary({ profile, hideControls = false }: Profil
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(
     Array.isArray(profile?.skills) ? profile.skills.map((s: any) => s.skillId) : []
   );
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({ averageRating: 0, totalReviews: 0 });
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Function to render star rating
+  const renderStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />);
+    }
+    
+    if (hasHalfStar) {
+      stars.push(<Star key="half" className="w-3 h-3 fill-yellow-400 text-yellow-400" />);
+    }
+    
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(<Star key={`empty-${i}`} className="w-3 h-3 text-gray-300" />);
+    }
+    
+    return stars;
+  };
+
+  // Fetch review statistics
+  const fetchReviewStats = async () => {
+    try {
+      // If developerId is provided, fetch stats for that specific developer
+      // Otherwise, fetch stats for current user
+      const endpoint = developerId 
+        ? `/api/developer/${developerId}/review-stats`
+        : "/api/user/review-stats";
+      
+      const response = await fetch(endpoint, { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        setReviewStats(data);
+      }
+    } catch (error) {
+      console.error("Error fetching review stats:", error);
+    }
+  };
+
+  // Handle review submission and refresh stats
+  const handleReviewSubmitted = () => {
+    // Refresh review statistics
+    fetchReviewStats();
+    // Notify parent component if callback provided
+    if (onReviewSubmitted) {
+      onReviewSubmitted();
+    }
+  };
 
   const submitStatus = async (newStatus: "available" | "busy") => {
     try {
@@ -95,6 +156,11 @@ export default function ProfileSummary({ profile, hideControls = false }: Profil
     }
   };
 
+  // Fetch review stats on component mount and when developerId changes
+  useEffect(() => {
+    fetchReviewStats();
+  }, [developerId]);
+
   useEffect(() => {
     if (!openEdit) return;
     let active = true;
@@ -149,7 +215,7 @@ export default function ProfileSummary({ profile, hideControls = false }: Profil
             <span className="truncate font-semibold text-sm md:text-base leading-tight">{name || profile?.name}</span>
             <span className="truncate text-xs md:text-[13px] text-gray-600 leading-tight">{profile?.email}</span>
           </div>
-          {!hideControls ? (
+          {!hideControls && !developerId ? (
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -209,8 +275,23 @@ export default function ProfileSummary({ profile, hideControls = false }: Profil
                   <span className="flex-1" />
                   <span className="flex items-center gap-2 whitespace-nowrap">
                     <span className="text-gray-500 text-xs sm:text-sm">My review:</span>
-                    <span className="text-yellow-500 text-xs sm:text-sm">★★★★★</span>
-                    <span className="text-gray-600 text-xs sm:text-sm">(8 reviews)</span>
+                    <div className="flex items-center gap-1">
+                      {renderStars(reviewStats.averageRating)}
+                    </div>
+                    <span className="text-gray-600 text-xs sm:text-sm">
+                      ({reviewStats.totalReviews} review{reviewStats.totalReviews !== 1 ? 's' : ''})
+                    </span>
+                    {!hideControls && developerId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-2 h-6 px-2 text-xs"
+                        onClick={() => setShowReviewModal(true)}
+                      >
+                        <MessageSquare className="w-3 h-3 mr-1" />
+                        Review
+                      </Button>
+                    )}
                   </span>
                 </div>
               </div>
@@ -344,6 +425,17 @@ export default function ProfileSummary({ profile, hideControls = false }: Profil
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Developer Review Modal */}
+    {showReviewModal && developerId && !hideControls && (
+      <DeveloperReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        developerId={developerId}
+        developerName={profile?.name || "Developer"}
+        onReviewSubmitted={handleReviewSubmitted}
+      />
+    )}
     </>
   );
 }

@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/revalidate") ||
     pathname.startsWith("/api/developer") ||
+    pathname.startsWith("/api/test") ||
     pathname.startsWith("/_next") || 
     pathname.startsWith("/images") ||
     pathname.includes(".") // Skip files with extensions

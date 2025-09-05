@@ -13,7 +13,9 @@ import {
   Sprout,
   Palmtree,
   TreePine,
-  Calendar
+  Calendar,
+  FileText,
+  AlertCircle
 } from "lucide-react";
 import ProjectActivity from "./project-activity";
 import { ProjectPostForm } from "./project-post-form";
@@ -24,11 +26,77 @@ export default function ClientDashboard() {
   const searchParams = useSearchParams();
   const userRole = session?.user?.role as string | undefined;
   const targetPortal = searchParams.get("targetPortal") as string | undefined;
+  
+  const [quotaStatus, setQuotaStatus] = useState<{
+    hasActiveSubscription: boolean;
+    quotas?: { projectsPerMonth: number; contactClicksPerProject: number };
+    usage?: { projectsUsed: number; contactClicksUsed: Record<string, number> };
+    remaining?: { projects: number; contactClicks: Record<string, number> };
+  } | null>(null);
+
+  // Fetch quota status
+  useEffect(() => {
+    const fetchQuota = async () => {
+      try {
+        const res = await fetch("/api/billing/quotas", { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        setQuotaStatus(data);
+      } catch (error) {
+        console.error("Failed to fetch quota status:", error);
+      }
+    };
+    fetchQuota();
+  }, []);
 
   return (
     <div className="space-y-8">
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
+
+      {/* Quota Status */}
+      {quotaStatus && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Project Quota Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {quotaStatus.hasActiveSubscription ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Projects this month:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {quotaStatus.usage?.projectsUsed || 0} / {quotaStatus.quotas?.projectsPerMonth || 0}
+                    </span>
+                    <Badge variant={quotaStatus.remaining?.projects === 0 ? "destructive" : "secondary"}>
+                      {quotaStatus.remaining?.projects || 0} remaining
+                    </Badge>
+                  </div>
+                </div>
+                {quotaStatus.remaining?.projects === 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm text-red-700">
+                      Monthly project limit reached. Upgrade your plan to create more projects.
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-yellow-700">
+                  No active subscription. Please subscribe to create projects.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -78,22 +78,11 @@ export async function GET(request: NextRequest) {
 
     // Transform projects to match the expected format
     const transformedProjects = projects.map((project: any) => {
-      let status: "recent" | "in_progress" | "completed" = "recent";
-      
-      // In Progress: projects that are not completed and not canceled
-      if (project.status === "submitted" || project.status === "assigning" || 
-          project.status === "accepted" || project.status === "in_progress") {
-        status = "in_progress";
-      } else if (project.status === "completed") {
-        status = "completed";
-      }
-      // draft and canceled projects will remain as "recent" (or could be filtered out)
-
       return {
         id: project.id,
         name: project.title,
         description: project.description,
-        status: status,
+        status: project.status, // Keep original status from database
         date: project.postedAt ? project.postedAt.toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",

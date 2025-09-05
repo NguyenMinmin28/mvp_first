@@ -25,6 +25,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
+import { ProjectReviewModal } from "./project-review-modal";
 
 interface Project {
   id: string;
@@ -45,14 +46,52 @@ export default function MyProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
   const [completingProjects, setCompletingProjects] = useState<Set<string>>(new Set());
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewData, setReviewData] = useState<{
+    projectId: string;
+    projectTitle: string;
+    developers: Array<{ id: string; name: string; image?: string }>;
+  } | null>(null);
+  const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
+  // Check review status for all completed projects
+  useEffect(() => {
+    const checkReviewStatus = async () => {
+      const completedProjects = projects.filter(p => p.status === "completed");
+      const reviewStatusPromises = completedProjects.map(async (project) => {
+        try {
+          const response = await fetch(`/api/projects/${project.id}/reviews/status`);
+          if (response.ok) {
+            const data = await response.json();
+            return { projectId: project.id, hasReviews: data.hasReviews };
+          }
+        } catch (error) {
+          console.error(`Error checking review status for project ${project.id}:`, error);
+        }
+        return { projectId: project.id, hasReviews: false };
+      });
+
+      const results = await Promise.all(reviewStatusPromises);
+      const reviewedSet = new Set(
+        results.filter(r => r.hasReviews).map(r => r.projectId)
+      );
+      setReviewedProjects(reviewedSet);
+    };
+
+    if (projects.length > 0) {
+      checkReviewStatus();
+    }
+  }, [projects]);
+
   const fetchProjects = async () => {
     try {
-      const response = await fetch("/api/projects");
+      const response = await fetch("/api/projects", {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setProjects(data.projects || []);
@@ -80,10 +119,18 @@ export default function MyProjectsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        toast.success("Project marked as completed successfully!");
-        
-        // Refresh projects list
-        await fetchProjects();
+        // If there are developers to review, show review modal
+        if (data.acceptedDevelopers && data.acceptedDevelopers.length > 0) {
+          setReviewData({
+            projectId,
+            projectTitle: data.project.title,
+            developers: data.acceptedDevelopers
+          });
+          setShowReviewModal(true);
+        } else {
+          toast.success("Project marked as completed successfully!");
+          await fetchProjects();
+        }
       } else {
         let errorMessage = "Failed to complete project";
         try {
@@ -104,6 +151,63 @@ export default function MyProjectsPage() {
         newSet.delete(projectId);
         return newSet;
       });
+    }
+  };
+
+  const handleReviewComplete = async () => {
+    await fetchProjects();
+    setShowReviewModal(false);
+    setReviewData(null);
+    
+    // Mark project as reviewed
+    if (reviewData) {
+      setReviewedProjects(prev => new Set(prev).add(reviewData.projectId));
+    }
+  };
+
+  const handleReviewProject = async (projectId: string, projectTitle: string) => {
+    try {
+      // First check if project already has reviews
+      const reviewCheckResponse = await fetch(`/api/projects/${projectId}/reviews/status`);
+      
+      if (reviewCheckResponse.ok) {
+        const reviewStatus = await reviewCheckResponse.json();
+        if (reviewStatus.hasReviews) {
+          toast.info("This project has already been reviewed");
+          return;
+        }
+      }
+
+      // Fetch accepted developers for this project
+      const response = await fetch(`/api/projects/${projectId}/assignment`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const acceptedDevelopers = data.candidates
+          ?.filter((candidate: any) => candidate.responseStatus === "accepted")
+          ?.map((candidate: any) => ({
+            id: candidate.developer.id,
+            name: candidate.developer.user.name,
+            image: candidate.developer.photoUrl || candidate.developer.user.image
+          })) || [];
+
+
+        if (acceptedDevelopers.length > 0) {
+          setReviewData({
+            projectId,
+            projectTitle,
+            developers: acceptedDevelopers
+          });
+          setShowReviewModal(true);
+        } else {
+          toast.info("No accepted developers to review for this project");
+        }
+      } else {
+        toast.error("Failed to fetch project data");
+      }
+    } catch (error) {
+      console.error("Error fetching project data for review:", error);
+      toast.error("An error occurred while fetching project data");
     }
   };
 
@@ -298,12 +402,12 @@ export default function MyProjectsPage() {
                   placeholder="Search projects..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 text-sm lg:text-base"
+                  className="pl-10 text-sm lg:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150"
                 />
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48 text-sm lg:text-base">
+              <SelectTrigger className="w-full sm:w-48 text-sm lg:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -323,11 +427,11 @@ export default function MyProjectsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 lg:space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-          <TabsTrigger value="all" className="text-xs lg:text-sm">All ({getTabCount("all")})</TabsTrigger>
-          <TabsTrigger value="active" className="text-xs lg:text-sm">Active ({getTabCount("active")})</TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs lg:text-sm">Completed ({getTabCount("completed")})</TabsTrigger>
-          <TabsTrigger value="draft" className="text-xs lg:text-sm">Draft ({getTabCount("draft")})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-gray-100">
+          <TabsTrigger value="all" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">All ({getTabCount("all")})</TabsTrigger>
+          <TabsTrigger value="active" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">Active ({getTabCount("active")})</TabsTrigger>
+          <TabsTrigger value="completed" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">Completed ({getTabCount("completed")})</TabsTrigger>
+          <TabsTrigger value="draft" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">Draft ({getTabCount("draft")})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-3 lg:space-y-4">
@@ -344,20 +448,12 @@ export default function MyProjectsPage() {
                     : "Get started by creating your first project"
                   }
                 </p>
-                {!searchTerm && statusFilter === "all" && (
-                  <Link href="/projects/new">
-                    <Button className="text-sm lg:text-base">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Project
-                    </Button>
-                  </Link>
-                )}
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-3 lg:gap-4">
               {filteredProjects.map((project) => (
-                <Card key={project.id} className="hover:shadow-md transition-shadow">
+                <Card key={project.id} className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-gray-200 hover:border-gray-300">
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
                       <div className="flex items-start gap-3 lg:gap-4 flex-1">
@@ -406,15 +502,25 @@ export default function MyProjectsPage() {
                       
                       <div className="flex flex-wrap items-center gap-1 lg:gap-2">
                         <Link href={`/projects/${project.id}`}>
-                          <Button variant="outline" size="sm" className="text-xs lg:text-sm h-8 lg:h-9">
+                          <Button variant="outline" size="sm" className="text-xs lg:text-sm h-8 lg:h-9 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-150">
                             <Eye className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
                             View
                           </Button>
                         </Link>
                         {project.status === "completed" && (
-                          <Button variant="outline" size="sm" className="text-xs lg:text-sm h-8 lg:h-9">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={`text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150 ${
+                              reviewedProjects.has(project.id) 
+                                ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500" 
+                                : "hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                            }`}
+                            onClick={() => handleReviewProject(project.id, project.name)}
+                            disabled={reviewedProjects.has(project.id)}
+                          >
                             <MessageSquare className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                            Review
+                            {reviewedProjects.has(project.id) ? "Reviewed" : "Review"}
                           </Button>
                         )}
                         {(project.status !== "completed" && project.status !== "draft" && project.status !== "canceled") && (
@@ -423,7 +529,7 @@ export default function MyProjectsPage() {
                             size="sm"
                             onClick={() => handleCompleteProject(project.id)}
                             disabled={completingProjects.has(project.id)}
-                            className="text-green-600 border-green-600 hover:bg-green-50 text-xs lg:text-sm h-8 lg:h-9"
+                            className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150"
                           >
                             {completingProjects.has(project.id) ? (
                               <Clock className="h-3 w-3 lg:h-4 lg:w-4 mr-1 animate-spin" />
@@ -447,6 +553,22 @@ export default function MyProjectsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Review Modal */}
+      {reviewData && (
+        <ProjectReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setReviewData(null);
+          }}
+          projectId={reviewData.projectId}
+          projectTitle={reviewData.projectTitle}
+          developers={reviewData.developers}
+          onComplete={handleReviewComplete}
+        />
+      )}
+      
     </div>
   );
 }

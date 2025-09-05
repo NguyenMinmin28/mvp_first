@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
+import { redirect } from "next/navigation";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ProfileSummary from "@/features/developer/components/dashboard/profile-summary";
 import IdeaSparkList from "@/features/developer/components/dashboard/ideaspark-list";
@@ -17,6 +18,14 @@ import Link from "next/link";
 
 export default async function DeveloperPublicProfilePage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.id) {
+    redirect("/auth/signin");
+  }
+
+  if (session.user.role !== "CLIENT") {
+    redirect("/");
+  }
 
   // Fetch developer profile by developerId (DeveloperProfile.id or Developer userId?)
   // In assignment we used developer.id for DeveloperProfile id
@@ -67,7 +76,7 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
             <div className="xl:col-span-2">
-              <ProfileSummary profile={profile} hideControls />
+              <ProfileSummary profile={profile} hideControls={true} developerId={params.id} />
 
               {/* Info Tabs */}
               <div className="mt-4 sm:mt-6">

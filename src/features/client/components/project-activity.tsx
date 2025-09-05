@@ -12,11 +12,12 @@ import {
   MessageSquare
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface Project {
   id: string;
   name: string;
-  status: "recent" | "in_progress" | "completed";
+  status: "draft" | "submitted" | "assigning" | "accepted" | "in_progress" | "completed" | "canceled";
   date: string;
   logo?: string;
 }
@@ -24,10 +25,41 @@ interface Project {
 export default function ProjectActivity() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(new Set());
+  const router = useRouter();
 
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  // Check review status for completed projects
+  useEffect(() => {
+    const checkReviewStatus = async () => {
+      const completedProjects = projects.filter(p => p.status === "completed");
+      const reviewStatusPromises = completedProjects.map(async (project) => {
+        try {
+          const response = await fetch(`/api/projects/${project.id}/reviews/status`);
+          if (response.ok) {
+            const data = await response.json();
+            return { projectId: project.id, hasReviews: data.hasReviews };
+          }
+        } catch (error) {
+          console.error(`Error checking review status for project ${project.id}:`, error);
+        }
+        return { projectId: project.id, hasReviews: false };
+      });
+
+      const results = await Promise.all(reviewStatusPromises);
+      const reviewedSet = new Set(
+        results.filter(r => r.hasReviews).map(r => r.projectId)
+      );
+      setReviewedProjects(reviewedSet);
+    };
+
+    if (projects.length > 0) {
+      checkReviewStatus();
+    }
+  }, [projects]);
 
   const fetchProjects = async () => {
     try {
@@ -47,9 +79,37 @@ export default function ProjectActivity() {
     }
   };
 
-  const getRecentProjects = () => projects.slice(0, 1); // Only the first project
-  const getInProgressProjects = () => projects.slice(1).filter(p => p.status === "in_progress"); // Exclude first project
-  const getCompletedProjects = () => projects.slice(1).filter(p => p.status === "completed"); // Exclude first project
+  const getRecentProjects = () => {
+    // Get the most recent project (first in the list)
+    return projects.slice(0, 1);
+  };
+  
+  const getInProgressProjects = () => {
+    // Get projects that are actively being worked on
+    return projects.filter(p => 
+      p.status === "in_progress" || 
+      p.status === "assigning" || 
+      p.status === "accepted"
+    );
+  };
+  
+  const getCompletedProjects = () => {
+    // Get completed projects
+    return projects.filter(p => p.status === "completed");
+  };
+
+  const formatStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'draft': 'Draft',
+      'submitted': 'Submitted',
+      'assigning': 'Assigning',
+      'accepted': 'Accepted',
+      'in_progress': 'In Progress',
+      'completed': 'Completed',
+      'canceled': 'Canceled'
+    };
+    return statusMap[status] || status.replace('_', ' ').toUpperCase();
+  };
 
   if (isLoading) {
     return (
@@ -116,7 +176,12 @@ export default function ProjectActivity() {
                         </h4>
                         <div className="flex flex-col items-center space-y-3">
                           <span className="text-base text-gray-500">{project.date}</span>
-                          <Button variant="outline" size="sm" className="text-gray-500 border-gray-300">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-gray-500 border-gray-300"
+                            onClick={() => router.push(`/projects/${project.id}`)}
+                          >
                             <Eye className="h-3 w-3 mr-1" />
                             See Details
                           </Button>
@@ -137,7 +202,12 @@ export default function ProjectActivity() {
                         </h4>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-sm text-gray-500">{project.date}</span>
-                          <Button variant="outline" size="sm" className="text-gray-500 border-gray-300">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-gray-500 border-gray-300"
+                            onClick={() => router.push(`/projects/${project.id}`)}
+                          >
                             <Eye className="h-3 w-3 mr-1" />
                             See Details
                           </Button>
@@ -168,9 +238,14 @@ export default function ProjectActivity() {
                       </h4>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-sm text-gray-500">
-                          {project.date} In progress
+                          {project.date} {formatStatus(project.status)}
                         </span>
-                        <Button variant="outline" size="sm" className="text-gray-500 border-gray-300">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-gray-500 border-gray-300"
+                          onClick={() => router.push(`/projects/${project.id}`)}
+                        >
                           <Eye className="h-3 w-3 mr-1" />
                           See Details
                         </Button>
@@ -200,11 +275,21 @@ export default function ProjectActivity() {
                       </h4>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-sm text-gray-500">
-                          {project.date} Completed
+                          {project.date} {formatStatus(project.status)}
                         </span>
-                        <Button variant="outline" size="sm" className="text-gray-500 border-gray-300">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className={`${
+                            reviewedProjects.has(project.id) 
+                              ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500" 
+                              : "text-gray-500 border-gray-300"
+                          }`}
+                          onClick={() => router.push(`/my-projects`)}
+                          disabled={reviewedProjects.has(project.id)}
+                        >
                           <MessageSquare className="h-3 w-3 mr-1" />
-                          Add Review
+                          {reviewedProjects.has(project.id) ? "Reviewed" : "Add Review"}
                         </Button>
                       </div>
                     </div>

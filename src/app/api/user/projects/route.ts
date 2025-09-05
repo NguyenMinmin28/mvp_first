@@ -53,9 +53,14 @@ export async function GET(request: NextRequest) {
     const transformedProjects = projects.map(project => {
       const latestAssignment = project.assignmentCandidates[0];
       
-      // Determine status based on assignment response status for current user
+      // Determine status based on project status first, then assignment response status
       let status = 'recent'; // default
-      if (latestAssignment) {
+      
+      // First check if project is completed - this takes priority
+      if (project.status === 'completed') {
+        status = 'completed';
+      } else if (latestAssignment) {
+        // If project is not completed, check assignment status
         switch (latestAssignment.responseStatus) {
           case 'accepted':
             status = 'approved';
@@ -73,16 +78,14 @@ export async function GET(request: NextRequest) {
             status = project.status === 'submitted' ? 'recent' : 
                     project.status === 'accepted' ? 'approved' :
                     project.status === 'canceled' ? 'rejected' :
-                    project.status === 'in_progress' ? 'in_progress' :
-                    project.status === 'completed' ? 'completed' : 'recent';
+                    project.status === 'in_progress' ? 'in_progress' : 'recent';
         }
       } else {
         // No assignment, use project status
         status = project.status === 'submitted' ? 'recent' : 
                 project.status === 'accepted' ? 'approved' :
                 project.status === 'canceled' ? 'rejected' :
-                project.status === 'in_progress' ? 'in_progress' :
-                project.status === 'completed' ? 'completed' : 'recent';
+                project.status === 'in_progress' ? 'in_progress' : 'recent';
       }
       
       return {
