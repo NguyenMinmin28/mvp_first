@@ -13,9 +13,10 @@ import { Checkbox } from "@/ui/components/checkbox";
 
 interface ProfileSummaryProps {
   profile: any;
+  hideControls?: boolean;
 }
 
-export default function ProfileSummary({ profile }: ProfileSummaryProps) {
+export default function ProfileSummary({ profile, hideControls = false }: ProfileSummaryProps) {
   const [openEdit, setOpenEdit] = useState(false);
   const [name, setName] = useState<string>(profile?.name || "");
   const [location, setLocation] = useState<string>(profile?.location || "");
@@ -148,31 +149,44 @@ export default function ProfileSummary({ profile }: ProfileSummaryProps) {
             <span className="truncate font-semibold text-sm md:text-base leading-tight">{name || profile?.name}</span>
             <span className="truncate text-xs md:text-[13px] text-gray-600 leading-tight">{profile?.email}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-black text-white h-10 md:h-12 px-4 rounded-md flex items-center gap-2">
-                  {status || "available"}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => submitStatus("available")}>Available</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => submitStatus("busy")}>busy</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-black text-white h-10 md:h-12 px-4 rounded-md flex items-center gap-2">
-                  Action
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setOpenEdit(true)}>Edit profile</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {!hideControls ? (
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-black text-white h-10 md:h-12 px-4 rounded-md flex items-center gap-2">
+                    {status || "available"}
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => submitStatus("available")}>Available</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => submitStatus("busy")}>busy</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-black text-white h-10 md:h-12 px-4 rounded-md flex items-center gap-2">
+                    Action
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setOpenEdit(true)}>Edit profile</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Badge className="text-xs capitalize bg-gray-100 text-gray-800">
+                {status || profile?.currentStatus || "available"}
+              </Badge>
+              {profile?.adminApprovalStatus && (
+                <Badge className="text-xs capitalize">
+                  {String(profile.adminApprovalStatus).toLowerCase()}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-0 px-3 sm:px-4 pb-3 sm:pb-4">

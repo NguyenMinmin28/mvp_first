@@ -130,6 +130,8 @@ export async function GET(
           location: (candidate.developer as any).location ?? null,
           hourlyRateUsd: (candidate.developer as any).hourlyRateUsd ?? null,
           experienceYears: (candidate.developer as any).experienceYears ?? null,
+          // expose whatsapp number for contact reveal when accepted
+          whatsappNumber: (candidate.developer as any).whatsappNumber ?? null,
           skills: candidate.developer.skills.map((skill: any) => ({
             skill: { name: skill.skill.name },
             years: skill.years

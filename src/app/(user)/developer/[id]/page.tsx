@@ -1,0 +1,129 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/features/auth/auth";
+import { prisma } from "@/core/database/db";
+import { UserLayout } from "@/features/shared/components/user-layout";
+import ProfileSummary from "@/features/developer/components/dashboard/profile-summary";
+import IdeaSparkList from "@/features/developer/components/dashboard/ideaspark-list";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
+import BasicDetails from "@/features/developer/components/profile/basic-details";
+import SkillsSection from "@/features/developer/components/profile/skills-section";
+import PortfolioSection from "@/features/developer/components/profile/portfolio-section";
+import EmploymentHistory from "@/features/developer/components/profile/employment-history";
+import EducationSection from "@/features/developer/components/profile/education-section";
+import WorkHistory from "@/features/developer/components/profile/work-history";
+import { Button } from "@/ui/components/button";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+
+export default async function DeveloperPublicProfilePage({ params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+
+  // Fetch developer profile by developerId (DeveloperProfile.id or Developer userId?)
+  // In assignment we used developer.id for DeveloperProfile id
+  const developer = await prisma.developerProfile.findFirst({
+    where: { id: params.id },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, image: true },
+      },
+      skills: { include: { skill: true } },
+      reviewsSummary: true,
+    },
+  });
+
+  if (!developer) {
+    return <div className="container mx-auto px-4 py-12">Developer not found</div>;
+  }
+
+  const profile = {
+    name: developer.user.name,
+    email: developer.user.email,
+    image: developer.user.image,
+    photoUrl: developer.photoUrl,
+    location: developer.location,
+    experienceYears: developer.experienceYears,
+    age: (developer as any).age,
+    hourlyRate: developer.hourlyRateUsd,
+    level: developer.level,
+    currentStatus: developer.currentStatus,
+    adminApprovalStatus: developer.adminApprovalStatus,
+    skills: developer.skills.map((s: any) => ({ skillId: s.skillId, skillName: (s as any).skill?.name })),
+    portfolioLinks: developer.portfolioLinks,
+  } as any;
+
+  return (
+    <UserLayout user={session?.user}>
+      <section className="w-full py-8">
+        <div className="container mx-auto px-4">
+          {/* Back Button */}
+          <div className="mb-4 sm:mb-6">
+            <Link href="/client-dashboard">
+              <Button variant="outline" className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Project Detail
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+            <div className="xl:col-span-2">
+              <ProfileSummary profile={profile} hideControls />
+
+              {/* Info Tabs */}
+              <div className="mt-4 sm:mt-6">
+                <Tabs defaultValue="basic" className="w-full">
+                  <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
+                    <TabsTrigger value="basic" className="rounded-md px-4 py-2 data-[state=active]:bg-black data-[state=active]:text-white border">Basic Information</TabsTrigger>
+                    <TabsTrigger value="skills" className="rounded-md px-4 py-2 border">Skills</TabsTrigger>
+                    <TabsTrigger value="employment" className="rounded-md px-4 py-2 border">Employment History</TabsTrigger>
+                    <TabsTrigger value="portfolio" className="rounded-md px-4 py-2 border">Portfolio</TabsTrigger>
+                    <TabsTrigger value="education" className="rounded-md px-4 py-2 border">Education</TabsTrigger>
+                    <TabsTrigger value="work" className="rounded-md px-4 py-2 border">Work History</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="basic">
+                    <BasicDetails 
+                      profile={{
+                        name: profile.name,
+                        experienceYears: profile.experienceYears,
+                        hourlyRate: profile.hourlyRate,
+                        hoursWorked: 0, // TODO: Calculate from completed projects
+                        totalEarning: 0, // TODO: Calculate from completed projects
+                        skills: profile.skills
+                      }}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="skills">
+                    <SkillsSection skills={profile.skills} />
+                  </TabsContent>
+
+                  <TabsContent value="portfolio">
+                    <PortfolioSection portfolioLinks={profile.portfolioLinks} />
+                  </TabsContent>
+
+                  <TabsContent value="employment">
+                    <EmploymentHistory employmentHistory={[]} />
+                  </TabsContent>
+
+                  <TabsContent value="education">
+                    <EducationSection education={[]} />
+                  </TabsContent>
+
+                  <TabsContent value="work">
+                    <WorkHistory workHistory={[]} />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+            <div className="xl:col-span-1">
+              <IdeaSparkList profile={profile} />
+            </div>
+          </div>
+        </div>
+      </section>
+    </UserLayout>
+  );
+}
+
+

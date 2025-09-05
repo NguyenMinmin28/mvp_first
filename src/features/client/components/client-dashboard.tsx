@@ -55,7 +55,10 @@ export default function ClientDashboard() {
 
           <div className="grid grid-cols-2 gap-4">
             {/* Favourite Card */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push('/favorites')}
+            >
               <CardContent className="pt-6 text-center">
                 <div className="flex justify-center mb-3">
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">

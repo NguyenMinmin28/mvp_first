@@ -32,6 +32,7 @@ interface Freelancer {
   respondedAt?: string;
   usualResponseTimeMsSnapshot: number;
   statusTextForClient: string;
+  isFavorited?: boolean;
   developer: {
     id: string;
     user: {
@@ -92,13 +93,19 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   }, []);
 
   // Auto-refresh data every 15 seconds to sync acceptance status
+  // Disable auto refresh once any developer has accepted (project locked)
   useEffect(() => {
+    const hasAccepted = Array.isArray(freelancers) && freelancers.some(f => f.responseStatus === "accepted");
+    if (hasAccepted) {
+      return; // stop creating intervals when project is locked
+    }
+
     const refreshTimer = setInterval(() => {
       fetchFreelancers();
-    }, 15000); // 15 seconds for faster sync
+    }, 15000); // 15 seconds for faster sync while still finding devs
 
     return () => clearInterval(refreshTimer);
-  }, [project.id]);
+  }, [project.id, freelancers]);
 
   const fetchFreelancers = async () => {
     try {
@@ -109,7 +116,25 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       
       if (response.ok) {
         const data = await response.json();
-        setFreelancers(data.candidates || []);
+        const candidates = data.candidates || [];
+        
+        // Check favorite status for each candidate
+        const candidatesWithFavorites = await Promise.all(
+          candidates.map(async (candidate: Freelancer) => {
+            try {
+              const favoriteResponse = await fetch(`/api/user/favorites/check?developerId=${candidate.developer.id}`);
+              if (favoriteResponse.ok) {
+                const favoriteData = await favoriteResponse.json();
+                return { ...candidate, isFavorited: favoriteData.isFavorited };
+              }
+            } catch (error) {
+              console.error("Error checking favorite status:", error);
+            }
+            return { ...candidate, isFavorited: false };
+          })
+        );
+        
+        setFreelancers(candidatesWithFavorites);
         setProjectData(data.project);
         setLastRefreshTime(new Date());
         if (Array.isArray(data.skills)) {
@@ -313,6 +338,34 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   };
 
   // Handle completing project and showing review modal
+  const handleToggleFavorite = async (developerId: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch('/api/user/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ developerId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update the freelancer's favorite status in the list
+        setFreelancers(prev => 
+          prev.map(freelancer => 
+            freelancer.developer.id === developerId 
+              ? { ...freelancer, isFavorited: data.isFavorited }
+              : freelancer
+          )
+        );
+      } else {
+        console.error('Failed to toggle favorite');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
   const handleCompleteProject = async () => {
     try {
       const response = await fetch(`/api/projects/${project.id}/complete`, {
@@ -632,8 +685,13 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                               Verified
                             </span>
                           )}
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            <Heart className="h-4 w-4" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-6 w-6 p-0 transition-all duration-150 active:scale-95 ${freelancer.isFavorited ? 'text-red-600' : ''}`}
+                            onClick={() => handleToggleFavorite(freelancer.developer.id, freelancer.isFavorited || false)}
+                          >
+                            <Heart className={`h-4 w-4 transition-all duration-200 ${freelancer.isFavorited ? 'fill-current scale-110' : 'hover:scale-110'}`} />
                           </Button>
                         </div>
                         
@@ -676,11 +734,42 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                     <div className="flex flex-col items-start lg:items-end gap-2 lg:gap-3">
                       {/* Buttons first to align with user name row */}
                       <div className="flex flex-row gap-2 w-full lg:w-auto justify-start lg:justify-end">
-                        <Button className="bg-black text-white hover:bg-gray-800 text-xs lg:text-sm h-8 lg:h-9">
-                          <MessageCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                          WhatsApp
+                        <Button
+                          className="bg-black text-white hover:bg-gray-800 text-xs lg:text-sm h-8 lg:h-9"
+                          asChild
+                        >
+                          <a
+                            href={
+                              freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
+                                ? `https://wa.me/${String((freelancer as any).developer.whatsappNumber).replace(/\D/g, "")}`
+                                : undefined
+                            }
+                            target={
+                              freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
+                                ? "_blank"
+                                : undefined
+                            }
+                            rel={
+                              freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
+                                ? "noopener noreferrer"
+                                : undefined
+                            }
+                          >
+                            <MessageCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
+                            {freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
+                              ? String((freelancer as any).developer.whatsappNumber)
+                              : "WhatsApp"}
+                          </a>
                         </Button>
-                        <Button className="bg-black text-white hover:bg-gray-800 text-xs lg:text-sm h-8 lg:h-9">
+                        <Button
+                          className="bg-black text-white hover:bg-gray-800 text-xs lg:text-sm h-8 lg:h-9"
+                          onClick={() => {
+                            // Only allow when developer has accepted (belongs to project)
+                            if (freelancer.responseStatus !== "accepted") return;
+                            window.open(`/developer/${freelancer.developer.id}`, "_blank");
+                          }}
+                          disabled={freelancer.responseStatus !== "accepted"}
+                        >
                           <User className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
                           Check my Profile
                         </Button>

@@ -282,6 +282,7 @@ model ClientProfile {
   payments              Payment[]            @relation("ClientPayments")
   projects              Project[]            @relation("ClientProjects")
   contactReveals        ContactRevealEvent[] @relation("ClientContactReveals")
+  favoriteDevelopers    FavoriteDeveloper[]  @relation("ClientFavorites")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -502,6 +503,7 @@ model DeveloperProfile {
   assignmentCandidates    AssignmentCandidate[] @relation("DeveloperCandidates")
   contactReveals          ContactRevealEvent[]  @relation("DeveloperContactReveals")
   rotationCursors         RotationCursor[]      @relation("DeveloperToRotationCursors")
+  favoritedBy             FavoriteDeveloper[]   @relation("DeveloperFavorites")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1098,4 +1100,23 @@ model Comment {
   @@index([parentId])
   @@index([status])
   @@index([authorId])
+}
+
+/**
+ * ===== Favorite Developers =====
+ */
+model FavoriteDeveloper {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  clientId       String @db.ObjectId
+  developerId    String @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  client    ClientProfile    @relation("ClientFavorites", fields: [clientId], references: [id], onDelete: Cascade)
+  developer DeveloperProfile @relation("DeveloperFavorites", fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, developerId], map: "idx_favorite_developers_unique")
+  @@index([clientId])
+  @@index([developerId])
 }
