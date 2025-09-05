@@ -32,6 +32,8 @@ const signInSchema = z.object({
 type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignInClient() {
+  const { update, data: session, status } = useSession();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -42,9 +44,41 @@ export default function SignInClient() {
     setMounted(true);
   }, []);
 
-  const router = useRouter();
+  // Fallback redirect mechanism - detect when user is authenticated and redirect
+  useEffect(() => {
+    if (status === "authenticated" && session?.user && !hasFallbackRedirected) {
+      console.log("🔄 Fallback redirect triggered - user authenticated:", session.user);
+      
+      const user = session.user;
+      const userRole = user.role;
+      const isProfileCompleted = user.isProfileCompleted;
+      
+      console.log("🎯 Fallback - User role:", userRole, "Profile completed:", isProfileCompleted);
+      
+      setHasFallbackRedirected(true);
+      
+      if (userRole === "ADMIN") {
+        console.log("🔄 Fallback redirecting to /admin");
+        router.push("/admin");
+      } else if (userRole === "CLIENT") {
+        console.log("🔄 Fallback redirecting to /client-dashboard");
+        router.push("/client-dashboard");
+      } else if (userRole === "DEVELOPER") {
+        if (isProfileCompleted) {
+          console.log("🔄 Fallback redirecting to /dashboard-user");
+          router.push("/dashboard-user");
+        } else {
+          console.log("🔄 Fallback redirecting to /onboarding/freelancer/basic-information");
+          router.push("/onboarding/freelancer/basic-information");
+        }
+      } else {
+        console.log("🔄 Fallback redirecting to /role-selection");
+        router.push("/role-selection");
+      }
+    }
+  }, [status, session, hasFallbackRedirected, router]);
+
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
 
   // Note: We handle redirect manually after sign-in to avoid loops
 
@@ -145,15 +179,18 @@ export default function SignInClient() {
     setServerError(null); // Reset error state
 
     try {
+      console.log("🔄 Starting Google sign in...");
       const result = await signIn("google", {
         redirect: false,
       });
+      
+      console.log("🔄 Google sign in result:", result);
 
       const googleError = (result as any)?.error as string | undefined;
       if (googleError) {
         if (googleError === "AccessDenied") {
           setServerError(
-            "This Google account has not been registered. Please register first."
+            "Google sign in was cancelled or failed. Please try again."
           );
         } else {
           setServerError("Google sign in failed. Please try again.");
@@ -163,31 +200,64 @@ export default function SignInClient() {
       }
       
       if (result?.ok) {
+        console.log("✅ Google sign in successful, refreshing session...");
+        // Force refresh session to get updated user data
+        await update();
+        console.log("✅ Session refreshed");
+        
         setTimeout(async () => {
           try {
+            console.log("🔄 Fetching user data from /api/user/me...");
             const res = await fetch("/api/user/me", { cache: "no-store" });
-            const { user } = await res.json();
+            
+            if (!res.ok) {
+              console.error("❌ API /api/user/me failed:", res.status, res.statusText);
+              throw new Error(`API call failed: ${res.status}`);
+            }
+            
+            const data = await res.json();
+            console.log("✅ API response:", data);
+            
+            const user = data.user;
+            console.log("👤 User data after Google signin:", user);
+            
+            if (!user) {
+              console.error("❌ No user data in response");
+              window.location.href = "/";
+              return;
+            }
+            
+            console.log("🎯 User role:", user.role, "Profile completed:", user.isProfileCompleted);
+            
             if (user?.role === "ADMIN") {
-              window.location.href = "/admin";
+              console.log("🔄 Redirecting to /admin");
+              router.push("/admin");
               return;
             }
             if (user?.role === "CLIENT") {
-              window.location.href = "/client-dashboard";
+              console.log("🔄 Redirecting to /client-dashboard");
+              router.push("/client-dashboard");
               return;
             }
             if (user?.role === "DEVELOPER") {
               if (user?.isProfileCompleted) {
-                window.location.href = "/dashboard-user";
+                console.log("🔄 Redirecting to /dashboard-user (profile completed)");
+                router.push("/dashboard-user");
               } else {
-                window.location.href = "/onboarding/freelancer/basic-information";
+                console.log("🔄 Redirecting to /onboarding/freelancer/basic-information (profile not completed)");
+                router.push("/onboarding/freelancer/basic-information");
               }
               return;
             }
-            window.location.href = "/role-selection";
-          } catch {
+            // If no role or role is null, redirect to role selection
+            console.log("🔄 No role found, redirecting to /role-selection");
+            router.push("/role-selection");
+          } catch (error) {
+            console.error("❌ Error fetching user data after Google signin:", error);
+            console.log("🔄 Fallback redirect to /");
             window.location.href = "/";
           }
-        }, 400);
+        }, 1000); // Increased timeout to allow session update
       }
     } catch (error) {
       console.error("Google sign in error:", error);

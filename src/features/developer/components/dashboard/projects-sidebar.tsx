@@ -83,25 +83,25 @@ export default function ProjectsSidebar({
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="border-b">
+      <CardHeader className="border-b p-3 sm:p-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{getFilterLabel(filter)}</CardTitle>
+          <CardTitle className="text-base sm:text-lg">{getFilterLabel(filter)}</CardTitle>
           <Badge variant="secondary" className="text-xs">
             {filtered.length} project{filtered.length !== 1 ? 's' : ''}
           </Badge>
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 p-4 overflow-y-auto">
+      <CardContent className="flex-1 p-3 sm:p-4 overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-gray-500 py-6 sm:py-8">
             <div className="text-sm">No projects found.</div>
             <div className="text-xs text-gray-400 mt-1">
               Projects will appear here when assigned to you.
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {filtered.map((project) => (
               <ProjectCard
                 key={project.id}

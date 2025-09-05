@@ -53,15 +53,43 @@ export async function GET(request: NextRequest) {
     const transformedProjects = projects.map(project => {
       const latestAssignment = project.assignmentCandidates[0];
       
+      // Determine status based on assignment response status for current user
+      let status = 'recent'; // default
+      if (latestAssignment) {
+        switch (latestAssignment.responseStatus) {
+          case 'accepted':
+            status = 'approved';
+            break;
+          case 'rejected':
+            status = 'rejected';
+            break;
+          case 'expired':
+            status = 'rejected';
+            break;
+          case 'pending':
+            status = 'recent';
+            break;
+          default:
+            status = project.status === 'submitted' ? 'recent' : 
+                    project.status === 'accepted' ? 'approved' :
+                    project.status === 'canceled' ? 'rejected' :
+                    project.status === 'in_progress' ? 'in_progress' :
+                    project.status === 'completed' ? 'completed' : 'recent';
+        }
+      } else {
+        // No assignment, use project status
+        status = project.status === 'submitted' ? 'recent' : 
+                project.status === 'accepted' ? 'approved' :
+                project.status === 'canceled' ? 'rejected' :
+                project.status === 'in_progress' ? 'in_progress' :
+                project.status === 'completed' ? 'completed' : 'recent';
+      }
+      
       return {
         id: project.id,
         name: project.title,
         description: project.description,
-        status: project.status === 'submitted' ? 'recent' : 
-                project.status === 'accepted' ? 'approved' :
-                project.status === 'canceled' ? 'rejected' :
-                project.status === 'in_progress' ? 'in_progress' :
-                project.status === 'completed' ? 'completed' : 'recent',
+        status,
         date: project.createdAt.toISOString(),
         budget: project.budget,
         currency: project.currency,

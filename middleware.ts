@@ -13,7 +13,7 @@ import {
   adminRoutes as adminRoutesConfig,
   userRoutes,
   publicRoutes as publicRoutesConfig,
-} from "./core/config/routes";
+} from "./src/core/config/routes";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

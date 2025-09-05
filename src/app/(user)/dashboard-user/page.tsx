@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { UserLayout } from "@/features/shared/components/user-layout";
@@ -10,6 +10,8 @@ import ProjectStatusFilter from "@/features/developer/components/project-status-
 import type { ProjectStatus } from "@/features/developer/components/project-status-filter";
 import ProjectsSidebar from "@/features/developer/components/dashboard/projects-sidebar";
 import ProjectDetail from "@/features/developer/components/dashboard/project-detail";
+import { Button } from "@/ui/components/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface UserIdeaSummary {
   id: string;
@@ -52,6 +54,10 @@ export default function DashboardUserPage() {
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>("NEW");
   const [selectedProject, setSelectedProject] = useState<AssignedProjectItem | null>(null);
   const [projects, setProjects] = useState<AssignedProjectItem[]>([]);
+  const [currentProjectIndex, setCurrentProjectIndex] = useState<number>(0);
+  
+  // Ref for project detail container to detect clicks outside
+  const projectDetailRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -193,6 +199,51 @@ export default function DashboardUserPage() {
     }
   };
 
+  // Filter projects based on status
+  const filteredProjects = projects.filter((project) => {
+    switch (projectStatus) {
+      case "NEW":
+        return project.status === "recent";
+      case "IN_PROGRESS":
+        return project.status === "in_progress";
+      case "COMPLETED":
+        return project.status === "completed";
+      case "APPROVED":
+        return project.status === "approved";
+      case "REJECTED":
+        return project.status === "rejected";
+      default:
+        return true;
+    }
+  });
+
+  // Handle mobile navigation
+  const handlePreviousProject = () => {
+    if (currentProjectIndex > 0) {
+      const newIndex = currentProjectIndex - 1;
+      setCurrentProjectIndex(newIndex);
+      setSelectedProject(filteredProjects[newIndex]);
+    }
+  };
+
+  const handleNextProject = () => {
+    if (currentProjectIndex < filteredProjects.length - 1) {
+      const newIndex = currentProjectIndex + 1;
+      setCurrentProjectIndex(newIndex);
+      setSelectedProject(filteredProjects[newIndex]);
+    }
+  };
+
+  // Update selected project when filter changes
+  useEffect(() => {
+    if (filteredProjects.length > 0) {
+      setCurrentProjectIndex(0);
+      setSelectedProject(filteredProjects[0]);
+    } else {
+      setSelectedProject(null);
+    }
+  }, [projectStatus, projects]);
+
   const handleAcceptAssignment = async (projectId: string) => {
     try {
       const response = await fetch(`/api/user/projects/${projectId}/accept`, {
@@ -277,6 +328,29 @@ export default function DashboardUserPage() {
     }
   };
 
+  // Handle click outside to close project detail
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (projectDetailRef.current && !projectDetailRef.current.contains(event.target as Node)) {
+        // Check if click is not on a project card (to avoid closing when selecting a project)
+        const target = event.target as HTMLElement;
+        const isProjectCard = target.closest('[data-project-card]');
+        
+        if (!isProjectCard && selectedProject) {
+          setSelectedProject(null);
+        }
+      }
+    };
+
+    if (selectedProject) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedProject]);
+
   if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -289,47 +363,93 @@ export default function DashboardUserPage() {
 
   return (
     <UserLayout user={session.user}>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {/* Top Section - Profile and Activity Side by Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Section - Takes 2/3 of the width */}
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+          {/* Profile Section - Takes 2/3 of the width on xl screens */}
+          <div className="xl:col-span-2">
             <ProfileSummary profile={profile} />
           </div>
           
-          {/* Activity Section - Takes 1/3 of the width */}
-          <div className="lg:col-span-1">
+          {/* Activity Section - Takes 1/3 of the width on xl screens */}
+          <div className="xl:col-span-1">
             <IdeaSparkList profile={profile} />
           </div>
         </div>
         
         {/* Project Status Filter */}
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <ProjectStatusFilter value={projectStatus} onChange={setProjectStatus} />
         </div>
 
-        {/* Main Content - Two Column Layout */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-400px)]">
-          {/* Left Column - Projects List */}
-          <div className="lg:col-span-1">
-            <ProjectsSidebar 
-              filter={projectStatus}
-              selectedProjectId={selectedProject?.id || null}
-              onProjectSelect={setSelectedProject}
-              projects={projects}
-            />
-          </div>
-          
-          {/* Right Column - Project Detail */}
-          <div className="lg:col-span-2">
-            <ProjectDetail 
-              project={selectedProject} 
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onExpired={handleExpired}
-              onAcceptAssignment={handleAcceptAssignment}
-              onRejectAssignment={handleRejectAssignment}
-            />
+        {/* Main Content - Responsive Layout */}
+        <div className="mt-4 sm:mt-6">
+          {/* Mobile Navigation - Only show on mobile when projects exist */}
+          {filteredProjects.length > 0 && (
+            <div className="xl:hidden mb-4">
+              <div className="flex items-center justify-between bg-white rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousProject}
+                    disabled={currentProjectIndex === 0}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-sm font-medium">
+                    {currentProjectIndex + 1} of {filteredProjects.length}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextProject}
+                    disabled={currentProjectIndex === filteredProjects.length - 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {selectedProject?.name || "No project selected"}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile: Stack vertically, Desktop: Side by side */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 min-h-[500px] xl:min-h-[calc(100vh-400px)]">
+            {/* Left Column - Projects List */}
+            <div className="xl:col-span-1 order-1 xl:order-1">
+              <ProjectsSidebar 
+                filter={projectStatus}
+                selectedProjectId={selectedProject?.id || null}
+                onProjectSelect={(project) => {
+                  setSelectedProject(project);
+                  // Update current index when project is selected from sidebar
+                  if (project) {
+                    const index = filteredProjects.findIndex(p => p.id === project.id);
+                    if (index !== -1) {
+                      setCurrentProjectIndex(index);
+                    }
+                  }
+                }}
+                projects={projects}
+              />
+            </div>
+            
+            {/* Right Column - Project Detail */}
+            <div className="xl:col-span-2 order-2 xl:order-2" ref={projectDetailRef}>
+              <ProjectDetail 
+                project={selectedProject} 
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onExpired={handleExpired}
+                onAcceptAssignment={handleAcceptAssignment}
+                onRejectAssignment={handleRejectAssignment}
+              />
+            </div>
           </div>
         </div>
       </div>

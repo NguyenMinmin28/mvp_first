@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import CandidateMetaRow from "@/features/client/components/candidate-meta-row";
 import { Badge } from "@/ui/components/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
+import ReviewSlideModal from "@/features/client/components/review-slide-modal";
 import { 
   Send,
   Star,
@@ -36,8 +38,10 @@ interface Freelancer {
       id: string;
       name: string;
       email: string;
+      image?: string;
     };
     level: "FRESHER" | "MID" | "EXPERT";
+    photoUrl?: string;
     skills: Array<{
       skill: { name: string };
       years: number;
@@ -70,6 +74,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [projectSkills, setProjectSkills] = useState<string[]>([]);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedDevelopers, setSelectedDevelopers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchFreelancers();
@@ -84,6 +91,15 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     return () => clearInterval(timer);
   }, []);
 
+  // Auto-refresh data every 15 seconds to sync acceptance status
+  useEffect(() => {
+    const refreshTimer = setInterval(() => {
+      fetchFreelancers();
+    }, 15000); // 15 seconds for faster sync
+
+    return () => clearInterval(refreshTimer);
+  }, [project.id]);
+
   const fetchFreelancers = async () => {
     try {
       setIsLoading(true);
@@ -95,6 +111,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         const data = await response.json();
         setFreelancers(data.candidates || []);
         setProjectData(data.project);
+        setLastRefreshTime(new Date());
         if (Array.isArray(data.skills)) {
           setProjectSkills(data.skills.map((s: any) => s.name).filter(Boolean));
         }
@@ -269,6 +286,105 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     return stars;
   };
 
+  // Check if batch has accepted candidates (block immediately when someone accepts)
+  const hasAcceptedCandidates = () => {
+    if (freelancers.length === 0) return false;
+    
+    // Check if any candidate has been accepted
+    return freelancers.some(freelancer => 
+      freelancer.responseStatus === "accepted"
+    );
+  };
+
+  // Check if batch is expired but has accepted candidates (for additional blocking)
+  const isBatchExpiredWithAccepted = () => {
+    if (freelancers.length === 0) return false;
+    
+    // Check if any candidate has expired deadline
+    const hasExpiredDeadline = freelancers.some(freelancer => {
+      const deadline = new Date(freelancer.acceptanceDeadline);
+      return deadline.getTime() <= currentTime.getTime();
+    });
+    
+    // Check if any candidate has been accepted
+    const hasAccepted = hasAcceptedCandidates();
+    
+    return hasExpiredDeadline && hasAccepted;
+  };
+
+  // Handle completing project and showing review modal
+  const handleCompleteProject = async () => {
+    try {
+      const response = await fetch(`/api/projects/${project.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.acceptedDevelopers && data.acceptedDevelopers.length > 0) {
+          // Show review slide modal for all accepted developers
+          setSelectedDevelopers(data.acceptedDevelopers);
+          setShowReviewModal(true);
+        }
+        // Refresh project data
+        await fetchFreelancers();
+      } else {
+        let errorMessage = "Failed to complete project";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          console.error("Failed to parse error response:", jsonError);
+          errorMessage = `Failed to complete project (${response.status})`;
+        }
+        alert(errorMessage);
+      }
+    } catch (error) {
+      console.error("Error completing project:", error);
+      alert("Failed to complete project");
+    }
+  };
+
+  // Handle submitting review
+  const handleSubmitReview = async (reviewData: any, developerId: string) => {
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: project.id,
+          developerId: developerId,
+          rating: reviewData.rating,
+          comment: reviewData.comment,
+          deliveryOnTime: reviewData.deliveryOnTime,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh project data after each review
+        await fetchFreelancers();
+      } else {
+        let errorMessage = "Failed to submit review";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          console.error("Failed to parse error response:", jsonError);
+          errorMessage = `Failed to submit review (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-gray-50">
       {/* Left Sidebar */}
@@ -340,15 +456,37 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           </div>
         </div>
 
-        {/* Action Button */}
-        <Button 
-          className="w-full bg-gray-100 text-black hover:bg-gray-200 border border-gray-300 h-10 lg:h-auto"
-          onClick={generateNewBatch}
-          disabled={isLoading}
-        >
-          <User className="h-4 w-4 mr-1 lg:mr-2" />
-          <span className="text-xs lg:text-sm">{isLoading ? "Finding..." : "Find New Freelancers"}</span>
-        </Button>
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          <Button 
+            className="w-full bg-gray-100 text-black hover:bg-gray-200 border border-gray-300 h-10 lg:h-auto"
+            onClick={generateNewBatch}
+            disabled={isLoading || hasAcceptedCandidates()}
+          >
+            <User className="h-4 w-4 mr-1 lg:mr-2" />
+            <span className="text-xs lg:text-sm">
+              {isLoading ? "Finding..." : 
+               hasAcceptedCandidates() ? "Project Locked (Accepted)" : 
+               "Find New Freelancers"}
+            </span>
+          </Button>
+          
+          {hasAcceptedCandidates() && projectData?.status === "in_progress" && (
+            <Button 
+              className="w-full bg-green-600 text-white hover:bg-green-700 h-10 lg:h-auto"
+              onClick={handleCompleteProject}
+            >
+              <Check className="h-4 w-4 mr-1 lg:mr-2" />
+              <span className="text-xs lg:text-sm">Complete Project</span>
+            </Button>
+          )}
+          
+          {!hasAcceptedCandidates() && (
+            <div className="text-center text-xs text-gray-500 p-2">
+              No accepted candidates yet
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
@@ -408,6 +546,20 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           </div>
         </div>
 
+        {/* Auto-refresh indicator */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Auto-refresh: {lastRefreshTime.toLocaleTimeString()}</span>
+          </div>
+          {hasAcceptedCandidates() && (
+            <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+              <span>🔒</span>
+              <span>Project locked - someone has accepted</span>
+            </div>
+          )}
+        </div>
+
         {/* Freelancer Cards */}
         <div className="space-y-4">
           {isLoading ? (
@@ -433,8 +585,13 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 <Button onClick={fetchFreelancers} variant="outline">
                   Refresh
                 </Button>
-                <Button onClick={generateNewBatch} variant="default" className="bg-black text-white">
-                  Find More Freelancers
+                <Button 
+                  onClick={generateNewBatch} 
+                  variant="default" 
+                  className="bg-black text-white"
+                  disabled={hasAcceptedCandidates()}
+                >
+                  {hasAcceptedCandidates() ? "Project Locked (Accepted)" : "Find More Freelancers"}
                 </Button>
               </div>
             </div>
@@ -447,9 +604,14 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                     {/* Left Section - Profile Info */}
                     <div className="flex items-start gap-3 lg:gap-4 flex-1">
                       <div className="relative flex-shrink-0">
-                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <User className="h-6 w-6 lg:h-8 lg:w-8 text-gray-400" />
-                        </div>
+                        <Avatar className="w-16 h-16 lg:w-20 lg:h-20 rounded-lg">
+                          <AvatarImage 
+                            src={freelancer.developer.photoUrl || freelancer.developer.user.image || undefined} 
+                          />
+                          <AvatarFallback className="bg-gray-200 text-gray-400">
+                            <User className="h-6 w-6 lg:h-8 lg:w-8" />
+                          </AvatarFallback>
+                        </Avatar>
                         {freelancer.developer.level === "EXPERT" && (
                           <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-1">
                             <CheckCircle className="h-3 w-3" />
@@ -606,9 +768,10 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                         variant="outline"
                         size="sm"
                         className="text-black border-black text-xs lg:text-sm h-8 lg:h-9 hover:bg-black hover:text-white transition-colors"
+                        disabled={isBatchExpiredWithAccepted()}
                       >
                         <Trash2 className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                        Remove
+                        {isBatchExpiredWithAccepted() ? "Locked" : "Remove"}
                       </Button>
                     </div>
                   </div>
@@ -618,6 +781,23 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           )}
         </div>
       </div>
+
+      {/* Review Slide Modal */}
+      {showReviewModal && selectedDevelopers.length > 0 && (
+        <ReviewSlideModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedDevelopers([]);
+          }}
+          project={{
+            id: project.id,
+            title: projectData?.title || project.title || "Untitled Project"
+          }}
+          developers={selectedDevelopers}
+          onSubmit={handleSubmitReview}
+        />
+      )}
     </div>
   );
 }

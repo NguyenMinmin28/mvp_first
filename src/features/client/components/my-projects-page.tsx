@@ -72,7 +72,7 @@ export default function MyProjectsPage() {
       setCompletingProjects(prev => new Set(prev).add(projectId));
       
       const response = await fetch(`/api/projects/${projectId}/complete`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -85,8 +85,15 @@ export default function MyProjectsPage() {
         // Refresh projects list
         await fetchProjects();
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || "Failed to complete project");
+        let errorMessage = "Failed to complete project";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          console.error("Failed to parse error response:", jsonError);
+          errorMessage = `Failed to complete project (${response.status})`;
+        }
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Error completing project:", error);

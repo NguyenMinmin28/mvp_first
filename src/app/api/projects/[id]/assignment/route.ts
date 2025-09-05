@@ -59,6 +59,7 @@ export async function GET(
                   id: true,
                   name: true,
                   email: true,
+                  image: true,
                 }
               },
               skills: {
@@ -125,6 +126,7 @@ export async function GET(
           id: candidate.developer.id,
           user: candidate.developer.user,
           level: candidate.developer.level,
+          photoUrl: (candidate.developer as any).photoUrl ?? null,
           location: (candidate.developer as any).location ?? null,
           hourlyRateUsd: (candidate.developer as any).hourlyRateUsd ?? null,
           experienceYears: (candidate.developer as any).experienceYears ?? null,

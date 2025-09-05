@@ -78,7 +78,7 @@ export default function ProjectsList() {
 
       // Call API to update project completion status
       const response = await fetch(`/api/projects/${projectId}/complete`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },

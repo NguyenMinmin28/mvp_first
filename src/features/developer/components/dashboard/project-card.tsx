@@ -55,12 +55,13 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
           : "hover:shadow-sm"
       )}
       onClick={onClick}
+      data-project-card
     >
-      <CardContent className="p-4">
-        <div className="space-y-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-2 sm:space-y-3">
           {/* Header with title and status */}
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
+            <h3 className="font-semibold text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
               {project.name}
             </h3>
             <Badge className={cn("text-xs shrink-0", getStatusColor(project.status))}>
@@ -70,14 +71,14 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
 
           {/* Description */}
           {project.description && (
-            <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed">
               {project.description}
             </p>
           )}
 
           {/* Budget */}
           {formatBudget(project.budget, project.currency) && (
-            <div className="text-sm font-medium text-green-600">
+            <div className="text-sm sm:text-base font-medium text-green-600">
               {formatBudget(project.budget, project.currency)}
             </div>
           )}
@@ -102,7 +103,7 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
           )}
 
           {/* Date */}
-          <div className="text-xs text-gray-500">
+          <div className="text-xs sm:text-sm text-gray-500">
             {project.date}
           </div>
         </div>

@@ -195,9 +195,60 @@ export default {
         })
 
         if (!existingUser) {
-          console.log("❌ Google user not found in database:", user.email)
-          // Từ chối đăng nhập - user phải đăng ký trước
-          return false
+          console.log("🔄 Google user not found, creating new user:", user.email)
+          
+          // Tự động tạo user mới với Google account
+          const newUser = await prisma.$transaction(async (tx) => {
+            // Create user with Google account
+            const newUserRecord = await tx.user.create({
+              data: {
+                name: user.name || user.email!.split('@')[0],
+                email: user.email!,
+                image: user.image,
+                emailVerified: new Date(), // Google accounts are pre-verified
+                isProfileCompleted: false, // User needs to complete profile
+              },
+            });
+
+            // Create client profile
+            const clientProfile = await tx.clientProfile.create({
+              data: {
+                userId: newUserRecord.id,
+              },
+            });
+
+            // Tìm Basic Plan package
+            const basicPackage = await tx.package.findFirst({
+              where: {
+                name: "Basic Plan",
+                priceUSD: 0
+              }
+            });
+
+            // Nếu có Basic Plan, tạo subscription
+            if (basicPackage) {
+              await tx.subscription.create({
+                data: {
+                  clientId: clientProfile.id,
+                  packageId: basicPackage.id,
+                  status: 'active',
+                  provider: 'paypal',
+                  providerSubscriptionId: `basic-${newUserRecord.id}-${Date.now()}`,
+                  startAt: new Date(),
+                  currentPeriodStart: new Date(),
+                  currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                  cancelAtPeriodEnd: false,
+                  trialStart: null,
+                  trialEnd: null
+                }
+              });
+            }
+
+            return newUserRecord;
+          });
+
+          console.log("✅ Google user created successfully:", newUser.id)
+          return true
         }
 
         console.log("✅ Google user found in database:", existingUser)

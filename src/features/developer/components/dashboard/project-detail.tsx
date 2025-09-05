@@ -103,84 +103,90 @@ export default function ProjectDetail({ project, onApprove, onReject, onExpired,
 
   return (
     <Card className="h-full">
-      <CardHeader className="border-b">
-        <div className="flex items-start justify-between gap-4">
+      <CardHeader className="border-b p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex-1">
-            <CardTitle className="text-xl font-bold text-gray-900 mb-2">
+            <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
               {project.name}
             </CardTitle>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <Badge className={getStatusColor(project.status)}>
                 {project.status.replace("_", " ")}
               </Badge>
-              {project.assignmentStatus && (
+              {project.client && (
                 <Badge variant="secondary">
-                  {project.assignmentStatus}
+                  {project.client.name}
                 </Badge>
               )}
             </div>
+            
+            {/* Contact & Budget Section - Responsive Layout */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-bold text-gray-700">Contact:</span>
+                <span className="text-sm text-gray-900">{project.client?.name || "Unknown"}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-bold text-gray-700">Estimated budget:</span>
+                <span className="text-sm text-gray-900">
+                  {formatBudget(project.budget, project.currency)}
+                </span>
+              </div>
+            </div>
           </div>
           
-          {/* Approve/Reject Buttons */}
-          <div className="flex gap-2">
-            <Button 
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
-              onClick={() => {
-                // If there's a pending assignment, use assignment logic
-                if (project.assignment && project.assignment.responseStatus === "pending") {
-                  if (onAcceptAssignment) {
-                    onAcceptAssignment(project.id);
+          {/* Approve/Reject Buttons - Only show for pending/recent projects */}
+          {(project.status === "recent" || (project.assignment && project.assignment.responseStatus === "pending")) && (
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm sm:text-base"
+                onClick={() => {
+                  // If there's a pending assignment, use assignment logic
+                  if (project.assignment && project.assignment.responseStatus === "pending") {
+                    if (onAcceptAssignment) {
+                      onAcceptAssignment(project.id);
+                    }
+                  } else {
+                    // Otherwise use regular approve logic
+                    if (onApprove) {
+                      onApprove(project.id);
+                    }
                   }
-                } else {
-                  // Otherwise use regular approve logic
-                  if (onApprove) {
-                    onApprove(project.id);
+                }}
+              >
+                {project.assignment && project.assignment.responseStatus === "pending" ? "Accept" : "Approve"}
+              </Button>
+              <Button 
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm sm:text-base"
+                onClick={() => {
+                  // If there's a pending assignment, use assignment logic
+                  if (project.assignment && project.assignment.responseStatus === "pending") {
+                    if (onRejectAssignment) {
+                      onRejectAssignment(project.id);
+                    }
+                  } else {
+                    // Otherwise use regular reject logic
+                    if (onReject) {
+                      onReject(project.id);
+                    }
                   }
-                }
-              }}
-            >
-              {project.assignment && project.assignment.responseStatus === "pending" ? "Accept" : "Approve"}
-            </Button>
-            <Button 
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-              onClick={() => {
-                // If there's a pending assignment, use assignment logic
-                if (project.assignment && project.assignment.responseStatus === "pending") {
-                  if (onRejectAssignment) {
-                    onRejectAssignment(project.id);
-                  }
-                } else {
-                  // Otherwise use regular reject logic
-                  if (onReject) {
-                    onReject(project.id);
-                  }
-                }
-              }}
-            >
-              {project.assignment && project.assignment.responseStatus === "pending" ? "Reject" : "Reject"}
-            </Button>
-          </div>
+                }}
+              >
+                {project.assignment && project.assignment.responseStatus === "pending" ? "Reject" : "Reject"}
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
 
-      <CardContent className="p-6 space-y-6">
-        {/* Description */}
-        {project.description && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Project Description
-            </h4>
-            <p className="text-gray-700 leading-relaxed">
-              {project.description}
-            </p>
-          </div>
-        )}
-
+      <CardContent className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Assignment Timer */}
         {project.assignment && project.assignment.responseStatus === "pending" && (
-          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-            <div className="flex items-center justify-between">
+          <div className="bg-yellow-50 border border-yellow-200 p-3 sm:p-4 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-1">Assignment Deadline</h4>
                 <p className="text-sm text-gray-600">
@@ -199,61 +205,16 @@ export default function ProjectDetail({ project, onApprove, onReject, onExpired,
           </div>
         )}
 
-        {/* Budget & Timeline */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="w-4 h-4 text-green-600" />
-              <h4 className="font-semibold text-gray-900">Budget</h4>
-            </div>
-            <p className="text-lg font-bold text-green-600">
-              {formatBudget(project.budget, project.currency)}
-            </p>
-          </div>
+        {/* Divider Line */}
+        <hr className="border-gray-200" />
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <h4 className="font-semibold text-gray-900">Posted</h4>
-            </div>
-            <p className="text-sm text-gray-700">{project.date}</p>
-          </div>
-        </div>
-
-        {/* Client Information */}
-        {project.client && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Client Information
-            </h4>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-gray-900">{project.client.name}</span>
-                {project.client.rating && (
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="text-sm text-gray-600">{project.client.rating}</span>
-                  </div>
-                )}
-              </div>
-              {project.client.location && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin className="w-4 h-4" />
-                  {project.client.location}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Skills Required */}
+        {/* Skills Section */}
         {Array.isArray(project.skills) && project.skills.length > 0 && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Required Skills</h4>
+          <div className="space-y-2 sm:space-y-3">
+            <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Skills</h4>
             <div className="flex flex-wrap gap-2">
               {project.skills.map((skillId, index) => (
-                <Badge key={index} variant="outline" className="text-sm">
+                <Badge key={index} variant="outline" className="text-xs sm:text-sm" style={{ backgroundColor: '#FCEBE2' }}>
                   {getSkillName(skillId)}
                 </Badge>
               ))}
@@ -261,72 +222,18 @@ export default function ProjectDetail({ project, onApprove, onReject, onExpired,
           </div>
         )}
 
-        {/* Requirements */}
-        {Array.isArray(project.requirements) && project.requirements.length > 0 && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Requirements</h4>
-            <ul className="space-y-2">
-              {project.requirements.map((req, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  {req}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Deliverables */}
-        {Array.isArray(project.deliverables) && project.deliverables.length > 0 && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Deliverables</h4>
-            <ul className="space-y-2">
-              {project.deliverables.map((deliverable, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                  <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  {deliverable}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Communication Preferences */}
-        {project.communication && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Communication
-            </h4>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-gray-700">Method:</span>
-                <span className="text-gray-600">{project.communication.preferredMethod}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-gray-700">Frequency:</span>
-                <span className="text-gray-600">{project.communication.frequency}</span>
-              </div>
-            </div>
+        {/* Description Section */}
+        {project.description && (
+          <div className="space-y-2 sm:space-y-3">
+            <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Description</h4>
+            <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+              {project.description}
+            </p>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
-          {project.status === "recent" && (
-            <Button className="flex-1 bg-green-600 hover:bg-green-700">
-              Accept Project
-            </Button>
-          )}
-          {project.status === "in_progress" && (
-            <Button variant="outline" className="flex-1">
-              Update Progress
-            </Button>
-          )}
-          <Button variant="outline" className="flex-1">
-            View Messages
-          </Button>
-        </div>
+       
       </CardContent>
     </Card>
   );

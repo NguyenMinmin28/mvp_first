@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 
-export async function PATCH(
+export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -19,64 +19,80 @@ export async function PATCH(
 
     if (session.user.role !== "CLIENT") {
       return NextResponse.json(
-        { error: "Only clients can complete projects" },
+        { error: "Only clients can mark projects as completed" },
         { status: 403 }
       );
     }
 
     const projectId = params.id;
 
-    // Get client profile
-    const clientProfile = await prisma.clientProfile.findUnique({
-      where: { userId: session.user.id }
-    });
-
-    if (!clientProfile) {
-      return NextResponse.json(
-        { error: "Client profile not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check if project exists and belongs to this client
+    // Verify the project belongs to the client and has accepted candidates
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
-        clientId: clientProfile.id
+        client: {
+          userId: session.user.id
+        },
+        status: "in_progress" // Only allow completing projects that are in progress
+      },
+      include: {
+        currentBatch: {
+          include: {
+            candidates: {
+              where: {
+                responseStatus: "accepted"
+              },
+              include: {
+                developer: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        image: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     });
 
     if (!project) {
       return NextResponse.json(
-        { error: "Project not found or access denied" },
+        { error: "Project not found or not in progress" },
         { status: 404 }
       );
     }
 
-    // Check if project can be completed (allow any status except draft and canceled)
-    if (project.status === "draft" || project.status === "canceled") {
+    if (!project.currentBatch?.candidates?.length) {
       return NextResponse.json(
-        { error: "Project cannot be completed in current status" },
+        { error: "No accepted candidates found for this project" },
         { status: 400 }
       );
     }
 
-    // Update project status to completed
-    const updatedProject = await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: "completed",
-        updatedAt: new Date()
-      }
-    });
+    // Don't update project status yet - wait for first review
+    // Just return the project info and accepted developers
+
+    // Return project info with accepted developers for review
+    const acceptedDevelopers = project.currentBatch.candidates.map(candidate => ({
+      id: candidate.developer.id,
+      name: candidate.developer.user.name,
+      image: candidate.developer.user.image
+    }));
 
     return NextResponse.json({
       success: true,
       project: {
-        id: updatedProject.id,
-        title: updatedProject.title,
-        status: updatedProject.status
-      }
+        id: project.id,
+        title: project.title,
+        status: project.status
+      },
+      acceptedDevelopers: acceptedDevelopers
     });
 
   } catch (error) {

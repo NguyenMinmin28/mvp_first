@@ -175,11 +175,11 @@ export default function ProfileSummary({ profile }: ProfileSummaryProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 px-4 pb-4">
-        <div className="flex flex-col md:flex-row gap-6">
+      <CardContent className="pt-0 px-3 sm:px-4 pb-3 sm:pb-4">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Left: Large square avatar filling card height visually */}
-          <div className="md:w-[280px] w-full md:max-w-[300px] -mt-8 md:-mt-10">
-            <Avatar className="w-full h-72 md:h-80 rounded-md">
+          <div className="lg:w-[280px] w-full lg:max-w-[300px] mt-2 sm:-mt-6 lg:-mt-10">
+            <Avatar className="w-full h-48 sm:h-64 lg:h-72 xl:h-80 rounded-md">
               <AvatarImage src={(photoUrl || profile?.photoUrl || profile?.image) || undefined} />
               <AvatarFallback>{(name || profile?.name || "").slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
@@ -187,48 +187,47 @@ export default function ProfileSummary({ profile }: ProfileSummaryProps) {
 
           {/* Right: Personal info */}
           <div className="flex-1">
-
-            <div className="mt-6 space-y-3 text-sm">
-              <div className="grid grid-cols-[96px_1fr] items-center gap-1.5">
-                <div className="text-gray-500">Address: </div>
-                <div className="flex items-center min-w-0">
-                  <span className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">{profile?.location || ""}</span>
+            <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3 text-sm">
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Address: </div>
+                <div className="flex flex-col sm:flex-row sm:items-center min-w-0 gap-1 sm:gap-0">
+                  <span className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">{profile?.location || ""}</span>
                   <span className="flex-1" />
                   <span className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="text-gray-500">My review:</span>
-                    <span className="text-yellow-500">★★★★★</span>
-                    <span className="text-gray-600">(8 reviews)</span>
+                    <span className="text-gray-500 text-xs sm:text-sm">My review:</span>
+                    <span className="text-yellow-500 text-xs sm:text-sm">★★★★★</span>
+                    <span className="text-gray-600 text-xs sm:text-sm">(8 reviews)</span>
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-[96px_1fr] items-center gap-1.5">
-                <div className="text-gray-500">Age: </div>
-                <div className="flex items-center min-w-0">
-                  <span className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">{(profile as any)?.age || ""}</span>
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Age: </div>
+                <div className="flex flex-col sm:flex-row sm:items-center min-w-0 gap-1 sm:gap-0">
+                  <span className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">{(profile as any)?.age || ""}</span>
                   <span className="flex-1" />
                   <span className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="text-gray-500">Hourly rate:</span>
-                    <span className="font-bold">{(profile as any)?.hourlyRate ? `$${(profile as any).hourlyRate}` : ""}</span>
+                    <span className="text-gray-500 text-xs sm:text-sm">Hourly rate:</span>
+                    <span className="font-bold text-xs sm:text-sm">{(profile as any)?.hourlyRate ? `$${(profile as any).hourlyRate}` : ""}</span>
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-[96px_1fr] items-center gap-1.5">
-                <div className="text-gray-500">Email: </div>
-                <div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">{profile?.email || ""}</div>
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Email: </div>
+                <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">{profile?.email || ""}</div>
               </div>
-              <div className="grid grid-cols-[96px_1fr] items-center gap-1.5">
-                <div className="text-gray-500">Approve: </div>
-                <div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">{(profile as any)?.adminApprovalStatus || ""}</div>
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Approve: </div>
+                <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">{(profile as any)?.adminApprovalStatus || ""}</div>
               </div>
-              <div className="grid grid-cols-[96px_1fr] items-start gap-1.5">
-                <div className="text-gray-500">Skills: </div>
-                <div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-start gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Skills: </div>
+                <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
                   {displaySkillNames.length > 0 ? displaySkillNames.join(", ") : ""}
                 </div>
               </div>
-              <div className="grid grid-cols-[96px_1fr] items-center gap-1.5">
-                <div className="text-gray-500">Attachment: </div>
-                <div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Attachment: </div>
+                <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
                   {Array.isArray((profile as any)?.portfolioLinks) && (profile as any).portfolioLinks.length > 0 ? (
                     <a href={(profile as any).portfolioLinks[0]} target="_blank" rel="noreferrer" className="underline text-blue-600 break-all">
                       {(profile as any).portfolioLinks[0]}
