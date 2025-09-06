@@ -38,7 +38,7 @@ export default function SignUpCallbackPage() {
         if (session.user.role === pendingRole) {
           console.log("User already has correct role:", pendingRole);
           localStorage.removeItem("pendingRole");
-          toast.success("Đăng ký thành công!");
+          toast.success("Signup successful!");
           // Redirect will be handled by useAuthRedirect hook
           return;
         }
@@ -71,7 +71,7 @@ export default function SignUpCallbackPage() {
         // Clean up localStorage
         localStorage.removeItem("pendingRole");
 
-        toast.success("Đăng ký thành công! Đang cập nhật thông tin...");
+        toast.success("Signup successful! Updating information...");
 
         // Force a hard refresh to reload the session completely
         // This ensures NextAuth creates a fresh session with updated user data

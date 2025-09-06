@@ -37,9 +37,18 @@ export default function CompleteProfilePage() {
     }
 
     if (session.user.role && session.user.isProfileCompleted) {
+      // Check if user has saved form data from guest session
+      const savedFormData = sessionStorage.getItem('guestProjectForm');
+      
       // Redirect based on role instead of home
       if (session.user.role === "CLIENT") {
-        window.location.href = "/client-dashboard";
+        // If user has saved form data, redirect to client dashboard to show the form
+        if (savedFormData) {
+          console.log("🔍 User has saved form data, redirecting to client dashboard");
+          window.location.href = "/client-dashboard";
+        } else {
+          window.location.href = "/client-dashboard";
+        }
       } else if (session.user.role === "DEVELOPER") {
         window.location.href = "/inbox";
       } else if (session.user.role === "ADMIN") {

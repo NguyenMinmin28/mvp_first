@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, skillsRequired, budget, currency, paymentMethod } = body;
+    const { title, description, skillsRequired, budget, currency, paymentMethod, startDate, endDate } = body;
 
     // Validation
     if (!title?.trim() || !description?.trim() || !Array.isArray(skillsRequired) || skillsRequired.length === 0) {
@@ -196,6 +196,8 @@ export async function POST(request: NextRequest) {
     if (budget) data.budgetMin = Number(budget);
     if (currency) data.currency = String(currency).toUpperCase();
     if (paymentMethod) data.paymentMethod = String(paymentMethod);
+    if (startDate) data.expectedStartAt = new Date(startDate);
+    if (endDate) data.expectedEndAt = new Date(endDate);
 
     const project = await prisma.project.create({
       data,

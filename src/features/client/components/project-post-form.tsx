@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Label } from "@/ui/components/label";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Search, Upload } from "lucide-react";
 
 type Skill = { id: string; name: string };
@@ -25,6 +26,7 @@ export function ProjectPostForm({
   onSuccess
 }: ProjectPostFormProps) {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [skillQuery, setSkillQuery] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -34,6 +36,86 @@ export function ProjectPostForm({
   const [paymentMethod, setPaymentMethod] = useState<string>("hourly");
   const [budget, setBudget] = useState<string>("");
   const [currency, setCurrency] = useState<string>("USD");
+  const [projectTitle, setProjectTitle] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  // Load saved form data from sessionStorage
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('guestProjectForm');
+    console.log('🔍 Loading saved form data:', savedData, 'Session status:', status);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        console.log('🔍 Parsed form data:', parsed);
+        setProjectTitle(parsed.title || "");
+        setSkills(parsed.skills || []);
+        setPaymentMethod(parsed.paymentMethod || "hourly");
+        setBudget(parsed.budget || "");
+        setCurrency(parsed.currency || "USD");
+        setStartDate(parsed.startDate || "");
+        setEndDate(parsed.endDate || "");
+        console.log('✅ Form data loaded successfully');
+      } catch (error) {
+        console.error('Error parsing saved form data:', error);
+      }
+    } else {
+      console.log('🔍 No saved form data found');
+    }
+  }, [status]); // Load when session status changes
+
+  // Also load data on component mount
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('guestProjectForm');
+    console.log('🔍 Loading saved form data on mount:', savedData);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        console.log('🔍 Parsed form data on mount:', parsed);
+        setProjectTitle(parsed.title || "");
+        setSkills(parsed.skills || []);
+        setPaymentMethod(parsed.paymentMethod || "hourly");
+        setBudget(parsed.budget || "");
+        setCurrency(parsed.currency || "USD");
+        setStartDate(parsed.startDate || "");
+        setEndDate(parsed.endDate || "");
+        console.log('✅ Form data loaded successfully on mount');
+      } catch (error) {
+        console.error('Error parsing saved form data on mount:', error);
+      }
+    } else {
+      console.log('🔍 No saved form data found on mount');
+    }
+  }, []); // Load data on component mount
+
+  // Save form data to sessionStorage for all users (not just guests)
+  useEffect(() => {
+    // Only save if there's actual data to save
+    if (projectTitle.trim() || skills.length > 0 || budget.trim() || startDate || endDate) {
+      const formData = {
+        title: projectTitle,
+        skills: skills,
+        paymentMethod: paymentMethod,
+        budget: budget,
+        currency: currency,
+        startDate: startDate,
+        endDate: endDate
+      };
+      console.log('💾 Saving form data:', formData, 'Session status:', status);
+      sessionStorage.setItem('guestProjectForm', JSON.stringify(formData));
+    }
+  }, [projectTitle, skills, paymentMethod, budget, currency, startDate, endDate, status]);
+
+  // Clear saved data when user successfully submits the form
+  const clearSavedData = () => {
+    sessionStorage.removeItem('guestProjectForm');
+  };
+
+  // Handle login for existing users
+  const handleLogin = () => {
+    // Form data is already saved by useEffect, just redirect to signin
+    router.push("/auth/signin");
+  };
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -83,9 +165,18 @@ export function ProjectPostForm({
       alert("Please select at least one technology");
       return;
     }
+
+    // If user is not logged in, redirect to signup
+    if (status === "unauthenticated") {
+      // Form data is already saved by useEffect, just redirect
+      router.push("/auth/signup");
+      return;
+    }
+
+    // If user is logged in, proceed with project creation
     setIsSubmitting(true);
     try {
-      const titleInput = (document.getElementById("project-title") as HTMLInputElement | null)?.value?.trim() || "Quick project";
+      const titleInput = projectTitle.trim() || "Quick project";
       const description = `Quick post: ${titleInput}`;
       const res = await fetch("/api/projects", {
         method: "POST",
@@ -96,12 +187,17 @@ export function ProjectPostForm({
           skillsRequired: skills,
           paymentMethod,
           budget: budget ? Number(budget) : undefined,
-          currency: currency
+          currency: currency,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
         }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data?.id) {
+          // Clear saved form data after successful submission
+          clearSavedData();
+          
           if (onSuccess) {
             onSuccess(data.id);
           } else {
@@ -136,6 +232,8 @@ export function ProjectPostForm({
             <Input 
               id="project-title" 
               placeholder="Enter your project title"
+              value={projectTitle}
+              onChange={(e) => setProjectTitle(e.target.value)}
               className="w-full"
             />
           </div>
@@ -249,6 +347,8 @@ export function ProjectPostForm({
               <Input 
                 id="start-date" 
                 type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 className="w-full"
               />
             </div>
@@ -257,6 +357,8 @@ export function ProjectPostForm({
               <Input 
                 id="end-date" 
                 type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
                 className="w-full"
               />
             </div>
@@ -277,11 +379,23 @@ export function ProjectPostForm({
           {/* Find Freelancer Button */}
           <Button className="w-full bg-black text-white hover:bg-black/90" onClick={handleFindFreelancer} disabled={isSubmitting}>
             <Search className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Posting..." : "Find Freelancer"}
+            {isSubmitting ? "Posting..." : 
+             status === "unauthenticated" ? "Sign Up to Find Freelancer" : "Find Freelancer"}
           </Button>
 
-          {/* Login Link */}
-          {showLoginLink && (
+          {/* Login Button for unauthenticated users */}
+          {status === "unauthenticated" && (
+            <Button 
+              variant="outline" 
+              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50" 
+              onClick={handleLogin}
+            >
+              Already have an account? Log In
+            </Button>
+          )}
+
+          {/* Login Link for authenticated users */}
+          {showLoginLink && status === "authenticated" && (
             <div className="text-center">
               <a href="/auth/signin" className="text-sm text-gray-500 hover:text-gray-700">
                 Log in to see your recent activity

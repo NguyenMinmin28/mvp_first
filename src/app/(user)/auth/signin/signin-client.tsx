@@ -68,7 +68,13 @@ export default function SignInClient() {
         console.log("🔄 Fallback redirecting to /admin");
         window.location.href = "/admin";
       } else if (userRole === "CLIENT") {
-        console.log("🔄 Fallback redirecting to /client-dashboard");
+        // Check if user has saved form data
+        const savedFormData = sessionStorage.getItem('guestProjectForm');
+        if (savedFormData) {
+          console.log("🔄 Fallback redirecting to /client-dashboard with saved form data");
+        } else {
+          console.log("🔄 Fallback redirecting to /client-dashboard");
+        }
         window.location.href = "/client-dashboard";
       } else if (userRole === "DEVELOPER") {
         if (isProfileCompleted) {
@@ -152,6 +158,13 @@ export default function SignInClient() {
               return;
             }
             if (user?.role === "CLIENT") {
+              // Check if user has saved form data
+              const savedFormData = sessionStorage.getItem('guestProjectForm');
+              if (savedFormData) {
+                console.log("🔄 Redirecting to /client-dashboard with saved form data");
+              } else {
+                console.log("🔄 Redirecting to /client-dashboard");
+              }
               window.location.href = "/client-dashboard";
               return;
             }
@@ -242,7 +255,13 @@ export default function SignInClient() {
               return;
             }
             if (user?.role === "CLIENT") {
-              console.log("🔄 Redirecting to /client-dashboard");
+              // Check if user has saved form data
+              const savedFormData = sessionStorage.getItem('guestProjectForm');
+              if (savedFormData) {
+                console.log("🔄 Redirecting to /client-dashboard with saved form data");
+              } else {
+                console.log("🔄 Redirecting to /client-dashboard");
+              }
               window.location.href = "/client-dashboard";
               return;
             }

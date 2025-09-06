@@ -33,6 +33,23 @@ export default function ClientDashboard() {
     usage?: { projectsUsed: number; contactClicksUsed: Record<string, number> };
     remaining?: { projects: number; contactClicks: Record<string, number> };
   } | null>(null);
+  const [hasSavedFormData, setHasSavedFormData] = useState(false);
+
+  // Check for saved form data from any session
+  useEffect(() => {
+    const savedFormData = sessionStorage.getItem('guestProjectForm');
+    console.log('🔍 Client Dashboard - Checking saved form data:', savedFormData);
+    if (savedFormData) {
+      setHasSavedFormData(true);
+      // Show a toast notification
+      setTimeout(() => {
+        // You can add a toast notification here if needed
+        console.log("Welcome! Your project details have been restored from your previous session.");
+      }, 1000);
+    } else {
+      setHasSavedFormData(false);
+    }
+  }, [session?.user?.id]); // Re-check when user changes
 
   // Fetch quota status
   useEffect(() => {
@@ -53,6 +70,25 @@ export default function ClientDashboard() {
     <div className="space-y-8">
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
+
+      {/* Welcome Message for Users with Saved Data */}
+      {hasSavedFormData && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                <Heart className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-green-900">Welcome! Your project details have been restored</h3>
+                <p className="text-sm text-green-700 mt-1">
+                  We've saved your project information from your previous session. You can now complete your project posting below.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quota Status */}
       {quotaStatus && (

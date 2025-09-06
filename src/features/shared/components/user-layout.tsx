@@ -145,7 +145,26 @@ export function UserLayout({
       )}
 
       {/* Toast Notifications */}
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-center" 
+        richColors
+        closeButton
+        expand
+        visibleToasts={5}
+        toastOptions={{
+          style: {
+            zIndex: 99999,
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+        }}
+      />
     </div>
   );
 }

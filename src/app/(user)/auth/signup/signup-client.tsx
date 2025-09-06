@@ -7,6 +7,8 @@ import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
+import { useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -28,7 +30,6 @@ import { Badge } from "@/ui/components/badge";
 
 import { ErrorDisplay, FieldError } from "@/ui/components/error-display";
 import { Mail, Eye, EyeOff, UserPlus } from "lucide-react";
-import { toast } from "sonner";
 import { useFormSubmit } from "@/core/hooks/use-api";
 
 const signUpSchema = z
@@ -49,8 +50,10 @@ export default function SignUpClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const router = useRouter();
+
 
   const {
     register,
@@ -69,7 +72,25 @@ export default function SignUpClient() {
   } = useFormSubmit({
     onSuccess: async (data: any) => {
       setServerError(null); // Clear any existing errors
-      router.push("/role-selection");
+      setSuccessMessage("Signup successful! Please use this account to login to the system.");
+      
+      console.log("🎉 Signup successful, showing success message...");
+      
+      // Wait for message to show before redirecting
+      setTimeout(() => {
+        console.log("🔄 Redirecting after success message delay...");
+        // Check if user has saved form data (from any session)
+        const savedFormData = sessionStorage.getItem('guestProjectForm');
+        if (savedFormData) {
+          // Store pending role as CLIENT since they want to post projects
+          localStorage.setItem("pendingRole", "CLIENT");
+          console.log("🔄 Redirecting to /role-selection with saved form data");
+          router.push("/role-selection");
+        } else {
+          console.log("🔄 Redirecting to /auth/signin for login");
+          router.push("/auth/signin");
+        }
+      }, 3000); // Wait 3 seconds for message to show
     },
     onError: (error) => {
       console.error("Sign up error:", error);
@@ -79,6 +100,8 @@ export default function SignUpClient() {
 
   const handleEmailSignUp = async (formData: SignUpFormData) => {
     setServerError(null); // Reset error state
+    setSuccessMessage(null); // Reset success message
+    
     // Store password temporarily for sign in
     const dataWithPassword = { ...formData, password: formData.password };
 
@@ -87,8 +110,16 @@ export default function SignUpClient() {
 
   const handleGoogleSignUp = async () => {
     setServerError(null); // Reset error state
+    setSuccessMessage(null); // Reset success message
 
     try {
+      // Check if user has saved form data (from any session)
+      const savedFormData = sessionStorage.getItem('guestProjectForm');
+      if (savedFormData) {
+        // Store pending role as CLIENT since they want to post projects
+        localStorage.setItem("pendingRole", "CLIENT");
+      }
+
       const result = await signIn("google", {
         redirect: false,
         callbackUrl: "/role-selection",
@@ -107,7 +138,23 @@ export default function SignUpClient() {
 
       if (result?.ok) {
         setServerError(null); // Clear any existing errors
-        router.push("/role-selection");
+        setSuccessMessage("Signup successful! Please use this account to login to the system.");
+        
+        console.log("🎉 Google signup successful, showing success message...");
+        
+        // Wait for message to show before redirecting
+        setTimeout(() => {
+          console.log("🔄 Redirecting after Google success message delay...");
+          // Check if user has saved form data (from any session)
+          const savedFormData = sessionStorage.getItem('guestProjectForm');
+          if (savedFormData) {
+            console.log("🔄 Redirecting to /role-selection with saved form data");
+            router.push("/role-selection");
+          } else {
+            console.log("🔄 Redirecting to /auth/signin for login");
+            router.push("/auth/signin");
+          }
+        }, 3000); // Wait 3 seconds for message to show
       }
     } catch (error) {
       console.error("Google sign up error:", error);
@@ -189,6 +236,40 @@ export default function SignUpClient() {
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Success Message Display */}
+        {successMessage && (
+          <div className="mb-4">
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-800">
+                    {successMessage}
+                  </p>
+                </div>
+                <div className="ml-auto pl-3">
+                  <div className="-mx-1.5 -my-1.5">
+                    <button
+                      type="button"
+                      className="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+                      onClick={() => setSuccessMessage(null)}
+                    >
+                      <span className="sr-only">Dismiss</span>
+                      <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
