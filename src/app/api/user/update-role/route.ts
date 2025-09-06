@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const result = await db.$transaction(async (tx: any) => {
       console.log("🔍 Inside transaction...");
       
-      // Check if profile already exists
+      // Check if profile already exists - if it does, just update user role and return
       if (role === "CLIENT") {
         console.log("🔍 Checking for existing client profile...");
         const existingClientProfile = await tx.clientProfile.findUnique({
@@ -61,7 +61,23 @@ export async function POST(request: NextRequest) {
         });
         console.log("🔍 Existing client profile:", existingClientProfile);
         if (existingClientProfile) {
-          throw new Error("Client profile already exists for this user");
+          console.log("✅ Client profile already exists, just updating user role");
+          // Just update the user role, don't create new profile
+          const updatedUser = await tx.user.update({
+            where: { id: session.user.id },
+            data: {
+              role,
+              isProfileCompleted: true,
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              isProfileCompleted: true,
+            },
+          });
+          return updatedUser;
         }
       } else if (role === "DEVELOPER") {
         console.log("🔍 Checking for existing developer profile...");
@@ -70,7 +86,23 @@ export async function POST(request: NextRequest) {
         });
         console.log("🔍 Existing developer profile:", existingDeveloperProfile);
         if (existingDeveloperProfile) {
-          throw new Error("Developer profile already exists for this user");
+          console.log("✅ Developer profile already exists, just updating user role");
+          // Just update the user role, don't create new profile
+          const updatedUser = await tx.user.update({
+            where: { id: session.user.id },
+            data: {
+              role,
+              isProfileCompleted: false, // Developer profiles need admin approval
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              isProfileCompleted: true,
+            },
+          });
+          return updatedUser;
         }
       }
 
@@ -99,8 +131,7 @@ export async function POST(request: NextRequest) {
         await tx.clientProfile.create({
           data: {
             userId: session.user.id,
-            companyName: null, // Will be filled later
-            location: null, // Will be filled later
+            // companyName and location are optional fields, omit them instead of setting to null
           },
         });
         console.log("✅ Client profile created successfully");
@@ -119,13 +150,10 @@ export async function POST(request: NextRequest) {
         await tx.developerProfile.create({
           data: {
             userId: session.user.id,
-            photoUrl: null, // Will be filled later
-            bio: null, // Will be filled later
+            // Optional fields omitted: photoUrl, bio, linkedinUrl, whatsappNumber, location, age, hourlyRateUsd
             experienceYears: 0, // Default value
             level: "FRESHER", // Default level
-            linkedinUrl: null, // Will be filled later
             portfolioLinks: [], // Empty array by default
-            whatsappNumber: null, // Will be filled later
             whatsappVerified: false, // Default value
             usualResponseTimeMs: 0, // Default value
             currentStatus: "available", // Default status

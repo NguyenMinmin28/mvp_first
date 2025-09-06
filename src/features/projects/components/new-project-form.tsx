@@ -23,7 +23,10 @@ export default function NewProjectForm() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    skillsRequired: [] as string[]
+    skillsRequired: [] as string[],
+    budget: "",
+    currency: "USD",
+    paymentMethod: "hourly"
   });
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,7 +136,10 @@ export default function NewProjectForm() {
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          budget: formData.budget ? Number(formData.budget) : undefined
+        }),
       });
 
       if (response.ok) {
@@ -299,6 +305,70 @@ export default function NewProjectForm() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Payment Method */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Method *</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="hourly"
+                  checked={formData.paymentMethod === "hourly"}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  className="h-4 w-4 text-black focus:ring-black"
+                />
+                <span className="text-sm text-gray-700">Pay by the hours</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="fixed"
+                  checked={formData.paymentMethod === "fixed"}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  className="h-4 w-4 text-black focus:ring-black"
+                />
+                <span className="text-sm text-gray-700">Pay fixed price</span>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Budget and Currency */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Budget (Optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Input
+                type="number"
+                placeholder="Enter budget amount"
+                value={formData.budget}
+                onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
+                className="flex-1"
+                min="0"
+                step="0.01"
+              />
+              <select
+                value={formData.currency}
+                onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="USD">USD</option>
+                <option value="VND">VND</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500">
+              {formData.paymentMethod === "hourly" ? "Hourly rate" : "Total project budget"}
+            </p>
           </CardContent>
         </Card>
 

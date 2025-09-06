@@ -32,6 +32,8 @@ export function ProjectPostForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<string>("hourly");
+  const [budget, setBudget] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("USD");
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -92,7 +94,9 @@ export function ProjectPostForm({
           title: titleInput, 
           description, 
           skillsRequired: skills,
-          paymentMethod 
+          paymentMethod,
+          budget: budget ? Number(budget) : undefined,
+          currency: currency
         }),
       });
       if (res.ok) {
@@ -125,7 +129,7 @@ export function ProjectPostForm({
       </div>
 
       <Card>
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="pt-6 space-y-5">
           {/* Project Title */}
           <div className="space-y-2">
             <Label htmlFor="project-title">Project Title</Label>
@@ -209,6 +213,33 @@ export function ProjectPostForm({
                 <span className="text-sm text-gray-700">Pay fixed price</span>
               </label>
             </div>
+          </div>
+
+          {/* Budget and Currency */}
+          <div className="space-y-2">
+            <Label>Budget (Optional)</Label>
+            <div className="flex items-center space-x-3">
+              <Input
+                type="number"
+                placeholder="Enter budget amount"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                className="flex-1"
+                min="0"
+                step="0.01"
+              />
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="USD">USD</option>
+                <option value="VND">VND</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500">
+              {paymentMethod === "hourly" ? "Hourly rate" : "Total project budget"}
+            </p>
           </div>
 
           {/* Date Range */}

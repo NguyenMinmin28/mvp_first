@@ -44,6 +44,11 @@ export default function SignInClient() {
     setMounted(true);
   }, []);
 
+  // Reset fallback redirect flag when user changes
+  useEffect(() => {
+    setHasFallbackRedirected(false);
+  }, [session?.user?.id]);
+
   // Fallback redirect mechanism - detect when user is authenticated and redirect
   useEffect(() => {
     if (status === "authenticated" && session?.user && !hasFallbackRedirected) {
@@ -55,28 +60,30 @@ export default function SignInClient() {
       
       console.log("🎯 Fallback - User role:", userRole, "Profile completed:", isProfileCompleted);
       
+      // Set flag to prevent multiple redirects
       setHasFallbackRedirected(true);
       
+      // Use window.location.href to force a hard redirect and prevent loops
       if (userRole === "ADMIN") {
         console.log("🔄 Fallback redirecting to /admin");
-        router.push("/admin");
+        window.location.href = "/admin";
       } else if (userRole === "CLIENT") {
         console.log("🔄 Fallback redirecting to /client-dashboard");
-        router.push("/client-dashboard");
+        window.location.href = "/client-dashboard";
       } else if (userRole === "DEVELOPER") {
         if (isProfileCompleted) {
           console.log("🔄 Fallback redirecting to /dashboard-user");
-          router.push("/dashboard-user");
+          window.location.href = "/dashboard-user";
         } else {
           console.log("🔄 Fallback redirecting to /onboarding/freelancer/basic-information");
-          router.push("/onboarding/freelancer/basic-information");
+          window.location.href = "/onboarding/freelancer/basic-information";
         }
       } else {
         console.log("🔄 Fallback redirecting to /role-selection");
-        router.push("/role-selection");
+        window.location.href = "/role-selection";
       }
     }
-  }, [status, session, hasFallbackRedirected, router]);
+  }, [status, session?.user?.id, hasFallbackRedirected]);
 
   const searchParams = useSearchParams();
 
@@ -159,7 +166,7 @@ export default function SignInClient() {
               }
               return;
             }
-            // Default
+            // Default - no role or role is null/undefined
             window.location.href = "/role-selection";
           } catch {
             window.location.href = "/";
@@ -231,27 +238,27 @@ export default function SignInClient() {
             
             if (user?.role === "ADMIN") {
               console.log("🔄 Redirecting to /admin");
-              router.push("/admin");
+              window.location.href = "/admin";
               return;
             }
             if (user?.role === "CLIENT") {
               console.log("🔄 Redirecting to /client-dashboard");
-              router.push("/client-dashboard");
+              window.location.href = "/client-dashboard";
               return;
             }
             if (user?.role === "DEVELOPER") {
               if (user?.isProfileCompleted) {
                 console.log("🔄 Redirecting to /dashboard-user (profile completed)");
-                router.push("/dashboard-user");
+                window.location.href = "/dashboard-user";
               } else {
                 console.log("🔄 Redirecting to /onboarding/freelancer/basic-information (profile not completed)");
-                router.push("/onboarding/freelancer/basic-information");
+                window.location.href = "/onboarding/freelancer/basic-information";
               }
               return;
             }
             // If no role or role is null, redirect to role selection
             console.log("🔄 No role found, redirecting to /role-selection");
-            router.push("/role-selection");
+            window.location.href = "/role-selection";
           } catch (error) {
             console.error("❌ Error fetching user data after Google signin:", error);
             console.log("🔄 Fallback redirect to /");
