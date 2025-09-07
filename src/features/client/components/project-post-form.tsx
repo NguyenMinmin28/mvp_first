@@ -6,7 +6,7 @@ import { Badge } from "@/ui/components/badge";
 import { Card, CardContent } from "@/ui/components/card";
 import { Label } from "@/ui/components/label";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Search, Upload } from "lucide-react";
 
@@ -39,6 +39,7 @@ export function ProjectPostForm({
   const [projectTitle, setProjectTitle] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const skillDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load saved form data from sessionStorage
   useEffect(() => {
@@ -159,6 +160,40 @@ export function ProjectPostForm({
   const addSkill = (id: string) => setSkills((prev) => (prev.includes(id) ? prev : [...prev, id]));
   const removeSkill = (id: string) => setSkills((prev) => prev.filter((x) => x !== id));
 
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (skillDropdownRef.current && !skillDropdownRef.current.contains(event.target as Node)) {
+        setSkillOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      setSkillOpen(false);
+    };
+
+    const handleResize = () => {
+      setSkillOpen(false);
+    };
+
+    if (skillOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [skillOpen]);
+
+  // Toggle dropdown
+  const handleToggleDropdown = () => {
+    setSkillOpen((v) => !v);
+  };
+
   const handleFindFreelancer = async () => {
     if (isSubmitting) return;
     if (!Array.isArray(skills) || skills.length === 0) {
@@ -250,18 +285,18 @@ export function ProjectPostForm({
                 ))}
               </div>
             )}
-            <div className="relative">
+            <div className="relative" ref={skillDropdownRef}>
               <Button
                 type="button"
                 variant="outline"
                 className="w-full justify-between"
-                onClick={() => setSkillOpen((v) => !v)}
+                onClick={handleToggleDropdown}
               >
                 {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Select technologies"}
                 <span className="ml-2">▾</span>
               </Button>
               {skillOpen && (
-                <div className="absolute z-10 mt-2 w-full max-h-64 overflow-auto rounded-md border bg-white shadow">
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border bg-white shadow-lg">
                   {skillsLoading ? (
                     <div className="p-2 text-sm text-gray-500">Loading skills...</div>
                   ) : !Array.isArray(filteredSkills) || filteredSkills.length === 0 ? (
@@ -378,9 +413,17 @@ export function ProjectPostForm({
 
           {/* Find Freelancer Button */}
           <Button className="w-full bg-black text-white hover:bg-black/90" onClick={handleFindFreelancer} disabled={isSubmitting}>
-            <Search className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Posting..." : 
-             status === "unauthenticated" ? "Sign Up to Find Freelancer" : "Find Freelancer"}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating Project & Finding Developers...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                {status === "unauthenticated" ? "Sign Up to Find Freelancer" : "Find Freelancer"}
+              </>
+            )}
           </Button>
 
           {/* Login Button for unauthenticated users */}

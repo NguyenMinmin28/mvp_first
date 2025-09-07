@@ -45,6 +45,8 @@ export class RotationService {
       try {
         const result = await prisma.$transaction(async (tx: any) => {
           return await this._generateBatchWithTx(tx, projectId, customSelection);
+        }, {
+          timeout: 30000, // 30 seconds timeout
         });
         // Post-commit cursor updates to avoid transaction aborts
         try {
@@ -211,27 +213,28 @@ export class RotationService {
     const cursor = await this.getRotationCursor(tx, skillId, level);
 
     // Precompute developers who are pending in active batches and count per developer
-    const pendingActive = await tx.assignmentCandidate.findMany({
+    // Optimize: Use aggregation query instead of fetching all records
+    const pendingCounts = await tx.assignmentCandidate.groupBy({
+      by: ['developerId'],
       where: {
         responseStatus: "pending",
         batch: { status: "active" },
       },
-      select: { developerId: true },
+      _count: {
+        developerId: true,
+      },
+      having: {
+        developerId: {
+          _count: {
+            gte: RotationService.MAX_PENDING_ACTIVE_INVITES_PER_DEV,
+          },
+        },
+      },
     });
-    const pendingCounts = new Map<string, number>();
-    for (const c of pendingActive) {
-      const id = c.developerId as string;
-      pendingCounts.set(id, (pendingCounts.get(id) || 0) + 1);
-    }
-    // Exclude only developers who are already at or above the per-dev pending invite limit
-    const overLimitDeveloperIds: string[] = [];
-    Array.from(pendingCounts.entries()).forEach(([devId, count]: any) => {
-      if (count >= RotationService.MAX_PENDING_ACTIVE_INVITES_PER_DEV) {
-        overLimitDeveloperIds.push(devId);
-      }
-    });
+    
+    const overLimitDeveloperIds = pendingCounts.map(p => p.developerId as string);
 
-    // Build base query for eligible developers
+    // Build base query for eligible developers - optimized for performance
     const eligibleDevs = await tx.developerProfile.findMany({
       where: {
         adminApprovalStatus: "approved",
@@ -254,16 +257,22 @@ export class RotationService {
           },
         },
       },
-      include: {
-        skills: { where: { skillId } },
+      select: {
+        id: true,
+        level: true,
+        skills: { 
+          where: { skillId },
+          select: { skillId: true }
+        },
         assignmentCandidates: {
           where: { responseStatus: { in: ["accepted", "rejected"] } },
+          select: { respondedAt: true },
           orderBy: { respondedAt: "desc" },
           take: 5, // For calculating response time
         },
       },
       orderBy: [{ id: "asc" }], // Stable ordering for rotation
-      take: maxCount * 4, // Get more for fair rotation and rebalancing
+      take: Math.min(maxCount * 2, 50), // Limit to reasonable number for performance
     });
 
     // Apply fair ordering
@@ -281,16 +290,19 @@ export class RotationService {
    * Apply fair ordering based on rotation cursor or fallback strategy
    */
   private static async applyFairOrdering(devs: any[], cursor: any): Promise<any[]> {
-    if (cursor?.lastDeveloperId) {
-      // Find position of last developer and rotate from there
-              const lastIndex = devs.findIndex((dev: any) => dev.id === cursor.lastDeveloperId);
+    // Support both old format (lastDeveloperId) and new format (lastDeveloperIds)
+    const lastDeveloperIds = cursor?.lastDeveloperIds || (cursor?.lastDeveloperId ? [cursor.lastDeveloperId] : []);
+    
+    if (lastDeveloperIds.length > 0) {
+      // Find position of last batch of developers and rotate from there
+      const lastIndex = devs.findIndex((dev: any) => lastDeveloperIds.includes(dev.id));
       if (lastIndex >= 0) {
         return [...devs.slice(lastIndex + 1), ...devs.slice(0, lastIndex + 1)];
       }
     }
 
     // Fallback: sort by fairness metrics
-            return devs.sort((a: any, b: any) => {
+    return devs.sort((a: any, b: any) => {
       const aLastResponse = a.assignmentCandidates[0]?.respondedAt || new Date(0);
       const bLastResponse = b.assignmentCandidates[0]?.respondedAt || new Date(0);
       
@@ -308,40 +320,20 @@ export class RotationService {
   }
 
   /**
-   * Remove duplicate developers, prioritizing higher level and rarer skills
+   * Remove duplicate developers, only if same developer + same level + same skill combination
    */
   private static deduplicateCandidates(
     candidates: DeveloperCandidate[],
     skillsRequired: string[]
   ): DeveloperCandidate[] {
-    const developerMap = new Map<string, DeveloperCandidate>();
-    const levelPriority = { EXPERT: 3, MID: 2, FRESHER: 1 };
-
-    for (const candidate of candidates) {
-      const existing = developerMap.get(candidate.developerId);
-      
-      if (!existing) {
-        developerMap.set(candidate.developerId, candidate);
-        continue;
-      }
-
-      // Compare priority: higher level wins
-      const existingPriority = levelPriority[existing.level];
-      const candidatePriority = levelPriority[candidate.level];
-
-      if (candidatePriority > existingPriority) {
-        // Merge skill IDs
-        const mergedSkills = new Set([...existing.skillIds, ...candidate.skillIds]);
-        candidate.skillIds = Array.from(mergedSkills);
-        developerMap.set(candidate.developerId, candidate);
-      } else if (candidatePriority === existingPriority) {
-        // Same level, merge skills
-        const mergedSkills = new Set([...existing.skillIds, ...candidate.skillIds]);
-        existing.skillIds = Array.from(mergedSkills);
-      }
-    }
-
-    return Array.from(developerMap.values());
+    // Only remove duplicates if same developer + same level + same skill combination
+    const seen = new Set<string>();
+    return candidates.filter(candidate => {
+      const key = `${candidate.developerId}-${candidate.level}-${candidate.skillIds.sort().join(',')}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   /**
@@ -425,9 +417,9 @@ export class RotationService {
     skillsRequired: string[],
     candidates: DeveloperCandidate[]
   ): Promise<void> {
-    const updates: Array<{ skillId: string; level: DevLevel; lastDeveloperId: string }> = [];
+    const updates: Array<{ skillId: string; level: DevLevel; lastDeveloperIds: string[] }> = [];
 
-    // Group by skill and level to find last used developer
+    // Group by skill and level to find last used developers
     for (const skillId of skillsRequired) {
       for (const level of ["EXPERT", "MID", "FRESHER"] as DevLevel[]) {
         const relevantCandidates = candidates.filter(
@@ -435,12 +427,12 @@ export class RotationService {
         );
         
         if (relevantCandidates.length > 0) {
-          // Use the last candidate selected for this (skill, level)
-          const lastCandidate = relevantCandidates[relevantCandidates.length - 1];
+          // Use all candidates selected for this (skill, level)
+          const lastDeveloperIds = relevantCandidates.map(c => c.developerId);
           updates.push({
             skillId,
             level,
-            lastDeveloperId: lastCandidate.developerId,
+            lastDeveloperIds,
           });
         }
       }
@@ -456,10 +448,10 @@ export class RotationService {
             create: {
               skillId: update.skillId,
               level: update.level,
-              lastDeveloperId: update.lastDeveloperId,
+              lastDeveloperIds: update.lastDeveloperIds,
             },
             update: {
-              lastDeveloperId: update.lastDeveloperId,
+              lastDeveloperIds: update.lastDeveloperIds,
             },
           });
           break;
@@ -476,10 +468,10 @@ export class RotationService {
                   create: {
                     skillId: update.skillId,
                     level: update.level,
-                    lastDeveloperId: update.lastDeveloperId,
+                    lastDeveloperIds: update.lastDeveloperIds,
                   },
                   update: {
-                    lastDeveloperId: update.lastDeveloperId,
+                    lastDeveloperIds: update.lastDeveloperIds,
                   },
                 });
                 break;
@@ -733,6 +725,8 @@ export class RotationService {
 
       // Generate new batch using internal method to avoid nested transaction
       return await this._generateBatchWithTx(tx, projectId, customSelection);
+    }, {
+      timeout: 30000, // 30 seconds timeout
     });
 
     // Post-commit cursor updates

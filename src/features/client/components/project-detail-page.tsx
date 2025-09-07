@@ -6,6 +6,7 @@ import { Button } from "@/ui/components/button";
 import CandidateMetaRow from "@/features/client/components/candidate-meta-row";
 import { Badge } from "@/ui/components/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
+import { LoadingMessage } from "@/ui/components/loading-message";
 import ReviewSlideModal from "@/features/client/components/review-slide-modal";
 import DeveloperReviewsModal from "@/features/client/components/developer-reviews-modal";
 import { 
@@ -625,9 +626,11 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         {/* Freelancer Cards */}
         <div className="space-y-4">
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
+            <LoadingMessage 
+              title="Finding the Perfect Developers"
+              message="We're searching through our network of skilled developers. Please be patient..."
+              size="lg"
+            />
           ) : error ? (
             <div className="text-center py-8">
               <p className="text-red-600 mb-4">{error}</p>
@@ -651,9 +654,18 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                   onClick={generateNewBatch} 
                   variant="default" 
                   className="bg-black text-white"
-                  disabled={hasAcceptedCandidates()}
+                  disabled={hasAcceptedCandidates() || isLoading}
                 >
-                  {hasAcceptedCandidates() ? "Project Locked (Accepted)" : "Find More Freelancers"}
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Finding More Developers...
+                    </>
+                  ) : hasAcceptedCandidates() ? (
+                    "Project Locked (Accepted)"
+                  ) : (
+                    "Find More Freelancers"
+                  )}
                 </Button>
               </div>
             </div>

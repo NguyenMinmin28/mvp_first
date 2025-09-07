@@ -9,7 +9,7 @@ export function HeroProject() {
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-6 md:gap-8 items-start">
           {/* Left: Form column */}
-          <div className="md:h-[520px] md:pr-4">
+          <div className="md:min-h-[520px] md:pr-4">
             <ProjectPostForm 
               title="Find Freelancer"
               description="Post your project and find the perfect freelancer"

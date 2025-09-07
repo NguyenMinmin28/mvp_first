@@ -511,6 +511,7 @@ model DeveloperProfile {
   @@index([level])
   @@index([adminApprovalStatus])
   @@index([currentStatus])
+  @@index([adminApprovalStatus, currentStatus, level, whatsappVerified], map: "idx_devprofile_eligibility")
 }
 
 model DeveloperSkill {
@@ -697,6 +698,7 @@ model AssignmentCandidate {
   @@index([developerId], map: "idx_assignment_candidates_developerId")
   @@index([responseStatus], map: "idx_assignment_candidates_responseStatus")
   @@index([acceptanceDeadline], map: "idx_assignment_candidates_deadline")
+  @@index([responseStatus, developerId], map: "idx_assignment_candidates_pending_counts")
 }
 
 /**
@@ -800,8 +802,10 @@ model RotationCursor {
 
   level DevLevel
 
-  lastDeveloperId String?           @db.ObjectId // Alternative to offset
+  lastDeveloperId String?           @db.ObjectId // Legacy field for backward compatibility
   lastDeveloper   DeveloperProfile? @relation("DeveloperToRotationCursors", fields: [lastDeveloperId], references: [id])
+  
+  lastDeveloperIds String[] @default([]) // New field for multiple developers
 
   updatedAt DateTime @updatedAt
 

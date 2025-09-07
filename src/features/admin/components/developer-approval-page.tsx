@@ -19,7 +19,9 @@ import {
   FileText,
   AlertTriangle,
   MessageSquare,
-  Shield
+  Shield,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -71,6 +73,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
   const [developers, setDevelopers] = useState<DeveloperProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [whatsappProcessingIds, setWhatsappProcessingIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
 
   const fetchDevelopers = async () => {
@@ -121,6 +124,40 @@ export default function DeveloperApprovalPage({ user }: Props) {
       toast.error("Something went wrong");
     } finally {
       setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(developerId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleWhatsappToggle = async (developerId: string, currentStatus: boolean) => {
+    setWhatsappProcessingIds(prev => new Set(Array.from(prev).concat(developerId)));
+
+    try {
+      const response = await fetch(`/api/admin/developers/${developerId}/whatsapp-verify`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          whatsappVerified: !currentStatus,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+        await fetchDevelopers();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || "Failed to update WhatsApp verification");
+      }
+    } catch (error) {
+      console.error("Error updating WhatsApp verification:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setWhatsappProcessingIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(developerId);
         return newSet;
@@ -309,9 +346,6 @@ export default function DeveloperApprovalPage({ user }: Props) {
                                   <div className="flex items-center gap-2">
                                     <Phone className="h-4 w-4" />
                                     <span>{developer.user.phoneE164}</span>
-                                    {developer.whatsAppVerified && (
-                                      <MessageSquare className="h-4 w-4 text-green-500" />
-                                    )}
                                   </div>
                                 )}
                               </div>
@@ -347,17 +381,52 @@ export default function DeveloperApprovalPage({ user }: Props) {
                           )}
 
                           {/* Status Indicators */}
-                          <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Shield className="h-4 w-4" />
-                              <span>Status: {developer.currentStatus}</span>
-                            </div>
-                            {!developer.whatsAppVerified && (
-                              <div className="flex items-center gap-1 text-yellow-600">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span>WhatsApp not verified</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="flex items-center gap-1">
+                                <Shield className="h-4 w-4" />
+                                <span>Status: {developer.currentStatus}</span>
                               </div>
-                            )}
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4" />
+                                <span className="text-sm">WhatsApp:</span>
+                                <Badge 
+                                  className={developer.whatsAppVerified 
+                                    ? "bg-green-100 text-green-800" 
+                                    : "bg-red-100 text-red-800"
+                                  }
+                                >
+                                  {developer.whatsAppVerified ? "Verified" : "Not Verified"}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            {/* WhatsApp Toggle Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleWhatsappToggle(developer.id, developer.whatsAppVerified)}
+                              disabled={whatsappProcessingIds.has(developer.id)}
+                              className={`flex items-center gap-2 ${
+                                developer.whatsAppVerified 
+                                  ? "border-green-300 text-green-600 hover:bg-green-50" 
+                                  : "border-red-300 text-red-600 hover:bg-red-50"
+                              }`}
+                            >
+                              {whatsappProcessingIds.has(developer.id) ? (
+                                <LoadingSpinner size="sm" />
+                              ) : developer.whatsAppVerified ? (
+                                <>
+                                  <ToggleRight className="h-4 w-4" />
+                                  Disable
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleLeft className="h-4 w-4" />
+                                  Enable
+                                </>
+                              )}
+                            </Button>
                           </div>
 
                           {/* Action Buttons */}

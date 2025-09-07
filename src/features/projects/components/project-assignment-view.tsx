@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
+import { LoadingOverlay } from "@/ui/components/loading-message";
 import { 
   RefreshCw, 
   Eye, 
@@ -382,14 +383,11 @@ export default function ProjectAssignmentView({ projectId }: Props) {
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative">
       {/* Searching overlay to avoid flicker during polling */}
-      {isFetching && project.status === "assigning" && candidatesCount === 0 && (
-        <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex items-center gap-3 p-3 rounded-md bg-white shadow border">
-            <LoadingSpinner size="sm" />
-            <span className="text-sm font-medium">Processing...</span>
-          </div>
-        </div>
-      )}
+      <LoadingOverlay 
+        isVisible={isFetching && project.status === "assigning" && candidatesCount === 0}
+        title="Finding Developers"
+        message="We're searching through our network of skilled developers. Please be patient..."
+      />
 
       {/* Project Header */}
       <Card>
