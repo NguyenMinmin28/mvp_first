@@ -17,12 +17,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Get pagination and filter parameters from URL
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const filter = searchParams.get('filter') || 'all';
+    const skip = (page - 1) * limit;
+
+    // Build where clause based on filter
+    let whereClause: any = {};
+    if (filter !== 'all') {
+      if (filter === 'whatsapp-verified') {
+        whereClause.whatsappVerified = true;
+      } else if (filter === 'whatsapp-not-verified') {
+        whereClause.whatsappVerified = false;
+      } else {
+        whereClause.adminApprovalStatus = filter;
+      }
+    }
+
+    // Get total count for pagination with filter
+    const totalCount = await prisma.developerProfile.count({
+      where: whereClause,
+    });
+
     const developers = await prisma.developerProfile.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {
             name: true,
             email: true,
+            phoneE164: true,
           },
         },
         skills: {
@@ -30,6 +56,7 @@ export async function GET(request: NextRequest) {
             skill: {
               select: {
                 name: true,
+                category: true,
               },
             },
           },
@@ -43,11 +70,48 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      skip,
+      take: limit,
     });
+
+    // Get reviews data for each developer
+    const developersWithReviews = await Promise.all(
+      developers.map(async (developer) => {
+        const reviewsAggregate = await prisma.review.aggregate({
+          where: {
+            toUserId: developer.userId, // Use toUserId instead of developerId
+          },
+          _avg: {
+            rating: true,
+          },
+          _count: {
+            rating: true,
+          },
+        });
+
+        return {
+          ...developer,
+          reviewsAggregate: {
+            averageRating: reviewsAggregate._avg.rating || 0,
+            totalReviews: reviewsAggregate._count.rating || 0,
+          },
+        };
+      })
+    );
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
-      developers,
+      developers: developersWithReviews,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     console.error("Error fetching developers for admin:", error);
@@ -57,3 +121,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

@@ -21,7 +21,9 @@ import {
   MessageSquare,
   Shield,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -33,8 +35,8 @@ interface DeveloperProfile {
   userId: string;
   level: "EXPERT" | "MID" | "FRESHER";
   adminApprovalStatus: "pending" | "approved" | "rejected" | "draft";
-  currentStatus: "available" | "checking" | "busy";
-  whatsAppVerified: boolean;
+  currentStatus: "available" | "checking" | "busy" | "away";
+  whatsappVerified: boolean;
   createdAt: string;
   updatedAt: string;
   user: {
@@ -69,19 +71,40 @@ interface Props {
   user: AdminUser;
 }
 
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 export default function DeveloperApprovalPage({ user }: Props) {
   const [developers, setDevelopers] = useState<DeveloperProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [whatsappProcessingIds, setWhatsappProcessingIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected" | "whatsapp-verified" | "whatsapp-not-verified">("pending");
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
-  const fetchDevelopers = async () => {
+  const fetchDevelopers = async (page: number = pagination.page, newFilter?: string) => {
     try {
-      const response = await fetch("/api/admin/developers");
+      const currentFilter = newFilter || filter;
+      const response = await fetch(`/api/admin/developers?page=${page}&limit=${pagination.limit}&filter=${currentFilter}`);
       if (response.ok) {
         const data = await response.json();
         setDevelopers(data.developers || []);
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
       } else {
         toast.error("Failed to load developers");
       }
@@ -96,6 +119,23 @@ export default function DeveloperApprovalPage({ user }: Props) {
   useEffect(() => {
     fetchDevelopers();
   }, []);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchDevelopers(newPage);
+    }
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }));
+    fetchDevelopers(1);
+  };
+
+  const handleFilterChange = (newFilter: typeof filter) => {
+    setFilter(newFilter);
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchDevelopers(1, newFilter);
+  };
 
   const handleApprovalAction = async (developerId: string, action: "approve" | "reject") => {
     setProcessingIds(prev => new Set(Array.from(prev).concat(developerId)));
@@ -206,16 +246,19 @@ export default function DeveloperApprovalPage({ user }: Props) {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const filteredDevelopers = developers.filter(dev => {
-    if (filter === "all") return true;
-    return dev.adminApprovalStatus === filter;
-  });
+  // Note: Filtering is now handled server-side via API parameters
+  // This is just for display purposes
+  const filteredDevelopers = developers;
 
+  // For now, we'll use client-side stats since we don't have server-side stats endpoint
+  // In production, you might want to create a separate stats endpoint
   const stats = {
-    total: developers.length,
+    total: pagination.totalCount,
     pending: developers.filter(d => d.adminApprovalStatus === "pending").length,
     approved: developers.filter(d => d.adminApprovalStatus === "approved").length,
     rejected: developers.filter(d => d.adminApprovalStatus === "rejected").length,
+    whatsappVerified: developers.filter(d => d.whatsappVerified).length,
+    whatsappNotVerified: developers.filter(d => !d.whatsappVerified).length,
   };
 
   return (
@@ -226,7 +269,7 @@ export default function DeveloperApprovalPage({ user }: Props) {
     >
       <div className="space-y-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -274,6 +317,30 @@ export default function DeveloperApprovalPage({ user }: Props) {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">WhatsApp Verified</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.whatsappVerified}</p>
+                </div>
+                <MessageSquare className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">WhatsApp Not Verified</p>
+                  <p className="text-2xl font-bold text-yellow-600">{stats.whatsappNotVerified}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-yellow-500" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filter Tabs */}
@@ -281,19 +348,21 @@ export default function DeveloperApprovalPage({ user }: Props) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Developer Applications</CardTitle>
-              <div className="flex gap-2">
-                {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+              <div className="flex gap-2 flex-wrap">
+                {(["all", "pending", "approved", "rejected", "whatsapp-verified", "whatsapp-not-verified"] as const).map((status) => (
                   <Button
                     key={status}
                     variant={filter === status ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setFilter(status)}
+                    onClick={() => handleFilterChange(status)}
                     className="capitalize"
                   >
-                    {status}
+                    {status.replace("-", " ")}
                     {status !== "all" && (
                       <Badge className="ml-2 bg-gray-200 text-gray-800 text-xs">
-                        {stats[status]}
+                        {status === "whatsapp-verified" ? stats.whatsappVerified :
+                         status === "whatsapp-not-verified" ? stats.whatsappNotVerified :
+                         stats[status as keyof typeof stats]}
                       </Badge>
                     )}
                   </Button>
@@ -315,6 +384,10 @@ export default function DeveloperApprovalPage({ user }: Props) {
                 <p className="text-gray-600">
                   {filter === "pending" 
                     ? "No pending applications at the moment." 
+                    : filter === "whatsapp-verified"
+                    ? "No WhatsApp verified developers found."
+                    : filter === "whatsapp-not-verified"
+                    ? "No WhatsApp unverified developers found."
                     : `No ${filter} developers found.`}
                 </p>
               </div>
@@ -391,12 +464,12 @@ export default function DeveloperApprovalPage({ user }: Props) {
                                 <MessageSquare className="h-4 w-4" />
                                 <span className="text-sm">WhatsApp:</span>
                                 <Badge 
-                                  className={developer.whatsAppVerified 
+                                  className={developer.whatsappVerified 
                                     ? "bg-green-100 text-green-800" 
                                     : "bg-red-100 text-red-800"
                                   }
                                 >
-                                  {developer.whatsAppVerified ? "Verified" : "Not Verified"}
+                                  {developer.whatsappVerified ? "Verified" : "Not Verified"}
                                 </Badge>
                               </div>
                             </div>
@@ -405,17 +478,17 @@ export default function DeveloperApprovalPage({ user }: Props) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleWhatsappToggle(developer.id, developer.whatsAppVerified)}
+                              onClick={() => handleWhatsappToggle(developer.id, developer.whatsappVerified)}
                               disabled={whatsappProcessingIds.has(developer.id)}
                               className={`flex items-center gap-2 ${
-                                developer.whatsAppVerified 
+                                developer.whatsappVerified 
                                   ? "border-green-300 text-green-600 hover:bg-green-50" 
                                   : "border-red-300 text-red-600 hover:bg-red-50"
                               }`}
                             >
                               {whatsappProcessingIds.has(developer.id) ? (
                                 <LoadingSpinner size="sm" />
-                              ) : developer.whatsAppVerified ? (
+                              ) : developer.whatsappVerified ? (
                                 <>
                                   <ToggleRight className="h-4 w-4" />
                                   Disable
@@ -469,6 +542,87 @@ export default function DeveloperApprovalPage({ user }: Props) {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Show:</span>
+                    <select
+                      value={pagination.limit}
+                      onChange={(e) => handleLimitChange(parseInt(e.target.value))}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span className="text-sm text-gray-600">per page</span>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of {pagination.totalCount} developers
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={!pagination.hasPrevPage}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.page <= 3) {
+                        pageNum = i + 1;
+                      } else if (pagination.page >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.page - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pagination.page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={!pagination.hasNextPage}
+                    className="flex items-center gap-1"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminLayout>
   );
