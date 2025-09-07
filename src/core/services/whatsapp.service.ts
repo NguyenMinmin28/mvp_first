@@ -73,7 +73,7 @@ export class WhatsAppService {
       type: "template",
       template: {
         name: process.env.WHATSAPP_TEMPLATE_NAME || "otp_verification",
-        language: { code: "en" }, // hoặc en_US / vi ... đúng với template đã duyệt
+        language: { code: "en_US" }, // hoặc en_US / vi ... đúng với template đã duyệt
         components: [
           // {{1}} trong body
           { type: "body", parameters: [{ type: "text", text: code }] },
