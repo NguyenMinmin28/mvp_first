@@ -17,7 +17,7 @@ import {
 interface DeveloperProfileTabProps {
   profileData: any;
   isEditing: boolean;
-  onInputChange: (field: string, value: string | number | boolean) => void;
+  onInputChange: (field: string, value: string | number | boolean | string[]) => void;
 }
 
 export default function DeveloperProfileTab({

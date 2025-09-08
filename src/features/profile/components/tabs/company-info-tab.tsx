@@ -7,7 +7,7 @@ import { Label } from "@/ui/components/label";
 interface CompanyInfoTabProps {
   profileData: any;
   isEditing: boolean;
-  onInputChange: (field: string, value: string | number | boolean) => void;
+  onInputChange: (field: string, value: string | number | boolean | string[]) => void;
 }
 
 export default function CompanyInfoTab({

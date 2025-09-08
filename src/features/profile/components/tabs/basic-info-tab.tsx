@@ -8,7 +8,7 @@ import AvatarUpload from "../avatar-upload";
 interface BasicInfoTabProps {
   profileData: any;
   isEditing: boolean;
-  onInputChange: (field: string, value: string | number | boolean) => void;
+  onInputChange: (field: string, value: string | number | boolean | string[]) => void;
 }
 
 export default function BasicInfoTab({

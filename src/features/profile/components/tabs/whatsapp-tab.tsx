@@ -21,7 +21,7 @@ interface WhatsAppTabProps {
   showOtpInput: boolean;
   otpCode: string;
   isVerifyingOtp: boolean;
-  onInputChange: (field: string, value: string | number | boolean) => void;
+  onInputChange: (field: string, value: string | number | boolean | string[]) => void;
   onOtpCodeChange: (value: string) => void;
   onWhatsAppVerification: () => void;
   onWhatsAppConfirm: (otp: string) => void;

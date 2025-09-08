@@ -98,7 +98,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
 
   const handleInputChange = (
     field: string,
-    value: string | number | boolean
+    value: string | number | boolean | string[]
   ) => {
     setProfileData((prev) => ({
       ...prev,
