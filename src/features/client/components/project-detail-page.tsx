@@ -21,8 +21,12 @@ import {
   FileText,
   Eye,
   Trash2,
-  Clock
+  Clock,
+  Pause,
+  Play
 } from "lucide-react";
+import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/components/tooltip";
 
 interface Freelancer {
   id: string;
@@ -82,6 +86,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [selectedDevelopers, setSelectedDevelopers] = useState<any[]>([]);
   const [showDeveloperReviewsModal, setShowDeveloperReviewsModal] = useState(false);
   const [selectedDeveloperForReviews, setSelectedDeveloperForReviews] = useState<{id: string, name: string} | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
 
   // Handle opening developer reviews modal
   const handleReadReviews = (developerId: string, developerName: string) => {
@@ -103,11 +108,11 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   }, []);
 
   // Auto-refresh data every 15 seconds to sync acceptance status
-  // Disable auto refresh once any developer has accepted (project locked)
+  // Disable auto refresh once any developer has accepted (project locked) or when user disables it
   useEffect(() => {
     const hasAccepted = Array.isArray(freelancers) && freelancers.some(f => f.responseStatus === "accepted");
-    if (hasAccepted) {
-      return; // stop creating intervals when project is locked
+    if (hasAccepted || !autoRefreshEnabled) {
+      return; // stop creating intervals when project is locked or auto-refresh is disabled
     }
 
     const refreshTimer = setInterval(() => {
@@ -115,7 +120,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     }, 15000); // 15 seconds for faster sync while still finding devs
 
     return () => clearInterval(refreshTimer);
-  }, [project.id, freelancers]);
+  }, [project.id, freelancers, autoRefreshEnabled]);
 
   const fetchFreelancers = async () => {
     try {
@@ -144,11 +149,32 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           })
         );
         
+        // Check if someone just accepted (new accepted status)
+        const newAccepted = candidatesWithFavorites.find((c: any) => c.responseStatus === "accepted");
+        const hadAccepted = freelancers.find((c: any) => c.responseStatus === "accepted");
+        
         setFreelancers(candidatesWithFavorites);
         setProjectData(data.project);
         setLastRefreshTime(new Date());
         if (Array.isArray(data.skills)) {
           setProjectSkills(data.skills.map((s: any) => s.name).filter(Boolean));
+        }
+
+        // Show notification if someone just accepted
+        if (newAccepted && !hadAccepted) {
+          toast.success(`🎉 ${newAccepted.developer.user.name} has accepted your project!`, {
+            duration: 5000,
+            action: {
+              label: "View Details",
+              onClick: () => {
+                // Scroll to the accepted developer
+                const element = document.getElementById(`developer-${newAccepted.developerId}`);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+            }
+          });
         }
       } else {
         const errorData = await response.json();
@@ -611,9 +637,54 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
         {/* Auto-refresh indicator */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Auto-refresh: {lastRefreshTime.toLocaleTimeString()}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span>Auto-refresh: {lastRefreshTime.toLocaleTimeString()}</span>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={autoRefreshEnabled ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                    className={`h-8 px-3 text-sm font-medium transition-all duration-200 shadow-sm ${
+                      autoRefreshEnabled 
+                        ? 'border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 hover:shadow-md' 
+                        : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-md'
+                    }`}
+                  >
+                    {autoRefreshEnabled ? (
+                      <>
+                        <Pause className="h-3 w-3 mr-1.5" />
+                        Pause Auto-refresh
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3 w-3 mr-1.5" />
+                        Resume Auto-refresh
+                      </>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-sm max-w-xs">
+                    {autoRefreshEnabled ? (
+                      <>
+                        <p className="font-medium mb-1">Pause Auto-refresh</p>
+                        <p className="text-gray-600">Stop automatic updates every 15 seconds. You can manually refresh or resume later.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium mb-1">Resume Auto-refresh</p>
+                        <p className="text-gray-600">Restart automatic updates to get real-time notifications when developers respond.</p>
+                      </>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {hasAcceptedCandidates() && (
             <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
@@ -671,7 +742,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             </div>
           ) : (
             filteredFreelancers.map((freelancer) => (
-              <Card key={freelancer.id} className="p-4 lg:p-6">
+              <Card key={freelancer.id} id={`developer-${freelancer.developerId}`} className="p-4 lg:p-6">
                 <CardContent className="p-0">
                   {/* TOP: profile summary, meta and quick actions */}
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">

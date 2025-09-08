@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       ...(user.clientProfile && {
         companyName: user.clientProfile.companyName,
         location: user.clientProfile.location,
+        photoUrl: (user.clientProfile as any).photoUrl, // Add photoUrl for client profile
       }),
       ...(user.developerProfile && ({
         photoUrl: user.developerProfile.photoUrl,

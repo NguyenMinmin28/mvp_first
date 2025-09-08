@@ -6,6 +6,7 @@ import { Badge } from "@/ui/components/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/components/dropdown-menu";
 import { Button } from "@/ui/components/button";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/ui/components/dialog";
 import { Input } from "@/ui/components/input";
 import { ChevronDown, Star, MessageSquare } from "lucide-react";
@@ -25,6 +26,7 @@ interface ReviewStats {
 }
 
 export default function ProfileSummary({ profile, hideControls = false, developerId, onReviewSubmitted }: ProfileSummaryProps) {
+  const router = useRouter();
   const [openEdit, setOpenEdit] = useState(false);
   const [name, setName] = useState<string>(profile?.name || "");
   const [location, setLocation] = useState<string>(profile?.location || "");
@@ -237,7 +239,7 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setOpenEdit(true)}>Edit profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>Edit profile</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

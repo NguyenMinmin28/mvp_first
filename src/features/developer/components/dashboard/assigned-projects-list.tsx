@@ -16,6 +16,7 @@ interface AssignedProjectItem {
   currency?: string | null;
   skills?: string[];
   assignmentStatus?: string;
+  assignment?: any;
 }
 
 interface AssignedProjectsListProps {
@@ -46,9 +47,14 @@ export default function AssignedProjectsList({ filter }: AssignedProjectsListPro
   }, []);
 
   const filtered = useMemo(() => {
+    const now = new Date();
+    const isPendingActive = (p: AssignedProjectItem) =>
+      p.assignment?.responseStatus === "pending" &&
+      p.assignment?.acceptanceDeadline &&
+      new Date(p.assignment.acceptanceDeadline) > now;
     switch (filter) {
       case "NEW":
-        return items.filter((p) => p.status === "recent");
+        return items.filter((p) => p.status === "recent" && isPendingActive(p));
       case "IN_PROGRESS":
         return items.filter((p) => p.status === "in_progress");
       case "COMPLETED":

@@ -147,6 +147,8 @@ export default function InformationTab({ userRole }: InformationTabProps) {
         toast.success("Profile updated successfully");
         setIsEditing(false);
         await updateSession();
+        // Dispatch event to update header avatar
+        window.dispatchEvent(new CustomEvent('profile-updated'));
       } else {
         throw new Error("Failed to update profile");
       }
@@ -323,10 +325,11 @@ export default function InformationTab({ userRole }: InformationTabProps) {
 
       {/* Tabs for different sections */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="flex w-full flex-wrap gap-2">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
           {userRole === "DEVELOPER" && (
             <>
+              <TabsTrigger value="developer">Developer</TabsTrigger>
               <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
               <TabsTrigger value="verification">Verification</TabsTrigger>
@@ -345,14 +348,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
             onInputChange={handleInputChange}
           />
 
-          {/* Developer Profile Basic Info (when not in tabs) */}
-          {userRole === "DEVELOPER" && (
-            <DeveloperProfileTab
-              profileData={profileData}
-              isEditing={isEditing}
-              onInputChange={handleInputChange}
-            />
-          )}
+          {/* Developer section moved to its own tab to avoid duplication */}
         </TabsContent>
 
         {/* Company Information Tab (Client only) */}
@@ -369,6 +365,14 @@ export default function InformationTab({ userRole }: InformationTabProps) {
         {/* Developer Profile Tabs */}
         {userRole === "DEVELOPER" && (
           <>
+            {/* Developer Basic Profile Tab */}
+            <TabsContent value="developer" className="space-y-6">
+              <DeveloperProfileTab
+                profileData={profileData}
+                isEditing={isEditing}
+                onInputChange={handleInputChange}
+              />
+            </TabsContent>
             {/* Portfolio Links Tab */}
             <TabsContent value="portfolio" className="space-y-6">
               <PortfolioTab

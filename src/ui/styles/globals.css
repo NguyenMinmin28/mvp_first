@@ -89,6 +89,29 @@
 }
 
 @layer utilities {
+  /* Global cursor pointer for interactive elements */
+  button, 
+  [role="button"], 
+  [role="menuitem"],
+  a, 
+  input[type="button"], 
+  input[type="submit"], 
+  input[type="reset"],
+  .cursor-pointer,
+  .clickable {
+    cursor: pointer !important;
+  }
+  
+  /* Hover effects for interactive elements */
+  button:hover, 
+  [role="button"]:hover, 
+  [role="menuitem"]:hover,
+  a:hover, 
+  .cursor-pointer:hover,
+  .clickable:hover {
+    cursor: pointer !important;
+  }
+
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;

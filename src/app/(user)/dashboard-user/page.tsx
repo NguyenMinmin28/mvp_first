@@ -11,7 +11,9 @@ import type { ProjectStatus } from "@/features/developer/components/project-stat
 import ProjectsSidebar from "@/features/developer/components/dashboard/projects-sidebar";
 import ProjectDetail from "@/features/developer/components/dashboard/project-detail";
 import { Button } from "@/ui/components/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
+import { ChevronLeft, ChevronRight, TestTube } from "lucide-react";
+import { toast } from "sonner";
 
 interface UserIdeaSummary {
   id: string;
@@ -55,6 +57,7 @@ export default function DashboardUserPage() {
   const [selectedProject, setSelectedProject] = useState<AssignedProjectItem | null>(null);
   const [projects, setProjects] = useState<AssignedProjectItem[]>([]);
   const [currentProjectIndex, setCurrentProjectIndex] = useState<number>(0);
+  const [isTestingBatch, setIsTestingBatch] = useState(false);
   
   // Ref for project detail container to detect clicks outside
   const projectDetailRef = useRef<HTMLDivElement>(null);
@@ -132,6 +135,36 @@ export default function DashboardUserPage() {
     }
   };
 
+  // Test batch assignment function
+  const handleTestBatchAssignment = async () => {
+    setIsTestingBatch(true);
+    try {
+      const response = await fetch("/api/test-assign-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success("🧪 Test batch assignment created! Check your notifications and projects.");
+        
+        // Refresh projects to show the new test assignment
+        await load();
+        
+        // Trigger notification refresh in header
+        window.dispatchEvent(new CustomEvent('notification-refresh'));
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to create test batch assignment");
+      }
+    } catch (error) {
+      console.error("Error creating test batch assignment:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setIsTestingBatch(false);
+    }
+  };
+
   const handleReject = async (projectId: string) => {
     try {
       const response = await fetch(`/api/user/projects/${projectId}/reject`, {
@@ -201,9 +234,14 @@ export default function DashboardUserPage() {
 
   // Filter projects based on status
   const filteredProjects = projects.filter((project) => {
+    const now = new Date();
+    const isPendingActive =
+      project.assignment?.responseStatus === "pending" &&
+      project.assignment?.acceptanceDeadline &&
+      new Date(project.assignment.acceptanceDeadline) > now;
     switch (projectStatus) {
       case "NEW":
-        return project.status === "recent";
+        return project.status === "recent" && isPendingActive;
       case "IN_PROGRESS":
         return project.status === "in_progress";
       case "COMPLETED":
@@ -380,6 +418,43 @@ export default function DashboardUserPage() {
         {/* Project Status Filter */}
         <div className="mt-4 sm:mt-6">
           <ProjectStatusFilter value={projectStatus} onChange={setProjectStatus} />
+        </div>
+
+        {/* Test Tools Card */}
+        <div className="mt-4 sm:mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TestTube className="h-5 w-5" />
+                Test Tools
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Create a test batch assignment to simulate receiving a new project invitation and notification.
+                </p>
+                <Button
+                  onClick={handleTestBatchAssignment}
+                  disabled={isTestingBatch}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  {isTestingBatch ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
+                      Creating Test Assignment...
+                    </>
+                  ) : (
+                    <>
+                      <TestTube className="h-4 w-4 mr-2" />
+                      Create Test Batch Assignment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Content - Responsive Layout */}

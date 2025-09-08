@@ -15,10 +15,13 @@ import {
   TreePine,
   Calendar,
   FileText,
-  AlertCircle
+  AlertCircle,
+  CheckCircle
 } from "lucide-react";
 import ProjectActivity from "./project-activity";
 import { ProjectPostForm } from "./project-post-form";
+import { PayPalButtons } from "@/features/billing/components/paypal-buttons";
+import { toast } from "sonner";
 
 export default function ClientDashboard() {
   const router = useRouter();
@@ -34,6 +37,7 @@ export default function ClientDashboard() {
     remaining?: { projects: number; contactClicks: Record<string, number> };
   } | null>(null);
   const [hasSavedFormData, setHasSavedFormData] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
 
   // Check for saved form data from any session
   useEffect(() => {
@@ -65,6 +69,135 @@ export default function ClientDashboard() {
     };
     fetchQuota();
   }, []);
+
+  // Fetch current subscription
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        const res = await fetch("/api/user/subscriptions", { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // Get the most recent active subscription
+        const activeSubscription = data.subscriptions?.find((sub: any) => sub.status === "active");
+        console.log("🔍 Dashboard - Subscriptions data:", data);
+        console.log("🔍 Dashboard - Active subscription:", activeSubscription);
+        setCurrentSubscription(activeSubscription || null);
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error);
+      }
+    };
+    fetchSubscription();
+  }, [session?.user?.id]);
+
+  // Plan data matching the pricing page
+  const plans = [
+    {
+      id: "basic",
+      name: "Basic Plan",
+      price: "$0",
+      priceNumber: 0,
+      period: "/monthly",
+      features: [
+        "Monthly Post 1 project free.",
+        "Contact up to 5 freelancer per project.",
+        "Get notified when freelancers show interest",
+      ],
+      cta: "CHOOSE YOUR PLAN",
+      providerPlanId: "P-BASIC-PLAN-ID",
+    },
+    {
+      id: "plus",
+      name: "Plus Plan",
+      price: "$19.95",
+      priceNumber: 19.95,
+      period: "/monthly",
+      features: [
+        "Post up to 10 projects per month.",
+        "Contact up to 10 freelancer per project",
+        "Get notified when freelancers show interest",
+      ],
+      cta: "CHOOSE YOUR PLAN",
+      providerPlanId: "P-2L869865T2585332XNC24EXA",
+    },
+    {
+      id: "pro",
+      name: "Pro Plan",
+      price: "$99.95",
+      priceNumber: 99.95,
+      period: "/monthly",
+      features: [
+        "Unlimited project postings",
+        "Unlimited contacts per project.",
+        "Get notified when freelancers show interest",
+      ],
+      cta: "CHOOSE YOUR PLAN",
+      providerPlanId: "P-6BH23931L7595043MNC24EXQ",
+    },
+  ];
+
+  const handlePlanSelection = (plan: any) => {
+    if (!session) {
+      window.location.href = "/auth/signin";
+      return;
+    }
+    alert(`PayPal integration for ${plan.name} will be available soon!`);
+  };
+
+  const renderPlanButton = (plan: any) => {
+    // Basic Plan ($0) - always disabled for logged in users
+    if (plan.id === "basic" && session) {
+      return (
+        <div className="h-16 flex flex-col justify-center">
+          <Button disabled className="w-full h-12 text-sm font-semibold bg-green-600 text-white">
+            ✓ Included Free
+          </Button>
+          <p className="text-xs text-muted-foreground text-center mt-1">
+            You already have Basic Plan access
+          </p>
+        </div>
+      );
+    }
+
+    // Plus Plan and Pro Plan - show PayPal buttons
+    if (session && (plan.id === "plus" || plan.id === "pro")) {
+      const isCurrentPlan = currentSubscription?.package?.name === plan.name;
+      const hasActiveSubscription = !!currentSubscription;
+      console.log(`🔍 Dashboard - Plan ${plan.name}:`, {
+        isCurrentPlan,
+        hasActiveSubscription,
+        currentSubscriptionPackage: currentSubscription?.package?.name,
+        planName: plan.name
+      });
+      
+      return (
+        <div className="h-16 flex items-center">
+          <PayPalButtons
+            packageId={plan.id}
+            packageName={plan.name}
+            price={plan.priceNumber}
+            planId={plan.providerPlanId}
+            isCurrentPlan={isCurrentPlan}
+            hasActiveSubscription={hasActiveSubscription}
+          />
+        </div>
+      );
+    }
+
+    // Not logged in - show login button
+    return (
+      <div className="h-16 flex items-center">
+        <Button 
+          className="w-full h-12 text-sm font-semibold"
+          onClick={() => handlePlanSelection(plan)}
+        >
+          {plan.cta}
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -215,58 +348,60 @@ export default function ClientDashboard() {
       {/* Project Activity Section */}
       <ProjectActivity />
 
+      {/* Test Notification Button - Remove this after testing */}
+      <Card className="border-yellow-200 bg-yellow-50">
+        <CardHeader>
+          <CardTitle className="text-yellow-800">🧪 Test Notification ( Test environment only , will remove after deployment) </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={async () => {
+              try {
+                console.log('🧪 Testing notification creation...');
+                const res = await fetch('/api/test-notification', { method: 'POST' });
+                
+                console.log('🧪 Response status:', res.status);
+                console.log('🧪 Response headers:', Object.fromEntries(res.headers.entries()));
+                
+                const data = await res.json();
+                console.log('🧪 Test result:', data);
+                
+                if (res.ok) {
+                  toast.success('Test notification created!');
+                  // Dispatch event to refresh notification count
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('notification-refresh'));
+                  }, 1000);
+                } else {
+                  toast.error('Test notification failed: ' + (data.error || data.message || 'Unknown error'));
+                }
+              } catch (error) {
+                console.error('🧪 Test error:', error);
+                toast.error('Test notification failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+              }
+            }}
+            className="bg-yellow-600 hover:bg-yellow-700"
+          >
+            Create Test Notification
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Plan for later section */}
       <div className="mt-16">
         <h2 className="text-3xl font-bold text-gray-900  mb-8">
           Plan for later
         </h2>
+
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Pricing Plans */}
           <div className="lg:col-span-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                {
-                  id: "basic",
-                  name: "Basic Plan - Starter",
-                  price: "$0",
-                  period: "/monthly",
-                  features: [
-                    "Lorem Ipsum is simply dummy text",
-                    "Lorem Ipsum is simply dummy text", 
-                    "Lorem Ipsum is simply dummy text"
-                  ],
-                  cta: "CHOOSE YOUR PLAN",
-                },
-                {
-                  id: "pro",
-                  name: "Pro Plan - Starter",
-                  price: "$19.95",
-                  period: "/monthly",
-                  features: [
-                    "Lorem Ipsum is simply dummy text",
-                    "Lorem Ipsum is simply dummy text",
-                    "Lorem Ipsum is simply dummy text"
-                  ],
-                  cta: "CHOOSE YOUR PLAN",
-                },
-                {
-                  id: "premium",
-                  name: "Premium Plan - Starter",
-                  price: "$99",
-                  period: "/monthly",
-                  features: [
-                    "Lorem Ipsum is simply dummy text",
-                    "Lorem Ipsum is simply dummy text",
-                    "Lorem Ipsum is simply dummy text"
-                  ],
-                  cta: "CHOOSE YOUR PLAN",
-                }
-              ].map((plan) => (
-                <Card key={plan.id} className="border-2">
+              {plans.map((plan) => (
+                <Card key={plan.id} className={`border-2 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
                   <CardHeader>
-                    <CardTitle className={`text-lg font-semibold ${plan.id === "pro" ? "text-blue-600 underline" : ""}`}>
-                      {plan.name}
-                    </CardTitle>
+                    <CardTitle className="text-lg font-semibold">{plan.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="py-4 border-t">
@@ -276,9 +411,8 @@ export default function ClientDashboard() {
                       </div>
                     </div>
 
-                    <Button className="w-full h-12 text-sm font-semibold mt-2 bg-gray-600 hover:bg-gray-700">
-                      {plan.cta}
-                    </Button>
+                    {/* Plan Button */}
+                    {renderPlanButton(plan)}
 
                     <div className="mt-6 rounded-md border bg-gray-50">
                       <div className="px-4 py-3 font-semibold">Service Include:</div>

@@ -16,7 +16,7 @@ import { LogOut, User, Settings, Plus, FolderOpen, Menu, X, Bell, ChevronDown, Z
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePortal } from "@/features/shared/portal-context";
 import { PortalLoginModal } from "@/features/shared/components/portal-login-modal";
 import {
@@ -36,8 +36,14 @@ export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unread, setUnread] = useState<number>(0);
+  const [openNotif, setOpenNotif] = useState(false);
+  const [items, setItems] = useState<Array<{id:string; type:string; createdAt:string; payload:any; projectId?:string; read:boolean;}>>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const notifRef = useRef<HTMLDivElement | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingLogoutPortal, setPendingLogoutPortal] = useState<"client" | "freelancer" | null>(null);
+  const [userData, setUserData] = useState<any>(null);
   
   // Use portal context with fallback
   const portalContext = usePortal();
@@ -55,6 +61,100 @@ export function Header({ user }: HeaderProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch user data with photoUrl
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user?.id) {
+        try {
+          const response = await fetch("/api/user/me", { credentials: 'include' });
+          if (response.ok) {
+            const data = await response.json();
+            setUserData(data.user);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user data:", error);
+        }
+      }
+    };
+    
+    fetchUserData();
+  }, [user?.id]);
+
+  // Listen for profile updates
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      if (user?.id) {
+        fetch("/api/user/me", { credentials: 'include' })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => data && setUserData(data.user))
+          .catch(err => console.error("Failed to refresh user data:", err));
+      }
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+  }, [user?.id]);
+
+  // Function to refresh notification count
+  const refreshNotificationCount = async () => {
+    try {
+      const res = await fetch(`/api/notifications?only=unread&limit=10&_=${Date.now()}` , { 
+        cache: "no-store",
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      const serverUnread = typeof data.unreadCount === 'number' ? data.unreadCount : undefined;
+      const localUnread = items.reduce((acc: number, it: any) => acc + (it.read ? 0 : 1), 0);
+      setUnread(serverUnread && serverUnread > 0 ? serverUnread : localUnread);
+      console.log('🔔 Notification count refreshed:', data.unreadCount);
+    } catch (error) {
+      console.error('🔔 Failed to refresh notification count:', error);
+    }
+  };
+
+  // No polling: only load once on initial mount (handled below)
+
+  // Refresh unread count immediately when user becomes authenticated
+  useEffect(() => {
+    if (user?.id) {
+      refreshNotificationCount();
+      // small debounce retry in case session becomes ready right after mount
+      const t = setTimeout(() => refreshNotificationCount(), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [user?.id]);
+
+  // No focus/visibility refresh: user requested only on full page load
+
+  // No custom refresh events: load only once per page load
+
+  // Close notifications dropdown on outside click / Esc
+  useEffect(() => {
+    if (!openNotif) return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (notifRef.current && !notifRef.current.contains(target)) {
+        setOpenNotif(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenNotif(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [openNotif]);
 
   const getUserInitials = (name: string) => {
     return name
@@ -321,10 +421,6 @@ export function Header({ user }: HeaderProps) {
             {/* Public right actions */}
             {!isAuthenticated && (
               <div className="hidden md:flex items-center gap-6">
-                <div className="relative">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
-                </div>
                 <Link href="/help" className="text-sm">Help</Link>
                 <Link href="/auth/signin" className="text-sm">Log in</Link>
                 <Link href="/auth/signup" className="inline-flex items-center h-9 px-4 rounded-full bg-white text-black text-sm">Sign up</Link>
@@ -334,10 +430,145 @@ export function Header({ user }: HeaderProps) {
             {/* Authenticated right actions */}
             {isAuthenticated && (
               <div className="hidden md:flex items-center gap-6">
-                <button className="relative inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-white hover:text-black">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
-                </button>
+                <div className="relative">
+                  <button
+                    className="relative inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-white hover:text-black"
+                    onClick={async () => {
+                      const willOpen = !openNotif;
+                      console.log('🔔 Bell icon clicked. Will open:', willOpen);
+                      setOpenNotif(willOpen);
+                      if (willOpen) {
+                        console.log('🔔 Fetching notifications...');
+                        try {
+                          const res = await fetch(`/api/notifications?limit=10&_=${Date.now()}` , { 
+                            cache: "no-store",
+                            headers: {
+                              'Cache-Control': 'no-cache, no-store, must-revalidate',
+                              'Pragma': 'no-cache',
+                              'Expires': '0'
+                            }
+                          });
+                          console.log('🔔 Fetch response status:', res.status);
+                          if (res.ok) {
+                            const data = await res.json();
+                            console.log('🔔 Notifications fetched:', data);
+                            console.log('🔔 Items details:', data.items.map((item: any) => ({
+                              id: item.id,
+                              type: item.type,
+                              read: item.read,
+                              createdAt: item.createdAt,
+                              payload: item.payload
+                            })));
+                            const items = data.items || [];
+                            setItems(items);
+                            setCursor(data.nextCursor || null);
+                            // Fallback: if API unreadCount is missing/0 but we have unread items, compute locally
+                            const localUnread = items.reduce((acc: number, it: any) => acc + (it.read ? 0 : 1), 0);
+                            const serverUnread = typeof data.unreadCount === 'number' ? data.unreadCount : undefined;
+                            setUnread(serverUnread && serverUnread > 0 ? serverUnread : localUnread);
+                          } else {
+                            console.error('🔔 Failed to fetch notifications:', res.status);
+                          }
+                        } catch (error) {
+                          console.error('🔔 Fetch error:', error);
+                        }
+                      } else {
+                        console.log('🔔 Closing notification dropdown');
+                      }
+                    }}
+                  >
+                    <Bell className="w-5 h-5" />
+                    {unread > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] leading-4 text-center">
+                        {unread}
+                      </span>
+                    )}
+                  </button>
+                  {openNotif && (
+                    <>
+                      {/* click-away overlay */}
+                      <div className="fixed inset-0 z-40" onClick={() => setOpenNotif(false)} />
+                      <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-auto bg-white border rounded-lg shadow-lg z-50">
+                      <div className="flex items-center justify-between px-3 py-2 border-b">
+                        <span className="text-sm font-medium">Notifications</span>
+                        <button
+                          className="text-xs underline"
+                          onClick={async () => {
+                            await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read_all' }) });
+                            setUnread(0);
+                            setItems((prev) => prev.map((i) => ({ ...i, read: true })));
+                          }}
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+                      <ul className="divide-y">
+                        {items.length === 0 && (
+                          <li className="p-3 text-xs text-gray-500">No notifications</li>
+                        )}
+                        {items.map((n) => (
+                          <li
+                            key={n.id}
+                            className="p-3 text-sm hover:bg-gray-50 cursor-pointer"
+                            onClick={async () => {
+                              if (!n.read) {
+                                await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                setUnread((u) => Math.max(0, u - 1));
+                                setItems((prev) => prev.map((i) => (i.id === n.id ? { ...i, read: true } : i)));
+                              }
+                              if (n.type === "quota.project_limit_reached") {
+                                router.push("/pricing");
+                              } else if (n.projectId) {
+                                router.push(`/projects/${n.projectId}`);
+                              }
+                            }}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className={`mt-1 h-2 w-2 rounded-full ${n.read ? 'bg-gray-300' : 'bg-blue-600'}`} />
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-800">
+                                  {n.type === "quota.project_limit_reached" 
+                                    ? "Project Limit Reached" 
+                                    : n.type === "assignment.invited"
+                                    ? "New Project Assignment"
+                                    : n.type}
+                                </div>
+                                {n.payload?.message && (
+                                  <div className="text-xs text-gray-600">{n.payload.message}</div>
+                                )}
+                                {n.payload?.description && (
+                                  <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
+                                )}
+                                {n.payload?.projectTitle && (
+                                  <div className="text-xs text-gray-600">{n.payload.projectTitle}</div>
+                                )}
+                                <div className="text-[11px] text-gray-400">{new Date(n.createdAt).toLocaleString()}</div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                        {cursor && (
+                          <li className="p-2 text-center">
+                            <button
+                              className="text-xs underline"
+                              onClick={async () => {
+                                const res = await fetch(`/api/notifications?limit=10&cursor=${cursor}`);
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setItems((prev) => [...prev, ...(data.items || [])]);
+                                  setCursor(data.nextCursor || null);
+                                }
+                              }}
+                            >
+                              Load more
+                            </button>
+                          </li>
+                        )}
+                      </ul>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <Link href="/help" className="text-sm hover:bg-white hover:text-black px-3 py-1.5 rounded-full">Help</Link>
               </div>
             )}
@@ -348,7 +579,10 @@ export function Header({ user }: HeaderProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.image || undefined} alt={user.name || user.email || "User"} />
+                      <AvatarImage 
+                        src={userData?.photoUrl || user.image || undefined} 
+                        alt={user.name || user.email || "User"} 
+                      />
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {user.name ? getUserInitials(user.name) : user.email?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>

@@ -33,6 +33,8 @@ export async function PUT(request: NextRequest) {
         clientUpdateData.companyName = body.companyName;
       if (body.location !== undefined)
         clientUpdateData.location = body.location;
+      if (body.photoUrl !== undefined)
+        clientUpdateData.photoUrl = body.photoUrl;
 
       if (Object.keys(clientUpdateData).length > 0) {
         await db.clientProfile.upsert({

@@ -39,13 +39,31 @@ export async function POST(
     }
 
     const project = await prisma.project.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
+      include: {
+        assignmentCandidates: {
+          where: {
+            responseStatus: "accepted"
+          }
+        }
+      }
     });
 
     if (!project) {
       return NextResponse.json(
         { error: "Project not found" },
         { status: 404 }
+      );
+    }
+
+    // Check if project already has an accepted developer
+    if (project.assignmentCandidates.length > 0) {
+      return NextResponse.json(
+        { 
+          error: "Project already has an accepted developer",
+          message: "Someone has already accepted this project. Please refresh the page to see the updated status."
+        },
+        { status: 409 }
       );
     }
 

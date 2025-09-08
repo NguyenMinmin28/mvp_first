@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
+import AvatarUpload from "../avatar-upload";
 
 interface BasicInfoTabProps {
   profileData: any;
@@ -21,6 +22,15 @@ export default function BasicInfoTab({
         <CardTitle>Basic Information</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Avatar Upload Section */}
+        <AvatarUpload
+          value={profileData.photoUrl || profileData.image || ""}
+          onChange={(value) => onInputChange("photoUrl", value)}
+          disabled={!isEditing}
+          name={profileData.name}
+          size="md"
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="name">Full Name</Label>

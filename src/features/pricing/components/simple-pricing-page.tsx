@@ -85,11 +85,11 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
     // Basic Plan ($0) - luôn disable cho người dùng đã đăng nhập
     if (plan.id === "basic" && session) {
       return (
-        <div className="space-y-2">
-          <Button disabled className="w-full h-12 text-sm font-semibold mt-2 bg-green-600 text-white">
+        <div className="h-16 flex flex-col justify-center">
+          <Button disabled className="w-full h-12 text-sm font-semibold bg-green-600 text-white">
             ✓ Included Free
           </Button>
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground text-center mt-1">
             You already have Basic Plan access
           </p>
         </div>
@@ -103,25 +103,29 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
       const hasActiveSubscription = !!currentSubscription;
       
       return (
-        <PayPalButtons
-          packageId={plan.id}
-          packageName={plan.name}
-          price={plan.priceNumber}
-          planId={plan.providerPlanId}
-          isCurrentPlan={isCurrentPlan}
-          hasActiveSubscription={hasActiveSubscription}
-        />
+        <div className="h-16 flex items-center">
+          <PayPalButtons
+            packageId={plan.id}
+            packageName={plan.name}
+            price={plan.priceNumber}
+            planId={plan.providerPlanId}
+            isCurrentPlan={isCurrentPlan}
+            hasActiveSubscription={hasActiveSubscription}
+          />
+        </div>
       );
     }
 
     // Chưa đăng nhập - hiển thị nút đăng nhập
     return (
-      <Button 
-        className="w-full h-12 text-sm font-semibold mt-2"
-        onClick={() => handlePlanSelection(plan)}
-      >
-        {plan.cta}
-      </Button>
+      <div className="h-16 flex items-center">
+        <Button 
+          className="w-full h-12 text-sm font-semibold"
+          onClick={() => handlePlanSelection(plan)}
+        >
+          {plan.cta}
+        </Button>
+      </div>
     );
   };
 

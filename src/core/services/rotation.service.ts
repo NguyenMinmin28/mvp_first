@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { prisma } from "@/core/database/db";
 import type { Prisma } from "@prisma/client";
+import { NotificationService } from "./notification.service";
 type DevLevel = Prisma.$Enums.DevLevel;
 
 export interface BatchSelectionCriteria {
@@ -59,6 +60,15 @@ export class RotationService {
         } catch (_) {
           // Non-critical; ignore cursor update failures
         }
+
+        // Send WhatsApp notifications for new batch
+        try {
+          await NotificationService.sendBatchNotifications(result.batch.id);
+        } catch (error) {
+          console.error("Failed to send batch notifications:", error);
+          // Non-critical; don't fail the batch creation
+        }
+
         return result;
       } catch (err: any) {
         const message: string = err?.message || '';

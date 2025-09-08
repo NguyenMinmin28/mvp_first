@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Search, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 type Skill = { id: string; name: string };
 
@@ -197,7 +198,13 @@ export function ProjectPostForm({
   const handleFindFreelancer = async () => {
     if (isSubmitting) return;
     if (!Array.isArray(skills) || skills.length === 0) {
-      alert("Please select at least one technology");
+      toast.error("Please select at least one technology", {
+        description: "Choose the technologies you need for your project.",
+        action: {
+          label: "Select Skills",
+          onClick: () => setSkillOpen(true)
+        }
+      });
       return;
     }
 
@@ -241,7 +248,34 @@ export function ProjectPostForm({
         }
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(err?.error || "Failed to post project");
+        
+        // Debug response headers
+        console.log('🔍 Response headers:', {
+          status: res.status,
+          quotaExceeded: res.headers.get('X-Debug-Quota-Exceeded'),
+          userId: res.headers.get('X-Debug-User-ID'),
+          error: err
+        });
+        
+        // Check if it's a quota exceeded error
+        if (res.status === 402 || err?.code === "QUOTA_EXCEEDED" || err?.code === "FREE_LIMIT_EXCEEDED") {
+          toast.error("Project limit reached", {
+            description: "You've reached your project posting limit. Upgrade your plan to post more projects.",
+            action: {
+              label: "View Plans",
+              onClick: () => router.push("/pricing")
+            }
+          });
+          
+          // Dispatch event to refresh notification count
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('notification-refresh'));
+          }, 1000); // Wait 1 second for notification to be created
+        } else {
+          toast.error(err?.error || "Failed to post project", {
+            description: "Please try again or contact support if the problem persists."
+          });
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -260,7 +294,7 @@ export function ProjectPostForm({
       </div>
 
       <Card>
-        <CardContent className="pt-6 space-y-5">
+        <CardContent className="pt-6 space-y-5 project-form-content">
           {/* Project Title */}
           <div className="space-y-2">
             <Label htmlFor="project-title">Project Title</Label>

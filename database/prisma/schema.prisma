@@ -276,6 +276,7 @@ model ClientProfile {
 
   companyName String?
   location    String? // Country/City
+  photoUrl    String? // Profile photo URL
 
   currentSubscriptionId String?              @db.ObjectId
   subscriptions         Subscription[]       @relation("ClientSubscriptions")
@@ -604,7 +605,7 @@ model Project {
   // Relations
   assignmentBatches    AssignmentBatch[]       @relation("ProjectBatches")
   progressUpdates      ProjectProgressUpdate[] @relation("ProjectUpdates")
-  assignmentCandidates AssignmentCandidate[]   @relation("ProjectCandidates")
+  assignmentCandidates AssignmentCandidate[] @relation("ProjectCandidates")
   contactRevealEvents  ContactRevealEvent[]    @relation("ProjectContactReveals")
   reviews              Review[]                @relation("ProjectReviews")
 
@@ -676,6 +677,8 @@ model AssignmentCandidate {
 
   projectId String  @db.ObjectId
   project   Project @relation("ProjectCandidates", fields: [projectId], references: [id])
+  
+  notificationLogs NotificationLog[] @relation("CandidateNotifications")
 
   developerId String           @db.ObjectId
   developer   DeveloperProfile @relation("DeveloperCandidates", fields: [developerId], references: [id])
@@ -813,6 +816,58 @@ model RotationCursor {
   @@index([skillId], map: "idx_rotation_cursors_skillId")
   @@index([level], map: "idx_rotation_cursors_level")
   @@index([lastDeveloperId], map: "idx_rotation_cursors_lastDeveloperId")
+}
+
+/**
+ * ===== Notification Models =====
+ */
+model NotificationLog {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  candidateId String @db.ObjectId
+  candidate   AssignmentCandidate @relation("CandidateNotifications", fields: [candidateId], references: [id])
+
+  type String // "project_assignment", "reminder", "deadline_warning"
+  status String // "sent", "delivered", "failed"
+  sentAt DateTime
+  deliveredAt DateTime?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  @@index([candidateId], map: "idx_notification_log_candidateId")
+  @@index([type], map: "idx_notification_log_type")
+  @@index([status], map: "idx_notification_log_status")
+}
+
+// Notifications (generic, fan-out to users)
+model Notification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String
+  actorUserId String?  @db.ObjectId
+  projectId   String?  @db.ObjectId
+  payload     Json
+  createdAt   DateTime @default(now())
+
+  users NotificationUser[]
+
+  @@index([type], map: "idx_notification_type")
+  @@index([projectId], map: "idx_notification_project")
+  @@index([createdAt], map: "idx_notification_createdAt")
+}
+
+model NotificationUser {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  notificationId String   @db.ObjectId
+  userId         String   @db.ObjectId
+  readAt         DateTime?
+  archivedAt     DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [id])
+
+  @@index([userId, readAt], map: "idx_notifuser_user_read")
+  @@index([userId, archivedAt], map: "idx_notifuser_user_archived")
+  @@unique([notificationId, userId], map: "uq_notifuser_notification_user")
 }
 
 /**

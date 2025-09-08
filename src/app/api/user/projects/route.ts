@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
     // Transform projects to match the expected format
     const transformedProjects = projects.map(project => {
       const latestAssignment = project.assignmentCandidates[0];
+      const now = new Date();
       
       // Determine status based on project status first, then assignment response status
       let status = 'recent'; // default
@@ -60,6 +61,14 @@ export async function GET(request: NextRequest) {
       if (project.status === 'completed') {
         status = 'completed';
       } else if (latestAssignment) {
+        // If pending but past acceptance deadline -> treat as expired (rejected in UI)
+        if (
+          latestAssignment.responseStatus === 'pending' &&
+          latestAssignment.acceptanceDeadline &&
+          latestAssignment.acceptanceDeadline < now
+        ) {
+          status = 'rejected';
+        } else {
         // If project is not completed, check assignment status
         switch (latestAssignment.responseStatus) {
           case 'accepted':
@@ -79,6 +88,7 @@ export async function GET(request: NextRequest) {
                     project.status === 'accepted' ? 'approved' :
                     project.status === 'canceled' ? 'rejected' :
                     project.status === 'in_progress' ? 'in_progress' : 'recent';
+        }
         }
       } else {
         // No assignment, use project status

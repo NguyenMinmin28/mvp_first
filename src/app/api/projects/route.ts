@@ -4,6 +4,42 @@ import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import { RotationService } from "@/core/services/rotation.service";
 import { billingService } from "@/modules/billing/billing.service";
+import { notify } from "@/core/services/notify.service";
+
+/**
+ * Send quota exceeded notification to user (only once per quota period)
+ */
+async function sendQuotaExceededNotification(userId: string, clientProfileId: string) {
+  try {
+    console.log(`🔔 Attempting to send quota notification to user ${userId}, client ${clientProfileId}`);
+    
+    // Get current subscription info for the notification
+    const subscription = await billingService.getActiveSubscription(clientProfileId);
+    const currentPlan = subscription?.package?.name || "Basic Plan";
+    const projectLimit = subscription?.package?.projectsPerMonth || 1;
+
+    console.log(`📊 Current plan: ${currentPlan}, limit: ${projectLimit}`);
+
+    // Send notification (the notify service will handle deduplication)
+    const notificationId = await notify({
+      type: "quota.project_limit_reached",
+      actorUserId: userId,
+      payload: {
+        message: "You've reached your project posting limit",
+        description: `You've used all ${projectLimit} project(s) available in your ${currentPlan}. Upgrade your plan to post more projects.`,
+        currentPlan,
+        projectLimit,
+        upgradeUrl: "/pricing"
+      },
+      recipients: [userId]
+    });
+
+    console.log(`✅ Quota exceeded notification sent successfully! ID: ${notificationId}`);
+  } catch (error) {
+    console.error("❌ Failed to send quota exceeded notification:", error);
+    // Don't throw error - notification failure shouldn't break project creation flow
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -159,9 +195,14 @@ export async function POST(request: NextRequest) {
 
     // Check if user can post project (billing quota check)
     const quotaCheck = await billingService.canPostProject(clientProfile.id);
+    console.log(`🔍 Quota check result:`, quotaCheck);
     
     if (!quotaCheck.allowed) {
-      return NextResponse.json(
+      console.log(`🚫 Quota exceeded! Sending notification to user ${session.user.id}`);
+      // Send notification to user about quota exceeded (only once per period)
+      await sendQuotaExceededNotification(session.user.id, clientProfile.id);
+      
+      const response = NextResponse.json(
         {
           error: "Project limit reached",
           message: quotaCheck.reason || "You have reached your project posting limit for this period.",
@@ -170,6 +211,12 @@ export async function POST(request: NextRequest) {
         },
         { status: 402 } // Payment Required
       );
+      
+      // Add debug header
+      response.headers.set('X-Debug-Quota-Exceeded', 'true');
+      response.headers.set('X-Debug-User-ID', session.user.id);
+      
+      return response;
     }
 
     // Verify skills exist

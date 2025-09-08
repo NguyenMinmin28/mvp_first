@@ -114,6 +114,55 @@ export class WhatsAppService {
   }
 
   /**
+   * Gửi template message qua WhatsApp
+   */
+  async sendTemplateMessage(
+    phoneNumber: string,
+    templateName: string,
+    parameters: string[],
+    buttons?: Array<{ id: string; title: string; payload: string }>
+  ): Promise<WhatsAppResponse> {
+    const components: any[] = [];
+    
+    // Add body parameters if any
+    if (parameters.length > 0) {
+      components.push({
+        type: "body",
+        parameters: parameters.map(param => ({
+          type: "text",
+          text: param
+        }))
+      });
+    }
+    
+    // Add interactive buttons if provided
+    if (buttons && buttons.length > 0) {
+      components.push({
+        type: "button",
+        sub_type: "quick_reply",
+        index: "0",
+        parameters: buttons.map(button => ({
+          type: "payload",
+          payload: button.payload
+        }))
+      });
+    }
+
+    const message: WhatsAppMessage = {
+      messaging_product: "whatsapp",
+      to: WhatsAppService.formatPhoneForWhatsApp(phoneNumber),
+      type: "template",
+      template: {
+        name: templateName,
+        language: { code: "en" },
+        components: components.length > 0 ? components : undefined
+      }
+    };
+
+    return this.sendMessage(message);
+  }
+
+  /**
    * Gửi message qua WhatsApp Business API
    */
   private async sendMessage(

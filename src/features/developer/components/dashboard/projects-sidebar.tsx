@@ -17,6 +17,7 @@ interface AssignedProjectItem {
   currency?: string | null;
   skills?: string[];
   assignmentStatus?: string;
+  assignment?: any;
 }
 
 interface ProjectsSidebarProps {
@@ -35,9 +36,14 @@ export default function ProjectsSidebar({
   const [loading, setLoading] = useState<boolean>(false);
 
   const filtered = useMemo(() => {
+    const now = new Date();
+    const isPendingActive = (p: AssignedProjectItem) =>
+      p.assignment?.responseStatus === "pending" &&
+      p.assignment?.acceptanceDeadline &&
+      new Date(p.assignment.acceptanceDeadline) > now;
     switch (filter) {
       case "NEW":
-        return projects.filter((p) => p.status === "recent");
+        return projects.filter((p) => p.status === "recent" && isPendingActive(p));
       case "IN_PROGRESS":
         return projects.filter((p) => p.status === "in_progress");
       case "COMPLETED":
