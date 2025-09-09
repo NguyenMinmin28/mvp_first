@@ -404,34 +404,6 @@ export function ProjectPostForm({
             </div>
           </div>
 
-          {/* Project Type */}
-          <div>
-            <div className="flex items-center space-x-6">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="fixed"
-                  checked={paymentMethod === "fixed"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-4 w-4 text-black focus:ring-black"
-                />
-                <span className="text-sm text-gray-700">Pay fixed price</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="hourly"
-                  checked={paymentMethod === "hourly"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-4 w-4 text-black focus:ring-black"
-                />
-                <span className="text-sm text-gray-700">Pay by the hours</span>
-              </label>
-            </div>
-          </div>
-
           {/* Budget */}
           <div>
             <div className="flex items-center space-x-3">
@@ -462,6 +434,34 @@ export function ProjectPostForm({
             </div>
           </div>
 
+          {/* Project Type - moved below Budget as requested */}
+          <div>
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="fixed"
+                  checked={paymentMethod === "fixed"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="h-4 w-4 text-black focus:ring-black"
+                />
+                <span className="text-sm text-gray-700">Pay fixed price</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="hourly"
+                  checked={paymentMethod === "hourly"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="h-4 w-4 text-black focus:ring-black"
+                />
+                <span className="text-sm text-gray-700">Pay by the hours</span>
+              </label>
+            </div>
+          </div>
+
           {/* Post Project Button */}
           <Button className="w-full bg-black text-white hover:bg-black/90" onClick={handleFindFreelancer} disabled={isSubmitting}>
             {isSubmitting ? (
@@ -488,14 +488,7 @@ export function ProjectPostForm({
             </div>
           )}
 
-          {/* Login Link for authenticated users */}
-          {showLoginLink && status === "authenticated" && (
-            <div className="text-center">
-              <a href="/auth/signin" className="text-sm text-gray-500 hover:text-gray-700">
-                Log in to see your recent activity
-              </a>
-            </div>
-          )}
+          {/* Hide login link when authenticated */}
         </CardContent>
       </Card>
     </div>
