@@ -15,8 +15,8 @@ import AiMatch from "@/features/home/ai-match";
 import EarnFreedom from "@/features/home/earn-freedom";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Role-based dashboard",
+  title: "Home",
+  description: "Welcome to Developer Connect",
 };
 
 export default async function Home() {

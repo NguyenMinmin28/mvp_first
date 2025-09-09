@@ -38,13 +38,13 @@ export function UserLayout({
               <a href="/help" className="mt-2 inline-block underline text-sm text-gray-300">Visit Help Center</a>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8 text-gray-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-300 max-w-2xl">
               <div>
                 <h4 className="font-semibold text-white mb-3">Company</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:underline">About us</a></li>
-                  <li><a href="#" className="hover:underline">Our offerings</a></li>
-                  <li><a href="#" className="hover:underline">Newsroom</a></li>
+                  <li><a href="/about" className="hover:underline">About us</a></li>
+                  <li><a href="/ceo-letter" className="hover:underline">Our offerings</a></li>
+                  <li><a href="/blog" className="hover:underline">Newsroom</a></li>
                   <li><a href="#" className="hover:underline">Investors</a></li>
                   <li><a href="#" className="hover:underline">Careers</a></li>
                 </ul>
@@ -52,27 +52,11 @@ export function UserLayout({
               <div>
                 <h4 className="font-semibold text-white mb-3">Products</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:underline">Client</a></li>
-                  <li><a href="#" className="hover:underline">Freelancer</a></li>
-                  <li><a href="#" className="hover:underline">Pricing</a></li>
+                  <li><a href="/client-dashboard" className="hover:underline">Client</a></li>
+                  <li><a href="/dashboard-user" className="hover:underline">Freelancer</a></li>
+                  <li><a href="/pricing" className="hover:underline">Pricing</a></li>
                 </ul>
               </div>
-              <div>
-                <h4 className="font-semibold text-white mb-3">Global citizenship</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:underline">Safety</a></li>
-                  <li><a href="#" className="hover:underline">Sustainability</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-white mb-3">Travel</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:underline">Reserve</a></li>
-                  <li><a href="#" className="hover:underline">Airports</a></li>
-                  <li><a href="#" className="hover:underline">Cities</a></li>
-                </ul>
-              </div>
-
             </div>
 
             <div className="mt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-gray-400 text-sm">
@@ -105,12 +89,6 @@ export function UserLayout({
                   </svg>
                 </a>
                 
-                {/* Instagram */}
-                <a href="#" aria-label="Instagram" className="hover:opacity-80 transition-opacity">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987 6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.323-1.297C4.198 14.895 3.708 13.744 3.708 12.447s.49-2.448 1.418-3.323c.875-.807 2.026-1.297 3.323-1.297s2.448.49 3.323 1.297c.928.875 1.418 2.026 1.418 3.323s-.49 2.448-1.418 3.244c-.875.807-2.026 1.297-3.323 1.297zm7.83-9.781c-.49 0-.928-.175-1.297-.49-.368-.315-.49-.753-.49-1.243 0-.49.122-.928.49-1.243.369-.315.807-.49 1.297-.49s.928.175 1.297.49c.368.315.49.753.49 1.243 0 .49-.122.928-.49 1.243-.369.315-.807.49-1.297.49z"/>
-                  </svg>
-                </a>
               </div>
             </div>
             
@@ -118,16 +96,6 @@ export function UserLayout({
             <div className="mt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               {/* Left Side - Apps and Copyright */}
               <div className="flex flex-col gap-4">
-                {/* Apps Section */}
-                <div className="flex justify-start">
-                  <a href="#" className="inline-block">
-                    <img 
-                      src="/images/home/picgoapp.png" 
-                      alt="Download on Google Play and App Store" 
-                      className="h-12 w-auto"
-                    />
-                  </a>
-                </div>
                 
                 {/* Copyright - Bottom Left */}
                 <p className="text-gray-400 text-sm">© 2025 Clevrs</p>

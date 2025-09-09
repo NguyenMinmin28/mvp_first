@@ -9,7 +9,10 @@ import { cn } from "@/core/utils/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Developer Connect - Connect with Top Developers",
+  title: {
+    default: "Developer Connect",
+    template: "%s | Developer Connect",
+  },
   description: "Find and hire the best developers for your projects",
 };
 

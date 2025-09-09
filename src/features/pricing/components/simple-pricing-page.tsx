@@ -160,29 +160,29 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan) => (
-            <Card key={plan.id} className={`border-2 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
+            <Card key={plan.id} className={`border-2 flex flex-col hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">{plan.name}</CardTitle>
+                <CardTitle className="text-base font-semibold">{plan.name}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 flex flex-col">
                 <div className="py-4 border-t">
                   <div className="flex items-end gap-2">
-                    <span className="text-5xl font-extrabold">{plan.price}</span>
-                    <span className="text-sm text-gray-500">{plan.period}</span>
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-xs text-gray-500">{plan.period}</span>
                   </div>
                 </div>
 
                 {/* Plan Button */}
                 {renderPlanButton(plan)}
 
-                <div className="mt-6 rounded-md border bg-gray-50">
-                  <div className="px-4 py-3 font-semibold">Service Include:</div>
-                  <ul className="px-4 pb-4 space-y-3 text-sm text-gray-700">
+                <div className="mt-4 rounded-md border bg-gray-50">
+                  <div className="px-4 py-2 text-sm font-medium">Service Include:</div>
+                  <ul className="px-4 pb-4 space-y-2 text-sm text-gray-700">
                     {plan.features.map((f, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <span className="mt-1 inline-block h-2 w-2 rounded-full bg-gray-600" />
+                        <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-gray-600" />
                         <span>{f}</span>
                       </li>
                     ))}

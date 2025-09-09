@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/core/database/db";
 import { ProjectManagementPage } from "@/features/projects/components/project-management-page";
 import { UserLayout } from "@/features/shared/components/user-layout";
+import { Metadata } from "next";
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
@@ -79,3 +80,8 @@ export default async function ProjectsPage() {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Projects",
+  description: "Manage your projects",
+};

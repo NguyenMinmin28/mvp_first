@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/core/database/db";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ProjectDetailPage from "@/features/client/components/project-detail-page";
+import { Metadata } from "next";
 
 interface ProjectDetailPageProps {
   params: {
@@ -63,3 +64,8 @@ export default async function ProjectDetail({ params }: ProjectDetailPageProps) 
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Project Detail",
+  description: "View project details and candidates",
+};

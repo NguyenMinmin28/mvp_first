@@ -6,6 +6,7 @@ import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import SimplePricingPage from "@/features/pricing/components/simple-pricing-page";
 import { UserLayout } from "@/features/shared/components/user-layout";
+import { Metadata } from "next";
 
 export default async function Pricing() {
   const session = await getServerSession(authOptions);
@@ -53,3 +54,8 @@ export default async function Pricing() {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description: "Choose a plan that fits your needs",
+};

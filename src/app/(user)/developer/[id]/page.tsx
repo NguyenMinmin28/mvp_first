@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { Metadata } from "next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import { redirect } from "next/navigation";
@@ -134,5 +135,10 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Developer Profile",
+  description: "View developer skills and experience",
+};
 
 

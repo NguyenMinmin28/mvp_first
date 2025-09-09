@@ -19,6 +19,7 @@ import {
   Phone
 } from "lucide-react";
 import Link from "next/link";
+import { Metadata } from "next";
 
 interface FavoriteDeveloper {
   id: string;
@@ -278,3 +279,8 @@ export default function FavoritesPage() {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Favorites",
+  description: "Your saved developers",
+};

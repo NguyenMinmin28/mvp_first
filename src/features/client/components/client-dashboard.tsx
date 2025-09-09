@@ -293,7 +293,7 @@ export default function ClientDashboard() {
           <div className="grid grid-cols-2 gap-4">
             {/* Favourite Card */}
             <Card 
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200"
               onClick={() => router.push('/favorites')}
             >
               <CardContent className="pt-6 text-center">
@@ -307,7 +307,7 @@ export default function ClientDashboard() {
             </Card>
 
             {/* Starter Card */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200">
               <CardContent className="pt-6 text-center">
                 <div className="flex justify-center mb-3">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -319,7 +319,7 @@ export default function ClientDashboard() {
             </Card>
 
             {/* Mid Card */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200">
               <CardContent className="pt-6 text-center">
                 <div className="flex justify-center mb-3">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -331,7 +331,7 @@ export default function ClientDashboard() {
             </Card>
 
             {/* Expert Card */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200">
               <CardContent className="pt-6 text-center">
                 <div className="flex justify-center mb-3">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -399,27 +399,27 @@ export default function ClientDashboard() {
           <div className="lg:col-span-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {plans.map((plan) => (
-                <Card key={plan.id} className={`border-2 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
+                <Card key={plan.id} className={`border-2 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
                   <CardHeader>
-                    <CardTitle className="text-lg font-semibold">{plan.name}</CardTitle>
+                    <CardTitle className="text-base font-semibold">{plan.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="py-4 border-t">
                       <div className="flex items-end gap-2">
-                        <span className="text-5xl font-extrabold">{plan.price}</span>
-                        <span className="text-sm text-gray-500">{plan.period}</span>
+                        <span className="text-4xl font-bold">{plan.price}</span>
+                        <span className="text-xs text-gray-500">{plan.period}</span>
                       </div>
                     </div>
 
                     {/* Plan Button */}
                     {renderPlanButton(plan)}
 
-                    <div className="mt-6 rounded-md border bg-gray-50">
-                      <div className="px-4 py-3 font-semibold">Service Include:</div>
-                      <ul className="px-4 pb-4 space-y-3 text-sm text-gray-700">
+                    <div className="mt-4 rounded-md border bg-gray-50">
+                      <div className="px-4 py-2 text-sm font-medium">Service Include:</div>
+                      <ul className="px-4 pb-4 space-y-2 text-sm text-gray-700">
                         {plan.features.map((f, i) => (
                           <li key={i} className="flex items-start gap-2">
-                            <span className="mt-1 inline-block h-2 w-2 rounded-full bg-gray-600" />
+                            <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-gray-600" />
                             <span>{f}</span>
                           </li>
                         ))}
@@ -432,8 +432,8 @@ export default function ClientDashboard() {
           </div>
 
           {/* Benefits Section */}
-          <div className="lg:col-span-1">
-            <Card className="h-fit">
+          <div className="lg:col-span-1 flex">
+            <Card className="h-full flex-1">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Benefits</CardTitle>
               </CardHeader>
@@ -452,7 +452,7 @@ export default function ClientDashboard() {
                     <p className="text-sm text-gray-700">Keep 100% earnings, zero commission</p>
                   </div>
                 </div>
-                <div className="mt-6 pt-4 border-t">
+                <div className="mt-6 pt-4 border-t text-center">
                   <a href="#" className="text-sm text-gray-600 underline hover:text-gray-800">
                     See terms
                   </a>

@@ -8,7 +8,7 @@ import { Label } from "@/ui/components/label";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { Search, Upload } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 
 type Skill = { id: string; name: string };
@@ -34,12 +34,12 @@ export function ProjectPostForm({
   const [skillOpen, setSkillOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<string>("hourly");
+  const [paymentMethod, setPaymentMethod] = useState<string>("fixed"); // Default to fixed price
   const [budget, setBudget] = useState<string>("");
   const [currency, setCurrency] = useState<string>("USD");
   const [projectTitle, setProjectTitle] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [projectDescription, setProjectDescription] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: boolean}>({});
   const skillDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load saved form data from sessionStorage
@@ -51,12 +51,11 @@ export function ProjectPostForm({
         const parsed = JSON.parse(savedData);
         console.log('🔍 Parsed form data:', parsed);
         setProjectTitle(parsed.title || "");
+        setProjectDescription(parsed.description || "");
         setSkills(parsed.skills || []);
-        setPaymentMethod(parsed.paymentMethod || "hourly");
+        setPaymentMethod(parsed.paymentMethod || "fixed");
         setBudget(parsed.budget || "");
         setCurrency(parsed.currency || "USD");
-        setStartDate(parsed.startDate || "");
-        setEndDate(parsed.endDate || "");
         console.log('✅ Form data loaded successfully');
       } catch (error) {
         console.error('Error parsing saved form data:', error);
@@ -76,11 +75,9 @@ export function ProjectPostForm({
         console.log('🔍 Parsed form data on mount:', parsed);
         setProjectTitle(parsed.title || "");
         setSkills(parsed.skills || []);
-        setPaymentMethod(parsed.paymentMethod || "hourly");
+        setPaymentMethod(parsed.paymentMethod || "fixed");
         setBudget(parsed.budget || "");
         setCurrency(parsed.currency || "USD");
-        setStartDate(parsed.startDate || "");
-        setEndDate(parsed.endDate || "");
         console.log('✅ Form data loaded successfully on mount');
       } catch (error) {
         console.error('Error parsing saved form data on mount:', error);
@@ -93,24 +90,34 @@ export function ProjectPostForm({
   // Save form data to sessionStorage for all users (not just guests)
   useEffect(() => {
     // Only save if there's actual data to save
-    if (projectTitle.trim() || skills.length > 0 || budget.trim() || startDate || endDate) {
+    if (projectTitle.trim() || projectDescription.trim() || skills.length > 0 || budget.trim()) {
       const formData = {
         title: projectTitle,
+        description: projectDescription,
         skills: skills,
         paymentMethod: paymentMethod,
         budget: budget,
-        currency: currency,
-        startDate: startDate,
-        endDate: endDate
+        currency: currency
       };
       console.log('💾 Saving form data:', formData, 'Session status:', status);
       sessionStorage.setItem('guestProjectForm', JSON.stringify(formData));
     }
-  }, [projectTitle, skills, paymentMethod, budget, currency, startDate, endDate, status]);
+  }, [projectTitle, projectDescription, skills, paymentMethod, budget, currency, status]);
 
   // Clear saved data when user successfully submits the form
   const clearSavedData = () => {
     sessionStorage.removeItem('guestProjectForm');
+  };
+
+  // Clear validation error when user starts typing
+  const clearFieldError = (fieldName: string) => {
+    if (validationErrors[fieldName]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
   };
 
   // Handle login for existing users
@@ -158,7 +165,10 @@ export function ProjectPostForm({
     return availableSkills.filter((s) => selected.has(s.id));
   }, [availableSkills, skills]);
 
-  const addSkill = (id: string) => setSkills((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  const addSkill = (id: string) => {
+    setSkills((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    clearFieldError('skills');
+  };
   const removeSkill = (id: string) => setSkills((prev) => prev.filter((x) => x !== id));
 
   // Handle click outside to close dropdown
@@ -197,14 +207,43 @@ export function ProjectPostForm({
 
   const handleFindFreelancer = async () => {
     if (isSubmitting) return;
+    
+    // Validate required fields and set errors
+    const errors: {[key: string]: boolean} = {};
+    
+    if (!projectTitle.trim()) {
+      errors.projectTitle = true;
+    }
+    if (!projectDescription.trim()) {
+      errors.projectDescription = true;
+    }
     if (!Array.isArray(skills) || skills.length === 0) {
-      toast.error("Please select at least one technology", {
-        description: "Choose the technologies you need for your project.",
-        action: {
-          label: "Select Skills",
-          onClick: () => setSkillOpen(true)
-        }
-      });
+      errors.skills = true;
+    }
+    if (!budget.trim()) {
+      errors.budget = true;
+    }
+
+    // If there are validation errors, show them and return
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      
+      // Show toast for the first error
+      if (errors.projectTitle) {
+        toast.error("Project title is required");
+      } else if (errors.projectDescription) {
+        toast.error("Project description is required");
+      } else if (errors.skills) {
+        toast.error("Please select at least one skill", {
+          description: "Choose the skills you need for your project.",
+          action: {
+            label: "Select Skills",
+            onClick: () => setSkillOpen(true)
+          }
+        });
+      } else if (errors.budget) {
+        toast.error("Budget is required");
+      }
       return;
     }
 
@@ -218,20 +257,16 @@ export function ProjectPostForm({
     // If user is logged in, proceed with project creation
     setIsSubmitting(true);
     try {
-      const titleInput = projectTitle.trim() || "Quick project";
-      const description = `Quick post: ${titleInput}`;
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          title: titleInput, 
-          description, 
+          title: projectTitle.trim(), 
+          description: projectDescription.trim(), 
           skillsRequired: skills,
-          paymentMethod,
+          paymentMethod: paymentMethod,
           budget: budget ? Number(budget) : undefined,
-          currency: currency,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined
+          currency: currency
         }),
       });
       if (res.ok) {
@@ -297,19 +332,75 @@ export function ProjectPostForm({
         <CardContent className="pt-6 space-y-5 project-form-content">
           {/* Project Title */}
           <div className="space-y-2">
-            <Label htmlFor="project-title">Project Title</Label>
+            <Label htmlFor="project-title" className={validationErrors.projectTitle ? "text-red-600" : ""}>Project Title</Label>
             <Input 
               id="project-title" 
-              placeholder="Enter your project title"
+              placeholder="e.g. Food Delivery App"
               value={projectTitle}
-              onChange={(e) => setProjectTitle(e.target.value)}
-              className="w-full"
+              onChange={(e) => {
+                setProjectTitle(e.target.value);
+                clearFieldError('projectTitle');
+              }}
+              className={`w-full ${validationErrors.projectTitle ? 'border-red-500 focus:ring-red-500' : ''}`}
+              required
             />
           </div>
 
-          {/* Technologies (multi-select dropdown, no free typing) */}
+          {/* Budget */}
           <div className="space-y-2">
-            <Label>Technologies</Label>
+            <Label className={validationErrors.budget ? "text-red-600" : ""}>Budget</Label>
+            <div className="flex items-center space-x-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <Input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={budget}
+                  onChange={(e) => {
+                    setBudget(e.target.value);
+                    clearFieldError('budget');
+                  }}
+                  className={`w-full pl-8 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="USD">USD</option>
+                <option value="VND">VND</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="project-description" className={validationErrors.projectDescription ? "text-red-600" : ""}>Description</Label>
+            <textarea
+              id="project-description"
+              placeholder="Briefly describe your goal and key features"
+              value={projectDescription}
+              onChange={(e) => {
+                setProjectDescription(e.target.value);
+                clearFieldError('projectDescription');
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none ${
+                validationErrors.projectDescription 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-black'
+              }`}
+              rows={4}
+              required
+            />
+          </div>
+
+          {/* Skills */}
+          <div className="space-y-2">
+            <Label className={validationErrors.skills ? "text-red-600" : ""}>Skills</Label>
             {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedSkills.map((s) => (
@@ -323,10 +414,10 @@ export function ProjectPostForm({
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-between"
+                className={`w-full justify-between ${validationErrors.skills ? 'border-red-500 text-red-600' : ''}`}
                 onClick={handleToggleDropdown}
               >
-                {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Select technologies"}
+                {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Select skills"}
                 <span className="ml-2">▾</span>
               </Button>
               {skillOpen && (
@@ -353,21 +444,10 @@ export function ProjectPostForm({
             </div>
           </div>
 
-          {/* Payment Method */}
+          {/* Project Type */}
           <div className="space-y-2">
-            <Label>Payment Method</Label>
+            <Label>Project Type</Label>
             <div className="flex items-center space-x-6">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="hourly"
-                  checked={paymentMethod === "hourly"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-4 w-4 text-black focus:ring-black"
-                />
-                <span className="text-sm text-gray-700">Pay by the hours</span>
-              </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="radio"
@@ -377,98 +457,47 @@ export function ProjectPostForm({
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="h-4 w-4 text-black focus:ring-black"
                 />
-                <span className="text-sm text-gray-700">Pay fixed price</span>
+                <span className="text-sm text-gray-700">Fixed Price</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="hourly"
+                  checked={paymentMethod === "hourly"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="h-4 w-4 text-black focus:ring-black"
+                />
+                <span className="text-sm text-gray-700">Hourly</span>
               </label>
             </div>
           </div>
 
-          {/* Budget and Currency */}
-          <div className="space-y-2">
-            <Label>Budget (Optional)</Label>
-            <div className="flex items-center space-x-3">
-              <Input
-                type="number"
-                placeholder="Enter budget amount"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                className="flex-1"
-                min="0"
-                step="0.01"
-              />
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="USD">USD</option>
-                <option value="VND">VND</option>
-              </select>
-            </div>
-            <p className="text-xs text-gray-500">
-              {paymentMethod === "hourly" ? "Hourly rate" : "Total project budget"}
-            </p>
-          </div>
-
-          {/* Date Range */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-date">Start Date</Label>
-              <Input 
-                id="start-date" 
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end-date">Expected end date</Label>
-              <Input 
-                id="end-date" 
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* Document Upload */}
-          <div className="space-y-2">
-            <Label htmlFor="document">Upload Product document</Label>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Browse File
-              </Button>
-              <span className="text-sm text-gray-500">No file chosen</span>
-            </div>
-          </div>
-
-          {/* Find Freelancer Button */}
+          {/* Post Project Button */}
           <Button className="w-full bg-black text-white hover:bg-black/90" onClick={handleFindFreelancer} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating Project & Finding Developers...
+                Creating Project...
               </>
             ) : (
               <>
-                <Search className="h-4 w-4 mr-2" />
-                {status === "unauthenticated" ? "Sign Up to Find Freelancer" : "Find Freelancer"}
+                {status === "unauthenticated" ? "Sign Up to Post Project" : "Post Project"}
               </>
             )}
           </Button>
 
           {/* Login Button for unauthenticated users */}
           {status === "unauthenticated" && (
-            <Button 
-              variant="outline" 
-              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50" 
-              onClick={handleLogin}
-            >
-              Already have an account? Log In
-            </Button>
+            <div className="text-center">
+              <span className="text-sm text-gray-600">Already have an account? </span>
+              <button 
+                className="text-sm text-black underline hover:no-underline"
+                onClick={handleLogin}
+              >
+                Log in
+              </button>
+            </div>
           )}
 
           {/* Login Link for authenticated users */}

@@ -6,6 +6,7 @@ import { authOptions } from "@/features/auth/auth";
 import { redirect } from "next/navigation";
 import { SubmitIdeaForm } from "@/features/ideas/components";
 import { UserLayout } from "@/features/shared/components/user-layout";
+import { Metadata } from "next";
 
 export default async function SubmitIdeaPage() {
   const session = await getServerSession(authOptions);
@@ -22,5 +23,10 @@ export default async function SubmitIdeaPage() {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Submit Idea",
+  description: "Share your idea with the community",
+};
 
 

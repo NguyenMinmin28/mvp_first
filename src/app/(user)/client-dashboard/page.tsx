@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { getServerSessionUser } from "@/features/auth/auth-server";
+import { Metadata } from "next";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ClientDashboard from "@/features/client/components/client-dashboard";
 
@@ -18,3 +19,8 @@ export default async function ClientDashboardPage() {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Client Dashboard",
+  description: "Manage your projects and invitations",
+};

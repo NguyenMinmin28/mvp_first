@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { UserLayout } from "@/features/shared/components/user-layout";
+import { Metadata } from "next";
 
 export default async function HelpPage() {
   const user = await getServerSessionUser();
@@ -86,3 +87,8 @@ export default async function HelpPage() {
     </UserLayout>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Help Center",
+  description: "Find answers and guides",
+};
