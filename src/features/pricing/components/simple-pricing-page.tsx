@@ -116,14 +116,24 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
       );
     }
 
-    // Chưa đăng nhập - hiển thị nút đăng nhập
+    // Chưa đăng nhập - hiển thị label theo yêu cầu trên trang public/home
+    const unauthenticatedLabel =
+      plan.id === "basic"
+        ? "Current Plan"
+        : plan.id === "plus"
+        ? "Upgrade to Plus"
+        : plan.id === "pro"
+        ? "Upgrade to Pro"
+        : plan.cta;
+
     return (
       <div className="h-16 flex items-center">
-        <Button 
+        <Button
           className="w-full h-12 text-sm font-semibold"
+          disabled={plan.id === "basic"}
           onClick={() => handlePlanSelection(plan)}
         >
-          {plan.cta}
+          {unauthenticatedLabel}
         </Button>
       </div>
     );

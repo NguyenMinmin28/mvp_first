@@ -10,7 +10,7 @@ export default function Workspace() {
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div>
-            <h2 className="text-4xl font-extrabold tracking-tight mb-4">Log in to your workspace</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight mb-4">Login to your workspace</h2>
             <p className="text-gray-700 mb-6 text-lg">
               Access projects, contracts, payments & connections in one place.
             </p>
@@ -35,7 +35,7 @@ export default function Workspace() {
             )}
           </div>
           <div>
-            <img src="/images/home/workspace.png" alt="workspace" className="w-full h-auto rounded-xl object-cover" />
+            <img src="/images/home/loginworkspace.png" alt="workspace" className="w-full h-auto rounded-xl object-cover" />
           </div>
         </div>
       </div>

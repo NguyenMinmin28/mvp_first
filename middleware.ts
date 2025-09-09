@@ -6,7 +6,8 @@ import { getToken } from "next-auth/jwt";
 const PUBLIC_ROUTES = [
   "/", "/pricing", "/about", "/blog", "/ceo-letter", "/help",
   "/auth/signin", "/auth/signup", 
-  "/role-selection", "/ideas"
+  "/role-selection", "/ideas", 
+  "/how-clevrs-work", "/newsroom", "/investors"
 ];
 
 import {

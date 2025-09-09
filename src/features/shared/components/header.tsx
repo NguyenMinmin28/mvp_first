@@ -629,7 +629,8 @@ export function Header({ user }: HeaderProps) {
         {isAuthenticated && user && (
           <div className="w-full bg-black text-white">
             <div className="container px-4 py-2 text-sm">
-              {`Welcome back, ${user.name || user.email || "there"}`}
+              <span className="opacity-80">Welcome back,</span>{" "}
+              <span className="font-semibold text-white">{user.name || user.email || "there"}</span>
             </div>
           </div>
         )}

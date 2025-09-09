@@ -27,7 +27,7 @@ export function HeroProject() {
   return (
     <section className="w-full py-8 md:py-16">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-6 md:gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.1fr] lg:grid-cols-[0.8fr_1.2fr] gap-6 md:gap-8 items-stretch">
           {/* Left: Form column */}
           <div className="md:pr-4" ref={formContentRef}>
             <ProjectPostForm 
@@ -38,14 +38,16 @@ export function HeroProject() {
           </div>
 
           {/* Right: Image column */}
-          <div className="w-full" style={{ height: rightHeight ? Math.round(rightHeight * IMAGE_SCALE) : undefined }}>
+          <div className="w-full">
             <Card className="h-full">
-              <CardContent className="pt-6 p-0 flex items-start justify-center bg-white h-full overflow-hidden">
-                <img
-                  alt="Hire freelancer directly"
-                  src="/images/home/hireafreelance.png"
-                  className="h-[110%] w-full object-cover object-top"
-                />
+              <CardContent className="p-0 h-full">
+                <div className="relative h-[280px] sm:h-[360px] md:h-full w-full overflow-hidden rounded-xl">
+                  <img
+                    alt="Hire freelancer directly"
+                    src="/images/home/herobanner2.png"
+                    className="absolute inset-0 h-full w-full object-contain"
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>

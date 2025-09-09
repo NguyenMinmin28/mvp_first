@@ -11,8 +11,45 @@
   }
 }
 
+@keyframes anchor-pop {
+  0% { transform: translateY(8px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes anchor-glow {
+  0% { box-shadow: 0 0 0 0 rgba(0,0,0,0.35); }
+  100% { box-shadow: 0 0 0 18px rgba(0,0,0,0); }
+}
+
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+.hash-pop {
+  animation: anchor-pop 800ms ease-out;
+}
+
+.hash-glow {
+  animation: anchor-glow 1200ms ease-out;
+}
+
+/* Hash focus layout + motion utilities */
+.hash-zoom {
+  transform: scale(1.0125);
+  transition: transform 400ms ease, box-shadow 400ms ease;
+  box-shadow: 0 16px 32px -12px rgba(0,0,0,0.28);
+}
+
+.hash-dim {
+  transform: scale(0.995);
+  opacity: 0.95;
+  transition: transform 300ms ease, opacity 300ms ease, filter 300ms ease;
+  filter: saturate(0.96);
+}
+
+@media (min-width: 768px) {
+  /* Removed spanning to avoid breaking layout */
 }
 
 @layer base {
@@ -85,6 +122,9 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  html {
+    scroll-behavior: smooth;
   }
 }
 
