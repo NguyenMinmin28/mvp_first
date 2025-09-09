@@ -21,8 +21,8 @@ interface ProjectPostFormProps {
 }
 
 export function ProjectPostForm({ 
-  title = "Project Post", 
-  description = "Post your project and find the perfect freelancer",
+  title = "Find Freelancer", 
+  description = "",
   showLoginLink = true,
   onSuccess
 }: ProjectPostFormProps) {
@@ -319,23 +319,16 @@ export function ProjectPostForm({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {title}
-        </h1>
-        <p className="text-gray-600">
-          {description}
-        </p>
-      </div>
-
       <Card>
         <CardContent className="pt-6 space-y-5 project-form-content">
+          <h1 className="text-5xl font-bold text-gray-900 mb-4">
+            {title}
+          </h1>
           {/* Project Title */}
-          <div className="space-y-2">
-            <Label htmlFor="project-title" className={validationErrors.projectTitle ? "text-red-600" : ""}>Project Title</Label>
+          <div>
             <Input 
               id="project-title" 
-              placeholder="e.g. Food Delivery App"
+              placeholder="Project Title"
               value={projectTitle}
               onChange={(e) => {
                 setProjectTitle(e.target.value);
@@ -346,43 +339,11 @@ export function ProjectPostForm({
             />
           </div>
 
-          {/* Budget */}
-          <div className="space-y-2">
-            <Label className={validationErrors.budget ? "text-red-600" : ""}>Budget</Label>
-            <div className="flex items-center space-x-3">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                <Input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={budget}
-                  onChange={(e) => {
-                    setBudget(e.target.value);
-                    clearFieldError('budget');
-                  }}
-                  className={`w-full pl-8 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="USD">USD</option>
-                <option value="VND">VND</option>
-              </select>
-            </div>
-          </div>
-
           {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="project-description" className={validationErrors.projectDescription ? "text-red-600" : ""}>Description</Label>
+          <div>
             <textarea
               id="project-description"
-              placeholder="Briefly describe your goal and key features"
+              placeholder="Project Description"
               value={projectDescription}
               onChange={(e) => {
                 setProjectDescription(e.target.value);
@@ -399,8 +360,7 @@ export function ProjectPostForm({
           </div>
 
           {/* Skills */}
-          <div className="space-y-2">
-            <Label className={validationErrors.skills ? "text-red-600" : ""}>Skills</Label>
+          <div>
             {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedSkills.map((s) => (
@@ -417,7 +377,7 @@ export function ProjectPostForm({
                 className={`w-full justify-between ${validationErrors.skills ? 'border-red-500 text-red-600' : ''}`}
                 onClick={handleToggleDropdown}
               >
-                {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Select skills"}
+                {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Skills"}
                 <span className="ml-2">▾</span>
               </Button>
               {skillOpen && (
@@ -445,8 +405,7 @@ export function ProjectPostForm({
           </div>
 
           {/* Project Type */}
-          <div className="space-y-2">
-            <Label>Project Type</Label>
+          <div>
             <div className="flex items-center space-x-6">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -457,7 +416,7 @@ export function ProjectPostForm({
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="h-4 w-4 text-black focus:ring-black"
                 />
-                <span className="text-sm text-gray-700">Fixed Price</span>
+                <span className="text-sm text-gray-700">Pay fixed price</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -468,8 +427,38 @@ export function ProjectPostForm({
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="h-4 w-4 text-black focus:ring-black"
                 />
-                <span className="text-sm text-gray-700">Hourly</span>
+                <span className="text-sm text-gray-700">Pay by the hours</span>
               </label>
+            </div>
+          </div>
+
+          {/* Budget */}
+          <div>
+            <div className="flex items-center space-x-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <Input
+                  type="number"
+                  placeholder="Budget"
+                  value={budget}
+                  onChange={(e) => {
+                    setBudget(e.target.value);
+                    clearFieldError('budget');
+                  }}
+                  className={`w-full pl-8 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="USD">USD</option>
+                <option value="VND">VND</option>
+              </select>
             </div>
           </div>
 
@@ -478,11 +467,11 @@ export function ProjectPostForm({
             {isSubmitting ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating Project...
+                Finding...
               </>
             ) : (
               <>
-                {status === "unauthenticated" ? "Sign Up to Post Project" : "Post Project"}
+                Find
               </>
             )}
           </Button>
@@ -490,12 +479,11 @@ export function ProjectPostForm({
           {/* Login Button for unauthenticated users */}
           {status === "unauthenticated" && (
             <div className="text-center">
-              <span className="text-sm text-gray-600">Already have an account? </span>
               <button 
-                className="text-sm text-black underline hover:no-underline"
+                className="text-sm text-gray-500 underline hover:no-underline"
                 onClick={handleLogin}
               >
-                Log in
+                Log in to access your recent projects
               </button>
             </div>
           )}

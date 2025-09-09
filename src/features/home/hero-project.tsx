@@ -7,8 +7,8 @@ import { ProjectPostForm } from "@/features/client/components/project-post-form"
 export function HeroProject() {
   const formContentRef = useRef<HTMLDivElement | null>(null);
   const [rightHeight, setRightHeight] = useState<number | undefined>(undefined);
-  // Tuning factor to make image slightly shorter than form content
-  const IMAGE_SCALE = 1.2; // slight increase
+  // Keep image container height synced with form content
+  const IMAGE_SCALE = 1.0;
 
   useEffect(() => {
     const sync = () => {
@@ -32,7 +32,7 @@ export function HeroProject() {
           <div className="md:pr-4" ref={formContentRef}>
             <ProjectPostForm 
               title="Find Freelancer"
-              description="Post your project and find the perfect freelancer"
+              description=""
               showLoginLink={true}
             />
           </div>
@@ -40,11 +40,11 @@ export function HeroProject() {
           {/* Right: Image column */}
           <div className="w-full" style={{ height: rightHeight ? Math.round(rightHeight * IMAGE_SCALE) : undefined }}>
             <Card className="h-full">
-              <CardContent className="p-0 flex items-center justify-center bg-white h-full">
+              <CardContent className="pt-6 p-0 flex items-start justify-center bg-white h-full overflow-hidden">
                 <img
                   alt="Hire freelancer directly"
-                  src="/images/home/clerves.webp"
-                  className="h-full w-auto object-contain"
+                  src="/images/home/hireafreelance.png"
+                  className="h-[110%] w-full object-cover object-top"
                 />
               </CardContent>
             </Card>
