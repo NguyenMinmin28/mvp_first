@@ -240,7 +240,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   // Helper function to format date
   const formatDate = (dateString: string | Date) => {
-    if (!dateString) return "Not set";
+    if (!dateString) return "Date not available";
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
       day: 'numeric', 
@@ -255,9 +255,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       const names = projectSkills.length
         ? projectSkills
         : (projectData?.skillsRequired || []).map((id: string) => id);
-      return names.length ? names.join(", ") : "Not specified";
+      return names.length ? names.join(", ") : "No skills specified";
     } catch {
-      return "Not specified";
+      return "No skills specified";
     }
   };
 
@@ -500,12 +500,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
                 <span className="font-medium text-sm lg:text-base">
-                  {formatDate(projectData?.expectedStartAt)}
+                  {projectData?.paymentMethod === "hourly" ? "Hourly Rate" : "Fixed Price"}
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
                 <span className="font-medium text-sm lg:text-base">
-                  {formatDate(projectData?.expectedEndAt)}
+                  {formatDate(projectData?.createdAt || project.createdAt)}
                 </span>
               </div>
             </div>
