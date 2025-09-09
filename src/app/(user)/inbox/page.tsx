@@ -7,8 +7,6 @@ import { UserLayout } from "@/features/shared/components/user-layout";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import DeveloperInbox from "@/features/developer/components/developer-inbox";
 import { Inbox } from "lucide-react";
-import { Metadata } from "next";
-
 export const dynamic = "force-dynamic"; // Prevent SSG/ISR caching for auth pages
 
 export default function InboxPage() {
@@ -81,7 +79,3 @@ export default function InboxPage() {
   );
 }
 
-export const metadata: Metadata = {
-  title: "Inbox",
-  description: "Your project invitations",
-};

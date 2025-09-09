@@ -531,5 +531,3 @@ export default function DashboardUserPage() {
     </UserLayout>
   );
 }
-
-

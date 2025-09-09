@@ -14,8 +14,6 @@ import BillingTab from "@/features/profile/components/billing-tab";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import { User, CreditCard } from "lucide-react";
-import { Metadata } from "next";
-
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -150,7 +148,3 @@ export default function ProfilePage() {
   );
 }
 
-export const metadata: Metadata = {
-  title: "Profile",
-  description: "Manage your account and billing",
-};
