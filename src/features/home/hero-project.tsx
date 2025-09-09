@@ -31,7 +31,7 @@ export function HeroProject() {
           {/* Left: Form column */}
           <div className="md:pr-4" ref={formContentRef}>
             <ProjectPostForm 
-              title="Find Freelancer"
+              title="Post Project"
               description=""
               showLoginLink={true}
             />

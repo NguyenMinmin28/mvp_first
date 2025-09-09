@@ -21,7 +21,7 @@ interface ProjectPostFormProps {
 }
 
 export function ProjectPostForm({ 
-  title = "Find Freelancer", 
+  title = "Post Project", 
   description = "",
   showLoginLink = true,
   onSuccess
@@ -317,6 +317,8 @@ export function ProjectPostForm({
     }
   };
 
+  const isGuest = status === "unauthenticated";
+
   return (
     <div className="space-y-6">
       <Card>
@@ -463,28 +465,28 @@ export function ProjectPostForm({
           </div>
 
           {/* Post Project Button */}
-          <Button className="w-full bg-black text-white hover:bg-black/90" onClick={handleFindFreelancer} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Finding...
-              </>
-            ) : (
-              <>
-                Find
-              </>
-            )}
+          <Button
+            className="w-full bg-black text-white hover:bg-black/90"
+            onClick={isGuest ? () => router.push("/auth/signup") : handleFindFreelancer}
+            disabled={isSubmitting}
+          >
+            {isGuest
+              ? "Sign Up to Post Project"
+              : isSubmitting
+                ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Finding...
+                  </>
+                )
+                : "Find"}
           </Button>
 
-          {/* Login Button for unauthenticated users */}
-          {status === "unauthenticated" && (
+          {/* Auth prompts when unauthenticated */}
+          {isGuest && (
             <div className="text-center">
-              <button 
-                className="text-sm text-gray-500 underline hover:no-underline"
-                onClick={handleLogin}
-              >
-                Log in to access your recent projects
-              </button>
+              <span className="text-sm text-gray-600">Already have an account ? </span>
+              <a href="/auth/signin" className="text-sm underline">Log in</a>
             </div>
           )}
 
