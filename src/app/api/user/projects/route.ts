@@ -3,6 +3,39 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 
+// Type definitions for better type safety
+interface ProjectWithDetails {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  budget?: number | null;
+  budgetMin?: number | null;
+  currency?: string | null;
+  skillsRequired?: string[];
+  createdAt?: Date;
+  client?: {
+    id: string;
+    user?: {
+      name?: string | null;
+      email?: string | null;
+    };
+  };
+  _count?: {
+    assignmentCandidates?: number;
+  };
+}
+
+interface AssignmentWithProject {
+  id: string;
+  projectId: string;
+  responseStatus: string;
+  acceptanceDeadline?: Date;
+  assignedAt?: Date;
+  batchId: string;
+  project?: ProjectWithDetails | null;
+}
+
 export async function GET(request: NextRequest) {
   console.log("🚀 Projects API called");
   try {
@@ -42,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     // Then get assignments for this developer
     console.log("🔍 Starting database query for assignments...");
-    let assignments;
+    let assignments: AssignmentWithProject[];
     try {
       // First try a simple query without complex includes
       assignments = await prisma.assignmentCandidate.findMany({
@@ -81,7 +114,10 @@ export async function GET(request: NextRequest) {
                 }
               }
             });
-            assignments[i].project = projectWithDetails;
+            
+            if (projectWithDetails) {
+              assignments[i].project = projectWithDetails as ProjectWithDetails;
+            }
           } catch (error) {
             console.error(`❌ Error getting project details for ${assignment.project.id}:`, error);
             // Keep the basic project data
@@ -105,7 +141,7 @@ export async function GET(request: NextRequest) {
     console.log("🔍 Starting transform process...");
     const transformedProjects = assignments.map((assignment, index) => {
       console.log(`🔍 Transforming assignment ${index + 1}/${assignments.length}:`, assignment.id);
-      const project = assignment.project;
+      const project = assignment.project as ProjectWithDetails;
       
       if (!project) {
         console.error(`❌ Project is null for assignment ${assignment.id}`);
@@ -183,7 +219,7 @@ export async function GET(request: NextRequest) {
         budget: project.budget || project.budgetMin,
         currency: project.currency,
         skills: project.skillsRequired || [],
-        assignmentStatus: project._count?.assignmentCandidates > 0 ? 'Has candidates' : 'No candidates',
+        assignmentStatus: project._count?.assignmentCandidates && project._count.assignmentCandidates > 0 ? 'Has candidates' : 'No candidates',
         assignment: {
           id: assignment.id,
           acceptanceDeadline: assignment.acceptanceDeadline?.toISOString() || new Date().toISOString(),
