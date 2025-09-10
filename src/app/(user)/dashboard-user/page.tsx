@@ -62,6 +62,35 @@ export default function DashboardUserPage() {
   // Ref for project detail container to detect clicks outside
   const projectDetailRef = useRef<HTMLDivElement>(null);
 
+  const handleTestBatchAssignment = async () => {
+    try {
+      setIsTestingBatch(true);
+      const response = await fetch("/api/test-assign-batch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success("🧪 Test batch assignment created! Check your notifications and projects.");
+        // Reload the dashboard to show the new project
+        await load();
+        // Trigger notification refresh in header
+        window.dispatchEvent(new CustomEvent('notification-refresh'));
+      } else {
+        const errorData = await response.json();
+        toast.error(`Failed to create test assignment: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error("Error creating test batch assignment:", error);
+      toast.error("Failed to create test assignment");
+    } finally {
+      setIsTestingBatch(false);
+    }
+  };
+
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.user) {
@@ -84,18 +113,34 @@ export default function DashboardUserPage() {
         fetch("/api/user/my-ideas?limit=6", { cache: "no-store" }),
         fetch("/api/user/projects", { cache: "no-store" }),
       ]);
+      
       if (meRes.ok) {
         const data = await meRes.json();
         setProfile(data.user);
+      } else {
+        console.error("Failed to fetch user profile:", meRes.status, meRes.statusText);
+        toast.error("Failed to load profile data");
       }
+      
       if (myIdeasRes.ok) {
         const data = await myIdeasRes.json();
         setIdeas(Array.isArray(data.ideas) ? data.ideas : []);
+      } else {
+        console.error("Failed to fetch ideas:", myIdeasRes.status, myIdeasRes.statusText);
+        toast.error("Failed to load ideas data");
       }
+      
       if (projectsRes.ok) {
         const data = await projectsRes.json();
         setProjects(Array.isArray(data.projects) ? data.projects : []);
+      } else {
+        console.error("Failed to fetch projects:", projectsRes.status, projectsRes.statusText);
+        const errorData = await projectsRes.json().catch(() => ({}));
+        toast.error(`Failed to load projects: ${errorData.error || projectsRes.statusText}`);
       }
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      toast.error("Failed to load dashboard data");
     } finally {
       setIsLoading(false);
     }
@@ -135,35 +180,6 @@ export default function DashboardUserPage() {
     }
   };
 
-  // Test batch assignment function
-  const handleTestBatchAssignment = async () => {
-    setIsTestingBatch(true);
-    try {
-      const response = await fetch("/api/test-assign-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success("🧪 Test batch assignment created! Check your notifications and projects.");
-        
-        // Refresh projects to show the new test assignment
-        await load();
-        
-        // Trigger notification refresh in header
-        window.dispatchEvent(new CustomEvent('notification-refresh'));
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to create test batch assignment");
-      }
-    } catch (error) {
-      console.error("Error creating test batch assignment:", error);
-      toast.error("Something went wrong");
-    } finally {
-      setIsTestingBatch(false);
-    }
-  };
 
   const handleReject = async (projectId: string) => {
     try {
