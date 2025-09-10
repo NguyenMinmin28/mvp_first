@@ -10,10 +10,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: {
-    default: "Developer Connect",
-    template: "%s | Developer Connect",
+    default: "Clevrs",
+    template: "%s | Clevrs",
   },
-  description: "Find and hire the best developers for your projects",
+  description: "Connect directly with skilled freelancers worldwide. No middlemen, no commissions. Post your project and get matched with the perfect developer in minutes.",
 };
 
 export default function RootLayout({

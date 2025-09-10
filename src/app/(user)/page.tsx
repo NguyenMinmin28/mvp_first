@@ -15,8 +15,8 @@ import AiMatch from "@/features/home/ai-match";
 import EarnFreedom from "@/features/home/earn-freedom";
 
 export const metadata: Metadata = {
-  title: "Home",
-  description: "Welcome to Developer Connect",
+  title: "Clevrs – Hire Freelancers Directly with 0% Commission",
+  description: "Connect directly with skilled freelancers worldwide. No middlemen, no commissions. Post your project and get matched with the perfect developer in minutes.",
 };
 
 export default async function Home() {

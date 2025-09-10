@@ -1,6 +1,7 @@
 // Static page - cache for 1 hour
 export const revalidate = 3600;
 
+import { Metadata } from "next";
 import HeroAbout from "@/features/about/hero-about";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { UserLayout } from "@/features/shared/components/user-layout";
@@ -10,6 +11,11 @@ import Principles from "@/features/about/principles";
 import CompanyInfo from "@/features/about/company-info";
 import KeepUp from "@/features/about/keepup";
 import Together from "@/features/about/together";
+
+export const metadata: Metadata = {
+  title: "About Clevrs – Freedom, Respect & Direct Work Connections",
+  description: "Learn about Clevrs' mission to create a fair, transparent platform where freelancers keep 100% of their earnings and clients connect directly with skilled developers.",
+};
 
 export default async function AboutPage() {
   const user = await getServerSessionUser();

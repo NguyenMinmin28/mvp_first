@@ -1,9 +1,15 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { CalendarDays, Megaphone, Newspaper, ArrowRight } from "lucide-react";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import { getServerSessionUser } from "@/features/auth/auth-server";
+
+export const metadata: Metadata = {
+  title: "Clevrs Newsroom – Updates, Partnerships & Announcements",
+  description: "Stay updated with the latest Clevrs news, product updates, partnerships, and company announcements. Discover how we're revolutionizing freelancing.",
+};
 
 export default async function NewsroomPage() {
   const user = await getServerSessionUser();

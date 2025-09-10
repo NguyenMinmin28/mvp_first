@@ -137,8 +137,8 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
 }
 
 export const metadata: Metadata = {
-  title: "Developer Profile",
-  description: "View developer skills and experience",
+  title: "Freelancer Profile – Skills, Experience & Portfolio",
+  description: "View detailed freelancer profile including skills, experience, portfolio, and work history. Connect directly with skilled developers on Clevrs.",
 };
 
 

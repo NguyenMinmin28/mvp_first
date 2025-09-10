@@ -56,6 +56,6 @@ export default async function Pricing() {
 }
 
 export const metadata: Metadata = {
-  title: "Pricing",
-  description: "Choose a plan that fits your needs",
+  title: "Clevrs Pricing – Flexible Plans for Clients & Freelancers",
+  description: "Transparent pricing with no hidden fees. Clients pay only for what they use, freelancers keep 100% of their earnings. Start free today.",
 };

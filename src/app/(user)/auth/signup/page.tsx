@@ -3,8 +3,8 @@ import SignUpClient from "./signup-client";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
-  description: "Create your account to get started.",
+  title: "Join Clevrs – Create Your Free Account Today",
+  description: "Create your free Clevrs account and start connecting directly with skilled freelancers or clients. No commissions, no middlemen.",
 };
 
 export default function SignUpPage() {

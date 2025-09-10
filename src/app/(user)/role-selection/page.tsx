@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import CompleteProfilePage from "@/features/role-selection/view/role-selection-page";
 
 export const metadata = {
-  title: "Complete Profile",
-  description: "Complete your profile information to use all features.",
+  title: "Choose Your Role – Client or Freelancer",
+  description: "Complete your Clevrs profile by choosing your role as a client or freelancer. Start connecting directly with no commissions.",
 };
 
 export default async function CompleteProfile() {

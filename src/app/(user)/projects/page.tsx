@@ -82,6 +82,6 @@ export default async function ProjectsPage() {
 }
 
 export const metadata: Metadata = {
-  title: "Projects",
-  description: "Manage your projects",
+  title: "Find Freelancers on Clevrs – Verified, Skilled, Direct Contact",
+  description: "Browse and manage your projects on Clevrs. Connect directly with verified, skilled freelancers worldwide with transparent pricing.",
 };

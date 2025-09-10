@@ -5,18 +5,18 @@ import { BlogPageClient } from '@/features/blog/components/blog-page-client';
 import { Header } from '@/features/shared/components/header';
 
 export const metadata: Metadata = {
-  title: 'Blog - Developer Connect',
-  description: 'Discover insights, tutorials, and stories from the developer community. Stay updated with the latest tech trends and best practices.',
+  title: 'Clevrs Blog – Freelancing Insights, Tips & Success Stories',
+  description: 'Discover insights, tutorials, and success stories from the freelancing community. Stay updated with the latest trends in remote work and direct client connections.',
   openGraph: {
-    title: 'Blog - Developer Connect',
-    description: 'Discover insights, tutorials, and stories from the developer community.',
+    title: 'Clevrs Blog – Freelancing Insights, Tips & Success Stories',
+    description: 'Discover insights, tutorials, and success stories from the freelancing community.',
     type: 'website',
     url: '/blog',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Blog - Developer Connect',
-    description: 'Discover insights, tutorials, and stories from the developer community.',
+    title: 'Clevrs Blog – Freelancing Insights, Tips & Success Stories',
+    description: 'Discover insights, tutorials, and success stories from the freelancing community.',
   },
 };
 

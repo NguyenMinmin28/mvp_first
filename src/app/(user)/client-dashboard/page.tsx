@@ -21,6 +21,6 @@ export default async function ClientDashboardPage() {
 }
 
 export const metadata: Metadata = {
-  title: "Client Dashboard",
-  description: "Manage your projects and invitations",
+  title: "Client Dashboard – Manage Projects & Freelancers",
+  description: "Manage your projects, track progress, and connect with freelancers on your Clevrs client dashboard. Direct communication and transparent pricing.",
 };

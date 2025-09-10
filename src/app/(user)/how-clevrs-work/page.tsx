@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
@@ -8,6 +9,11 @@ import {
 import { UserLayout } from "@/features/shared/components/user-layout";
 import { HashScrollOnLoad } from "@/features/shared/components/hash-scroll";
 import { getServerSessionUser } from "@/features/auth/auth-server";
+
+export const metadata: Metadata = {
+  title: "How Clevrs Works – Post Projects & Connect with Freelancers",
+  description: "Discover how Clevrs makes freelancing simple: post your project, get AI-matched with skilled developers, and work directly with 0% commission fees.",
+};
 
 const BENEFITS = [
   { icon: ShieldCheck, label: "Vetted talent" },

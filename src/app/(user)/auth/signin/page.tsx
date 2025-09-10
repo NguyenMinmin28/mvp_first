@@ -3,8 +3,8 @@ import SignInClient from "./signin-client";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Sign In",
-  description: "Sign in to your App account to manage your tasks.",
+  title: "Login to Clevrs – Access Your Projects & Freelancers",
+  description: "Sign in to your Clevrs account to manage your projects, connect with freelancers, and access all platform features.",
 };
 
 export default function SignInPage() {
