@@ -18,7 +18,7 @@ export function UserLayout({
   showFooter = true,
 }: UserLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
       <Header user={user} />
 

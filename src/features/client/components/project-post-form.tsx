@@ -3,7 +3,6 @@
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Badge } from "@/ui/components/badge";
-import { Card, CardContent } from "@/ui/components/card";
 import { Label } from "@/ui/components/label";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
@@ -166,7 +165,14 @@ export function ProjectPostForm({
   }, [availableSkills, skills]);
 
   const addSkill = (id: string) => {
-    setSkills((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setSkills((prev) => {
+      if (prev.includes(id)) return prev;
+      if (prev.length >= 5) {
+        toast.error("You can only select up to 5 skills");
+        return prev;
+      }
+      return [...prev, id];
+    });
     clearFieldError('skills');
   };
   const removeSkill = (id: string) => setSkills((prev) => prev.filter((x) => x !== id));
@@ -321,8 +327,8 @@ export function ProjectPostForm({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6 space-y-5 project-form-content">
+      <div>
+        <div className="pt-6 space-y-5 project-form-content">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
             {title}
           </h1>
@@ -336,7 +342,7 @@ export function ProjectPostForm({
                 setProjectTitle(e.target.value);
                 clearFieldError('projectTitle');
               }}
-              className={`w-full ${validationErrors.projectTitle ? 'border-red-500 focus:ring-red-500' : ''}`}
+              className={`w-full bg-[#F3F3F3] border-0 ${validationErrors.projectTitle ? 'border-red-500 focus:ring-red-500' : ''}`}
               required
             />
           </div>
@@ -351,10 +357,10 @@ export function ProjectPostForm({
                 setProjectDescription(e.target.value);
                 clearFieldError('projectDescription');
               }}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none ${
+              className={`w-full px-3 py-2 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none bg-[#F3F3F3] ${
                 validationErrors.projectDescription 
                   ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-gray-300 focus:ring-black'
+                  : 'focus:ring-black'
               }`}
               rows={4}
               required
@@ -364,9 +370,13 @@ export function ProjectPostForm({
           {/* Skills */}
           <div>
             {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-3">
                 {selectedSkills.map((s) => (
-                  <Badge key={s.id} className="px-3 py-1 cursor-pointer" onClick={() => removeSkill(s.id)}>
+                  <Badge 
+                    key={s.id} 
+                    className="px-3 py-1.5 cursor-pointer bg-gray-800 text-white hover:bg-gray-700 transition-colors rounded-md text-sm font-medium" 
+                    onClick={() => removeSkill(s.id)}
+                  >
                     {s.name} ×
                   </Badge>
                 ))}
@@ -376,25 +386,26 @@ export function ProjectPostForm({
               <Button
                 type="button"
                 variant="outline"
-                className={`w-full justify-between ${validationErrors.skills ? 'border-red-500 text-red-600' : ''}`}
+                className={`w-full justify-between bg-[#F3F3F3] border-0 text-gray-700 hover:bg-gray-200 transition-colors py-2.5 ${validationErrors.skills ? 'border-red-500 text-red-600' : ''}`}
                 onClick={handleToggleDropdown}
               >
-                {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length} selected` : "Skills"}
+                {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length}/5 selected` : "Skills (max 5)"}
                 <span className="ml-2">▾</span>
               </Button>
               {skillOpen && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border bg-white shadow-lg">
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border-0 bg-white shadow-lg">
                   {skillsLoading ? (
                     <div className="p-2 text-sm text-gray-500">Loading skills...</div>
                   ) : !Array.isArray(filteredSkills) || filteredSkills.length === 0 ? (
                     <div className="p-2 text-sm text-gray-500">No options</div>
                   ) : (
                     filteredSkills.map((s) => (
-                      <label key={s.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-sm">
+                      <label key={s.id} className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-sm ${Array.isArray(skills) && skills.length >= 5 && !skills.includes(s.id) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="checkbox"
                           className="h-4 w-4"
                           checked={Array.isArray(skills) && skills.includes(s.id)}
+                          disabled={Array.isArray(skills) && skills.length >= 5 && !skills.includes(s.id)}
                           onChange={(e) => (e.target.checked ? addSkill(s.id) : removeSkill(s.id))}
                         />
                         <span>{s.name}</span>
@@ -419,7 +430,7 @@ export function ProjectPostForm({
                     setBudget(e.target.value);
                     clearFieldError('budget');
                   }}
-                  className={`w-full pl-8 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={`w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
                   min="0"
                   step="0.01"
                   required
@@ -428,7 +439,7 @@ export function ProjectPostForm({
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                className="px-3 py-2 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-[#F3F3F3]"
               >
                 <option value="USD">USD</option>
                 <option value="VND">VND</option>
@@ -491,8 +502,8 @@ export function ProjectPostForm({
           )}
 
           {/* Hide login link when authenticated */}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

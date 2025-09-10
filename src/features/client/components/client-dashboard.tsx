@@ -16,7 +16,8 @@ import {
   Calendar,
   FileText,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Check
 } from "lucide-react";
 import ProjectActivity from "./project-activity";
 import { ProjectPostForm } from "./project-post-form";
@@ -201,27 +202,63 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Test Notification Button - Remove this after testing */}
+      <Card className="border-yellow-200 bg-yellow-50">
+        <CardHeader>
+          <CardTitle className="text-yellow-800">🧪 Test Notification (Test environment only - will remove after deployment)</CardTitle>
+          <CardDescription className="text-yellow-700">
+            <strong>This feature is for test environment only:</strong>
+            <br />
+            • Creates a test notification to verify the notification system
+            <br />
+            • When clicked, the system will call API `/api/test-notification` 
+            <br />
+            • If successful: Shows toast "Test notification created!" and automatically refreshes notification count
+            <br />
+            • If failed: Shows error toast with detailed information
+            <br />
+            • All logs are written to console for debugging
+            <br />
+            <strong>⚠️ Note:</strong> This button is only for testing and will be removed when deploying to production
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={async () => {
+              try {
+                console.log('🧪 Testing notification creation...');
+                const res = await fetch('/api/test-notification', { method: 'POST' });
+                
+                console.log('🧪 Response status:', res.status);
+                console.log('🧪 Response headers:', Object.fromEntries(res.headers.entries()));
+                
+                const data = await res.json();
+                console.log('🧪 Test result:', data);
+                
+                if (res.ok) {
+                  toast.success('Test notification created!');
+                  // Dispatch event to refresh notification count
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('notification-refresh'));
+                  }, 1000);
+                } else {
+                  toast.error('Test notification failed: ' + (data.error || data.message || 'Unknown error'));
+                }
+              } catch (error) {
+                console.error('🧪 Test error:', error);
+                toast.error('Test notification failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+              }
+            }}
+            className="bg-yellow-600 hover:bg-yellow-700"
+          >
+            Create Test Notification
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
 
-      {/* Welcome Message for Users with Saved Data */}
-      {hasSavedFormData && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <Heart className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-medium text-green-900">Welcome! Your project details have been restored</h3>
-                <p className="text-sm text-green-700 mt-1">
-                  We've saved your project information from your previous session. You can now complete your project posting below.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Quota Status */}
       {quotaStatus && (
@@ -348,120 +385,82 @@ export default function ClientDashboard() {
       {/* Project Activity Section */}
       <ProjectActivity />
 
-      {/* Test Notification Button - Remove this after testing */}
-      <Card className="border-yellow-200 bg-yellow-50">
-        <CardHeader>
-          <CardTitle className="text-yellow-800">🧪 Test Notification ( Test environment only , will remove after deployment) </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            onClick={async () => {
-              try {
-                console.log('🧪 Testing notification creation...');
-                const res = await fetch('/api/test-notification', { method: 'POST' });
-                
-                console.log('🧪 Response status:', res.status);
-                console.log('🧪 Response headers:', Object.fromEntries(res.headers.entries()));
-                
-                const data = await res.json();
-                console.log('🧪 Test result:', data);
-                
-                if (res.ok) {
-                  toast.success('Test notification created!');
-                  // Dispatch event to refresh notification count
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('notification-refresh'));
-                  }, 1000);
-                } else {
-                  toast.error('Test notification failed: ' + (data.error || data.message || 'Unknown error'));
-                }
-              } catch (error) {
-                console.error('🧪 Test error:', error);
-                toast.error('Test notification failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
-              }
-            }}
-            className="bg-yellow-600 hover:bg-yellow-700"
-          >
-            Create Test Notification
-          </Button>
-        </CardContent>
-      </Card>
 
-      {/* Plan for later section */}
-      <div className="mt-16">
-        <h2 className="text-3xl font-bold text-gray-900  mb-8">
-          Plan for later
-        </h2>
-
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Pricing Plans */}
-          <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <Card key={plan.id} className={`border-2 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
-                  <CardHeader>
-                    <CardTitle className="text-base font-semibold">{plan.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="py-4 border-t">
-                      <div className="flex items-end gap-2">
-                        <span className="text-4xl font-bold">{plan.price}</span>
-                        <span className="text-xs text-gray-500">{plan.period}</span>
-                      </div>
+      {/* Subscription for clients section */}
+      <section className="w-full py-10 md:py-16">
+        <div className="container mx-auto max-w-8xl px-0">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
+            <div className="lg:col-span-3">
+              <h2 className="text-4xl font-extrabold tracking-tight mb-8">Subscription for clients</h2>
+              {/* Subscription Plans Section */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {plans.map((plan) => (
+                  <div key={plan.id} className={`rounded-2xl border bg-white/70 p-6 flex flex-col ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
+                    <div className="mb-6">
+                      <h3 className="font-semibold text-lg text-left">{plan.name}</h3>
+                      <div className="mt-2 mx-1 h-px bg-[#DEE0E2]"></div>
                     </div>
-
+                    <div className="mb-8">
+                      <span className="text-3xl font-bold">{plan.price}</span>
+                      <span className="ml-2 text-sm text-gray-600">/{plan.period.replace('/', '')}</span>
+                    </div>
+                    
                     {/* Plan Button */}
-                    {renderPlanButton(plan)}
-
-                    <div className="mt-4 rounded-md border bg-gray-50">
-                      <div className="px-4 py-2 text-sm font-medium">Service Include:</div>
-                      <ul className="px-4 pb-4 space-y-2 text-sm text-gray-700">
+                    <div className="mb-8">
+                      {renderPlanButton(plan)}
+                    </div>
+                    
+                    <div className="mt-auto rounded-xl bg-[#FAFAFA] p-6">
+                      <p className="font-semibold mb-3">Service Include:</p>
+                      <ul className="space-y-2 text-xs text-gray-700">
                         {plan.features.map((f, i) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-gray-600" />
-                            <span>{f}</span>
+                          <li key={i} className="flex items-start gap-3">
+                            <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#6D6D6D] text-white shrink-0">
+                              <Check className="w-2.5 h-2.5" />
+                            </span>
+                            <span className="leading-relaxed whitespace-nowrap">{f}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Benefits Section */}
+            <div className="lg:col-span-1 flex justify-center">
+              <div className="w-full max-w-sm rounded-2xl border bg-white/70 p-6 flex flex-col mt-8 mb-8">
+                <h3 className="font-semibold text-xl mb-6">Benefits</h3>
+                <ul className="space-y-6 text-gray-800">
+                  <li className="flex items-start gap-4">
+                    <span className="inline-flex h-10 w-10 items-center justify-center">
+                      <img src="/images/home/calendar.jpg" alt="calendar" className="w-6 h-6 object-contain" />
+                    </span>
+                    <p className="font-medium">Post projects anytime and connect instantly</p>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <span className="inline-flex h-10 w-10 items-center justify-center">
+                      <svg viewBox="0 0 24 24" className="w-6 h-6" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="9" fill="#ffffff" stroke="#000000" strokeWidth="2" />
+                        <path d="M12 7v5l3 3" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <p className="font-medium">Flexible contracts with direct agreements</p>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <span className="inline-flex h-10 w-10 items-center justify-center">
+                      <img src="/images/home/pay.png" alt="earnings" className="w-6 h-6 object-contain" />
+                    </span>
+                    <p className="font-medium">Keep 100% earnings, zero commission</p>
+                  </li>
+                </ul>
+                <a href="/pricing" className="inline-block mt-auto underline">See terms</a>
+              </div>
             </div>
           </div>
-
-          {/* Benefits Section */}
-          <div className="lg:col-span-1 flex">
-            <Card className="h-full flex-1">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold">Benefits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-gray-600 mt-0.5" />
-                    <p className="text-sm text-gray-700">Post projects anytime and connect instantly</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-gray-600 mt-0.5" />
-                    <p className="text-sm text-gray-700">Flexible contracts with direct agreements</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-gray-600 mt-0.5" />
-                    <p className="text-sm text-gray-700">Keep 100% earnings, zero commission</p>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t text-center">
-                  <a href="#" className="text-sm text-gray-600 underline hover:text-gray-800">
-                    See terms
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

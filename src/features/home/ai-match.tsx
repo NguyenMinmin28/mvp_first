@@ -18,7 +18,7 @@ export default function AiMatch() {
             </div>
           </div>
           <div className="order-1 md:order-2">
-            <img src="/images/home/aidirect.png" alt="AI Match" className="w-full h-auto rounded-xl object-cover" />
+            <img src="/images/home/aimatch.png" alt="AI Match" className="w-full h-auto rounded-xl object-cover" />
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { PayPalButtons } from "@/features/billing/components/paypal-buttons";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Check } from "lucide-react";
 
 type Plan = {
   id: string;
@@ -191,9 +191,11 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
                   <div className="px-4 py-2 text-sm font-medium">Service Include:</div>
                   <ul className="px-4 pb-4 space-y-2 text-sm text-gray-700">
                     {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-gray-600" />
-                        <span>{f}</span>
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#6D6D6D] text-white shrink-0">
+                          <Check className="w-2.5 h-2.5" />
+                        </span>
+                        <span className="leading-relaxed whitespace-nowrap">{f}</span>
                       </li>
                     ))}
                   </ul>

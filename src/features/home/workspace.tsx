@@ -35,7 +35,7 @@ export default function Workspace() {
             )}
           </div>
           <div>
-            <img src="/images/home/loginworkspace.png" alt="workspace" className="w-full h-auto rounded-xl object-cover" />
+            <img src="/images/home/workplace.png" alt="workspace" className="w-full h-auto object-cover" />
           </div>
         </div>
       </div>

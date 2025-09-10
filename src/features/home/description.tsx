@@ -12,21 +12,23 @@ export default function Description() {
   ];
 
   return (
-    <section className="w-full mt-8 md:mt-5 pt-16 md:pt-20 pb-12 md:pb-16">
+    <section className="w-full mt-8 md:mt-5 pt-8 md:pt-12 pb-12 md:pb-16">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
         <h2 className="text-2xl md:text-3xl font-bold mb-6">What Makes Us Different</h2>
         <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
-            <div key={it.key} className="rounded-xl border bg-gray-50 p-5 flex flex-col">
-              <div className="flex items-start justify-between">
-                <div>
+            <div key={it.key} className="rounded-xl bg-gray-50 p-5 flex">
+              <div className="w-1/2 pr-4 flex flex-col justify-between">
+                <div className="mb-6">
                   <h3 className="font-semibold text-gray-900">{it.title}</h3>
                   <p className="text-sm text-gray-600 mt-1">{it.desc}</p>
                 </div>
-                <img src={it.img} alt={it.key} className="w-16 h-16 object-contain" />
+                <div className="mt-2">
+                  <Link href={`/how-clevrs-work#${it.key}`} className="text-xs rounded-full px-3 py-1 text-gray-700 bg-white inline-block">Details</Link>
+                </div>
               </div>
-              <div className="mt-4">
-                <Link href={`/how-clevrs-work#${it.key}`} className="text-xs rounded-full border px-3 py-1 text-gray-700 bg-white inline-block">Details</Link>
+              <div className="w-1/2 flex items-center justify-center">
+                <img src={it.img} alt={it.key} className="w-20 h-20 object-contain" />
               </div>
             </div>
           ))}
