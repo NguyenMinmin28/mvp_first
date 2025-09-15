@@ -4,34 +4,24 @@ export const revalidate = 0;
 import { Metadata } from "next";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { redirect } from "next/navigation";
-import { AdminLayout } from "@/features/shared/components/admin-layout";
-import { UsageTransactionsTable } from "@/features/admin/components/usage-transactions-table";
+import AdminUsageTransactionsClient from "@/features/admin/components/usage-transaction-client";
 
 export const metadata: Metadata = {
-  title: "Usage Logs",
-  description: "Track project posts and contact reveals per client subscription period.",
+  title: "IdeaSpark Management | Admin",
+  description: "Manage IdeaSpark ideas and reports.",
 };
 
-export default async function AdminUsageTransactionsPage() {
+export default async function AdminDevelopersPage() {
   const user = await getServerSessionUser();
 
   if (!user) {
     redirect("/admin/login");
   }
 
+  // Check if user is admin
   if (user.role !== "ADMIN") {
     redirect("/");
   }
 
-  return (
-    <AdminLayout
-      user={user}
-      title="Usage Logs"
-      description="Track project posts and contact reveals per client subscription period"
-    >
-      <UsageTransactionsTable />
-    </AdminLayout>
-  );
+  return <AdminUsageTransactionsClient user={user as any} />;
 }
-
-

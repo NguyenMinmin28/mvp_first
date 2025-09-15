@@ -39,6 +39,7 @@ interface AdminSidebarProps {
   };
   isOpen?: boolean;
   setIsOpen?: (open: boolean) => void;
+  collapsed?: boolean;
 }
 
 const navigationItems = [
@@ -96,11 +97,12 @@ export function AdminSidebar({
   user,
   isOpen: externalIsOpen,
   setIsOpen: externalSetIsOpen,
+  collapsed = false,
 }: AdminSidebarProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  
+
   // Always call hooks in the same order
   const pathname = usePathname();
   const router = useRouter();
@@ -140,27 +142,36 @@ export function AdminSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-full w-64 transform bg-white border-r border-gray-200 shadow-lg transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "fixed left-0 top-0 z-40 h-full transform bg-white border-r border-gray-200 overflow-hidden transition-[transform,width] duration-500 ease-in-out lg:translate-x-0",
+          collapsed ? "w-16" : "w-64",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Sidebar Header */}
-        <div className="flex h-20 items-center gap-3 p-6 border-b border-gray-200">
-          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-            <Shield className="w-6 h-6 text-red-600" />
+        <div className="flex h-16 items-center gap-3 px-4 border-b border-gray-200">
+          <div
+            className={cn(
+              "w-9 h-9 rounded-lg flex items-center justify-center",
+              collapsed ? "bg-transparent" : "bg-blue-50"
+            )}
+          >
+            <Shield className="w-5 h-5 text-blue-600" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              Admin Panel
+          <div
+            className={cn(
+              "overflow-hidden transition-[max-width,opacity,transform] duration-400 ease-in-out",
+              collapsed ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100"
+            )}
+            aria-hidden={collapsed}
+          >
+            <h2 className="text-sm font-semibold tracking-wide text-gray-800 whitespace-nowrap will-change-transform">
+              Admin Console
             </h2>
-            <p className="text-xs text-gray-600">
-              {user.name || user.email}
-            </p>
           </div>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="p-4 space-y-2">
+        <nav className="px-2 py-3 space-y-3">
           {navigationItems.map((item) => {
             const isActive = mounted && pathname && pathname === item.href;
             return (
@@ -169,54 +180,43 @@ export function AdminSidebar({
                 href={item.href}
                 onClick={() => setIsOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 group",
+                  "flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-150 group h-[36px]",
                   isActive
-                    ? "bg-red-50 text-red-700 border-r-2 border-red-500"
-                    : "text-gray-700 hover:bg-gray-50"
+                    ? "text-blue-600"
+                    : "text-gray-700 hover:text-gray-900"
                 )}
               >
                 <item.icon
                   className={cn(
-                    "w-5 h-5 transition-colors duration-200",
-                    isActive
-                      ? "text-red-600"
-                      : "text-gray-500 group-hover:text-gray-700"
+                    "w-4 h-4 group-hover:text-blue-500",
+                    isActive ? "text-blue-600" : "text-gray-500"
                   )}
                 />
-                <div className="flex-1">
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-xs text-gray-500">
-                    {item.description}
-                  </div>
-                </div>
-                <ChevronRight
+                <div
                   className={cn(
-                    "w-4 h-4 transition-transform duration-200",
-                    isActive ? "rotate-90" : "rotate-0"
+                    "flex-1 overflow-hidden transition-[max-width,opacity,transform] duration-400 ease-in-out",
+                    collapsed
+                      ? "max-w-0 opacity-0 hidden"
+                      : "max-w-[200px] opacity-100"
                   )}
-                />
+                  aria-hidden={collapsed}
+                >
+                  <span
+                    className={cn(
+                      "block truncate text-sm group-hover:text-blue-500 will-change-transform",
+                      isActive ? "font-medium" : "font-normal",
+                      collapsed ? "translate-x-2" : "translate-x-0"
+                    )}
+                  >
+                    {item.name}
+                  </span>
+                </div>
               </Link>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer - Logout Button */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <button
-            onClick={handleSignOut}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg border border-red-200 hover:bg-red-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" />
-            ) : (
-              <LogOut className="w-4 h-4" />
-            )}
-            <span className="font-medium">
-              {isLoading ? "Signing out..." : "Sign Out"}
-            </span>
-          </button>
-        </div>
+        {/* Sidebar Footer removed: sign out moved to header */}
       </aside>
     </>
   );
