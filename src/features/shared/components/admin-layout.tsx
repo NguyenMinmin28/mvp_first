@@ -2,6 +2,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { cn } from "@/core/utils/utils";
 
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
@@ -34,29 +35,57 @@ export function AdminLayout({
   description,
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("adminSidebarCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   // Use session refresh hook to automatically refresh user data on navigation
   const { isRefreshing } = useSessionRefresh();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("adminSidebarCollapsed", next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 overflow-x-hidden" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
+    <div
+      className="min-h-screen bg-white overflow-x-hidden"
+      style={{ minHeight: "100vh", overflowX: "hidden" }}
+    >
       {/* Header */}
-      <AdminHeader user={user} onToggleSidebar={toggleSidebar} />
+      <AdminHeader
+        user={user}
+        onToggleSidebar={toggleSidebar}
+        isSidebarOpen={isSidebarOpen}
+        isCollapsed={isCollapsed}
+        onToggleCollapsed={toggleCollapsed}
+      />
       <SessionRefreshNotice isRefreshing={isRefreshing} />
       {/* Sidebar */}
       <AdminSidebar
         user={user}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
+        collapsed={isCollapsed}
       />
 
       {/* Main Content */}
-      <main className="pt-20 lg:ml-64" style={{ display: 'block', paddingTop: '3rem', marginLeft: '15rem' }}>
-        <div className="w-full max-w-6xl px-1 sm:px-2 lg:px-4 py-4" style={{ padding: '1rem 0.25rem', width: '100%' }}>
-          {children}
-        </div>
+      <main
+        className={cn("pt-16", isCollapsed ? "lg:ml-16" : "lg:ml-64")}
+        style={{ display: "block" }}
+      >
+        <div className="w-full px-1 sm:px-2 lg:px-6 py-4">{children}</div>
       </main>
     </div>
   );

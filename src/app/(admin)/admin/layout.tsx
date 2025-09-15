@@ -17,16 +17,18 @@ interface AdminLayoutPageProps {
   children: ReactNode;
 }
 
-export default async function AdminLayoutPage({ children }: AdminLayoutPageProps) {
+export default async function AdminLayoutPage({
+  children,
+}: AdminLayoutPageProps) {
   try {
     const user = await requireServerAuth();
-    
+
     // Check if user has admin role
     if (user.role !== "ADMIN") {
       redirect("/auth/signin");
     }
 
-    return <AdminLayout user={user}>{children}</AdminLayout>;
+    return children;
   } catch (error) {
     // If not authenticated, redirect to signin
     redirect("/auth/signin");

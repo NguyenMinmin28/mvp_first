@@ -23,8 +23,9 @@ import {
   DialogTrigger,
 } from "@/ui/components/dialog";
 import { Textarea } from "@/ui/components/textarea";
-import { CheckCircle, XCircle, Clock, Eye, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/ui/components/input";
 
 interface DeveloperProfile {
   id: string;
@@ -72,7 +73,7 @@ export function DeveloperProfileManagement() {
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
-    itemsPerPage: 10,
+    itemsPerPage: 5,
     hasNextPage: false,
     hasPrevPage: false,
   });
@@ -86,6 +87,7 @@ export function DeveloperProfileManagement() {
     level: "all",
     approvalStatus: "all",
   });
+  const [search, setSearch] = useState("");
 
   // Fetch profiles
   const fetchProfiles = async (page: number = 1) => {
@@ -95,6 +97,7 @@ export function DeveloperProfileManagement() {
         page: page.toString(),
         limit: pagination.itemsPerPage.toString(),
         ...filters,
+        search,
       });
 
       const response = await fetch(`/api/admin/developer-profiles?${params}`);
@@ -159,6 +162,7 @@ export function DeveloperProfileManagement() {
   // Clear filters
   const clearFilters = () => {
     setFilters({ status: "all", level: "all", approvalStatus: "all" });
+    setSearch("");
     fetchProfiles(1);
   };
 
@@ -174,7 +178,7 @@ export function DeveloperProfileManagement() {
       sortable: true,
       filterable: true,
       render: (value, item) => (
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 text-nowrap w-fit">
           {item.photoUrl ? (
             <img
               src={item.photoUrl}
@@ -243,7 +247,7 @@ export function DeveloperProfileManagement() {
           approved: {
             label: "Approved",
             icon: CheckCircle,
-            variant: "default" as const,
+            variant: "success" as const,
           },
           rejected: {
             label: "Rejected",
@@ -297,7 +301,7 @@ export function DeveloperProfileManagement() {
 
         if (item.adminApprovalStatus === "approved") {
           return (
-            <Badge variant="default" className="w-full justify-center">
+            <Badge variant="success" className="w-full justify-center">
               <CheckCircle className="w-3 h-3 mr-1" />
               Approved
             </Badge>
@@ -325,7 +329,7 @@ export function DeveloperProfileManagement() {
       key: "currentStatus",
       label: "Status",
       render: (value) => (
-        <Badge variant={value === "available" ? "default" : "secondary"}>
+        <Badge variant={value === "available" ? "success" : "secondary"}>
           {value}
         </Badge>
       ),
@@ -370,90 +374,196 @@ export function DeveloperProfileManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select
-                value={filters.status}
-                onValueChange={(value) => handleFilterChange("status", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="checking">Checking</SelectItem>
-                  <SelectItem value="busy">Busy</SelectItem>
-                  <SelectItem value="away">Away</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Stats bar */}
+      <div className="grid grid-rows-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-blue-700/90">
+                  Total (all)
+                </p>
+                <p className="text-xl font-bold text-blue-900">
+                  {pagination.totalItems}
+                </p>
+              </div>
+              <Badge className="bg-blue-100 text-blue-800">All</Badge>
             </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Level</label>
-              <Select
-                value={filters.level}
-                onValueChange={(value) => handleFilterChange("level", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Levels" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="FRESHER">Fresher</SelectItem>
-                  <SelectItem value="MID">Mid</SelectItem>
-                  <SelectItem value="EXPERT">Expert</SelectItem>
-                </SelectContent>
-              </Select>
+          </CardContent>
+        </Card>
+        <Card className="bg-emerald-50 border-emerald-200">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-emerald-700/90">
+                  Approved
+                </p>
+                <p className="text-xl font-bold text-emerald-900">
+                  {
+                    profiles.filter((p) => p.adminApprovalStatus === "approved")
+                      .length
+                  }
+                </p>
+              </div>
+              <Badge variant="success">OK</Badge>
             </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Approval Status
-              </label>
-              <Select
-                value={filters.approvalStatus}
-                onValueChange={(value) =>
-                  handleFilterChange("approvalStatus", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Approval Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Approval Statuses</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-amber-700/90">
+                  Pending
+                </p>
+                <p className="text-xl font-bold text-amber-900">
+                  {
+                    profiles.filter((p) => p.adminApprovalStatus === "pending")
+                      .length
+                  }
+                </p>
+              </div>
+              <Badge className="bg-amber-100 text-amber-800">Waiting</Badge>
             </div>
-          </div>
-
-          <div className="flex space-x-2 mt-4">
-            <Button onClick={applyFilters}>Apply Filters</Button>
-            <Button variant="outline" onClick={clearFilters}>
-              Clear Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Data Table */}
+          </CardContent>
+        </Card>
+        <Card className="bg-rose-50 border-rose-200">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-rose-700/90">
+                  Rejected
+                </p>
+                <p className="text-xl font-bold text-rose-900">
+                  {
+                    profiles.filter((p) => p.adminApprovalStatus === "rejected")
+                      .length
+                  }
+                </p>
+              </div>
+              <Badge variant="destructive">No</Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-indigo-50 border-indigo-200">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-indigo-700/90">
+                  Available (page)
+                </p>
+                <p className="text-xl font-bold text-indigo-900">
+                  {
+                    profiles.filter((p) => p.currentStatus === "available")
+                      .length
+                  }
+                </p>
+              </div>
+              <Badge className="bg-indigo-100 text-indigo-800">Now</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      {/* Data Table with unified toolbar */}
       <DataTable
         data={profiles}
         columns={columns}
-        title={`Developer Profiles (${pagination.totalItems})`}
         searchPlaceholder="Search by name, email, bio..."
         loading={loading}
+        hideSearch
+        unstyled
+        headerContent={
+          <div className="space-y-3">
+            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by name, email, bio..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 h-11"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") applyFilters();
+                  }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button className="h-11" onClick={applyFilters}>
+                  Apply
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  onClick={clearFilters}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) => handleFilterChange("status", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="checking">Checking</SelectItem>
+                    <SelectItem value="busy">Busy</SelectItem>
+                    <SelectItem value="away">Away</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Level</label>
+                <Select
+                  value={filters.level}
+                  onValueChange={(value) => handleFilterChange("level", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="FRESHER">Fresher</SelectItem>
+                    <SelectItem value="MID">Mid</SelectItem>
+                    <SelectItem value="EXPERT">Expert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Approval Status
+                </label>
+                <Select
+                  value={filters.approvalStatus}
+                  onValueChange={(value) =>
+                    handleFilterChange("approvalStatus", value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Approval Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Approval Statuses</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        }
       />
 
       {/* Pagination */}

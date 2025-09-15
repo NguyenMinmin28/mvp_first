@@ -32,6 +32,9 @@ export interface DataTableProps<T> {
   actions?: React.ReactNode;
   className?: string;
   loading?: boolean;
+  headerContent?: React.ReactNode;
+  hideSearch?: boolean;
+  unstyled?: boolean;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -43,6 +46,9 @@ export function DataTable<T extends Record<string, any>>({
   actions,
   className = "",
   loading = false,
+  hideSearch = false,
+  headerContent,
+  unstyled = false,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -112,47 +118,53 @@ export function DataTable<T extends Record<string, any>>({
     setSortConfig(null);
   };
 
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
-          {actions}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+  if (unstyled) {
+    return (
+      <div className={className}>
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            {title ? (
+              <div className="text-lg font-semibold">{title}</div>
+            ) : (
+              <div />
+            )}
+            {actions}
           </div>
-
-          <Button
-            variant="outline"
-            onClick={clearFilters}
-            className="whitespace-nowrap"
-          >
-            Clear Filters
-          </Button>
+          {headerContent ? (
+            <div className="mt-4">{headerContent}</div>
+          ) : (
+            !hideSearch && (
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder={searchPlaceholder}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="whitespace-nowrap"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )
+          )}
         </div>
-      </CardHeader>
 
-      <CardContent>
-        <div className="overflow-x-auto rounded-lg border-4 border-gray-300 shadow-lg">
+        <div className="overflow-x-auto rounded-lg border shadow-lg">
           <table className="w-full border-collapse">
-            <thead className="bg-gray-100 border-b-4 border-gray-400">
+            <thead className="bg-gray-100 border-b">
               <tr>
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`px-4 py-3 text-left text-sm font-bold text-gray-800 border-r-2 border-gray-400 ${
-                      column.sortable
-                        ? "cursor-pointer hover:bg-gray-100"
-                        : ""
+                    className={`px-4 py-3 text-left text-sm font-bold text-gray-800 border-r ${
+                      column.sortable ? "cursor-pointer hover:bg-gray-100" : ""
                     } ${column.width || ""}`}
                     onClick={() => column.sortable && handleSort(column.key)}
                   >
@@ -181,7 +193,7 @@ export function DataTable<T extends Record<string, any>>({
                     className="px-4 py-8 text-center text-gray-500"
                   >
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b"></div>
                       <span>Loading...</span>
                     </div>
                   </td>
@@ -199,16 +211,137 @@ export function DataTable<T extends Record<string, any>>({
                 filteredData.map((item, index) => (
                   <tr
                     key={index}
-                    className={`border-b-2 border-gray-300 hover:bg-gray-100 ${
+                    className={`border-b hover:bg-gray-100 ${
                       onRowClick ? "cursor-pointer" : ""
                     }`}
                     onClick={() => onRowClick?.(item)}
                   >
                     {columns.map((column, colIndex) => (
-                      <td 
-                        key={column.key} 
-                        className={`px-4 py-3 text-sm border-r-2 border-gray-300 ${
-                          colIndex === columns.length - 1 ? '' : 'border-r-2 border-gray-300'
+                      <td
+                        key={column.key}
+                        className={`px-4 py-3 text-sm border-r ${
+                          colIndex === columns.length - 1 ? "" : "border-r"
+                        }`}
+                      >
+                        {column.render ? (
+                          column.render(item[column.key], item)
+                        ) : (
+                          <span className="text-gray-900">
+                            {item[column.key] || "-"}
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{title}</CardTitle>
+          {actions}
+        </div>
+        {headerContent ? (
+          <div className="mt-4">{headerContent}</div>
+        ) : (
+          !hideSearch && (
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="whitespace-nowrap"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )
+        )}
+      </CardHeader>
+
+      <CardContent>
+        <div className="overflow-x-auto rounded-lg border shadow-lg">
+          <table className="w-full border-collapse">
+            <thead className="bg-gray-100 border-b">
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    className={`px-4 py-3 text-left text-sm font-bold text-gray-800 border-r ${
+                      column.sortable ? "cursor-pointer hover:bg-gray-100" : ""
+                    } ${column.width || ""}`}
+                    onClick={() => column.sortable && handleSort(column.key)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {column.label}
+                      {column.sortable && (
+                        <div className="flex flex-col">
+                          {sortConfig?.key === column.key &&
+                          sortConfig.direction === "asc" ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b"></div>
+                      <span>Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
+                    No data found
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((item, index) => (
+                  <tr
+                    key={index}
+                    className={`border-b hover:bg-gray-100 ${
+                      onRowClick ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => onRowClick?.(item)}
+                  >
+                    {columns.map((column, colIndex) => (
+                      <td
+                        key={column.key}
+                        className={`px-4 py-3 text-sm border-r ${
+                          colIndex === columns.length - 1 ? "" : "border-r"
                         }`}
                       >
                         {column.render ? (
