@@ -109,9 +109,19 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
 
   const handleHeartClick = async () => {
     if (!service?.id || isLiking) return;
+    // Optimistic update
+    const nextLiked = !isLiked;
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
+    setIsLiked(nextLiked);
+    setLikeCount(Math.max(0, prevCount + (nextLiked ? 1 : -1)));
+    if (nextLiked) {
+      setPop(true);
+      setTimeout(() => setPop(false), 500);
+    }
+
     try {
       setIsLiking(true);
-      // Fire request
       const res = await fetch(`/api/services/${service.id}/like`, { method: "POST" });
       if (res.ok) {
         const json = await res.json();
@@ -120,17 +130,16 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
         }
         if (typeof json.liked === "boolean") {
           setIsLiked(json.liked);
-          // trigger pop animation when newly liked
-          if (json.liked) {
-            setPop(true);
-            setTimeout(() => setPop(false), 500);
-          }
         }
       } else {
-        // optional: surface toast later
+        // Revert on failure
+        setIsLiked(prevLiked);
+        setLikeCount(prevCount);
       }
     } catch (e) {
-      // noop
+      // Revert on error
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
     } finally {
       setIsLiking(false);
     }
