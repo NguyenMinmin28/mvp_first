@@ -71,12 +71,13 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
   const [pop, setPop] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pendingLikeUrl, setPendingLikeUrl] = useState<string | null>(null);
   const [timelineStart, setTimelineStart] = useState("");
   const [timelineEnd, setTimelineEnd] = useState("");
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     };
     if (isOpen) {
       document.addEventListener("keydown", handleEsc);
@@ -85,8 +86,19 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
     return () => {
       document.removeEventListener("keydown", handleEsc);
       document.body.style.overflow = "";
+      // Best-effort delivery if user closes quickly/navigates away while like in-flight
+      if (pendingLikeUrl && isLiking && typeof navigator !== "undefined" && 'sendBeacon' in navigator) {
+        try { (navigator as any).sendBeacon(pendingLikeUrl); } catch (_) { /* ignore */ }
+      }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, pendingLikeUrl, isLiking]);
+
+  const handleClose = () => {
+    if (pendingLikeUrl && isLiking && typeof navigator !== "undefined" && 'sendBeacon' in navigator) {
+      try { (navigator as any).sendBeacon(pendingLikeUrl); } catch (_) { /* ignore */ }
+    }
+    onClose();
+  };
 
   // Avoid SSR/CSR mismatch for time-dependent strings
   useEffect(() => {
@@ -122,7 +134,9 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
 
     try {
       setIsLiking(true);
-      const res = await fetch(`/api/services/${service.id}/like`, { method: "POST" });
+      const url = `/api/services/${service.id}/like`;
+      setPendingLikeUrl(url);
+      const res = await fetch(url, { method: "POST" });
       if (res.ok) {
         const json = await res.json();
         if (typeof json.likeCount === "number") {
@@ -142,6 +156,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
       setLikeCount(prevCount);
     } finally {
       setIsLiking(false);
+      setPendingLikeUrl(null);
     }
   };
 
@@ -169,7 +184,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
         className={`fixed inset-0 bg-black/40 transition-opacity duration-300 lg:hidden ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Desktop backdrop: dim left 1/3, keep middle area clickable/transparent */}
@@ -177,7 +192,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
         className={`fixed inset-y-0 left-0 w-1/3 bg-black/40 transition-opacity duration-300 hidden lg:block ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
-        onClick={onClose}
+        onClick={handleClose}
       />
       <div
         className={`fixed inset-y-0 left-1/3 right-2/3 bg-transparent hidden lg:block ${isOpen ? "block" : "hidden"}`}
@@ -196,7 +211,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
           {/* Mobile Close Button */}
           <button
             aria-label="Close"
-            onClick={onClose}
+            onClick={handleClose}
             className="sm:hidden absolute top-3 right-3 z-30 p-2 rounded-full bg-white/90 border border-gray-200 shadow-md"
           >
             <X className="w-5 h-5 text-gray-900" />
