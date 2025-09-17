@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get("sort") || "popular";
 
     // Build where clause for published services
-    const where = {
+    const where: any = {
       status: "PUBLISHED",
       visibility: "PUBLIC",
     };
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    const services = await prisma.service.findMany({
+    const services = await (prisma as any).service.findMany({
       where,
       include: {
         developer: {
