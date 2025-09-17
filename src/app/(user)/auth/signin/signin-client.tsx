@@ -295,43 +295,6 @@ export default function SignInClient() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Top black bar with LOGO and Menu */}
-      <div className="w-full h-14 bg-black flex items-center">
-        <div className="max-w-4xl mx-auto w-full px-4 flex items-center justify-between">
-          <img 
-            src="/images/home/clervelogo.png" 
-            alt="Clevrs" 
-            className="h-6 w-auto"
-          />
-          {/* Navigation Menu */}
-          <nav className="flex items-center space-x-6">
-            <Link 
-              href="/" 
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              Home
-            </Link>
-            <Link 
-              href="/about" 
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              About
-            </Link>
-            <Link 
-              href="/pricing" 
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              Pricing
-            </Link>
-            <Link 
-              href="/help" 
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              Help
-            </Link>
-          </nav>
-        </div>
-      </div>
 
       {/* Centered form */}
       <div className="max-w-4xl mx-auto px-4">

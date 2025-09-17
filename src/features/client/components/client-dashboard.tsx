@@ -20,6 +20,8 @@ import {
   Check
 } from "lucide-react";
 import ProjectActivity from "./project-activity";
+import FreelancersStrip from "./FreelancersStrip";
+import ServicesStrip from "./ServicesStrip";
 import { ProjectPostForm } from "./project-post-form";
 import { PayPalButtons } from "@/features/billing/components/paypal-buttons";
 import { toast } from "sonner";
@@ -305,86 +307,133 @@ export default function ClientDashboard() {
       )}
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Section - Project Post / Find Freelancer */}
-        <div className="space-y-6">
-          <ProjectPostForm 
-            title="Project Post"
-            description="Post your project and find the perfect freelancer"
-            showLoginLink={true}
-            onSuccess={(projectId) => router.push(`/projects/${projectId}`)}
-          />
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Title Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
+          <div>
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Project Post</h2>
+          </div>
+          <div>
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Connects</h2>
+          </div>
         </div>
 
-        {/* Right Section - Team */}
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900  mb-2">
-              Team
-            </h2>
-            <p className="text-gray-600">
-              Choose your team level
-            </p>
+        {/* Content Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+          {/* Left Section - Project Post Form */}
+          <div className="w-full">
+            <ProjectPostForm 
+              title=""
+              description="Post your project and find the perfect freelancer"
+              showLoginLink={true}
+              onSuccess={(projectId) => router.push(`/projects/${projectId}`)}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Favourite Card */}
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200"
-              onClick={() => router.push('/favorites')}
-            >
-              <CardContent className="pt-6 text-center">
-                <div className="flex justify-center mb-3">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                    <Heart className="h-6 w-6 text-red-600" />
+          {/* Right Section - Connects Cards */}
+          <div className="w-full">
+            <div className="grid grid-cols-2 gap-4 w-full">
+              {/* Favourite Card */}
+              <Card 
+                className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
+                onClick={() => router.push('/favorites')}
+              >
+                <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                      <img 
+                        src="/images/client/favourite.png" 
+                        alt="Favourite" 
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
                   </div>
-                </div>
-                <h3 className="font-semibold text-gray-900">Favourite</h3>
-              </CardContent>
-            </Card>
+                  <h3 className="font-semibold text-gray-900 text-base">Favourite</h3>
+                </CardContent>
+              </Card>
 
-            {/* Starter Card */}
-            <Card className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200">
-              <CardContent className="pt-6 text-center">
-                <div className="flex justify-center mb-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Sprout className="h-6 w-6 text-green-600" />
+              {/* Starter Card */}
+              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                      <img 
+                        src="/images/client/starter.png" 
+                        alt="Starter" 
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
                   </div>
-                </div>
-                <h3 className="font-semibold text-gray-900">Starter</h3>
-              </CardContent>
-            </Card>
+                  <h3 className="font-semibold text-gray-900 text-base">Starter</h3>
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Mid Card */}
-            <Card className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200">
-              <CardContent className="pt-6 text-center">
-                <div className="flex justify-center mb-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Palmtree className="h-6 w-6 text-green-600" />
+            <div className="grid grid-cols-2 gap-4 w-full mt-4">
+              {/* Professional Card */}
+              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                      <img 
+                        src="/images/client/pro.png" 
+                        alt="Professional" 
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
                   </div>
-                </div>
-                <h3 className="font-semibold text-gray-900">Mid</h3>
-              </CardContent>
-            </Card>
+                  <h3 className="font-semibold text-gray-900 text-base">Professional</h3>
+                </CardContent>
+              </Card>
 
-            {/* Expert Card */}
-            <Card className="cursor-pointer hover:shadow-md hover:bg-gray-50 transition-all duration-200">
-              <CardContent className="pt-6 text-center">
-                <div className="flex justify-center mb-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <TreePine className="h-6 w-6 text-green-600" />
+              {/* Experts Card */}
+              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                      <img 
+                        src="/images/client/exp.png" 
+                        alt="Experts" 
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
                   </div>
-                </div>
-                <h3 className="font-semibold text-gray-900">Expert</h3>
-              </CardContent>
-            </Card>
+                  <h3 className="font-semibold text-gray-900 text-base">Experts</h3>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="w-full mt-4">
+              {/* Active Projects Card */}
+              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                      <img 
+                        src="/images/client/active.png" 
+                        alt="Active Projects" 
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-base">Active Projects</h3>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Project Activity Section */}
-      <ProjectActivity />
+      <div className="mt-20 md:mt-28">
+        <ProjectActivity />
+      </div>
 
+      {/* Freelancers Section */}
+      <FreelancersStrip />
+
+      {/* Services Section */}
+      <ServicesStrip />
 
       {/* Subscription for clients section */}
       <section className="w-full py-10 md:py-16">

@@ -17,6 +17,49 @@ enum Role {
   DEVELOPER
 }
 
+enum PriceType {
+  FIXED
+  HOURLY
+}
+
+enum ServiceStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+  PDF
+}
+
+enum LeadStatus {
+  NEW
+  VIEWED
+  CONTACTED
+  CLOSED
+}
+
+enum ContactVia {
+  IN_APP
+  EMAIL
+  WHATSAPP
+}
+
+enum NotifType {
+  SERVICE_LEAD_CREATED
+  SERVICE_APPROVED
+  SERVICE_REJECTED
+}
+
 enum UserStatus {
   ACTIVE
   SUSPENDED
@@ -208,6 +251,12 @@ model User {
   ideaApprovalEvents IdeaApprovalEvent[] @relation("IdeaApprovalAdmin")
   sparkPointLedger   SparkPointLedger[]
   ideaReports        IdeaReport[]        @relation("IdeaReportReporter")
+
+  // Service Relations
+  serviceLeads       ServiceLead[]       @relation("ClientLeads")
+  serviceFavorites   ServiceFavorite[]
+  serviceLikes       ServiceLike[]
+  notifications      NotificationUser[]
 
   @@index([lastLoginAt])
 }
@@ -505,6 +554,7 @@ model DeveloperProfile {
   contactReveals          ContactRevealEvent[]  @relation("DeveloperContactReveals")
   rotationCursors         RotationCursor[]      @relation("DeveloperToRotationCursors")
   favoritedBy             FavoriteDeveloper[]   @relation("DeveloperFavorites")
+  services                Service[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -556,6 +606,7 @@ model Skill {
   developerSkills DeveloperSkill[] @relation("SkillToDeveloperSkills")
   rotationCursors RotationCursor[] @relation("SkillToRotationCursors")
   ideaSkills      IdeaSkill[] @relation("IdeaSkillSkills")
+  serviceLinks    ServiceSkillOnService[]
 
   @@index([category], map: "idx_skills_category")
 }
@@ -864,6 +915,7 @@ model NotificationUser {
   archivedAt     DateTime?
 
   notification Notification @relation(fields: [notificationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
 
   @@index([userId, readAt], map: "idx_notifuser_user_read")
   @@index([userId, archivedAt], map: "idx_notifuser_user_archived")
@@ -1113,6 +1165,7 @@ model Category {
 
   // Relations
   posts Post[]
+  serviceLinks ServiceCategoryOnService[]
 }
 
 model Tag {
@@ -1121,6 +1174,7 @@ model Tag {
   slug      String @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  serviceLinks ServiceTagOnService[]
 }
 
 model Author {
@@ -1179,3 +1233,134 @@ model FavoriteDeveloper {
   @@index([clientId])
   @@index([developerId])
 }
+
+/**
+ * ===== Service Models =====
+ */
+model Service {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug         String   @unique
+  title        String
+  shortDesc    String
+  description  String
+  coverUrl     String?
+  priceType    PriceType
+  priceMin     Int?
+  priceMax     Int?
+  deliveryDays Int?
+  revisions    Int?
+  status       ServiceStatus @default(DRAFT)
+  visibility   Visibility    @default(PUBLIC)
+  ratingAvg    Float         @default(0)
+  ratingCount  Int           @default(0)
+  views        Int           @default(0)
+  likesCount   Int           @default(0)
+  favoritesCount Int         @default(0)
+
+  developerId  String           @db.ObjectId
+  developer    DeveloperProfile @relation(fields: [developerId], references: [id])
+
+  media        ServiceMedia[]
+  categories   ServiceCategoryOnService[]
+  skills       ServiceSkillOnService[]
+  tags         ServiceTagOnService[]
+  leads        ServiceLead[]       @relation("ServiceLeads")
+  favorites    ServiceFavorite[]
+  likes        ServiceLike[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([developerId])
+  @@index([status])
+  @@index([visibility])
+  @@index([ratingAvg])
+  @@index([views])
+  @@index([createdAt])
+}
+
+model ServiceMedia {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId  String     @db.ObjectId
+  service    Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  url        String
+  kind       MediaKind
+  sortOrder  Int        @default(0)
+
+  @@index([serviceId])
+  @@index([sortOrder])
+}
+
+model ServiceCategoryOnService {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId  String   @db.ObjectId
+  categoryId String   @db.ObjectId
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, categoryId])
+}
+
+model ServiceSkillOnService {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId String @db.ObjectId
+  skillId   String @db.ObjectId
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, skillId])
+}
+
+model ServiceTagOnService {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId String @db.ObjectId
+  tagId     String @db.ObjectId
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, tagId])
+}
+
+model ServiceLead {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId   String     @db.ObjectId
+  service     Service    @relation("ServiceLeads", fields: [serviceId], references: [id])
+  clientId    String     @db.ObjectId
+  client      User       @relation("ClientLeads", fields: [clientId], references: [id])
+  message     String?
+  status      LeadStatus @default(NEW)
+  contactVia  ContactVia @default(IN_APP)
+  createdAt   DateTime   @default(now())
+
+  @@index([serviceId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ServiceFavorite {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  serviceId String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, serviceId])
+  @@index([userId])
+  @@index([serviceId])
+}
+
+model ServiceLike {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  serviceId String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, serviceId])
+  @@index([userId])
+  @@index([serviceId])
+}
+

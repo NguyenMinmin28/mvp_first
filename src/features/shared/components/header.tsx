@@ -255,6 +255,23 @@ export function Header({ user }: HeaderProps) {
     setPendingLogoutPortal(null);
   };
 
+  // Use a stable, locale-agnostic date formatter to avoid hydration mismatch
+  const formatDateStable = (isoString: string) => {
+    try {
+      const d = new Date(isoString);
+      // Format in UTC to be deterministic between server and client
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mi = String(d.getUTCMinutes()).padStart(2, '0');
+      const ss = String(d.getUTCSeconds()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss} UTC`;
+    } catch {
+      return isoString;
+    }
+  };
+
   return (
     <>
       <header className={`sticky top-0 z-50 w-full ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}>
@@ -336,6 +353,12 @@ export function Header({ user }: HeaderProps) {
             
             {isAuthenticated && mounted && userRole === "DEVELOPER" && (
               <nav className="hidden md:flex items-center gap-4">
+                <Link href="/services">
+                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                    <FolderOpen className="h-4 w-4" />
+                    Services
+                  </Button>
+                </Link>
                 <Link href="/ideas">
                   <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
                     <Zap className="h-4 w-4" />
@@ -542,7 +565,7 @@ export function Header({ user }: HeaderProps) {
                                 {n.payload?.projectTitle && (
                                   <div className="text-xs text-gray-600">{n.payload.projectTitle}</div>
                                 )}
-                                <div className="text-[11px] text-gray-400">{new Date(n.createdAt).toLocaleString()}</div>
+                                <div className="text-[11px] text-gray-400">{formatDateStable(n.createdAt)}</div>
                               </div>
                             </div>
                           </li>

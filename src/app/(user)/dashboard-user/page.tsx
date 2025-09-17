@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import ClevrsLoader from "@/features/shared/components/ClevrsLoader";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { UserLayout } from "@/features/shared/components/user-layout";
@@ -47,6 +48,7 @@ interface AssignedProjectItem {
 }
 
 export default function DashboardUserPage() {
+  const [mounted, setMounted] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -92,6 +94,7 @@ export default function DashboardUserPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     if (status === "loading") return;
     if (!session?.user) {
       router.push("/auth/signin");
@@ -405,12 +408,8 @@ export default function DashboardUserPage() {
     };
   }, [selectedProject]);
 
-  if (status === "loading" || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading dashboard...</div>
-      </div>
-    );
+  if (!mounted || status === "loading" || isLoading) {
+    return <ClevrsLoader />;
   }
 
   if (!session?.user) return null;

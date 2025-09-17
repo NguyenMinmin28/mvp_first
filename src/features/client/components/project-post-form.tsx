@@ -328,10 +328,12 @@ export function ProjectPostForm({
   return (
     <div className="space-y-6">
       <div>
-        <div className="pt-6 space-y-5 project-form-content">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            {title}
-          </h1>
+        <div className="pt-0 space-y-5 project-form-content">
+          {title && (
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+              {title}
+            </h1>
+          )}
           {/* Project Title */}
           <div>
             <Input 
@@ -342,7 +344,7 @@ export function ProjectPostForm({
                 setProjectTitle(e.target.value);
                 clearFieldError('projectTitle');
               }}
-              className={`w-full bg-[#F3F3F3] border-0 ${validationErrors.projectTitle ? 'border-red-500 focus:ring-red-500' : ''}`}
+              className={`h-12 w-full bg-[#F3F3F3] border-0 ${validationErrors.projectTitle ? 'border-red-500 focus:ring-red-500' : ''}`}
               required
             />
           </div>
@@ -357,12 +359,12 @@ export function ProjectPostForm({
                 setProjectDescription(e.target.value);
                 clearFieldError('projectDescription');
               }}
-              className={`w-full px-3 py-2 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none bg-[#F3F3F3] ${
+              className={`w-full px-3 py-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none bg-[#F3F3F3] ${
                 validationErrors.projectDescription 
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'focus:ring-black'
               }`}
-              rows={4}
+              rows={5}
               required
             />
           </div>
@@ -386,7 +388,7 @@ export function ProjectPostForm({
               <Button
                 type="button"
                 variant="outline"
-                className={`w-full justify-between bg-[#F3F3F3] border-0 text-gray-700 hover:bg-gray-200 transition-colors py-2.5 ${validationErrors.skills ? 'border-red-500 text-red-600' : ''}`}
+                className={`h-12 w-full justify-between bg-[#F3F3F3] border-0 text-gray-700 hover:bg-gray-200 transition-colors py-3 ${validationErrors.skills ? 'border-red-500 text-red-600' : ''}`}
                 onClick={handleToggleDropdown}
               >
                 {Array.isArray(selectedSkills) && selectedSkills.length > 0 ? `${selectedSkills.length}/5 selected` : "Skills (max 5)"}
@@ -430,7 +432,7 @@ export function ProjectPostForm({
                     setBudget(e.target.value);
                     clearFieldError('budget');
                   }}
-                  className={`w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? 'border-red-500 focus:ring-red-500' : ''}`}
                   min="0"
                   step="0.01"
                   required
@@ -439,7 +441,7 @@ export function ProjectPostForm({
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="px-3 py-2 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-[#F3F3F3]"
+                className="h-12 px-3 py-2 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-[#F3F3F3]"
               >
                 <option value="USD">USD</option>
                 <option value="VND">VND</option>
@@ -477,7 +479,7 @@ export function ProjectPostForm({
 
           {/* Post Project Button */}
           <Button
-            className="w-full bg-black text-white hover:bg-black/90"
+            className="h-12 w-full bg-black text-white hover:bg-black/90"
             onClick={isGuest ? () => router.push("/auth/signup") : handleFindFreelancer}
             disabled={isSubmitting}
           >

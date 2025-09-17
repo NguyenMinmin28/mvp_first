@@ -182,3 +182,31 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* CLEVRS Loader */
+@keyframes clevrs-bounce {
+  0% { transform: translateX(-20px); opacity: 0.2; }
+  30% { transform: translateX(0); opacity: 1; }
+  60% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(20px); opacity: 0.2; }
+}
+
+.clevrs-letter {
+  display: inline-block;
+  animation: clevrs-bounce 1.2s ease-in-out infinite;
+}
+
+.clevrs-v {
+  position: relative;
+}
+
+.clevrs-v::after {
+  content: "";
+  position: absolute;
+  right: -0.15em;
+  top: 15%;
+  height: 70%;
+  width: 0.18em;
+  background: #2563eb; /* blue-600 */
+  border-radius: 2px;
+}

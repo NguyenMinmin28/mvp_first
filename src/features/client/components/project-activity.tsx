@@ -9,7 +9,9 @@ import {
   Star,
   Calendar,
   Eye,
-  MessageSquare
+  MessageSquare,
+  LayoutGrid,
+  List as ListIcon
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -20,12 +22,16 @@ interface Project {
   status: "draft" | "submitted" | "assigning" | "accepted" | "in_progress" | "completed" | "canceled";
   date: string;
   logo?: string;
+  description?: string;
 }
 
 export default function ProjectActivity() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [page, setPage] = useState<number>(1);
+  const pageSize = viewMode === "grid" ? 8 : 5;
   const router = useRouter();
 
   useEffect(() => {
@@ -143,167 +149,107 @@ export default function ProjectActivity() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">
-        Project Activity
-      </h2>
+    <div className="mt-24 md:mt-36 space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-4xl font-extrabold text-gray-900">Project Overview</h2>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Most Recent Section */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">Most Recent</h3>
-              {getRecentProjects().length > 0 ? (
-                <>
-                  {/* First project with large logo */}
-                  {getRecentProjects().slice(0, 1).map((project) => (
-                    <div key={project.id} className="flex flex-col items-center text-center space-y-8">
-                      <div className="relative">
-                        <div className="w-64 h-64 rounded-full flex items-center justify-center relative overflow-hidden">
-                          <Image
-                            src="/images/about/logo.png"
-                            alt="Project Logo"
-                            width={256}
-                            height={256}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                      <div className="w-full">
-                        <h4 className="font-semibold text-gray-900  text-xl mb-3">
-                          {project.name}
-                        </h4>
-                        <div className="flex flex-col items-center space-y-3">
-                          <span className="text-base text-gray-500">{project.date}</span>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-gray-500 border-gray-300"
-                            onClick={() => router.push(`/projects/${project.id}`)}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            See Details
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Other projects in list format */}
-                  {getRecentProjects().slice(1).map((project) => (
-                    <div key={project.id} className="flex items-start gap-3">
-                      <div className="flex items-center justify-center">
-                        <FileText className="h-6 w-6 text-gray-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900  truncate">
-                          {project.name}
-                        </h4>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-sm text-gray-500">{project.date}</span>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-gray-500 border-gray-300"
-                            onClick={() => router.push(`/projects/${project.id}`)}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            See Details
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500">No recent projects</p>
-                </div>
-              )}
-            </div>
+        <div className="flex items-center gap-3">
+          <button
+            className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+              viewMode === "grid" ? "bg-black text-white" : "border border-black text-black"
+            }`}
+            onClick={() => { setViewMode("grid"); setPage(1); }}
+            aria-label="Grid view"
+          >
+            <LayoutGrid className="h-6 w-6" />
+          </button>
+          <button
+            className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+              viewMode === "list" ? "bg-black text-white" : "border border-black text-black"
+            }`}
+            onClick={() => { setViewMode("list"); setPage(1); }}
+            aria-label="List view"
+          >
+            <ListIcon className="h-6 w-6" />
+          </button>
+        </div>
+      </div>
 
-            {/* In Progress Section */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">In Progress</h3>
-              {getInProgressProjects().length > 0 ? (
-                getInProgressProjects().slice(0, 5).map((project) => (
-                  <div key={project.id} className="flex items-start gap-3">
-                    <div className="flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-gray-600" />
+      <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4" : "grid grid-cols-1"} gap-6`}>
+        {projects.slice((page - 1) * pageSize, page * pageSize).map((project) => {
+          const isDraft = project.status === "draft" || project.status === "submitted";
+          return (
+            <Card key={project.id} className="rounded-2xl border border-gray-300 shadow-sm">
+              <CardContent className={`p-6 space-y-4 ${viewMode === "list" ? "md:grid md:grid-cols-[auto_1fr_auto] md:items-center md:gap-6" : ""}`}>
+                {/* Header */}
+                <div className={`${viewMode === "list" ? "col-span-1" : ""} flex items-center justify-between`}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center">
+                      <img src="/images/client/projecticon.png" alt="project" className="h-6 w-6 object-contain" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900  truncate">
-                        {project.name}
-                      </h4>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-sm text-gray-500">
-                          {project.date} {formatStatus(project.status)}
-                        </span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-gray-500 border-gray-300"
-                          onClick={() => router.push(`/projects/${project.id}`)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          See Details
-                        </Button>
-                      </div>
-                    </div>
+                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500">No projects in progress</p>
+                  <span className="text-gray-400">•••</span>
                 </div>
-              )}
-            </div>
 
-            {/* Completed Section */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">Completed</h3>
-              {getCompletedProjects().length > 0 ? (
-                getCompletedProjects().slice(0, 5).map((project) => (
-                  <div key={project.id} className="flex items-start gap-3">
-                    <div className="flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-gray-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900  truncate">
-                        {project.name}
-                      </h4>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-sm text-gray-500">
-                          {project.date} {formatStatus(project.status)}
-                        </span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className={`${
-                            reviewedProjects.has(project.id) 
-                              ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500" 
-                              : "text-gray-500 border-gray-300"
-                          }`}
-                          onClick={() => router.push(`/my-projects`)}
-                          disabled={reviewedProjects.has(project.id)}
-                        >
-                          <MessageSquare className="h-3 w-3 mr-1" />
-                          {reviewedProjects.has(project.id) ? "Reviewed" : "Add Review"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500">No completed projects</p>
+                {/* Status */}
+                <div className={`${viewMode === "list" ? "col-span-1" : ""} text-sm font-semibold text-gray-900`}>
+                  {formatStatus(project.status)}
                 </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
+                {/* Description (fixed height to equalize cards) */}
+                <div className={`${viewMode === "list" ? "col-span-1" : ""} min-h-[56px]`}>
+                  <p className="text-sm text-gray-600">
+                    {project.description && project.description.trim().length > 0
+                      ? project.description
+                      : ""}
+                  </p>
+                </div>
+
+                {/* Action */}
+                <div className={`${viewMode === "list" ? "col-span-1" : ""}`}>
+                  <Button
+                    className={`${
+                      isDraft
+                        ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
+                        : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
+                    } w-full h-10 transition-colors`}
+                    variant={isDraft ? "default" : "outline"}
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                  >
+                    Fill in Draft
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Pagination */}
+      {projects.length > pageSize && (
+        <div className="flex items-center justify-center gap-4 pt-2">
+          <Button
+            variant="outline"
+            className="h-9 px-3"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Prev
+          </Button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {Math.max(1, Math.ceil(projects.length / pageSize))}
+          </span>
+          <Button
+            variant="outline"
+            className="h-9 px-3"
+            onClick={() => setPage((p) => Math.min(Math.ceil(projects.length / pageSize), p + 1))}
+            disabled={page >= Math.ceil(projects.length / pageSize)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
