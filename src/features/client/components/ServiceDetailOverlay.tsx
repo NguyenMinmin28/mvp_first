@@ -34,6 +34,7 @@ type Developer = {
 
 export interface ServiceDetailData {
   id: string;
+  slug?: string;
   title: string;
   shortDesc: string;
   coverUrl?: string | null;
@@ -44,6 +45,8 @@ export interface ServiceDetailData {
   ratingAvg: number;
   ratingCount: number;
   views: number;
+  likesCount?: number;
+  userLiked?: boolean;
   developer: Developer;
   skills: string[];
   categories: string[];
@@ -62,6 +65,12 @@ interface ServiceDetailOverlayProps {
 
 export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow }: ServiceDetailOverlayProps) {
   const [today, setToday] = useState("");
+  const [likeCount, setLikeCount] = useState<number>(service?.likesCount ?? Math.max(1, Math.round((service?.views || 0) / 40)));
+  const [isLiking, setIsLiking] = useState(false);
+  const [isLiked, setIsLiked] = useState<boolean>((service as any)?.userLiked ?? false);
+  const [pop, setPop] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [timelineStart, setTimelineStart] = useState("");
   const [timelineEnd, setTimelineEnd] = useState("");
 
@@ -88,6 +97,58 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
     const end = new Date(Date.now() + 20 * 24 * 3600 * 1000);
     setTimelineEnd(end.toLocaleDateString(undefined, fmt));
   }, []);
+
+  // Sync heart state when service changes
+  useEffect(() => {
+    if (service) {
+      setIsLiked((service as any).userLiked ?? false);
+      setLikeCount(service.likesCount ?? Math.max(1, Math.round((service.views || 0) / 40)));
+      setIsDetailsOpen(false);
+    }
+  }, [service?.id]);
+
+  const handleHeartClick = async () => {
+    if (!service?.id || isLiking) return;
+    try {
+      setIsLiking(true);
+      // Fire request
+      const res = await fetch(`/api/services/${service.id}/like`, { method: "POST" });
+      if (res.ok) {
+        const json = await res.json();
+        if (typeof json.likeCount === "number") {
+          setLikeCount(json.likeCount);
+        }
+        if (typeof json.liked === "boolean") {
+          setIsLiked(json.liked);
+          // trigger pop animation when newly liked
+          if (json.liked) {
+            setPop(true);
+            setTimeout(() => setPop(false), 500);
+          }
+        }
+      } else {
+        // optional: surface toast later
+      }
+    } catch (e) {
+      // noop
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.origin + (service?.slug ? `/services/${service.slug}` : `/services`) : "";
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+    } catch (_) {
+      // ignore
+    } finally {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    }
+  };
 
   return (
     <div
@@ -189,9 +250,9 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
           <div className="relative mt-2 z-20 h-16">
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-[#BEBEBE]" />
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-              <div className="w-16 h-16 rounded-full bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ring-black/10 flex items-center justify-center">
-                <Heart className="w-5 h-5 text-black" strokeWidth={1} />
-              </div>
+              <button onClick={handleHeartClick} aria-label="Like service" className={`w-16 h-16 rounded-full bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ${isLiked ? 'ring-red-300' : 'ring-black/10'} flex items-center justify-center transition ${pop ? 'like-bounce' : 'active:scale-95'}`}>
+                <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-black'}`} strokeWidth={1} />
+              </button>
             </div>
           </div>
           {/* Spacer to keep future components area clear */}
@@ -201,14 +262,19 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
           <div className="flex-1 overflow-y-auto pt-0 relative z-0">
             {/* Action pills: Details / Share */}
             <div className="px-4 sm:px-6 mb-6 flex items-center justify-center gap-4 relative z-20">
-              <button className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
+              <button onClick={() => setIsDetailsOpen(true)} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
                 <Info className="w-5 h-5" />
                 <span className="font-medium">Details</span>
               </button>
-              <button className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
-                <Share className="w-5 h-5" />
-                <span className="font-medium">Share</span>
-              </button>
+              <div className="relative">
+                <button onClick={handleShare} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
+                  <Share className="w-5 h-5" />
+                  <span className="font-medium">Share</span>
+                </button>
+                {copied && (
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-md bg-black text-white text-xs shadow-md whitespace-nowrap pointer-events-none">link copied!</div>
+                )}
+              </div>
             </div>
             {/* Skills chips */}
             {(() => {
@@ -403,10 +469,15 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M10.59 13.41L9.17 12a4 4 0 0 1 0-5.66l2.12-2.12a4 4 0 0 1 5.66 5.66l-1.41 1.41"/><path d="M13.41 10.59L14.83 12a4 4 0 0 1 0 5.66l-2.12 2.12a4 4 0 0 1-5.66-5.66l1.41-1.41"/></svg>
                     <span className="font-medium">Completed work</span>
                   </button>
-                  <button className="inline-flex items-center gap-2 px-5 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
-                    <span className="font-medium">Share</span>
-                  </button>
+                  <div className="relative">
+                    <button onClick={handleShare} className="inline-flex items-center gap-2 px-5 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+                      <span className="font-medium">Share</span>
+                    </button>
+                    {copied && (
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-md bg-black text-white text-xs shadow-md whitespace-nowrap pointer-events-none">link copied!</div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,7 +501,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
                       </svg>
                     </div>
-                    <div className="text-2xl text-gray-500 mt-2">{service?.views ? Math.max(1, Math.round(service.views / 40)) : 2}</div>
+                    <div className="text-2xl text-gray-500 mt-2">{likeCount}</div>
                   </div>
 
                   <div>
@@ -546,6 +617,91 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
           </div>
         </div>
       </div>
+
+      {/* Centered Details Modal */}
+      {isDetailsOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsDetailsOpen(false)} />
+          <div className="relative z-10 w-[92vw] max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Project Detail</h2>
+              <button
+                aria-label="Close details"
+                onClick={() => setIsDetailsOpen(false)}
+                className="p-2 rounded-md hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-5 sm:px-6 py-5">
+              <div className="mb-4 relative">
+                <button onClick={handleShare} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
+                  <Share className="w-5 h-5" />
+                  <span className="font-semibold">Share</span>
+                </button>
+                {copied && (
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-md bg-black text-white text-xs shadow-md whitespace-nowrap">link copied!</div>
+                )}
+              </div>
+              <div className="text-sm text-gray-500 mb-6">
+                <span className="font-semibold text-gray-900 mr-1">{today || ""}</span>
+                <span className="font-semibold text-gray-900">, Client</span>
+              </div>
+
+              <p className="text-gray-700 leading-7 mb-6">
+                {service?.shortDesc || "Lorem Ipsum is simply dummy text of the printing and typesetting industry."}
+              </p>
+
+              <div className="flex flex-wrap items-end gap-8 md:gap-12 mb-8">
+                <div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Likes</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  </div>
+                  <div className="text-2xl text-gray-500 mt-2">{likeCount}</div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Views</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </div>
+                  <div className="text-2xl text-gray-500 mt-2">{service?.views ?? 0}</div>
+                </div>
+
+                <div className="hidden md:block h-10 w-px bg-gray-300" />
+
+                <div className="min-w-[220px]">
+                  <div className="text-sm text-gray-500 mb-1">Timeline</div>
+                  <div className="text-2xl text-gray-500">{timelineStart}{timelineStart ? " – " : ""}{timelineEnd}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 text-sm text-gray-500">Tags</div>
+                <div className="flex flex-wrap gap-3">
+                  {(() => {
+                    const fallback = [
+                      "Brand Designer",
+                      "UI/UX Designer",
+                      "Product Designer",
+                      "Figma",
+                      "Adobe Photoshop",
+                      "Designer",
+                    ];
+                    const tags = (service?.skills && service.skills.length)
+                      ? service.skills
+                      : (service?.categories && service.categories.length ? service.categories : fallback);
+                    return tags.map((tag) => (
+                      <span key={tag} className="inline-flex items-center h-9 px-4 rounded-xl bg-[#F5F6F9] text-gray-700 text-sm font-medium">{tag}</span>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

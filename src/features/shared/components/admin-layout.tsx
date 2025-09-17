@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { cn } from "@/core/utils/utils";
 
 import { AdminHeader } from "./admin-header";
@@ -35,14 +35,14 @@ export function AdminLayout({
   description,
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  // Read persisted collapse state after mount to avoid SSR/CSR mismatch
+  useEffect(() => {
     try {
-      return localStorage.getItem("adminSidebarCollapsed") === "1";
-    } catch {
-      return false;
-    }
-  });
+      const persisted = localStorage.getItem("adminSidebarCollapsed") === "1";
+      setIsCollapsed(persisted);
+    } catch {}
+  }, []);
 
   // Use session refresh hook to automatically refresh user data on navigation
   const { isRefreshing } = useSessionRefresh();

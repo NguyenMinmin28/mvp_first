@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/core/database/db";
+import { getServerSessionUser } from "@/features/auth/auth-server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,6 +73,18 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
+    // Determine which of these services current user has liked
+    const sessionUser = await getServerSessionUser();
+    let likedServiceIds = new Set<string>();
+    if (sessionUser?.id && services.length > 0) {
+      const ids = services.map((s: any) => s.id);
+      const likes = await (prisma as any).serviceLike.findMany({
+        where: { userId: sessionUser.id, serviceId: { in: ids } },
+        select: { serviceId: true },
+      });
+      likedServiceIds = new Set(likes.map((l: any) => l.serviceId));
+    }
+
     const data = services.map((service: any) => ({
       id: service.id,
       slug: service.slug,
@@ -87,6 +100,7 @@ export async function GET(request: NextRequest) {
       views: service.views,
       likesCount: service.likesCount,
       favoritesCount: service.favoritesCount,
+      userLiked: likedServiceIds.has(service.id),
       developer: {
         id: service.developer.id,
         name: service.developer.user?.name,

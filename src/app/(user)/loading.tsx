@@ -1,5 +1,10 @@
-import ClevrsLoader from "@/features/shared/components/ClevrsLoader";
+import dynamic from "next/dynamic";
+
+const Loader = dynamic(
+  () => import("@/features/shared/components/ClevrsLoader"),
+  { ssr: false }
+);
 
 export default function Loading() {
-  return <ClevrsLoader />
+  return <Loader />
 }

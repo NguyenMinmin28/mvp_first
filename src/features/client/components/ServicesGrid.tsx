@@ -20,6 +20,8 @@ interface Service {
   ratingAvg: number;
   ratingCount: number;
   views: number;
+  likesCount?: number;
+  userLiked?: boolean;
   developer: {
     id: string;
     name?: string | null;
@@ -207,7 +209,7 @@ export function ServicesGrid() {
       {/* Slide-in overlay for service detail */}
       <ServiceDetailOverlay
         isOpen={isOverlayOpen}
-        service={selectedService}
+        service={selectedService ? { ...selectedService, likesCount: selectedService.likesCount, } as any : null}
         onClose={() => setIsOverlayOpen(false)}
         onGetInTouch={() => selectedService && handleGetInTouch(selectedService)}
         onPrev={() => {

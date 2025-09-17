@@ -152,7 +152,11 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    fetchAdminData();
+    // Defer to next tick to avoid any SSR/CSR mismatch on first paint
+    const id = setTimeout(() => {
+      fetchAdminData();
+    }, 0);
+    return () => clearTimeout(id);
   }, []);
 
   const fetchAdminData = async () => {

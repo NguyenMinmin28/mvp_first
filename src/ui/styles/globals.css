@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes likePopKeyframe {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.like-pop {
+  animation: likePopKeyframe 0.22s ease-out;
+}
+
+@keyframes likeBounceKeyframe {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-24px) scale(1.08); }
+  55% { transform: translateY(0) scale(0.96); }
+  75% { transform: translateY(-8px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.like-bounce {
+  animation: likeBounceKeyframe 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -197,16 +219,9 @@
 }
 
 .clevrs-v {
-  position: relative;
-}
-
-.clevrs-v::after {
-  content: "";
-  position: absolute;
-  right: -0.15em;
-  top: 15%;
-  height: 70%;
-  width: 0.18em;
-  background: #2563eb; /* blue-600 */
-  border-radius: 2px;
+  /* Color half of the letter V in blue by clipping a gradient to text */
+  background-image: linear-gradient(130deg, #111111 0 48%, #2563eb 48% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
