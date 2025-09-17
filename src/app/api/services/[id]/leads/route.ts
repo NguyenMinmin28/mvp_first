@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
+import { notify } from "@/core/services/notify.service";
 
 export async function POST(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function POST(
     const { message, contactVia = "IN_APP" } = body;
 
     // Verify service exists and is published
-    const service = await prisma.service.findFirst({
+    const service = await (prisma as any).service.findFirst({
       where: {
         id: serviceId,
         status: "PUBLISHED",
@@ -42,7 +43,7 @@ export async function POST(
     }
 
     // Check if user already has a lead for this service
-    const existingLead = await prisma.serviceLead.findFirst({
+    const existingLead = await (prisma as any).serviceLead.findFirst({
       where: {
         serviceId,
         clientId: session.user.id,
@@ -54,7 +55,7 @@ export async function POST(
     }
 
     // Create the lead
-    const lead = await prisma.serviceLead.create({
+    const lead = await (prisma as any).serviceLead.create({
       data: {
         serviceId,
         clientId: session.user.id,
@@ -64,21 +65,19 @@ export async function POST(
       },
     });
 
-    // Create notification for developer
-    await prisma.notification.create({
-      data: {
-        userId: service.developer.userId,
-        type: "SERVICE_LEAD_CREATED",
-        title: "New Lead Received",
-        body: `You have a new lead for "${service.title}"`,
-        dataJson: {
-          serviceId: service.id,
-          serviceTitle: service.title,
-          leadId: lead.id,
-          clientName: session.user.name,
-          message: message?.trim() || null,
-        },
+    // Create notification for developer using centralized notify service
+    await notify({
+      type: "SERVICE_LEAD_CREATED",
+      actorUserId: session.user.id,
+      projectId: undefined,
+      payload: {
+        serviceId: service.id,
+        serviceTitle: service.title,
+        leadId: lead.id,
+        clientName: session.user.name,
+        message: message?.trim() || null,
       },
+      recipients: [service.developer.userId],
     });
 
     return NextResponse.json({
