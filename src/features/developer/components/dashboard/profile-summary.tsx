@@ -215,7 +215,14 @@ export default function ProfileSummary({ profile, hideControls = false, develope
           {/* Left: name on first line, email on second line */}
           <div className="h-10 md:h-12 flex flex-col justify-center min-w-0">
             <span className="truncate font-semibold text-sm md:text-base leading-tight">{name || profile?.name}</span>
-            <span className="truncate text-xs md:text-[13px] text-gray-600 leading-tight">{profile?.email}</span>
+            {profile?.email && (
+              <span className="truncate text-xs md:text-[13px] text-gray-600 leading-tight">{profile.email}</span>
+            )}
+            {!profile?.email && profile?.isConnected === false && (
+              <span className="truncate text-xs md:text-[13px] text-gray-400 leading-tight italic">
+                Contact information hidden - Connect to view
+              </span>
+            )}
           </div>
           {!hideControls && !developerId ? (
             <div className="flex items-center gap-2">
@@ -252,6 +259,17 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                 <Badge className="text-xs capitalize">
                   {String(profile.adminApprovalStatus).toLowerCase()}
                 </Badge>
+              )}
+              {!profile?.isConnected && developerId && (
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
+                  onClick={() => {
+                    // TODO: Implement connection logic
+                    alert("Connection feature coming soon!");
+                  }}
+                >
+                  Connect
+                </Button>
               )}
             </div>
           )}
@@ -310,7 +328,15 @@ export default function ProfileSummary({ profile, hideControls = false, develope
               </div>
               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
                 <div className="text-gray-500 text-xs sm:text-sm">Email: </div>
-                <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">{profile?.email || ""}</div>
+                <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                  {profile?.email ? (
+                    profile.email
+                  ) : profile?.isConnected === false ? (
+                    <span className="text-gray-400 italic">Hidden - Connect to view</span>
+                  ) : (
+                    ""
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
                 <div className="text-gray-500 text-xs sm:text-sm">Approve: </div>

@@ -7,6 +7,7 @@ import { Badge } from "@/ui/components/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { 
   Heart,
   MessageCircle,
@@ -42,6 +43,7 @@ interface FavoriteDeveloper {
 }
 
 export default function FavoritesPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const [favorites, setFavorites] = useState<FavoriteDeveloper[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,10 @@ export default function FavoritesPage() {
     } catch (error) {
       console.error('Error removing favorite:', error);
     }
+  };
+
+  const handleDeveloperClick = (developer: FavoriteDeveloper) => {
+    router.push(`/developer/${developer.id}`);
   };
 
   useEffect(() => {
@@ -161,7 +167,11 @@ export default function FavoritesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {favorites.map((developer) => (
-            <Card key={developer.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={developer.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleDeveloperClick(developer)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -179,7 +189,10 @@ export default function FavoritesPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemoveFavorite(developer.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFavorite(developer.id);
+                    }}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-150 active:scale-95"
                   >
                     <Heart className="h-4 w-4 fill-current transition-all duration-200 hover:scale-110" />

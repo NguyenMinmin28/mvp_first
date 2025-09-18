@@ -9,21 +9,14 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { 
-  Heart,
-  Sprout,
-  Palmtree,
-  TreePine,
-  Calendar,
   FileText,
-  AlertCircle,
-  CheckCircle,
-  Check
+  AlertCircle
 } from "lucide-react";
 import ProjectActivity from "./project-activity";
 import FreelancersStrip from "./FreelancersStrip";
 import ServicesStrip from "./ServicesStrip";
 import { ProjectPostForm } from "./project-post-form";
-import { PayPalButtons } from "@/features/billing/components/paypal-buttons";
+import HelpAndResources from "./HelpAndResources";
 import { toast } from "sonner";
 
 export default function ClientDashboard() {
@@ -95,112 +88,6 @@ export default function ClientDashboard() {
     fetchSubscription();
   }, [session?.user?.id]);
 
-  // Plan data matching the pricing page
-  const plans = [
-    {
-      id: "basic",
-      name: "Basic Plan",
-      price: "$0",
-      priceNumber: 0,
-      period: "/monthly",
-      features: [
-        "Monthly Post 1 project free.",
-        "Contact up to 5 freelancer per project.",
-        "Get notified when freelancers show interest",
-      ],
-      cta: "CHOOSE YOUR PLAN",
-      providerPlanId: "P-BASIC-PLAN-ID",
-    },
-    {
-      id: "plus",
-      name: "Plus Plan",
-      price: "$19.95",
-      priceNumber: 19.95,
-      period: "/monthly",
-      features: [
-        "Post up to 10 projects per month.",
-        "Contact up to 10 freelancer per project",
-        "Get notified when freelancers show interest",
-      ],
-      cta: "CHOOSE YOUR PLAN",
-      providerPlanId: "P-2L869865T2585332XNC24EXA",
-    },
-    {
-      id: "pro",
-      name: "Pro Plan",
-      price: "$99.95",
-      priceNumber: 99.95,
-      period: "/monthly",
-      features: [
-        "Unlimited project postings",
-        "Unlimited contacts per project.",
-        "Get notified when freelancers show interest",
-      ],
-      cta: "CHOOSE YOUR PLAN",
-      providerPlanId: "P-6BH23931L7595043MNC24EXQ",
-    },
-  ];
-
-  const handlePlanSelection = (plan: any) => {
-    if (!session) {
-      window.location.href = "/auth/signin";
-      return;
-    }
-    alert(`PayPal integration for ${plan.name} will be available soon!`);
-  };
-
-  const renderPlanButton = (plan: any) => {
-    // Basic Plan ($0) - always disabled for logged in users
-    if (plan.id === "basic" && session) {
-      return (
-        <div className="h-16 flex flex-col justify-center">
-          <Button disabled className="w-full h-12 text-sm font-semibold bg-green-600 text-white">
-            ✓ Included Free
-          </Button>
-          <p className="text-xs text-muted-foreground text-center mt-1">
-            You already have Basic Plan access
-          </p>
-        </div>
-      );
-    }
-
-    // Plus Plan and Pro Plan - show PayPal buttons
-    if (session && (plan.id === "plus" || plan.id === "pro")) {
-      const isCurrentPlan = currentSubscription?.package?.name === plan.name;
-      const hasActiveSubscription = !!currentSubscription;
-      console.log(`🔍 Dashboard - Plan ${plan.name}:`, {
-        isCurrentPlan,
-        hasActiveSubscription,
-        currentSubscriptionPackage: currentSubscription?.package?.name,
-        planName: plan.name
-      });
-      
-      return (
-        <div className="h-16 flex items-center">
-          <PayPalButtons
-            packageId={plan.id}
-            packageName={plan.name}
-            price={plan.priceNumber}
-            planId={plan.providerPlanId}
-            isCurrentPlan={isCurrentPlan}
-            hasActiveSubscription={hasActiveSubscription}
-          />
-        </div>
-      );
-    }
-
-    // Not logged in - show login button
-    return (
-      <div className="h-16 flex items-center">
-        <Button 
-          className="w-full h-12 text-sm font-semibold"
-          onClick={() => handlePlanSelection(plan)}
-        >
-          {plan.cta}
-        </Button>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-8">
@@ -435,81 +322,8 @@ export default function ClientDashboard() {
       {/* Services Section */}
       <ServicesStrip />
 
-      {/* Subscription for clients section */}
-      <section className="w-full py-10 md:py-16">
-        <div className="container mx-auto max-w-8xl px-0">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
-            <div className="lg:col-span-3">
-              <h2 className="text-4xl font-extrabold tracking-tight mb-8">Subscription for clients</h2>
-              {/* Subscription Plans Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                {plans.map((plan) => (
-                  <div key={plan.id} className={`rounded-2xl border bg-white/70 p-6 flex flex-col ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
-                    <div className="mb-6">
-                      <h3 className="font-semibold text-lg text-left">{plan.name}</h3>
-                      <div className="mt-2 mx-1 h-px bg-[#DEE0E2]"></div>
-                    </div>
-                    <div className="mb-8">
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      <span className="ml-2 text-sm text-gray-600">/{plan.period.replace('/', '')}</span>
-                    </div>
-                    
-                    {/* Plan Button */}
-                    <div className="mb-8">
-                      {renderPlanButton(plan)}
-                    </div>
-                    
-                    <div className="mt-auto rounded-xl bg-[#FAFAFA] p-6">
-                      <p className="font-semibold mb-3">Service Include:</p>
-                      <ul className="space-y-2 text-xs text-gray-700">
-                        {plan.features.map((f, i) => (
-                          <li key={i} className="flex items-start gap-3">
-                            <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#6D6D6D] text-white shrink-0">
-                              <Check className="w-2.5 h-2.5" />
-                            </span>
-                            <span className="leading-relaxed whitespace-nowrap">{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Benefits Section */}
-            <div className="lg:col-span-1 flex justify-center">
-              <div className="w-full max-w-sm rounded-2xl border bg-white/70 p-6 flex flex-col mt-8 mb-8">
-                <h3 className="font-semibold text-xl mb-6">Benefits</h3>
-                <ul className="space-y-6 text-gray-800">
-                  <li className="flex items-start gap-4">
-                    <span className="inline-flex h-10 w-10 items-center justify-center">
-                      <img src="/images/home/calendar.jpg" alt="calendar" className="w-6 h-6 object-contain" />
-                    </span>
-                    <p className="font-medium">Post projects anytime and connect instantly</p>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <span className="inline-flex h-10 w-10 items-center justify-center">
-                      <svg viewBox="0 0 24 24" className="w-6 h-6" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="9" fill="#ffffff" stroke="#000000" strokeWidth="2" />
-                        <path d="M12 7v5l3 3" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                    <p className="font-medium">Flexible contracts with direct agreements</p>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <span className="inline-flex h-10 w-10 items-center justify-center">
-                      <img src="/images/home/pay.png" alt="earnings" className="w-6 h-6 object-contain" />
-                    </span>
-                    <p className="font-medium">Keep 100% earnings, zero commission</p>
-                  </li>
-                </ul>
-                <a href="/pricing" className="inline-block mt-auto underline">See terms</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Help and Resources Section */}
+      <HelpAndResources />
     </div>
   );
 }

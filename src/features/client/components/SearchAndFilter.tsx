@@ -1,14 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Search, SlidersHorizontal } from "lucide-react";
+import { useDebounce } from "@/features/shared/hooks/use-debounce";
 
-export function SearchAndFilter() {
+interface SearchAndFilterProps {
+  onSearchChange?: (searchQuery: string) => void;
+  onTabChange?: (tab: "people" | "service") => void;
+  onFiltersChange?: (filters: string[]) => void;
+}
+
+export function SearchAndFilter({ 
+  onSearchChange, 
+  onTabChange, 
+  onFiltersChange 
+}: SearchAndFilterProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"people" | "service">("people");
+  const [activeTab, setActiveTab] = useState<"people" | "service">("service");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  
+  // Debounce search query to avoid too many API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Notify parent components of changes
+  useEffect(() => {
+    onSearchChange?.(debouncedSearchQuery);
+  }, [debouncedSearchQuery, onSearchChange]);
+
+  useEffect(() => {
+    onTabChange?.(activeTab);
+  }, [activeTab, onTabChange]);
+
+  useEffect(() => {
+    onFiltersChange?.(selectedFilters);
+  }, [selectedFilters, onFiltersChange]);
 
   const filterOptions = [
     "Featured",
@@ -28,6 +55,10 @@ export function SearchAndFilter() {
     );
   };
 
+  const handleTabChange = (tab: "people" | "service") => {
+    setActiveTab(tab);
+  };
+
   return (
     <div className="w-full space-y-4">
       {/* Search Bar and Toggle */}
@@ -37,17 +68,25 @@ export function SearchAndFilter() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <Input
             type="text"
-            placeholder="Search across 1M+ independents..."
+            placeholder={activeTab === "service" ? "Search services, skills, categories..." : "Search developers, skills, locations..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 text-base rounded-lg border-gray-300 focus:border-gray-400 focus:ring-0"
+            className="pl-10 pr-10 h-12 text-base rounded-lg border-gray-300 focus:border-gray-400 focus:ring-0"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* People/Service Toggle */}
         <div className="flex bg-gray-100 rounded-lg p-1">
           <button
-            onClick={() => setActiveTab("people")}
+            onClick={() => handleTabChange("people")}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === "people"
                 ? "bg-white text-black shadow-sm"
@@ -57,7 +96,7 @@ export function SearchAndFilter() {
             People
           </button>
           <button
-            onClick={() => setActiveTab("service")}
+            onClick={() => handleTabChange("service")}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === "service"
                 ? "bg-white text-black shadow-sm"

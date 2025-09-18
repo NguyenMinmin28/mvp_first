@@ -61,9 +61,10 @@ interface ServiceDetailOverlayProps {
   onPrev?: () => void;
   onNext?: () => void;
   onFollow?: () => void;
+  onServiceUpdate?: (service: ServiceDetailData) => void;
 }
 
-export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow }: ServiceDetailOverlayProps) {
+export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow, onServiceUpdate }: ServiceDetailOverlayProps) {
   const [today, setToday] = useState("");
   const [likeCount, setLikeCount] = useState<number>(service?.likesCount ?? Math.max(1, Math.round((service?.views || 0) / 40)));
   const [isLiking, setIsLiking] = useState(false);
@@ -121,43 +122,102 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
 
   const handleHeartClick = async () => {
     if (!service?.id || isLiking) return;
-    // Optimistic update
-    const nextLiked = !isLiked;
+    
+    // Store previous state for potential rollback
     const prevLiked = isLiked;
     const prevCount = likeCount;
+    const nextLiked = !isLiked;
+    
+    // Immediate UI update - no animation for unlike
     setIsLiked(nextLiked);
     setLikeCount(Math.max(0, prevCount + (nextLiked ? 1 : -1)));
+    
+    // Only add pop animation for like (not unlike)
     if (nextLiked) {
       setPop(true);
       setTimeout(() => setPop(false), 500);
     }
 
-    try {
-      setIsLiking(true);
-      const url = `/api/services/${service.id}/like`;
-      setPendingLikeUrl(url);
-      const res = await fetch(url, { method: "POST" });
-      if (res.ok) {
-        const json = await res.json();
-        if (typeof json.likeCount === "number") {
-          setLikeCount(json.likeCount);
+    // Notify parent component immediately
+    if (onServiceUpdate && service) {
+      onServiceUpdate({
+        ...service,
+        likesCount: Math.max(0, prevCount + (nextLiked ? 1 : -1)),
+        userLiked: nextLiked,
+      });
+    }
+
+    // Run API call in background (don't await)
+    const performApiCall = async () => {
+      try {
+        setIsLiking(true);
+        const url = `/api/services/${service.id}/like`;
+        setPendingLikeUrl(url);
+        
+        const res = await fetch(url, { 
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (res.ok) {
+          const json = await res.json();
+          console.log('Like API response:', json);
+          
+          // Update with server response
+          if (typeof json.likeCount === "number") {
+            setLikeCount(json.likeCount);
+          }
+          if (typeof json.liked === "boolean") {
+            setIsLiked(json.liked);
+          }
+          
+          // Notify parent component of the server response
+          if (onServiceUpdate && service) {
+            onServiceUpdate({
+              ...service,
+              likesCount: json.likeCount,
+              userLiked: json.liked,
+            });
+          }
+        } else {
+          console.error('Like API failed:', res.status, res.statusText);
+          // Revert on failure
+          setIsLiked(prevLiked);
+          setLikeCount(prevCount);
+          
+          // Notify parent component of the revert
+          if (onServiceUpdate && service) {
+            onServiceUpdate({
+              ...service,
+              likesCount: prevCount,
+              userLiked: prevLiked,
+            });
+          }
         }
-        if (typeof json.liked === "boolean") {
-          setIsLiked(json.liked);
-        }
-      } else {
-        // Revert on failure
+      } catch (e) {
+        console.error('Like API error:', e);
+        // Revert on error
         setIsLiked(prevLiked);
         setLikeCount(prevCount);
+        
+        // Notify parent component of the revert
+        if (onServiceUpdate && service) {
+          onServiceUpdate({
+            ...service,
+            likesCount: prevCount,
+            userLiked: prevLiked,
+          });
+        }
+      } finally {
+        setIsLiking(false);
+        setPendingLikeUrl(null);
       }
-    } catch (e) {
-      // Revert on error
-      setIsLiked(prevLiked);
-      setLikeCount(prevCount);
-    } finally {
-      setIsLiking(false);
-      setPendingLikeUrl(null);
-    }
+    };
+
+    // Start API call in background
+    performApiCall();
   };
 
   const handleShare = async () => {
@@ -274,7 +334,11 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
           <div className="relative mt-2 z-20 h-16">
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-[#BEBEBE]" />
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-              <button onClick={handleHeartClick} aria-label="Like service" className={`w-16 h-16 rounded-full bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ${isLiked ? 'ring-red-300' : 'ring-black/10'} flex items-center justify-center transition ${pop ? 'like-bounce' : 'active:scale-95'}`}>
+              <button 
+                onClick={handleHeartClick} 
+                aria-label={isLiked ? "Unlike service" : "Like service"} 
+                className={`w-16 h-16 rounded-full bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] ring-1 ${isLiked ? 'ring-red-300' : 'ring-black/10'} flex items-center justify-center transition ${pop ? 'like-bounce' : 'active:scale-95'} hover:shadow-[0_12px_32px_rgba(0,0,0,0.25)]`}
+              >
                 <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-black'}`} strokeWidth={1} />
               </button>
             </div>

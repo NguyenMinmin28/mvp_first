@@ -6,6 +6,7 @@ import { Button } from "@/ui/components/button";
 import Image from "next/image";
 import GetInTouchModal from "./GetInTouchModal";
 import ServiceDetailOverlay from "./ServiceDetailOverlay";
+import { Pagination } from "@/features/shared/components/pagination";
 
 interface Service {
   id: string;
@@ -33,25 +34,68 @@ interface Service {
   leadsCount: number;
 }
 
-export function ServicesGrid() {
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+interface ServicesGridProps {
+  searchQuery?: string;
+  sortBy?: string;
+  filters?: string[];
+}
+
+export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [] }: ServicesGridProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 12,
+    totalCount: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchQuery, sortBy, filters]);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/services?limit=8&sort=popular", { cache: "no-store" });
+        
+        // Build query parameters
+        const params = new URLSearchParams({
+          page: pagination.page.toString(),
+          limit: pagination.limit.toString(),
+          sort: sortBy,
+        });
+        
+        if (searchQuery.trim()) {
+          params.append("search", searchQuery.trim());
+        }
+        
+        const res = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
         const json = await res.json();
         if (res.ok && json?.success && Array.isArray(json.data) && mounted) {
           setServices(json.data);
+          if (json.pagination) {
+            setPagination(json.pagination);
+          }
         }
       } catch (e) {
-        // noop
+        console.error("Error loading services:", e);
       } finally {
         mounted && setLoading(false);
       }
@@ -60,7 +104,7 @@ export function ServicesGrid() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [pagination.page, searchQuery, sortBy, filters]);
 
   const handleGetInTouch = (service: Service) => {
     setSelectedService(service);
@@ -72,35 +116,112 @@ export function ServicesGrid() {
     setIsOverlayOpen(true);
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleServiceUpdate = (updatedService: any) => {
+    setServices(prev => prev.map(service => 
+      service.id === updatedService.id ? {
+        ...service,
+        likesCount: updatedService.likesCount,
+        userLiked: updatedService.userLiked,
+      } : service
+    ));
+    if (selectedService && selectedService.id === updatedService.id) {
+      setSelectedService({
+        ...selectedService,
+        likesCount: updatedService.likesCount,
+        userLiked: updatedService.userLiked,
+      });
+    }
+  };
+
   if (loading && services.length === 0) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 8 }).map((_, idx) => (
-          <Card key={idx} className="border border-gray-200">
-            <CardContent className="p-0">
-              <div className="h-48 bg-gray-200 animate-pulse" />
-              <div className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse" />
-                  <div>
-                    <div className="h-4 w-24 bg-gray-200 animate-pulse mb-2" />
-                    <div className="h-3 w-16 bg-gray-200 animate-pulse" />
+      <div className="space-y-4">
+        {searchQuery && (
+          <div className="text-center py-4">
+            <div className="text-gray-500 text-sm">
+              Searching for "{searchQuery}"...
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <Card key={idx} className="border border-gray-200">
+              <CardContent className="p-0">
+                <div className="h-48 bg-gray-200 animate-pulse" />
+                <div className="p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse" />
+                    <div>
+                      <div className="h-4 w-24 bg-gray-200 animate-pulse mb-2" />
+                      <div className="h-3 w-16 bg-gray-200 animate-pulse" />
+                    </div>
                   </div>
+                  <div className="h-4 w-full bg-gray-200 animate-pulse mb-2" />
+                  <div className="h-3 w-3/4 bg-gray-200 animate-pulse" />
                 </div>
-                <div className="h-4 w-full bg-gray-200 animate-pulse mb-2" />
-                <div className="h-3 w-3/4 bg-gray-200 animate-pulse" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (!services.length) return null;
+  if (!services.length && !loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-gray-500 text-lg mb-2">
+          {searchQuery ? "No services found matching your search" : "No services available"}
+        </div>
+        {searchQuery && (
+          <div className="text-gray-400 text-sm">
+            Try adjusting your search terms or filters
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
+      {/* Search results info */}
+      {searchQuery && !loading && (
+        <div className="mb-6">
+          <div className="text-gray-600 text-sm">
+            {searchQuery.length < 2 ? (
+              <>
+                <span className="text-amber-600">Please enter at least 2 characters to search</span>
+              </>
+            ) : pagination.totalCount > 0 ? (
+              <>
+                Found <span className="font-semibold text-gray-900">{pagination.totalCount}</span> services for "
+                <span className="font-semibold text-gray-900">"{searchQuery}"</span>"
+              </>
+            ) : (
+              <>
+                No results found for "<span className="font-semibold text-gray-900">"{searchQuery}"</span>"
+                {searchQuery.length < 3 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Try a longer search term for better results
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {loading && services.length > 0 && (
+        <div className="text-center py-2 mb-4">
+          <div className="text-gray-500 text-sm">
+            Updating results...
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {services.map((service) => (
           <Card key={service.id} className="hover:shadow-md transition-shadow border border-gray-200 h-full cursor-pointer" onClick={() => handleOpenOverlay(service)}>
@@ -206,6 +327,15 @@ export function ServicesGrid() {
         ))}
       </div>
 
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+        totalCount={pagination.totalCount}
+        limit={pagination.limit}
+      />
+
       {/* Slide-in overlay for service detail */}
       <ServiceDetailOverlay
         isOpen={isOverlayOpen}
@@ -229,6 +359,7 @@ export function ServicesGrid() {
         onFollow={() => {
           // Placeholder: implement follow later
         }}
+        onServiceUpdate={handleServiceUpdate}
       />
 
       {selectedService && (

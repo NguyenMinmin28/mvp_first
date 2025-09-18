@@ -1,16 +1,35 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/ui/components/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import SearchAndFilter from "@/features/client/components/SearchAndFilter";
 import ServicesGrid from "@/features/client/components/ServicesGrid";
+import PeopleGrid from "@/features/client/components/PeopleGrid";
 
 export default function ServicesPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const isDeveloper = session?.user?.role === "DEVELOPER";
+  
+  // State for search and filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"people" | "service">("service");
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+
+  // Set initial tab based on URL parameter
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "people") {
+      setActiveTab("people");
+    } else {
+      setActiveTab("service");
+    }
+  }, [searchParams]);
 
   return (
     <UserLayout user={session?.user}>
@@ -41,12 +60,28 @@ export default function ServicesPage() {
 
       {/* Search and Filter Section */}
       <div className="container mx-auto px-4 py-6">
-        <SearchAndFilter />
+        <SearchAndFilter 
+          onSearchChange={setSearchQuery}
+          onTabChange={setActiveTab}
+          onFiltersChange={setSelectedFilters}
+        />
       </div>
 
-      {/* Services Grid */}
+      {/* Content Grid - Services or People */}
       <div className="container mx-auto px-4 py-8">
-        <ServicesGrid />
+        {activeTab === "service" ? (
+          <ServicesGrid 
+            searchQuery={searchQuery}
+            sortBy="popular"
+            filters={selectedFilters}
+          />
+        ) : (
+          <PeopleGrid 
+            searchQuery={searchQuery}
+            sortBy="popular"
+            filters={selectedFilters}
+          />
+        )}
       </div>
     </UserLayout>
   );

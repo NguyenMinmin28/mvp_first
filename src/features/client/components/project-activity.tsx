@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
@@ -11,7 +11,9 @@ import {
   Eye,
   MessageSquare,
   LayoutGrid,
-  List as ListIcon
+  List as ListIcon,
+  MoreHorizontal,
+  Share
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -31,11 +33,27 @@ export default function ProjectActivity() {
   const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState<number>(1);
-  const pageSize = viewMode === "grid" ? 8 : 5;
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const pageSize = viewMode === "grid" ? 4 : 5;
   const router = useRouter();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchProjects();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // Check review status for completed projects
@@ -85,30 +103,12 @@ export default function ProjectActivity() {
     }
   };
 
-  const getRecentProjects = () => {
-    // Get the most recent project (first in the list)
-    return projects.slice(0, 1);
-  };
-  
-  const getInProgressProjects = () => {
-    // Get projects that are actively being worked on
-    return projects.filter(p => 
-      p.status === "in_progress" || 
-      p.status === "assigning" || 
-      p.status === "accepted"
-    );
-  };
-  
-  const getCompletedProjects = () => {
-    // Get completed projects
-    return projects.filter(p => p.status === "completed");
-  };
 
   const formatStatus = (status: string) => {
     const statusMap: Record<string, string> = {
       'draft': 'Draft',
       'submitted': 'Submitted',
-      'assigning': 'Assigning',
+      'assigning': 'Pending job post',
       'accepted': 'Accepted',
       'in_progress': 'In Progress',
       'completed': 'Completed',
@@ -116,6 +116,23 @@ export default function ProjectActivity() {
     };
     return statusMap[status] || status.replace('_', ' ').toUpperCase();
   };
+
+  const handleDropdownToggle = (projectId: string) => {
+    setOpenDropdown(openDropdown === projectId ? null : projectId);
+  };
+
+  const handleViewProject = (projectId: string) => {
+    router.push(`/projects/${projectId}`);
+    setOpenDropdown(null);
+  };
+
+  const handleShareProject = (projectId: string) => {
+    // TODO: Implement share project functionality
+    console.log('Share project:', projectId);
+    setOpenDropdown(null);
+  };
+
+  // Component is now available for all users, but shows only 4 projects
 
   if (isLoading) {
     return (
@@ -155,7 +172,7 @@ export default function ProjectActivity() {
 
         <div className="flex items-center gap-3">
           <button
-            className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+            className={`h-12 w-12 rounded-lg flex items-center justify-center ${
               viewMode === "grid" ? "bg-black text-white" : "border border-black text-black"
             }`}
             onClick={() => { setViewMode("grid"); setPage(1); }}
@@ -164,7 +181,7 @@ export default function ProjectActivity() {
             <LayoutGrid className="h-6 w-6" />
           </button>
           <button
-            className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+            className={`h-12 w-12 rounded-lg flex items-center justify-center ${
               viewMode === "list" ? "bg-black text-white" : "border border-black text-black"
             }`}
             onClick={() => { setViewMode("list"); setPage(1); }}
@@ -175,59 +192,163 @@ export default function ProjectActivity() {
         </div>
       </div>
 
-      <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4" : "grid grid-cols-1"} gap-6`}>
-        {projects.slice((page - 1) * pageSize, page * pageSize).map((project) => {
+      <div className={`${viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-0 border border-gray-300 rounded-2xl overflow-hidden"}`}>
+        {projects.slice((page - 1) * pageSize, page * pageSize).map((project, index) => {
           const isDraft = project.status === "draft" || project.status === "submitted";
+          const isLastItem = index === projects.slice((page - 1) * pageSize, page * pageSize).length - 1;
           return (
-            <Card key={project.id} className="rounded-2xl border border-gray-300 shadow-sm">
-              <CardContent className={`p-6 space-y-4 ${viewMode === "list" ? "md:grid md:grid-cols-[auto_1fr_auto] md:items-center md:gap-6" : ""}`}>
-                {/* Header */}
-                <div className={`${viewMode === "list" ? "col-span-1" : ""} flex items-center justify-between`}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center">
+            <Card key={project.id} className={`${viewMode === "list" ? "rounded-none border-l-0 border-r-0 border-t-0" : "rounded-2xl border border-gray-300 shadow-sm"} ${viewMode === "list" && !isLastItem ? "border-b border-gray-200" : viewMode === "list" ? "border-b border-gray-300" : ""}`}>
+              <CardContent className={`${viewMode === "list" ? "p-3" : "p-6"} ${viewMode === "list" ? "flex items-center justify-between" : "space-y-4"}`}>
+                {viewMode === "list" ? (
+                  <>
+                    {/* Icon */}
+                    <div className="flex h-10 w-10 items-center justify-center flex-shrink-0">
                       <img src="/images/client/projecticon.png" alt="project" className="h-6 w-6 object-contain" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                  </div>
-                  <span className="text-gray-400">•••</span>
-                </div>
 
-                {/* Status */}
-                <div className={`${viewMode === "list" ? "col-span-1" : ""} text-sm font-semibold text-gray-900`}>
-                  {formatStatus(project.status)}
-                </div>
+                    {/* Project Name */}
+                    <div className="flex-shrink-0 w-1/5">
+                      <h3 className="font-semibold text-gray-900 leading-tight">{project.name}</h3>
+                    </div>
 
-                {/* Description (fixed height to equalize cards) */}
-                <div className={`${viewMode === "list" ? "col-span-1" : ""} min-h-[56px]`}>
-                  <p className="text-sm text-gray-600">
-                    {project.description && project.description.trim().length > 0
-                      ? project.description
-                      : ""}
-                  </p>
-                </div>
+                    {/* Status */}
+                    <div className="flex-shrink-0 w-1/6">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {formatStatus(project.status)}
+                      </p>
+                    </div>
 
-                {/* Action */}
-                <div className={`${viewMode === "list" ? "col-span-1" : ""}`}>
-                  <Button
-                    className={`${
-                      isDraft
-                        ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
-                        : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
-                    } w-full h-10 transition-colors`}
-                    variant={isDraft ? "default" : "outline"}
-                    onClick={() => router.push(`/projects/${project.id}`)}
-                  >
-                    Fill in Draft
-                  </Button>
-                </div>
+                    {/* Description */}
+                    <div className="flex-1 min-w-0 mx-4">
+                      <p className="text-sm text-gray-600 truncate">
+                        {project.description && project.description.trim().length > 0
+                          ? project.description
+                          : ""}
+                      </p>
+                    </div>
+
+                    {/* Button */}
+                    <div className="flex-1 min-w-0">
+                      <Button
+                        className={`${
+                          isDraft
+                            ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
+                            : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
+                        } h-8 w-full text-sm transition-colors`}
+                        variant={isDraft ? "default" : "outline"}
+                        onClick={() => router.push(`/projects/${project.id}`)}
+                      >
+                        Fill in Draft
+                      </Button>
+                    </div>
+
+                    {/* More options */}
+                    <div className="flex-shrink-0 ml-4 relative" ref={dropdownRef}>
+                      <button
+                        onClick={() => handleDropdownToggle(project.id)}
+                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                      </button>
+                      
+                      {openDropdown === project.id && (
+                        <div className="absolute right-0 top-8 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                          <div className="py-1">
+                            <button
+                              onClick={() => handleViewProject(project.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Project
+                            </button>
+                            <button
+                              onClick={() => handleShareProject(project.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            >
+                              <Share className="w-4 h-4" />
+                              Share
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Grid view layout */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center">
+                          <img src="/images/client/projecticon.png" alt="project" className="h-8 w-8 object-contain" />
+                        </div>
+                        <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                      </div>
+                      <div className="relative" ref={dropdownRef}>
+                        <button
+                          onClick={() => handleDropdownToggle(project.id)}
+                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                        </button>
+                        
+                        {openDropdown === project.id && (
+                          <div className="absolute right-0 top-8 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                            <div className="py-1">
+                              <button
+                                onClick={() => handleViewProject(project.id)}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View Project
+                              </button>
+                              <button
+                                onClick={() => handleShareProject(project.id)}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <Share className="w-4 h-4" />
+                                Share
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-sm font-semibold text-gray-900">
+                      {formatStatus(project.status)}
+                    </div>
+
+                    <div className="min-h-[56px]">
+                      <p className="text-sm text-gray-600">
+                        {project.description && project.description.trim().length > 0
+                          ? project.description
+                          : ""}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Button
+                        className={`${
+                          isDraft
+                            ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
+                            : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
+                        } w-full h-10 transition-colors`}
+                        variant={isDraft ? "default" : "outline"}
+                        onClick={() => router.push(`/projects/${project.id}`)}
+                      >
+                        Fill in Draft
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Pagination */}
-      {projects.length > pageSize && (
+      {/* Pagination - only show in list view */}
+      {viewMode === "list" && projects.length > pageSize && (
         <div className="flex items-center justify-center gap-4 pt-2">
           <Button
             variant="outline"

@@ -45,9 +45,35 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     return <div className="container mx-auto px-4 py-12">Developer not found</div>;
   }
 
+  // Check if client is connected to this developer
+  const clientId = session.user.id;
+  const developerId = params.id;
+
+  // Check contact reveal events
+  const contactReveal = await prisma.contactRevealEvent.findFirst({
+    where: {
+      clientId,
+      developerId,
+    },
+    orderBy: {
+      revealedAt: "desc",
+    },
+  });
+
+  // Check if client has any projects with this developer
+  const projectConnection = await prisma.project.findFirst({
+    where: {
+      clientId,
+      contactRevealedDeveloperId: developerId,
+      contactRevealEnabled: true,
+    },
+  });
+
+  const isConnected = !!(contactReveal || projectConnection);
+
   const profile = {
     name: developer.user.name,
-    email: developer.user.email,
+    email: isConnected ? developer.user.email : null, // Hide email if not connected
     image: developer.user.image,
     photoUrl: developer.photoUrl,
     location: developer.location,
@@ -59,6 +85,7 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     adminApprovalStatus: developer.adminApprovalStatus,
     skills: developer.skills.map((s: any) => ({ skillId: s.skillId, skillName: (s as any).skill?.name })),
     portfolioLinks: developer.portfolioLinks,
+    isConnected, // Pass connection status to components
   } as any;
 
   return (

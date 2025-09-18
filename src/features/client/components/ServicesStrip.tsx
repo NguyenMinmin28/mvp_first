@@ -1,81 +1,155 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
-import { 
-  Code, 
-  Smartphone, 
-  Database, 
-  Cloud, 
-  Palette,
-  Search
-} from "lucide-react";
+import Image from "next/image";
+import GetInTouchModal from "./GetInTouchModal";
+import ServiceImageGallery from "./ServiceImageGallery";
+import ServiceDetailOverlay, { ServiceDetailData } from "./ServiceDetailOverlay";
 
 interface Service {
   id: string;
+  slug: string;
   title: string;
-  description: string;
-  icon: React.ReactNode;
-  price: string;
-  features: string[];
-  rating: number;
-  jobsCount: number;
+  shortDesc: string;
+  coverUrl?: string | null;
+  priceType: string;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  deliveryDays?: number | null;
+  ratingAvg: number;
+  ratingCount: number;
+  views: number;
+  likesCount: number;
+  developer: {
+    id: string;
+    name?: string | null;
+    image?: string | null;
+    location?: string | null;
+  };
+  skills: string[];
+  categories: string[];
+  leadsCount: number;
 }
 
-const services: Service[] = [
-  {
-    id: "web-development",
-    title: "Web Development",
-    description: "Custom websites and web applications built with modern technologies",
-    icon: <Code className="w-8 h-8" />,
-    price: "From $50/h",
-    features: ["React", "Next.js", "Node.js", "TypeScript"],
-    rating: 4.8,
-    jobsCount: 156
-  },
-  {
-    id: "mobile-development",
-    title: "Mobile Development",
-    description: "iOS and Android apps for your business needs",
-    icon: <Smartphone className="w-8 h-8" />,
-    price: "From $60/h",
-    features: ["React Native", "Flutter", "Swift", "Kotlin"],
-    rating: 4.6,
-    jobsCount: 89
-  },
-  {
-    id: "backend-development",
-    title: "Backend Development",
-    description: "Scalable server-side solutions and APIs",
-    icon: <Database className="w-8 h-8" />,
-    price: "From $45/h",
-    features: ["Python", "Java", "Go", "Microservices"],
-    rating: 4.7,
-    jobsCount: 203
-  },
-  {
-    id: "cloud-services",
-    title: "Cloud Services",
-    description: "Cloud infrastructure and deployment solutions",
-    icon: <Cloud className="w-8 h-8" />,
-    price: "From $55/h",
-    features: ["AWS", "Azure", "Docker", "Kubernetes"],
-    rating: 4.9,
-    jobsCount: 67
-  },
-  {
-    id: "ui-ux-design",
-    title: "UI/UX Design",
-    description: "Beautiful and user-friendly interface designs",
-    icon: <Palette className="w-8 h-8" />,
-    price: "From $40/h",
-    features: ["Figma", "Adobe XD", "Prototyping", "User Research"],
-    rating: 4.5,
-    jobsCount: 124
-  }
-];
-
 export function ServicesStrip() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailOverlayOpen, setIsDetailOverlayOpen] = useState(false);
+  const [selectedServiceForDetail, setSelectedServiceForDetail] = useState<ServiceDetailData | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/services?limit=4&sort=random", { cache: "no-store" });
+        const json = await res.json();
+        if (res.ok && json?.success && Array.isArray(json.data) && mounted) {
+          setServices(json.data.slice(0, 4));
+        }
+      } catch (e) {
+        // noop
+      } finally {
+        mounted && setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (loading && services.length === 0) {
+    return (
+      <div className="mt-10">
+        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">Services</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <Card key={idx} className="border border-gray-200">
+              <CardContent className="p-4">
+                <div className="h-24 w-24 rounded-full bg-gray-200 animate-pulse mb-4" />
+                <div className="h-4 w-2/3 bg-gray-200 animate-pulse mb-2" />
+                <div className="h-3 w-1/2 bg-gray-200 animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!services.length) return null;
+
+  const handleGetInTouch = (service: Service) => {
+    setSelectedService(service);
+    setIsModalOpen(true);
+  };
+
+  const handleServiceClick = (service: Service) => {
+    // Convert Service to ServiceDetailData format
+    const serviceDetailData: ServiceDetailData = {
+      id: service.id,
+      slug: service.slug,
+      title: service.title,
+      shortDesc: service.shortDesc,
+      coverUrl: service.coverUrl,
+      priceType: service.priceType,
+      priceMin: service.priceMin,
+      priceMax: service.priceMax,
+      deliveryDays: service.deliveryDays,
+      ratingAvg: service.ratingAvg,
+      ratingCount: service.ratingCount,
+      views: service.views,
+      likesCount: service.likesCount,
+      userLiked: false, // Default value
+      developer: service.developer,
+      skills: service.skills,
+      categories: service.categories,
+      leadsCount: service.leadsCount,
+    };
+    
+    setSelectedServiceForDetail(serviceDetailData);
+    setIsDetailOverlayOpen(true);
+  };
+
+  const handleDetailOverlayClose = () => {
+    setIsDetailOverlayOpen(false);
+    setSelectedServiceForDetail(null);
+  };
+
+  const handleDetailOverlayGetInTouch = () => {
+    if (selectedServiceForDetail) {
+      // Close detail overlay first
+      setIsDetailOverlayOpen(false);
+      // Open get in touch modal
+      const service: Service = {
+        id: selectedServiceForDetail.id,
+        slug: selectedServiceForDetail.slug || "",
+        title: selectedServiceForDetail.title,
+        shortDesc: selectedServiceForDetail.shortDesc,
+        coverUrl: selectedServiceForDetail.coverUrl,
+        priceType: selectedServiceForDetail.priceType,
+        priceMin: selectedServiceForDetail.priceMin,
+        priceMax: selectedServiceForDetail.priceMax,
+        deliveryDays: selectedServiceForDetail.deliveryDays,
+        ratingAvg: selectedServiceForDetail.ratingAvg,
+        ratingCount: selectedServiceForDetail.ratingCount,
+        views: selectedServiceForDetail.views,
+        likesCount: selectedServiceForDetail.likesCount || 0,
+        developer: selectedServiceForDetail.developer,
+        skills: selectedServiceForDetail.skills,
+        categories: selectedServiceForDetail.categories,
+        leadsCount: selectedServiceForDetail.leadsCount,
+      };
+      setSelectedService(service);
+      setIsModalOpen(true);
+    }
+  };
+
   return (
     <div className="mt-24">
       <div className="flex items-center justify-between mb-6">
@@ -85,28 +159,53 @@ export function ServicesStrip() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {services.map((service) => (
-          <Card key={service.id} className="hover:shadow-md transition-shadow border border-gray-200 h-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {services.slice(0, 4).map((service) => (
+          <Card 
+            key={service.id} 
+            className="hover:shadow-md transition-shadow border border-gray-200 h-full cursor-pointer"
+            onClick={() => handleServiceClick(service)}
+          >
             <CardContent className="p-5 h-full flex flex-col">
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">
-                  {service.icon}
+              {/* Service Image Gallery */}
+              <ServiceImageGallery 
+                coverUrl={service.coverUrl} 
+                title={service.title}
+                className="mb-4"
+              />
+              
+              {/* Freelancer Info */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100">
+                  {service.developer.image ? (
+                    <Image 
+                      src={service.developer.image} 
+                      alt={service.developer.name || "Freelancer"} 
+                      width={24} 
+                      height={24} 
+                      className="object-cover w-6 h-6" 
+                    />
+                  ) : (
+                    <div className="w-6 h-6 bg-gray-200" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-medium text-gray-900 leading-tight">
+                    {service.developer.name || "Unknown"}
+                  </div>
+                  <div className="text-[10px] text-gray-500">
+                    {service.developer.location || ""}
+                  </div>
                 </div>
               </div>
 
-              <h3 className="font-semibold text-gray-900 text-center mb-2">{service.title}</h3>
-              
-              <p className="text-sm text-gray-600 text-center mb-4 line-clamp-3">
-                {service.description}
-              </p>
-
-              <div className="flex items-center justify-between mt-4 text-sm">
+              {/* Stats */}
+              <div className="flex items-center justify-between mb-4 text-sm">
                 <div>
-                  <div className="font-semibold leading-tight">{service.rating.toFixed(1)}</div>
+                  <div className="font-semibold leading-tight">{service.ratingAvg.toFixed(1)}</div>
                   <div className="mt-1 flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => {
-                      const ratingValue = Math.round(service.rating);
+                      const ratingValue = Math.round(service.ratingAvg);
                       const filled = i < ratingValue;
                       return (
                         <span
@@ -120,22 +219,76 @@ export function ServicesStrip() {
                   </div>
                 </div>
                 <div>
-                  <div className="font-semibold">{service.jobsCount}</div>
-                  <div className="text-xs text-gray-500">Job</div>
+                  <div className="font-semibold">{service.leadsCount}</div>
+                  <div className="text-xs text-gray-500">Leads</div>
                 </div>
                 <div>
-                  <div className="font-semibold">{service.price}</div>
-                  <div className="text-xs text-gray-500">Rate</div>
+                  <div className="font-semibold">
+                    {service.priceType === "FIXED" 
+                      ? `$${service.priceMin || 0}`
+                      : `$${service.priceMin || 0}/h`
+                    }
+                  </div>
+                  <div className="text-xs text-gray-500">Price</div>
                 </div>
               </div>
 
-              <Button className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900" variant="outline">
+              {/* Service Description */}
+              <p className="text-xs text-gray-600 mb-4 line-clamp-3">
+                {service.shortDesc}
+              </p>
+
+              <Button 
+                className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm" 
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGetInTouch(service);
+                }}
+              >
                 Get in Touch
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {selectedService && (
+        <GetInTouchModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedService(null);
+          }}
+          serviceId={selectedService.id}
+          serviceTitle={selectedService.title}
+          developerName={selectedService.developer.name || undefined}
+        />
+      )}
+
+      {/* Service Detail Overlay */}
+      <ServiceDetailOverlay
+        isOpen={isDetailOverlayOpen}
+        service={selectedServiceForDetail}
+        onClose={handleDetailOverlayClose}
+        onGetInTouch={handleDetailOverlayGetInTouch}
+        onFollow={() => {
+          // Handle follow action
+          console.log('Follow clicked');
+        }}
+        onPrev={() => {
+          // Handle previous service
+          console.log('Previous service');
+        }}
+        onNext={() => {
+          // Handle next service
+          console.log('Next service');
+        }}
+        onServiceUpdate={(updatedService) => {
+          // Update service data if needed
+          setSelectedServiceForDetail(updatedService);
+        }}
+      />
     </div>
   );
 }
