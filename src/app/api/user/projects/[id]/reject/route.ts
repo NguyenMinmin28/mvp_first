@@ -27,6 +27,9 @@ export async function POST(
             userId: session.user.id
           },
           responseStatus: "pending"
+        },
+        orderBy: {
+          assignedAt: "desc" // Get the most recent assignment
         }
       });
 

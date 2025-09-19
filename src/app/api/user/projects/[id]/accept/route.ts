@@ -17,7 +17,7 @@ export async function POST(
       );
     }
 
-    // Find the assignment candidate for this project and user
+    // Find the assignment candidate for this project and user (get the latest one)
     const assignment = await prisma.assignmentCandidate.findFirst({
       where: {
         projectId: params.id,
@@ -29,6 +29,9 @@ export async function POST(
       include: {
         project: true,
         developer: true
+      },
+      orderBy: {
+        assignedAt: "desc" // Get the most recent assignment
       }
     });
 
