@@ -283,6 +283,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                         alt={idea.title}
                         fill
                         className="object-cover"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = getDefaultCoverImage(index);
@@ -294,6 +295,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                         alt={idea.title}
                         fill
                         className="object-cover"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -386,6 +388,7 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                             width={32}
                             height={32}
                             className="object-cover"
+                            sizes="32px"
                           />
                         </div>
                         <div>

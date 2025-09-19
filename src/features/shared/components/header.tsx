@@ -306,14 +306,30 @@ export function Header({ user }: HeaderProps) {
             {isAuthenticated && mounted && userRole === "CLIENT" && (
             <nav className="hidden md:flex items-center gap-4">
               <Link href="/my-projects">
-                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`flex items-center gap-2 ${
+                    (typeof window !== 'undefined' && window.location.pathname.startsWith('/my-projects'))
+                      ? 'bg-black text-white hover:bg-black hover:text-white'
+                      : (!isAuthenticated ? 'text-white hover:bg-white hover:text-black' : 'text-black hover:bg-black hover:text-white')
+                  }`}
+                >
                   <FolderOpen className="h-4 w-4" />
                   My Projects
                 </Button>
               </Link>
               {/* Removed Post Project link as requested */}
               <Link href="/pricing">
-                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`flex items-center gap-2 ${
+                    (typeof window !== 'undefined' && window.location.pathname.startsWith('/pricing'))
+                      ? 'bg-black text-white hover:bg-black hover:text-white'
+                      : (!isAuthenticated ? 'text-white hover:bg-white hover:text-black' : 'text-black hover:bg-black hover:text-white')
+                  }`}
+                >
                   <DollarSign className="h-4 w-4" />
                   Pricing
                 </Button>
@@ -343,7 +359,15 @@ export function Header({ user }: HeaderProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Link href="/ideas">
-                <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`flex items-center gap-2 ${
+                    (typeof window !== 'undefined' && window.location.pathname.startsWith('/ideas'))
+                      ? 'bg-black text-white hover:bg-black hover:text-white'
+                      : (!isAuthenticated ? 'text-white hover:bg-white hover:text-black' : 'text-black hover:bg-black hover:text-white')
+                  }`}
+                >
                   <Zap className="h-4 w-4" />
                   Idea Spark
                 </Button>
@@ -354,13 +378,29 @@ export function Header({ user }: HeaderProps) {
             {isAuthenticated && mounted && userRole === "DEVELOPER" && (
               <nav className="hidden md:flex items-center gap-4">
                 <Link href="/services">
-                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 ${
+                      (typeof window !== 'undefined' && window.location.pathname.startsWith('/services'))
+                        ? 'bg-black text-white hover:bg-black hover:text-white'
+                        : (!isAuthenticated ? 'text-white hover:bg-white hover:text-black' : 'text-black hover:bg-black hover:text-white')
+                    }`}
+                  >
                     <FolderOpen className="h-4 w-4" />
                     Services
                   </Button>
                 </Link>
                 <Link href="/ideas">
-                  <Button variant="ghost" size="sm" className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 ${
+                      (typeof window !== 'undefined' && window.location.pathname.startsWith('/ideas'))
+                        ? 'bg-black text-white hover:bg-black hover:text-white'
+                        : (!isAuthenticated ? 'text-white hover:bg-white hover:text-black' : 'text-black hover:bg-black hover:text-white')
+                    }`}
+                  >
                     <Zap className="h-4 w-4" />
                     IdeaSpark
                   </Button>

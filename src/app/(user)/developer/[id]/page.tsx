@@ -16,6 +16,7 @@ import WorkHistory from "@/features/developer/components/profile/work-history";
 import { Button } from "@/ui/components/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import DeveloperReviewsTrigger from "@/features/client/components/developer-reviews-trigger";
 
 export default async function DeveloperPublicProfilePage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -70,10 +71,18 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
   });
 
   const isConnected = !!(contactReveal || projectConnection);
+  const favorite = await prisma.favoriteDeveloper.findFirst({
+    where: {
+      client: { userId: clientId },
+      developerId: developerId,
+    },
+    select: { id: true }
+  });
+  const isFavorited = !!favorite;
 
   const profile = {
     name: developer.user.name,
-    email: isConnected ? developer.user.email : null, // Hide email if not connected
+    email: (isConnected || isFavorited) ? developer.user.email : null,
     image: developer.user.image,
     photoUrl: developer.photoUrl,
     location: developer.location,
@@ -86,6 +95,8 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     skills: developer.skills.map((s: any) => ({ skillId: s.skillId, skillName: (s as any).skill?.name })),
     portfolioLinks: developer.portfolioLinks,
     isConnected, // Pass connection status to components
+    isFavorited,
+    whatsappNumber: (developer as any).whatsappNumber || null,
   } as any;
 
   return (
@@ -105,6 +116,7 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
             <div className="xl:col-span-2">
               <ProfileSummary profile={profile} hideControls={true} developerId={params.id} />
+              <DeveloperReviewsTrigger developerId={params.id} developerName={profile.name} />
 
               {/* Info Tabs */}
               <div className="mt-4 sm:mt-6">

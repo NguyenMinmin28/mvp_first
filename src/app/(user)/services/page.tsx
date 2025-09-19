@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/ui/components/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import PeopleGrid from "@/features/client/components/PeopleGrid";
 export default function ServicesPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const isDeveloper = session?.user?.role === "DEVELOPER";
   
   // State for search and filters
@@ -30,6 +31,18 @@ export default function ServicesPage() {
       setActiveTab("service");
     }
   }, [searchParams]);
+
+  // Handle tab change and update URL
+  const handleTabChange = (tab: "people" | "service") => {
+    setActiveTab(tab);
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    if (tab === "people") {
+      newSearchParams.set("tab", "people");
+    } else {
+      newSearchParams.delete("tab");
+    }
+    router.push(`/services?${newSearchParams.toString()}`);
+  };
 
   return (
     <UserLayout user={session?.user}>
@@ -62,8 +75,9 @@ export default function ServicesPage() {
       <div className="container mx-auto px-4 py-6">
         <SearchAndFilter 
           onSearchChange={setSearchQuery}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onFiltersChange={setSelectedFilters}
+          activeTab={activeTab}
         />
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useMemo, useRef } from "react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import CandidateMetaRow from "@/features/client/components/candidate-meta-row";
@@ -9,16 +10,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import { LoadingMessage } from "@/ui/components/loading-message";
 import ReviewSlideModal from "@/features/client/components/review-slide-modal";
 import DeveloperReviewsModal from "@/features/client/components/developer-reviews-modal";
+import PeopleGrid, { Developer as PeopleGridDeveloper } from "@/features/client/components/PeopleGrid";
 import { 
-  Send,
-  Star,
   Heart,
   Briefcase,
   CheckCircle,
   Check,
   MessageCircle,
   User,
-  FileText,
+  Star,
   Eye,
   Trash2,
   Clock,
@@ -72,7 +72,6 @@ interface ProjectDetailPageProps {
 }
 
 export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
-  const [activeTab, setActiveTab] = useState<"current" | "history" | "favourites">("current");
   const [activeFilter, setActiveFilter] = useState<"all" | "beginner" | "professional" | "expert">("all");
   const [sortBy, setSortBy] = useState<"relevance" | "price-asc" | "price-desc" | "response-asc" | "response-desc">("relevance");
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
@@ -87,6 +86,37 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [showDeveloperReviewsModal, setShowDeveloperReviewsModal] = useState(false);
   const [selectedDeveloperForReviews, setSelectedDeveloperForReviews] = useState<{id: string, name: string} | null>(null);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const freelancersRef = useRef<Freelancer[]>([]);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+
+  // Header sub-section: Project title and price under main header
+  const ProjectHeaderBar = () => {
+    const projectTitle = project?.title || project?.name || projectData?.title || projectData?.name || "Project";
+    const priceText = (() => {
+      const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
+      const max = projectData?.budgetMax ?? project?.budgetMax;
+      const currency = projectData?.currency || project?.currency || "USD";
+      if (min && max) return `$${min} - $${max} ${currency}`;
+      if (min) return `$${min} ${currency}`;
+      return undefined;
+    })();
+    return (
+      <div className="w-full bg-white/90 sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-900 truncate">{projectTitle}</h1>
+            {priceText && (
+              <span className="text-sm lg:text-base px-3 py-1.5 rounded-xl border border-gray-300 text-gray-700 bg-white whitespace-nowrap">
+                {priceText}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Handle opening developer reviews modal
   const handleReadReviews = (developerId: string, developerName: string) => {
@@ -96,97 +126,222 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   useEffect(() => {
     fetchFreelancers();
+    return () => {
+      fetchAbortRef.current?.abort();
+    };
   }, [project.id]);
 
-  // Update current time every second for countdown
+  // Move ticking clock to requestAnimationFrame to avoid setState storms
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
+    let rafId: number | null = null;
+    let last = performance.now();
+    const tick = (now: number) => {
+      if (now - last >= 1000) {
+        setCurrentTime(new Date());
+        last = now;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   // Auto-refresh data every 15 seconds to sync acceptance status
   // Disable auto refresh once any developer has accepted (project locked) or when user disables it
   useEffect(() => {
-    const hasAccepted = Array.isArray(freelancers) && freelancers.some(f => f.responseStatus === "accepted");
-    if (hasAccepted || !autoRefreshEnabled) {
-      return; // stop creating intervals when project is locked or auto-refresh is disabled
+    // Đảm bảo ref luôn được cập nhật ngay lập tức khi state thay đổi
+    freelancersRef.current = freelancers;
+    console.log('Updating freelancersRef.current with:', freelancers.map(f => ({
+      id: f.id,
+      developerId: f.developerId,
+      developerIdFromNested: f.developer.id,
+      responseStatus: f.responseStatus,
+      developerName: f.developer.user.name
+    })));
+    
+    // Kiểm tra điều kiện dừng auto-refresh ngay khi state thay đổi
+    const hasAccepted = freelancers.some(f => f.responseStatus === "accepted");
+    
+    if (hasAccepted && autoRefreshEnabled) {
+      console.log('Auto-disabling refresh due to accepted candidate (from state sync)');
+      setAutoRefreshEnabled(false);
+    }
+  }, [freelancers, autoRefreshEnabled]);
+
+  useEffect(() => {
+    // Clear timer trước khi tạo timer mới
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+      refreshTimerRef.current = null;
     }
 
-    const refreshTimer = setInterval(() => {
-      fetchFreelancers();
-    }, 15000); // 15 seconds for faster sync while still finding devs
+    // Chỉ tạo timer mới khi auto-refresh được bật
+    if (!autoRefreshEnabled) {
+      console.log('Auto-refresh disabled, not starting timer');
+      return;
+    }
 
-    return () => clearInterval(refreshTimer);
-  }, [project.id, freelancers, autoRefreshEnabled]);
+    console.log('Starting auto-refresh timer');
+    
+    refreshTimerRef.current = setInterval(async () => {
+      try {
+        // Kiểm tra trạng thái trước khi fetch
+        const currentlyHasAccepted = freelancersRef.current.some(f => f.responseStatus === "accepted");
+        
+        if (currentlyHasAccepted) {
+          console.log('Found accepted candidate, stopping auto-refresh');
+          setAutoRefreshEnabled(false);
+          return;
+        }
 
-  const fetchFreelancers = async () => {
+        console.log('Auto-refreshing data...');
+        await fetchFreelancers();
+        
+      } catch (e) {
+        console.error('Auto-refresh error:', e);
+      }
+    }, 15000);
+
+    // Cleanup function
+    return () => {
+      if (refreshTimerRef.current) {
+        console.log('Cleaning up auto-refresh timer');
+        clearInterval(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [autoRefreshEnabled]); // Chỉ phụ thuộc vào autoRefreshEnabled
+
+  const fetchFreelancers = useCallback(async () => {
     try {
-      setIsLoading(true);
+      // Cancel previous request để tránh race condition
+      if (fetchAbortRef.current) {
+        fetchAbortRef.current.abort();
+      }
+      
+      const controller = new AbortController();
+      fetchAbortRef.current = controller;
+      
+      // Chỉ set loading = true khi không phải auto-refresh
+      const isAutoRefresh = refreshTimerRef.current !== null;
+      if (!isAutoRefresh) {
+        setIsLoading(true);
+      }
+      
       setError(null);
       
-      const response = await fetch(`/api/projects/${project.id}/assignment`);
+      const response = await fetch(`/api/projects/${project.id}/assignment`, { signal: controller.signal });
       
       if (response.ok) {
         const data = await response.json();
         const candidates = data.candidates || [];
+        if (data.project?.locked || ["accepted", "in_progress", "completed"].includes(String(data.project?.status || ""))) {
+          setIsLocked(true);
+          setAutoRefreshEnabled(false);
+        } else {
+          setIsLocked(false);
+        }
         
-        // Check favorite status for each candidate
-        const candidatesWithFavorites = await Promise.all(
-          candidates.map(async (candidate: Freelancer) => {
-            try {
-              const favoriteResponse = await fetch(`/api/user/favorites/check?developerId=${candidate.developer.id}`);
-              if (favoriteResponse.ok) {
-                const favoriteData = await favoriteResponse.json();
-                return { ...candidate, isFavorited: favoriteData.isFavorited };
-              }
-            } catch (error) {
-              console.error("Error checking favorite status:", error);
-            }
-            return { ...candidate, isFavorited: false };
-          })
-        );
+        // Bulk favorites check
+        const devIds = candidates.map((c: Freelancer) => c.developer.id);
+        let favMap: Record<string, boolean> = {};
+        try {
+          const favRes = await fetch('/api/user/favorites/check-bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ developerIds: devIds }),
+            signal: controller.signal,
+          });
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            favMap = favData.map || {};
+          }
+        } catch (e) {
+          // ignore abort or network errors
+        }
+
+        const candidatesWithFavorites = candidates.map((candidate: Freelancer) => ({
+          ...candidate,
+          isFavorited: !!favMap[candidate.developer.id],
+        }));
         
-        // Check if someone just accepted (new accepted status)
-        const newAccepted = candidatesWithFavorites.find((c: any) => c.responseStatus === "accepted");
-        const hadAccepted = freelancers.find((c: any) => c.responseStatus === "accepted");
+        // Debug log to check candidate data structure
+        console.log('Candidates from API:', candidatesWithFavorites.map((c: Freelancer) => ({
+          id: c.id,
+          developerId: c.developerId,
+          developerIdFromNested: c.developer.id,
+          responseStatus: c.responseStatus,
+          developerName: c.developer.user.name
+        })));
         
+        // Check accepted candidates trước khi update state
+        const acceptedCandidates = candidatesWithFavorites.filter((c: Freelancer) => c.responseStatus === "accepted");
+        const hadAccepted = freelancers.some((c: Freelancer) => c.responseStatus === "accepted");
+        
+        console.log('Setting freelancers state with:', candidatesWithFavorites.map((c: Freelancer) => ({
+          id: c.id,
+          developerId: c.developerId,
+          developerIdFromNested: c.developer.id,
+          responseStatus: c.responseStatus,
+          developerName: c.developer.user.name
+        })));
+        
+        if (acceptedCandidates.length > 0) {
+          console.log('Found accepted candidates:', acceptedCandidates.map((c: Freelancer) => ({
+            name: c.developer.user.name,
+            responseStatus: c.responseStatus
+          })));
+        }
+        
+        // Update state
         setFreelancers(candidatesWithFavorites);
         setProjectData(data.project);
         setLastRefreshTime(new Date());
+        
         if (Array.isArray(data.skills)) {
           setProjectSkills(data.skills.map((s: any) => s.name).filter(Boolean));
         }
 
-        // Show notification if someone just accepted
-        if (newAccepted && !hadAccepted) {
-          toast.success(`🎉 ${newAccepted.developer.user.name} has accepted your project!`, {
-            duration: 5000,
-            action: {
-              label: "View Details",
-              onClick: () => {
-                // Scroll to the accepted developer
-                const element = document.getElementById(`developer-${newAccepted.developerId}`);
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth' });
+        // Show notification nếu có người mới accept
+        if (acceptedCandidates.length > 0 && !hadAccepted) {
+          acceptedCandidates.forEach((candidate: Freelancer) => {
+            toast.success(`🎉 ${candidate.developer.user.name} has accepted your project!`, {
+              duration: 5000,
+              action: {
+                label: "View Details",
+                onClick: () => {
+                  const element = document.getElementById(`developer-${candidate.developerId}`);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                  }
                 }
               }
-            }
+            });
           });
+        }
+
+        // Disable auto-refresh nếu có người accept
+        if (acceptedCandidates.length > 0) {
+          console.log('Disabling auto-refresh due to accepted candidates');
+          setAutoRefreshEnabled(false);
         }
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to fetch freelancers");
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        console.log('Request aborted');
+        return;
+      }
       console.error("Error fetching freelancers:", error);
       setError("An error occurred while fetching freelancers");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [project.id, freelancers]); // Add freelancers as dependency
 
   const getSkillMatchText = (freelancer: Freelancer) => {
     try {
@@ -293,38 +448,69 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     }
   };
 
-  // Filter freelancers based on active filter
-  const filteredFreelancers = freelancers.filter(freelancer => {
-    if (activeFilter === "all") return true;
-    
-    switch (activeFilter) {
-      case "beginner":
-        return freelancer.developer.level === "FRESHER";
-      case "professional":
-        return freelancer.developer.level === "MID";
-      case "expert":
-        return freelancer.developer.level === "EXPERT";
-      default:
-        return true;
-    }
-  }).sort((a, b) => {
-    const priceA = Number((a.developer as any).hourlyRateUsd ?? Infinity);
-    const priceB = Number((b.developer as any).hourlyRateUsd ?? Infinity);
-    const respA = Number(a.usualResponseTimeMsSnapshot || 0);
-    const respB = Number(b.usualResponseTimeMsSnapshot || 0);
-    switch (sortBy) {
-      case "price-asc":
-        return priceA - priceB;
-      case "price-desc":
-        return priceB - priceA;
-      case "response-asc":
-        return respA - respB;
-      case "response-desc":
-        return respB - respA;
-      default:
-        return 0;
-    }
-  });
+  // Filter freelancers based on active filter (memoized to keep stable reference)
+  const filteredFreelancers = useMemo(() => {
+    const filtered = freelancers.filter(freelancer => {
+      if (activeFilter === "all") return true;
+      switch (activeFilter) {
+        case "beginner":
+          return freelancer.developer.level === "FRESHER";
+        case "professional":
+          return freelancer.developer.level === "MID";
+        case "expert":
+          return freelancer.developer.level === "EXPERT";
+        default:
+          return true;
+      }
+    });
+    const sorted = filtered.sort((a, b) => {
+      const priceA = Number((a.developer as any).hourlyRateUsd ?? Infinity);
+      const priceB = Number((b.developer as any).hourlyRateUsd ?? Infinity);
+      const respA = Number(a.usualResponseTimeMsSnapshot || 0);
+      const respB = Number(b.usualResponseTimeMsSnapshot || 0);
+      switch (sortBy) {
+        case "price-asc":
+          return priceA - priceB;
+        case "price-desc":
+          return priceB - priceA;
+        case "response-asc":
+          return respA - respB;
+        case "response-desc":
+          return respB - respA;
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [freelancers, activeFilter, sortBy]);
+
+  const overrideDevelopers = useMemo(() => {
+    return filteredFreelancers.map((f) => {
+      const dev: any = f.developer;
+      const mapped: PeopleGridDeveloper = {
+        id: dev.id,
+        user: {
+          id: dev.user.id,
+          name: dev.user.name,
+          email: dev.user.email,
+          image: dev.user.image || dev.photoUrl || undefined,
+        },
+        bio: dev.bio,
+        location: dev.location,
+        hourlyRateUsd: dev.hourlyRateUsd,
+        ratingAvg: Number((f as any).averageRating ?? dev.ratingAvg ?? 0),
+        ratingCount: Number((f as any).totalReviews ?? dev.ratingCount ?? 0),
+        views: dev.views,
+        likesCount: dev.likesCount,
+        userLiked: dev.userLiked || (f as any).isFavorited === true,
+        level: dev.level, // Add level field from API
+        skills: (dev.skills || []).map((s: any) => ({ skill: { id: s.skill.id, name: s.skill.name } })),
+        services: [],
+        createdAt: dev.createdAt,
+      };
+      return mapped;
+    });
+  }, [filteredFreelancers]);
 
   const renderStars = (rating: number) => {
     const stars = [];
@@ -349,10 +535,10 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   // Check if batch has accepted candidates (block immediately when someone accepts)
   const hasAcceptedCandidates = () => {
-    if (freelancers.length === 0) return false;
+    if (freelancersRef.current.length === 0) return false;
     
     // Check if any candidate has been accepted
-    return freelancers.some(freelancer => 
+    return freelancersRef.current.some(freelancer => 
       freelancer.responseStatus === "accepted"
     );
   };
@@ -401,6 +587,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       console.error('Error toggling favorite:', error);
     }
   };
+
 
   const handleCompleteProject = async () => {
     try {
@@ -474,228 +661,126 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     }
   };
 
+  const testCheckAccepted = async () => {
+    try {
+      const response = await fetch(`/api/test-check-accepted?projectId=${project.id}`);
+      const data = await response.json();
+      console.log('Database check result:', data);
+      alert(`Database check: ${data.totalCandidates} candidates, Status counts: ${JSON.stringify(data.statusCounts)}`);
+    } catch (error) {
+      console.error("Error checking database:", error);
+      alert("Error checking database");
+    }
+  };
+
+
+  // Thêm manual refresh function
+  const forceRefresh = async () => {
+    console.log('Force refreshing...');
+    console.log('Before force refresh - freelancers:', freelancers.map(f => ({
+      name: f.developer.user.name,
+      responseStatus: f.responseStatus
+    })));
+    setAutoRefreshEnabled(false); // Tạm dừng auto-refresh
+    await fetchFreelancers();
+    setTimeout(() => {
+      console.log('After force refresh - freelancersRef.current:', freelancersRef.current.map(f => ({
+        name: f.developer.user.name,
+        responseStatus: f.responseStatus
+      })));
+      const hasAccepted = freelancersRef.current.some(f => f.responseStatus === "accepted");
+      if (!hasAccepted) {
+        setAutoRefreshEnabled(true); // Bật lại auto-refresh nếu chưa có ai accept
+      }
+    }, 1000);
+  };
+
+  // Compute freelancerResponseStatuses outside conditional rendering
+  const freelancerResponseStatuses = useMemo(() => {
+    console.log('Computing freelancerResponseStatuses from freelancers:', freelancers.map(f => ({
+      id: f.id,
+      developerId: f.developerId,
+      developerIdFromNested: f.developer.id,
+      responseStatus: f.responseStatus,
+      developerName: f.developer.user.name
+    })));
+    const statuses = freelancers.reduce((acc, freelancer) => {
+      acc[freelancer.developer.id] = freelancer.responseStatus;
+      return acc;
+    }, {} as Record<string, string>);
+    console.log('Computed freelancerResponseStatuses:', statuses);
+    return statuses;
+  }, [freelancers]);
+
+  // Compute freelancerDeadlines outside conditional rendering
+  const freelancerDeadlines = useMemo(() => {
+    const deadlines = freelancers.reduce((acc, freelancer) => {
+      acc[freelancer.developer.id] = freelancer.acceptanceDeadline;
+      return acc;
+    }, {} as Record<string, string>);
+    console.log('Computed freelancerDeadlines:', deadlines);
+    return deadlines;
+  }, [freelancers]);
+
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 p-4 lg:p-6">
-        {/* Project Details Card */}
-        <div className="mb-4 lg:mb-6 border border-black rounded-md p-2">
-        <Card className="border border-gray-200 rounded-md">
-          <CardContent className="p-4 lg:p-6">
-            <div className="space-y-3 lg:space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
-                <span className="font-medium text-sm lg:text-base truncate">
-                  {projectData?.title || project.title || "Untitled Project"}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
-                <span className="font-medium text-sm lg:text-base">
-                  {getSkillsText()}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
-                <span className="font-medium text-sm lg:text-base">
-                  ${projectData?.budget || projectData?.budgetMin || 0} {projectData?.currency || "USD"}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
-                <span className="font-medium text-sm lg:text-base">
-                  {projectData?.paymentMethod === "hourly" ? "Hourly Rate" : "Fixed Price"}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-gray-300">
-                <span className="font-medium text-sm lg:text-base">
-                  {formatDate(projectData?.createdAt || project.createdAt)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="mb-4 lg:mb-6 border border-black rounded-md p-2">
-          <div className="border border-gray-200 rounded-md p-3">
-          <div className="grid grid-cols-3 gap-2 lg:space-y-2 lg:grid-cols-1">
-          <Button
-            variant={activeTab === "current" ? "default" : "ghost"}
-            className={`justify-center ${activeTab === "current" ? "bg-black text-white" : "border border-gray-300"} h-10 lg:h-auto lg:w-full`}
-            onClick={() => setActiveTab("current")}
-          >
-            <Send className="h-4 w-4 mr-1 lg:mr-2" />
-            <span className="text-xs lg:text-sm">Current</span>
-          </Button>
-          <Button
-            variant={activeTab === "history" ? "default" : "ghost"}
-            className={`justify-center ${activeTab === "history" ? "bg-black text-white" : "border border-gray-300"} h-10 lg:h-auto lg:w-full`}
-            onClick={() => setActiveTab("history")}
-          >
-            <FileText className="h-4 w-4 mr-1 lg:mr-2" />
-            <span className="text-xs lg:text-sm">History</span>
-          </Button>
-          <Button
-            variant={activeTab === "favourites" ? "default" : "ghost"}
-            className={`justify-center ${activeTab === "favourites" ? "bg-black text-white" : "border border-gray-300"} h-10 lg:h-auto lg:w-full`}
-            onClick={() => setActiveTab("favourites")}
-          >
-            <Star className="h-4 w-4 mr-1 lg:mr-2" />
-            <span className="text-xs lg:text-sm">Favourites</span>
-          </Button>
-          </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          <Button 
-            className="w-full bg-gray-100 text-black hover:bg-gray-200 border border-gray-300 h-10 lg:h-auto"
-            onClick={generateNewBatch}
-            disabled={isLoading || hasAcceptedCandidates()}
-          >
-            <User className="h-4 w-4 mr-1 lg:mr-2" />
-            <span className="text-xs lg:text-sm">
-              {isLoading ? "Finding..." : 
-               hasAcceptedCandidates() ? "Project Locked (Accepted)" : 
-               "Find New Freelancers"}
-            </span>
-          </Button>
-          
-          {hasAcceptedCandidates() && projectData?.status === "in_progress" && (
-            <Button 
-              className="w-full bg-green-600 text-white hover:bg-green-700 h-10 lg:h-auto"
-              onClick={handleCompleteProject}
-            >
-              <Check className="h-4 w-4 mr-1 lg:mr-2" />
-              <span className="text-xs lg:text-sm">Complete Project</span>
-            </Button>
-          )}
-          
-          {!hasAcceptedCandidates() && (
-            <div className="text-center text-xs text-gray-500 p-2">
-              No accepted candidates yet
-            </div>
-          )}
-        </div>
-      </div>
-
+    <div className="flex flex-col lg:flex-row h-screen bg-white">
       {/* Main Content */}
-      <div className="flex-1 p-4 lg:p-6 overflow-auto">
-        {/* Filter Buttons + Sort */}
-        <div className="flex items-center gap-2 mb-4 w-full">
-          <div className="flex gap-2 flex-1">
-          <Button
-            variant={activeFilter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveFilter("all")}
-            className={`${activeFilter === "all" ? "bg-black text-white" : ""} flex-1`}
-          >
-            All
-          </Button>
-          <Button
-            variant={activeFilter === "beginner" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveFilter("beginner")}
-            className={`${activeFilter === "beginner" ? "bg-black text-white" : ""} flex-1`}
-          >
-            <span className="mr-1">🌱</span>
-            Beginner
-          </Button>
-          <Button
-            variant={activeFilter === "professional" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveFilter("professional")}
-            className={`${activeFilter === "professional" ? "bg-black text-white" : ""} flex-1`}
-          >
-            <span className="mr-1">🌴</span>
-            Professional
-          </Button>
-          <Button
-            variant={activeFilter === "expert" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveFilter("expert")}
-            className={`${activeFilter === "expert" ? "bg-black text-white" : ""} flex-1`}
-          >
-            <span className="mr-1">🌳</span>
-            Expert
-          </Button>
-          </div>
-          {/* Sort Dropdown */}
-          <div className="ml-auto">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm"
-            >
-              <option value="relevance">Sort by: Relevance</option>
-              <option value="price-asc">Sort by: Price (Low → High)</option>
-              <option value="price-desc">Sort by: Price (High → Low)</option>
-              <option value="response-asc">Sort by: Response time (Fastest)</option>
-              <option value="response-desc">Sort by: Response time (Slowest)</option>
-            </select>
+      <div className="flex-1 overflow-auto">
+        {/* Project Name and Budget */}
+        <div className="p-4 lg:p-6 pb-0">
+          <div className="flex items-center justify-between px-4 py-3">
+            <h1 className="text-3xl font-bold text-black">
+              {projectData?.title || project?.title || project?.name || "Project name here..."}
+            </h1>
+            <div className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-600">
+              {(() => {
+                const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
+                const max = projectData?.budgetMax ?? project?.budgetMax;
+                const currency = projectData?.currency || project?.currency || "USD";
+                if (min && max) return `$${min} - $${max}`;
+                if (min) return `$${min}`;
+                return "$1000 - $2000";
+              })()}
+            </div>
           </div>
         </div>
-
-        {/* Auto-refresh indicator */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span>Auto-refresh: {lastRefreshTime.toLocaleTimeString()}</span>
+        
+        {/* Full width separator line - outside padding container */}
+        <div className="w-full" style={{ height: '2px', backgroundColor: '#BEBEBE' }}></div>
+        
+        <div className="p-4 lg:p-6 pt-0">
+          {/* Project Description */}
+          <div className="mb-6">
+            <div className="px-4">
+              <div className="leading-relaxed" style={{ color: '#999999', fontFamily: 'Uber Move Text, sans-serif' }}>
+                {(projectData?.description || project?.description || "No description available for this project.").replace(/^Quick post:\s*/i, '')}
+              </div>
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={autoRefreshEnabled ? "outline" : "default"}
-                    size="sm"
-                    onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
-                    className={`h-8 px-3 text-sm font-medium transition-all duration-200 shadow-sm ${
-                      autoRefreshEnabled 
-                        ? 'border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 hover:shadow-md' 
-                        : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-md'
-                    }`}
-                  >
-                    {autoRefreshEnabled ? (
-                      <>
-                        <Pause className="h-3 w-3 mr-1.5" />
-                        Pause Auto-refresh
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-3 w-3 mr-1.5" />
-                        Resume Auto-refresh
-                      </>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="text-sm max-w-xs">
-                    {autoRefreshEnabled ? (
-                      <>
-                        <p className="font-medium mb-1">Pause Auto-refresh</p>
-                        <p className="text-gray-600">Stop automatic updates every 15 seconds. You can manually refresh or resume later.</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-medium mb-1">Resume Auto-refresh</p>
-                        <p className="text-gray-600">Restart automatic updates to get real-time notifications when developers respond.</p>
-                      </>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
-          {hasAcceptedCandidates() && (
-            <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-              <span>🔒</span>
-              <span>Project locked - someone has accepted</span>
-            </div>
-          )}
-        </div>
 
-        {/* Freelancer Cards */}
-        <div className="space-y-4">
+          {/* Auto-refresh indicator */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                <span>Auto-refresh: {lastRefreshTime.toLocaleTimeString()}</span>
+                
+                
+                
+                
+                
+               
+              </div>
+            </div>
+            {hasAcceptedCandidates() && (
+              <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                <span>🔒</span>
+                <span>Project locked - someone has accepted</span>
+              </div>
+            )}
+          </div>
+
+          {/* Freelancer Cards */}
           {isLoading ? (
             <LoadingMessage 
               title="Finding the Perfect Developers"
@@ -709,257 +794,16 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 Try Again
               </Button>
             </div>
-          ) : filteredFreelancers.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">
-                {freelancers.length === 0 
-                  ? "No freelancers found for this project"
-                  : `No freelancers found for this project`
-                }
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={fetchFreelancers} variant="outline">
-                  Refresh
-                </Button>
-                <Button 
-                  onClick={generateNewBatch} 
-                  variant="default" 
-                  className="bg-black text-white"
-                  disabled={hasAcceptedCandidates() || isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Finding More Developers...
-                    </>
-                  ) : hasAcceptedCandidates() ? (
-                    "Project Locked (Accepted)"
-                  ) : (
-                    "Find More Freelancers"
-                  )}
-                </Button>
-              </div>
-            </div>
           ) : (
-            filteredFreelancers.map((freelancer) => (
-              <Card key={freelancer.id} id={`developer-${freelancer.developerId}`} className="p-4 lg:p-6">
-                <CardContent className="p-0">
-                  {/* TOP: profile summary, meta and quick actions */}
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    {/* Left Section - Profile Info */}
-                    <div className="flex items-start gap-3 lg:gap-4 flex-1">
-                      <div className="relative flex-shrink-0">
-                        <Avatar className="w-16 h-16 lg:w-20 lg:h-20 rounded-lg">
-                          <AvatarImage 
-                            src={freelancer.developer.photoUrl || freelancer.developer.user.image || undefined} 
-                          />
-                          <AvatarFallback className="bg-gray-200 text-gray-400">
-                            <User className="h-6 w-6 lg:h-8 lg:w-8" />
-                          </AvatarFallback>
-                        </Avatar>
-                        {freelancer.developer.level === "EXPERT" && (
-                          <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-1">
-                            <CheckCircle className="h-3 w-3" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h3 className="text-base lg:text-lg font-semibold text-gray-900 truncate">
-                            {freelancer.developer.user.name || "Unknown Developer"}
-                          </h3>
-                          {freelancer.developer.level === "EXPERT" && (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                              <span className="h-4 w-4 rounded-full border border-green-600 flex items-center justify-center">
-                                <Check className="h-3 w-3" />
-                              </span>
-                              Verified
-                            </span>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={`h-6 w-6 p-0 transition-all duration-150 active:scale-95 ${freelancer.isFavorited ? 'text-red-600' : ''}`}
-                            onClick={() => handleToggleFavorite(freelancer.developer.id, freelancer.isFavorited || false)}
-                          >
-                            <Heart className={`h-4 w-4 transition-all duration-200 ${freelancer.isFavorited ? 'fill-current scale-110' : 'hover:scale-110'}`} />
-                          </Button>
-                        </div>
-                        
-                        <p className="text-gray-600 mb-2 lg:mb-3 text-sm lg:text-base">
-                          {freelancer.developer.level} Level Developer
-                        </p>
-
-                        {/* Inline status under role */}
-                        <div className="mb-2 lg:mb-3">
-                          {freelancer.responseStatus === "pending" && (
-                            <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800">
-                              Pending
-                            </span>
-                          )}
-                          {freelancer.responseStatus === "accepted" && (
-                            <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-black" style={{ backgroundColor: "#7BFFD2" }}>
-                              Ready to start
-                            </span>
-                          )}
-                          {(freelancer.responseStatus === "rejected" || freelancer.responseStatus === "expired") && (
-                            <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-red-100 text-red-700">
-                              {freelancer.responseStatus === "expired" ? "Expired" : "Rejected"}
-                            </span>
-                          )}
-                          {freelancer.responseStatus !== "pending" && freelancer.responseStatus !== "accepted" && freelancer.responseStatus !== "rejected" && freelancer.responseStatus !== "expired" && (
-                            <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700">
-                              {freelancer.responseStatus}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="mb-2 lg:mb-3" />
-
-                        {/* Meta row moved below the whole top block */}
-                        {/* Top-right quick actions on large screens */}
-                      </div>
-                    </div>
-
-                    {/* Right Section - Actions aligned with name row */}
-                    <div className="flex flex-col items-start lg:items-end gap-2 lg:gap-3">
-                      {/* Buttons first to align with user name row */}
-                      <div className="flex flex-row gap-2 w-full lg:w-auto justify-start lg:justify-end">
-                        <Button
-                          className="bg-black text-white hover:bg-gray-800 text-xs lg:text-sm h-8 lg:h-9"
-                          asChild
-                        >
-                          <a
-                            href={
-                              freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
-                                ? `https://wa.me/${String((freelancer as any).developer.whatsappNumber).replace(/\D/g, "")}`
-                                : undefined
-                            }
-                            target={
-                              freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
-                                ? "_blank"
-                                : undefined
-                            }
-                            rel={
-                              freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
-                                ? "noopener noreferrer"
-                                : undefined
-                            }
-                          >
-                            <MessageCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                            {freelancer.responseStatus === "accepted" && (freelancer as any)?.developer?.whatsappNumber
-                              ? String((freelancer as any).developer.whatsappNumber)
-                              : "WhatsApp"}
-                          </a>
-                        </Button>
-                        <Button
-                          className="bg-black text-white hover:bg-gray-800 text-xs lg:text-sm h-8 lg:h-9"
-                          onClick={() => {
-                            // Only allow when developer has accepted (belongs to project)
-                            if (freelancer.responseStatus !== "accepted") return;
-                            window.open(`/developer/${freelancer.developer.id}`, "_blank");
-                          }}
-                          disabled={freelancer.responseStatus !== "accepted"}
-                        >
-                          <User className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                          Check my Profile
-                        </Button>
-                      </div>
-
-                      {/* Status under buttons */}
-                      <div className="flex items-center gap-2">
-                        {freelancer.responseStatus === "pending" ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">Pending</Badge>
-                            {freelancer.acceptanceDeadline && (
-                              <div className="text-xs text-gray-500">
-                                <span className={`font-medium ${getCountdownColor(freelancer.acceptanceDeadline)}`}>
-                                  {getCountdown(freelancer.acceptanceDeadline)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : freelancer.responseStatus === "accepted" ? (
-                          <Badge className="bg-green-100 text-green-800 text-xs">Accepted</Badge>
-                        ) : (freelancer.responseStatus === "rejected" || freelancer.responseStatus === "expired") ? (
-                          <Badge className="bg-red-100 text-red-800 text-xs">{freelancer.responseStatus === "expired" ? "Expired" : "Rejected"}</Badge>
-                        ) : (
-                          <Badge className="bg-gray-100 text-gray-800 text-xs capitalize">{freelancer.responseStatus}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Meta Row positioned to align with avatar on the left */}
-                  <div className="mt-4 mb-3">
-                    <CandidateMetaRow
-                      freelancer={freelancer as any}
-                      projectData={projectData}
-                      projectSkillNames={projectSkills}
-                    />
-                  </div>
-
-                  {/* Divider (full-width hyphens) */}
-                  <div className="my-3 w-full overflow-hidden select-none" aria-hidden>
-                    <span className="block whitespace-nowrap text-gray-300 tracking-widest">
-                      ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                    </span>
-                  </div>
-
-                  {/* BOTTOM: rating and actions */}
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                    {/* Rating summary */}
-                    <div className="flex items-center gap-2 text-sm">
-                      {(() => {
-                        const rating = Number((freelancer as any).averageRating ?? 0) || 0;
-                        const reviews = Number((freelancer as any).totalReviews ?? 0) || 0;
-                        return (
-                          <>
-                            <span className="font-semibold">{rating.toFixed(1)}</span>
-                            <div className="flex items-center">
-                              {renderStars(rating).map((star, i) => (
-                                <span key={i}>{star}</span>
-                              ))}
-                            </div>
-                            <span className="text-gray-500">{reviews} reviews</span>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs lg:text-sm h-8 lg:h-9 border-black text-black font-medium hover:bg-black hover:text-white transition-colors"
-                        disabled={!((freelancer.developer as any).portfolioLinks?.length)}
-                      >
-                        My Latest Folio
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs lg:text-sm h-8 lg:h-9 border-black text-black font-medium hover:bg-black hover:text-white transition-colors"
-                        onClick={() => handleReadReviews(freelancer.developer.id, freelancer.developer.user.name)}
-                      >
-                        Read Reviews
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-black border-black text-xs lg:text-sm h-8 lg:h-9 hover:bg-black hover:text-white transition-colors"
-                        disabled={isBatchExpiredWithAccepted()}
-                      >
-                        <Trash2 className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                        {isBatchExpiredWithAccepted() ? "Locked" : "Remove"}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                <PeopleGrid 
+                  overrideDevelopers={overrideDevelopers} 
+                  autoRefreshEnabled={autoRefreshEnabled}
+                  onAutoRefreshToggle={setAutoRefreshEnabled}
+                  freelancerResponseStatuses={freelancerResponseStatuses}
+                  freelancerDeadlines={freelancerDeadlines}
+                  onGenerateNewBatch={isLocked ? undefined : generateNewBatch}
+                  locked={isLocked}
+                />
           )}
         </div>
       </div>

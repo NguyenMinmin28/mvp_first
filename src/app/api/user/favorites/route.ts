@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const toggleFavoriteSchema = z.object({
   developerId: z.string(),
+  ensure: z.boolean().optional(), // when true, only add (idempotent)
 });
 
 // GET /api/user/favorites - Get client's favorite developers
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { developerId } = toggleFavoriteSchema.parse(body);
+    const { developerId, ensure } = toggleFavoriteSchema.parse(body);
 
     const clientProfile = await prisma.clientProfile.findUnique({
       where: { userId: sessionUser.id },
@@ -116,7 +117,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingFavorite) {
-      // Remove from favorites
+      if (ensure) {
+        // Idempotent add: already favorited, keep as is
+        return NextResponse.json({ isFavorited: true, message: "Already in favorites" });
+      }
+      // Remove from favorites (toggle mode)
       await prisma.favoriteDeveloper.delete({
         where: { id: existingFavorite.id },
       });

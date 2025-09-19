@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { RoleMismatchNotice } from "@/ui/components/role-mismatch-notice";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -12,11 +12,14 @@ import {
   FileText,
   AlertCircle
 } from "lucide-react";
-import ProjectActivity from "./project-activity";
-import FreelancersStrip from "./FreelancersStrip";
-import ServicesStrip from "./ServicesStrip";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import Image from "next/image";
+const ProjectActivity = dynamic(() => import("./project-activity"), { ssr: false });
+const FreelancersStrip = dynamic(() => import("./FreelancersStrip"), { ssr: false });
+const ServicesStrip = dynamic(() => import("./ServicesStrip"), { ssr: false });
 import { ProjectPostForm } from "./project-post-form";
-import HelpAndResources from "./HelpAndResources";
+const HelpAndResources = dynamic(() => import("./HelpAndResources"), { ssr: false });
 import { toast } from "sonner";
 
 export default function ClientDashboard() {
@@ -221,91 +224,113 @@ export default function ClientDashboard() {
           <div className="w-full">
             <div className="grid grid-cols-2 gap-4 w-full">
               {/* Favourite Card */}
-              <Card 
-                className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
-                onClick={() => router.push('/favorites')}
-              >
-                <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                  <div className="flex justify-center mb-3">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                      <img 
-                        src="/images/client/favourite.png" 
-                        alt="Favourite" 
-                        className="w-10 h-10 object-contain"
-                      />
+              <Link href="/favorites" prefetch>
+                <Card 
+                  className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
+                >
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image 
+                          src="/images/client/favourite.png" 
+                          alt="Favourite" 
+                          width={40}
+                          height={40}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-base">Favourite</h3>
-                </CardContent>
-              </Card>
+                    <h3 className="font-semibold text-gray-900 text-base">Favourite</h3>
+                  </CardContent>
+                </Card>
+              </Link>
 
               {/* Starter Card */}
-              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
-                <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                  <div className="flex justify-center mb-3">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                      <img 
-                        src="/images/client/starter.png" 
-                        alt="Starter" 
-                        className="w-10 h-10 object-contain"
-                      />
+              <Link href="/favorites?level=FRESHER" prefetch>
+                <Card 
+                  className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
+                >
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image 
+                          src="/images/client/starter.png" 
+                          alt="Starter" 
+                          width={40}
+                          height={40}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-base">Starter</h3>
-                </CardContent>
-              </Card>
+                    <h3 className="font-semibold text-gray-900 text-base">Starter</h3>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             <div className="grid grid-cols-2 gap-4 w-full mt-4">
               {/* Professional Card */}
-              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
-                <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                  <div className="flex justify-center mb-3">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                      <img 
-                        src="/images/client/pro.png" 
-                        alt="Professional" 
-                        className="w-10 h-10 object-contain"
-                      />
+              <Link href="/favorites?level=MID" prefetch>
+                <Card 
+                  className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
+                >
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image 
+                          src="/images/client/pro.png" 
+                          alt="Professional" 
+                          width={40}
+                          height={40}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-base">Professional</h3>
-                </CardContent>
-              </Card>
+                    <h3 className="font-semibold text-gray-900 text-base">Professional</h3>
+                  </CardContent>
+                </Card>
+              </Link>
 
               {/* Experts Card */}
-              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
-                <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                  <div className="flex justify-center mb-3">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                      <img 
-                        src="/images/client/exp.png" 
-                        alt="Experts" 
-                        className="w-10 h-10 object-contain"
-                      />
+              <Link href="/favorites?level=EXPERT" prefetch>
+                <Card 
+                  className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
+                >
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image 
+                          src="/images/client/exp.png" 
+                          alt="Experts" 
+                          width={40}
+                          height={40}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-base">Experts</h3>
-                </CardContent>
-              </Card>
+                    <h3 className="font-semibold text-gray-900 text-base">Experts</h3>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             <div className="w-full mt-4">
               {/* Active Projects Card */}
-              <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
-                <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                  <div className="flex justify-center mb-3">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                      <img 
-                        src="/images/client/active.png" 
-                        alt="Active Projects" 
-                        className="w-10 h-10 object-contain"
-                      />
+              <Link href="/my-projects" prefetch onClick={() => { try { sessionStorage.setItem('myProjectsInitialTab', 'active'); } catch {} }}>
+                <Card 
+                  className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center"
+                >
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image 
+                          src="/images/client/active.png" 
+                          alt="Active Projects" 
+                          width={40}
+                          height={40}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-base">Active Projects</h3>
-                </CardContent>
-              </Card>
+                    <h3 className="font-semibold text-gray-900 text-base">Active Projects</h3>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           </div>
         </div>
@@ -313,17 +338,25 @@ export default function ClientDashboard() {
 
       {/* Project Activity Section */}
       <div className="mt-20 md:mt-28">
-        <ProjectActivity />
+        <Suspense fallback={<div className="h-32 w-full animate-pulse rounded-md bg-gray-100" />}> 
+          <ProjectActivity />
+        </Suspense>
       </div>
 
       {/* Freelancers Section */}
-      <FreelancersStrip />
+      <Suspense fallback={<div className="h-24 w-full animate-pulse rounded-md bg-gray-100" />}> 
+        <FreelancersStrip />
+      </Suspense>
 
       {/* Services Section */}
-      <ServicesStrip />
+      <Suspense fallback={<div className="h-24 w-full animate-pulse rounded-md bg-gray-100" />}> 
+        <ServicesStrip />
+      </Suspense>
 
       {/* Help and Resources Section */}
-      <HelpAndResources />
+      <Suspense fallback={<div className="h-24 w-full animate-pulse rounded-md bg-gray-100" />}> 
+        <HelpAndResources />
+      </Suspense>
     </div>
   );
 }

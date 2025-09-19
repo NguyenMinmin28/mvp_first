@@ -47,6 +47,7 @@ export function BlogHero({ post }: BlogHeroProps) {
               fill
               className="object-cover"
               priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

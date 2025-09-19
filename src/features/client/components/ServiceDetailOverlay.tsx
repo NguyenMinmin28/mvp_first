@@ -670,7 +670,13 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                         Follow
                       </button>
                       <button
-                        onClick={onGetInTouch}
+                        onClick={() => {
+                          if (service?.developer?.id) {
+                            window.location.href = `/developer/${service.developer.id}`;
+                          } else {
+                            onGetInTouch?.();
+                          }
+                        }}
                         className="px-5 h-11 rounded-xl bg-black text-white hover:bg-black/90 w-36 sm:w-40"
                       >
                         Get in Touch

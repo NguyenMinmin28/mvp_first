@@ -10,16 +10,21 @@ interface SearchAndFilterProps {
   onSearchChange?: (searchQuery: string) => void;
   onTabChange?: (tab: "people" | "service") => void;
   onFiltersChange?: (filters: string[]) => void;
+  activeTab?: "people" | "service"; // allow parent to control active tab
 }
 
 export function SearchAndFilter({ 
   onSearchChange, 
   onTabChange, 
-  onFiltersChange 
+  onFiltersChange,
+  activeTab: externalActiveTab,
 }: SearchAndFilterProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"people" | "service">("service");
+  const [internalActiveTab, setInternalActiveTab] = useState<"people" | "service">("service");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  
+  // Use external activeTab if provided, otherwise use internal state
+  const activeTab = externalActiveTab ?? internalActiveTab;
   
   // Debounce search query to avoid too many API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -56,7 +61,13 @@ export function SearchAndFilter({
   };
 
   const handleTabChange = (tab: "people" | "service") => {
-    setActiveTab(tab);
+    // If external activeTab is provided, only notify parent
+    // Otherwise, update internal state
+    if (externalActiveTab !== undefined) {
+      onTabChange?.(tab);
+    } else {
+      setInternalActiveTab(tab);
+    }
   };
 
   return (

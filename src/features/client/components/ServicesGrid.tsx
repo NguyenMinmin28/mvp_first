@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import Image from "next/image";
-import GetInTouchModal from "./GetInTouchModal";
-import ServiceDetailOverlay from "./ServiceDetailOverlay";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+const GetInTouchModal = dynamic(() => import("./GetInTouchModal"), { ssr: false, loading: () => <div className="h-48 w-full animate-pulse bg-gray-100" /> });
+const ServiceDetailOverlay = dynamic(() => import("./ServiceDetailOverlay"), { ssr: false, loading: () => <div className="h-80 w-full animate-pulse bg-gray-100" /> });
 import { Pagination } from "@/features/shared/components/pagination";
+const DeveloperReviewsModal = dynamic(() => import("@/features/client/components/developer-reviews-modal"), { ssr: false, loading: () => <div className="h-48 w-full animate-pulse bg-gray-100" /> });
 
 interface Service {
   id: string;
@@ -50,11 +53,13 @@ interface ServicesGridProps {
 }
 
 export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [] }: ServicesGridProps) {
+  const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [showReviews, setShowReviews] = useState<{ open: boolean; developerId?: string; developerName?: string }>({ open: false });
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 12,
@@ -107,8 +112,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
   }, [pagination.page, searchQuery, sortBy, filters]);
 
   const handleGetInTouch = (service: Service) => {
-    setSelectedService(service);
-    setIsModalOpen(true);
+    router.push(`/developer/${service.developer.id}`);
   };
 
   const handleOpenOverlay = (service: Service) => {
@@ -234,6 +238,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                     alt={service.title}
                     fill
                     className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -291,6 +296,16 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                           </span>
                         );
                       })}
+                      <button
+                        type="button"
+                        className="ml-2 text-gray-600 text-xs sm:text-sm hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowReviews({ open: true, developerId: service.developer.id, developerName: service.developer.name || "Developer" });
+                        }}
+                      >
+                        ({service.ratingCount} reviews)
+                      </button>
                     </div>
                   </div>
                   <div>
@@ -372,6 +387,16 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
           serviceId={selectedService.id}
           serviceTitle={selectedService.title}
           developerName={selectedService.developer.name || undefined}
+        />
+      )}
+
+      {/* Developer Reviews Overlay */}
+      {showReviews.open && showReviews.developerId && (
+        <DeveloperReviewsModal
+          isOpen={showReviews.open}
+          onClose={() => setShowReviews({ open: false })}
+          developerId={showReviews.developerId}
+          developerName={showReviews.developerName || "Developer"}
         />
       )}
     </>

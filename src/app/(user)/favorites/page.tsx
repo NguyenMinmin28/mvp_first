@@ -48,6 +48,7 @@ export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<FavoriteDeveloper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [levelFilter, setLevelFilter] = useState<"FRESHER" | "MID" | "EXPERT" | null>(null);
 
   const fetchFavorites = async () => {
     try {
@@ -97,6 +98,14 @@ export default function FavoritesPage() {
   };
 
   useEffect(() => {
+    // Read level from query string
+    const params = new URLSearchParams(window.location.search);
+    const level = params.get('level');
+    if (level === 'FRESHER' || level === 'MID' || level === 'EXPERT') {
+      setLevelFilter(level);
+    } else {
+      setLevelFilter(null);
+    }
     fetchFavorites();
   }, []);
 
@@ -141,23 +150,27 @@ export default function FavoritesPage() {
     );
   }
 
+  const visibleFavorites = levelFilter
+    ? favorites.filter(f => f.level === levelFilter)
+    : favorites;
+
   return (
     <UserLayout user={session?.user}>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Favorite Developers</h1>
           <p className="text-gray-600">
-            {favorites.length} developer{favorites.length !== 1 ? 's' : ''} in your favorites
+            {visibleFavorites.length} developer{visibleFavorites.length !== 1 ? 's' : ''} in your favorites{levelFilter ? ` – ${levelFilter}` : ''}
           </p>
         </div>
 
-      {favorites.length === 0 ? (
+      {visibleFavorites.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No favorites yet</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No developers found</h3>
             <p className="text-gray-600 mb-4">
-              Start building your team by adding developers to your favorites from project assignments.
+              {levelFilter ? 'No favorites match this level.' : 'Start building your team by adding developers to your favorites from project assignments.'}
             </p>
             <Link href="/client-dashboard">
               <Button>Go to Projects</Button>
@@ -166,7 +179,7 @@ export default function FavoritesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {favorites.map((developer) => (
+          {visibleFavorites.map((developer) => (
             <Card 
               key={developer.id} 
               className="hover:shadow-lg transition-shadow cursor-pointer"

@@ -48,7 +48,7 @@ export function PayPalButtons({ packageId, packageName, price, planId, isCurrent
     }
 
     // Check if script is already in DOM
-    const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+    const existingScript = typeof document !== 'undefined' ? document.querySelector('script[src*="paypal.com/sdk/js"]') : null;
     if (existingScript) {
       existingScript.addEventListener('load', () => {
         setScriptLoaded(true);
@@ -69,7 +69,9 @@ export function PayPalButtons({ packageId, packageName, price, planId, isCurrent
       console.error("Failed to load PayPal SDK");
     };
 
-    document.head.appendChild(script);
+    if (typeof document !== 'undefined' && document.head) {
+      document.head.appendChild(script);
+    }
   };
 
   const handlePayPalSubscribe = async () => {
@@ -92,13 +94,15 @@ export function PayPalButtons({ packageId, packageName, price, planId, isCurrent
       console.log("✅ PayPal SDK loaded successfully");
 
       // Clear any existing buttons
-      const container = document.getElementById("paypal-button-container");
+      const container = typeof document !== 'undefined' ? document.getElementById("paypal-button-container") : null;
       console.log("🔍 PayPal container found:", !!container);
-      if (container) {
+      if (container && (container as any).isConnected && container.parentNode) {
         container.innerHTML = '';
         console.log("🔍 Container cleared, ready for PayPal button");
       } else {
-        console.error("❌ PayPal container not found!");
+        console.error("❌ PayPal container not found or not connected!");
+        setIsLoading(false);
+        return;
       }
 
       // Create and render PayPal button

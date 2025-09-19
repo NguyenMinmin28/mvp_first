@@ -45,6 +45,19 @@ export default function MyProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
+
+  // Read initial tab from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('myProjectsInitialTab');
+      if (stored === 'active' || stored === 'completed' || stored === 'draft' || stored === 'all') {
+        setActiveTab(stored);
+        sessionStorage.removeItem('myProjectsInitialTab');
+      }
+    } catch {}
+  }, []);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(8);
   const [completingProjects, setCompletingProjects] = useState<Set<string>>(new Set());
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewData, setReviewData] = useState<{
@@ -285,6 +298,16 @@ export default function MyProjectsPage() {
     return matchesSearch && matchesStatus && matchesTab;
   });
 
+  // Reset page on filters/search/tab changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, activeTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = startIdx + pageSize;
+  const visibleProjects = filteredProjects.slice(startIdx, endIdx);
+
   const getTabCount = (tab: string) => {
     switch (tab) {
       case "all":
@@ -318,7 +341,7 @@ export default function MyProjectsPage() {
             Manage and track all your projects
           </p>
         </div>
-        <Link href="/projects/new">
+        <Link href="/client-dashboard">
           <Button className="flex items-center gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             <span className="text-sm lg:text-base">New Project</span>
@@ -421,6 +444,18 @@ export default function MyProjectsPage() {
                 <SelectItem value="canceled">Canceled</SelectItem>
               </SelectContent>
             </Select>
+            {/* Page size */}
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <SelectTrigger className="w-full sm:w-36 text-sm lg:text-base">
+                <SelectValue placeholder="Page size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="6">6 / page</SelectItem>
+                <SelectItem value="8">8 / page</SelectItem>
+                <SelectItem value="12">12 / page</SelectItem>
+                <SelectItem value="16">16 / page</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -452,7 +487,7 @@ export default function MyProjectsPage() {
             </Card>
           ) : (
             <div className="grid gap-3 lg:gap-4">
-              {filteredProjects.map((project) => (
+              {visibleProjects.map((project) => (
                 <Card key={project.id} className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-gray-200 hover:border-gray-300">
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
@@ -553,6 +588,23 @@ export default function MyProjectsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Pagination Controls */}
+      {filteredProjects.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <div className="text-sm text-gray-600">
+            Showing <span className="font-medium">{startIdx + 1}</span> – <span className="font-medium">{Math.min(endIdx, filteredProjects.length)}</span>
+            {" "}of <span className="font-medium">{filteredProjects.length}</span> projects
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page === 1}>First</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Prev</Button>
+            <span className="text-sm text-gray-700">Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page === totalPages}>Last</Button>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {reviewData && (

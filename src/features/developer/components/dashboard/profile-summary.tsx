@@ -12,6 +12,8 @@ import { Input } from "@/ui/components/input";
 import { ChevronDown, Star, MessageSquare } from "lucide-react";
 import { Checkbox } from "@/ui/components/checkbox";
 import DeveloperReviewModal from "@/features/client/components/developer-review-modal";
+import { toast } from "sonner";
+import DeveloperReviewsModal from "@/features/client/components/developer-reviews-modal";
 
 interface ProfileSummaryProps {
   profile: any;
@@ -45,6 +47,8 @@ export default function ProfileSummary({ profile, hideControls = false, develope
   );
   const [reviewStats, setReviewStats] = useState<ReviewStats>({ averageRating: 0, totalReviews: 0 });
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isFavoritedLocal, setIsFavoritedLocal] = useState<boolean>(Boolean((profile as any)?.isFavorited));
+  const [showReviewsOverlay, setShowReviewsOverlay] = useState(false);
 
   // Function to render star rating
   const renderStars = (rating: number) => {
@@ -261,15 +265,41 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                 </Badge>
               )}
               {!profile?.isConnected && developerId && (
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
-                  onClick={() => {
-                    // TODO: Implement connection logic
-                    alert("Connection feature coming soon!");
-                  }}
-                >
-                  Connect
-                </Button>
+                ((isFavoritedLocal || profile?.isFavorited) && profile?.whatsappNumber) ? (
+                  <a
+                    href={`https://wa.me/${String(profile.whatsappNumber).replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-8 px-3 text-xs inline-flex items-center rounded-md border border-green-600 text-green-700 hover:bg-green-50"
+                  >
+                    WhatsApp: {profile.whatsappNumber}
+                  </a>
+                ) : (
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
+                    onClick={() => {
+                      // Optimistic follow
+                      setIsFavoritedLocal(true);
+                      toast.success(`Followed ${profile?.name || "freelancer"}`);
+                      try {
+                        const payload = JSON.stringify({ developerId: developerId, ensure: true });
+                        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+                          const blob = new Blob([payload], { type: 'application/json' });
+                          navigator.sendBeacon('/api/user/favorites', blob);
+                        } else {
+                          fetch('/api/user/favorites', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: payload,
+                            keepalive: true,
+                          }).catch(() => {});
+                        }
+                      } catch {}
+                    }}
+                  >
+                    Follow
+                  </Button>
+                )
               )}
             </div>
           )}
@@ -298,9 +328,13 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                     <div className="flex items-center gap-1">
                       {renderStars(reviewStats.averageRating)}
                     </div>
-                    <span className="text-gray-600 text-xs sm:text-sm">
+                    <button
+                      type="button"
+                      className="text-gray-600 text-xs sm:text-sm hover:underline"
+                      onClick={() => developerId && setShowReviewsOverlay(true)}
+                    >
                       ({reviewStats.totalReviews} review{reviewStats.totalReviews !== 1 ? 's' : ''})
-                    </span>
+                    </button>
                     {!hideControls && developerId && (
                       <Button
                         variant="outline"
@@ -364,6 +398,15 @@ export default function ProfileSummary({ profile, hideControls = false, develope
           </div>
         </div>
       </CardContent>
+      {/* Reviews overlay modal */}
+      {showReviewsOverlay && developerId && (
+        <DeveloperReviewsModal
+          isOpen={showReviewsOverlay}
+          onClose={() => setShowReviewsOverlay(false)}
+          developerId={developerId}
+          developerName={name || profile?.name || "Developer"}
+        />
+      )}
     </Card>
     <Dialog open={openEdit} onOpenChange={setOpenEdit}>
       <DialogContent>

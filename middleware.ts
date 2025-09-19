@@ -18,6 +18,7 @@ import {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const DEBUG_MW = process.env.NEXT_PUBLIC_DEBUG_MIDDLEWARE === "true";
 
   // Hard bypass for onboarding pages to avoid any potential redirect loops
   if (pathname.startsWith("/onboarding/freelancer")) {
@@ -49,10 +50,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if the route is public
+  // Check if the route is public and bypass immediately to avoid any work
   const isPublic = PUBLIC_ROUTES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
+  if (isPublic) {
+    return NextResponse.next();
+  }
 
   // Get token from cookie first
   const token = await getToken({
@@ -61,20 +65,15 @@ export async function middleware(request: NextRequest) {
     secureCookie: process.env.NODE_ENV === "production",
   });
 
-  console.log("🔍 Middleware - Pathname:", pathname, "Token:", !!token, "Role:", token?.role, "AdminStatus:", token?.adminApprovalStatus);
-  console.log("🔍 Middleware - Token details:", {
-    sub: token?.sub,
-    email: token?.email,
-    role: token?.role,
-    isProfileCompleted: token?.isProfileCompleted,
-    adminApprovalStatus: token?.adminApprovalStatus
-  });
+  if (DEBUG_MW) {
+    console.log("🔍 Middleware - Pathname:", pathname, "Token:", !!token, "Role:", token?.role, "AdminStatus:", token?.adminApprovalStatus);
+  }
 
   // ===== AUTHENTICATION CHECKS =====
   
   // Not authenticated and trying to access protected route -> redirect to login
-  if (!token && !isPublic) {
-    console.log("🔍 Unauthenticated user accessing protected route, redirecting to signin");
+  if (!token) {
+    if (DEBUG_MW) console.log("🔍 Unauthenticated user accessing protected route, redirecting to signin");
     const url = request.nextUrl.clone();
     url.pathname = "/auth/signin";
     url.searchParams.set("callbackUrl", pathname);
@@ -83,7 +82,7 @@ export async function middleware(request: NextRequest) {
 
   // Authenticated trying to access auth pages -> redirect to appropriate dashboard
   if (token && (pathname.startsWith("/auth/signin") || pathname.startsWith("/auth/signup"))) {
-    console.log("🔍 Authenticated user on auth page, redirecting to appropriate dashboard");
+    if (DEBUG_MW) console.log("🔍 Authenticated user on auth page, redirecting to appropriate dashboard");
     if (token.role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin", request.url));
     } else if (token.role === "CLIENT") {
@@ -101,16 +100,16 @@ export async function middleware(request: NextRequest) {
   // ===== ADMIN ROUTES =====
   
   if (pathname.startsWith("/admin")) {
-    console.log("🔍 Admin route detected");
+    if (DEBUG_MW) console.log("🔍 Admin route detected");
     if (!token) {
-      console.log("🔍 No token, redirecting to signin");
+      if (DEBUG_MW) console.log("🔍 No token, redirecting to signin");
       return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
     if (token?.role !== "ADMIN") {
-      console.log("🔍 User is not admin, redirecting to home");
+      if (DEBUG_MW) console.log("🔍 User is not admin, redirecting to home");
       return NextResponse.redirect(new URL("/", request.url));
     }
-    console.log("🔍 Admin access granted");
+    if (DEBUG_MW) console.log("🔍 Admin access granted");
     return NextResponse.next();
   }
 
@@ -121,11 +120,11 @@ export async function middleware(request: NextRequest) {
   // ===== AUTHENTICATED USER REDIRECTS =====
   
   if (token) {
-    console.log("🔍 Authenticated user detected");
+    if (DEBUG_MW) console.log("🔍 Authenticated user detected");
     
     // If user has no role, redirect to role selection
     if (!token?.role) {
-      console.log("🔍 User has no role, redirecting to role selection");
+      if (DEBUG_MW) console.log("🔍 User has no role, redirecting to role selection");
       if (pathname !== "/role-selection") {
         return NextResponse.redirect(new URL("/role-selection", request.url));
       }
@@ -134,53 +133,62 @@ export async function middleware(request: NextRequest) {
     
     // If user is on home page, redirect based on role and status
     if (pathname === "/") {
-      console.log("🔍 Home page redirect for role:", token.role);
+      if (DEBUG_MW) console.log("🔍 Home page redirect for role:", token.role);
       
       if (token.role === "ADMIN") {
-        console.log("🔍 Redirecting ADMIN to /admin");
+        if (DEBUG_MW) console.log("🔍 Redirecting ADMIN to /admin");
         return NextResponse.redirect(new URL("/admin", request.url));
       } else if (token.role === "CLIENT") {
-        console.log("🔍 Redirecting CLIENT to /client-dashboard");
+        if (DEBUG_MW) console.log("🔍 Redirecting CLIENT to /client-dashboard");
         return NextResponse.redirect(new URL("/client-dashboard", request.url));
       } else if (token.role === "DEVELOPER") {
         // Developer logic
         if (!token?.isProfileCompleted) {
-          console.log("🔍 Developer profile not completed, redirecting to onboarding");
+          if (DEBUG_MW) console.log("🔍 Developer profile not completed, redirecting to onboarding");
           return NextResponse.redirect(new URL("/onboarding/freelancer/basic-information", request.url));
         }
         
         const approvalStatus = token?.adminApprovalStatus;
-        console.log("🔍 Developer approval status:", approvalStatus);
+        if (DEBUG_MW) console.log("🔍 Developer approval status:", approvalStatus);
         
         if (approvalStatus === "pending") {
-          console.log("🔍 Developer pending approval, redirecting to pending page");
+          if (DEBUG_MW) console.log("🔍 Developer pending approval, redirecting to pending page");
           return NextResponse.redirect(new URL("/onboarding/freelancer/pending-approval", request.url));
         }
         
         if (approvalStatus === "approved") {
-          console.log("🔍 Developer approved, redirecting to dashboard-user");
+          if (DEBUG_MW) console.log("🔍 Developer approved, redirecting to dashboard-user");
           return NextResponse.redirect(new URL("/dashboard-user", request.url));
         }
         
         // Default case: draft, rejected, or unknown status
-        console.log("🔍 Developer default case (status:", approvalStatus, "), redirecting to pending page");
+        if (DEBUG_MW) console.log("🔍 Developer default case (status:", approvalStatus, "), redirecting to pending page");
         return NextResponse.redirect(new URL("/onboarding/freelancer/pending-approval", request.url));
       }
     }
     
     // For non-home pages, let the request pass through to server-side checks
-    console.log("🔍 Authenticated user on non-home page, allowing through");
+    if (DEBUG_MW) console.log("🔍 Authenticated user on non-home page, allowing through");
   }
 
   // ===== DEFAULT: ALLOW THROUGH =====
-  
-  console.log("🔍 Default case - allowing through");
   return NextResponse.next();
 }
 
-// More specific matcher that properly excludes auth routes
+// Restrict middleware only to protected route groups to minimize overhead
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|images|api/auth|api/webhooks).*)",
+    "/admin/:path*",
+    "/client-dashboard/:path*",
+    "/dashboard-user/:path*",
+    "/my-projects/:path*",
+    "/projects/:path*",
+    "/inbox/:path*",
+    "/favorites/:path*",
+    "/profile/:path*",
+    "/services/:path*",
+    "/onboarding/:path*",
+    "/role-selection",
+    "/role-selection/:path*",
   ],
 };

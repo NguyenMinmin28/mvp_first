@@ -29,6 +29,7 @@ export function ServiceImageGallery({ coverUrl, title, className = "" }: Service
             alt={title}
             fill
             className="object-cover"
+            sizes="(max-width: 640px) 100vw, 50vw"
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -55,6 +56,7 @@ export function ServiceImageGallery({ coverUrl, title, className = "" }: Service
                 alt={`${title} thumbnail ${index + 1}`}
                 fill
                 className="object-cover"
+                sizes="32px"
               />
             </button>
           ))}

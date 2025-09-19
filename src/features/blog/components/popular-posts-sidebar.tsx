@@ -50,6 +50,7 @@ export function PopularPostsSidebar({ posts, onTrackClick }: PopularPostsSidebar
                     alt={post.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-200"
+                    sizes="64px"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';

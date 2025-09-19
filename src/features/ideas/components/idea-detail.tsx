@@ -161,6 +161,7 @@ export function IdeaDetail({ idea, currentUserId }: IdeaDetailProps) {
                 alt={idea.title}
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 100vw, 768px"
               />
             </div>
           )}

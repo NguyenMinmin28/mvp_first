@@ -28,7 +28,7 @@ export async function POST(
 
     console.log("🔄 Generating batch for project:", projectId, "with selection:", customSelection);
 
-    // Check if batch has accepted candidates (block immediately when someone accepts)
+    // Check if project locked by status or accepted candidates
     const currentBatch = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -44,6 +44,14 @@ export async function POST(
         }
       }
     });
+
+    // Block if project status is locked
+    if (currentBatch && ["accepted", "in_progress", "completed"].includes(currentBatch.status as any)) {
+      return NextResponse.json(
+        { error: "Cannot generate new batch: project is locked" },
+        { status: 400 }
+      );
+    }
 
     if (currentBatch?.currentBatch?.candidates) {
       const hasAcceptedCandidates = currentBatch.currentBatch.candidates.some(candidate => 
