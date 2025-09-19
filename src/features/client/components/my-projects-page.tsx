@@ -5,9 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Badge } from "@/ui/components/badge";
 import { Input } from "@/ui/components/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/ui/components/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
-import { 
+import {
   FileText,
   Eye,
   MessageSquare,
@@ -20,7 +26,7 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  MoreHorizontal
+  MoreHorizontal,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,7 +36,14 @@ import { ProjectReviewModal } from "./project-review-modal";
 interface Project {
   id: string;
   name: string;
-  status: "draft" | "submitted" | "assigning" | "accepted" | "in_progress" | "completed" | "canceled";
+  status:
+    | "draft"
+    | "submitted"
+    | "assigning"
+    | "accepted"
+    | "in_progress"
+    | "completed"
+    | "canceled";
   date: string;
   budget?: number;
   currency?: string;
@@ -48,24 +61,36 @@ export default function MyProjectsPage() {
 
   // Read initial tab from sessionStorage on mount
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('myProjectsInitialTab');
-      if (stored === 'active' || stored === 'completed' || stored === 'draft' || stored === 'all') {
-        setActiveTab(stored);
-        sessionStorage.removeItem('myProjectsInitialTab');
-      }
-    } catch {}
+    // Only access sessionStorage on client side
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("myProjectsInitialTab");
+        if (
+          stored === "active" ||
+          stored === "completed" ||
+          stored === "draft" ||
+          stored === "all"
+        ) {
+          setActiveTab(stored);
+          sessionStorage.removeItem("myProjectsInitialTab");
+        }
+      } catch {}
+    }
   }, []);
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(8);
-  const [completingProjects, setCompletingProjects] = useState<Set<string>>(new Set());
+  const [completingProjects, setCompletingProjects] = useState<Set<string>>(
+    new Set()
+  );
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewData, setReviewData] = useState<{
     projectId: string;
     projectTitle: string;
     developers: Array<{ id: string; name: string; image?: string }>;
   } | null>(null);
-  const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(new Set());
+  const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(
+    new Set()
+  );
 
   useEffect(() => {
     fetchProjects();
@@ -74,23 +99,30 @@ export default function MyProjectsPage() {
   // Check review status for all completed projects
   useEffect(() => {
     const checkReviewStatus = async () => {
-      const completedProjects = projects.filter(p => p.status === "completed");
+      const completedProjects = projects.filter(
+        (p) => p.status === "completed"
+      );
       const reviewStatusPromises = completedProjects.map(async (project) => {
         try {
-          const response = await fetch(`/api/projects/${project.id}/reviews/status`);
+          const response = await fetch(
+            `/api/projects/${project.id}/reviews/status`
+          );
           if (response.ok) {
             const data = await response.json();
             return { projectId: project.id, hasReviews: data.hasReviews };
           }
         } catch (error) {
-          console.error(`Error checking review status for project ${project.id}:`, error);
+          console.error(
+            `Error checking review status for project ${project.id}:`,
+            error
+          );
         }
         return { projectId: project.id, hasReviews: false };
       });
 
       const results = await Promise.all(reviewStatusPromises);
       const reviewedSet = new Set(
-        results.filter(r => r.hasReviews).map(r => r.projectId)
+        results.filter((r) => r.hasReviews).map((r) => r.projectId)
       );
       setReviewedProjects(reviewedSet);
     };
@@ -103,7 +135,7 @@ export default function MyProjectsPage() {
   const fetchProjects = async () => {
     try {
       const response = await fetch("/api/projects", {
-        credentials: 'include',
+        credentials: "include",
       });
       if (response.ok) {
         const data = await response.json();
@@ -121,12 +153,12 @@ export default function MyProjectsPage() {
 
   const handleCompleteProject = async (projectId: string) => {
     try {
-      setCompletingProjects(prev => new Set(prev).add(projectId));
-      
+      setCompletingProjects((prev) => new Set(prev).add(projectId));
+
       const response = await fetch(`/api/projects/${projectId}/complete`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -137,7 +169,7 @@ export default function MyProjectsPage() {
           setReviewData({
             projectId,
             projectTitle: data.project.title,
-            developers: data.acceptedDevelopers
+            developers: data.acceptedDevelopers,
           });
           setShowReviewModal(true);
         } else {
@@ -159,7 +191,7 @@ export default function MyProjectsPage() {
       console.error("Error completing project:", error);
       toast.error("An error occurred while completing the project");
     } finally {
-      setCompletingProjects(prev => {
+      setCompletingProjects((prev) => {
         const newSet = new Set(prev);
         newSet.delete(projectId);
         return newSet;
@@ -171,18 +203,23 @@ export default function MyProjectsPage() {
     await fetchProjects();
     setShowReviewModal(false);
     setReviewData(null);
-    
+
     // Mark project as reviewed
     if (reviewData) {
-      setReviewedProjects(prev => new Set(prev).add(reviewData.projectId));
+      setReviewedProjects((prev) => new Set(prev).add(reviewData.projectId));
     }
   };
 
-  const handleReviewProject = async (projectId: string, projectTitle: string) => {
+  const handleReviewProject = async (
+    projectId: string,
+    projectTitle: string
+  ) => {
     try {
       // First check if project already has reviews
-      const reviewCheckResponse = await fetch(`/api/projects/${projectId}/reviews/status`);
-      
+      const reviewCheckResponse = await fetch(
+        `/api/projects/${projectId}/reviews/status`
+      );
+
       if (reviewCheckResponse.ok) {
         const reviewStatus = await reviewCheckResponse.json();
         if (reviewStatus.hasReviews) {
@@ -193,23 +230,26 @@ export default function MyProjectsPage() {
 
       // Fetch accepted developers for this project
       const response = await fetch(`/api/projects/${projectId}/assignment`);
-      
+
       if (response.ok) {
         const data = await response.json();
-        const acceptedDevelopers = data.candidates
-          ?.filter((candidate: any) => candidate.responseStatus === "accepted")
-          ?.map((candidate: any) => ({
-            id: candidate.developer.id,
-            name: candidate.developer.user.name,
-            image: candidate.developer.photoUrl || candidate.developer.user.image
-          })) || [];
-
+        const acceptedDevelopers =
+          data.candidates
+            ?.filter(
+              (candidate: any) => candidate.responseStatus === "accepted"
+            )
+            ?.map((candidate: any) => ({
+              id: candidate.developer.id,
+              name: candidate.developer.user.name,
+              image:
+                candidate.developer.photoUrl || candidate.developer.user.image,
+            })) || [];
 
         if (acceptedDevelopers.length > 0) {
           setReviewData({
             projectId,
             projectTitle,
-            developers: acceptedDevelopers
+            developers: acceptedDevelopers,
           });
           setShowReviewModal(true);
         } else {
@@ -287,16 +327,46 @@ export default function MyProjectsPage() {
     }
   };
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
-    const matchesTab = activeTab === "all" || 
-      (activeTab === "active" && ["submitted", "assigning", "accepted", "in_progress"].includes(project.status)) ||
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch = project.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || project.status === statusFilter;
+    const matchesTab =
+      activeTab === "all" ||
+      (activeTab === "active" &&
+        ["submitted", "assigning", "accepted", "in_progress"].includes(
+          project.status
+        )) ||
       (activeTab === "completed" && project.status === "completed") ||
       (activeTab === "draft" && project.status === "draft");
-    
+
     return matchesSearch && matchesStatus && matchesTab;
   });
+
+  const [quotaStatus, setQuotaStatus] = useState<{
+    hasActiveSubscription: boolean;
+    quotas?: { projectsPerMonth: number; contactClicksPerProject: number };
+    usage?: { projectsUsed: number; contactClicksUsed: Record<string, number> };
+    remaining?: { projects: number; contactClicks: Record<string, number> };
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchQuota = async () => {
+      try {
+        const res = await fetch("/api/billing/quotas", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setQuotaStatus(data);
+      } catch (error) {
+        console.error("Failed to fetch quota status:", error);
+      }
+    };
+    fetchQuota();
+  }, []);
 
   // Reset page on filters/search/tab changes
   useEffect(() => {
@@ -313,11 +383,15 @@ export default function MyProjectsPage() {
       case "all":
         return projects.length;
       case "active":
-        return projects.filter(p => ["submitted", "assigning", "accepted", "in_progress"].includes(p.status)).length;
+        return projects.filter((p) =>
+          ["submitted", "assigning", "accepted", "in_progress"].includes(
+            p.status
+          )
+        ).length;
       case "completed":
-        return projects.filter(p => p.status === "completed").length;
+        return projects.filter((p) => p.status === "completed").length;
       case "draft":
-        return projects.filter(p => p.status === "draft").length;
+        return projects.filter((p) => p.status === "draft").length;
       default:
         return 0;
     }
@@ -336,7 +410,9 @@ export default function MyProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">My Projects</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+            My Projects
+          </h1>
           <p className="text-sm lg:text-base text-gray-600 mt-1">
             Manage and track all your projects
           </p>
@@ -349,6 +425,60 @@ export default function MyProjectsPage() {
         </Link>
       </div>
 
+      {/* Quota Status */}
+      {quotaStatus && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Project Quota Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {quotaStatus.hasActiveSubscription ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    Projects this month:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {quotaStatus.usage?.projectsUsed || 0} /{" "}
+                      {quotaStatus.quotas?.projectsPerMonth || 0}
+                    </span>
+                    <Badge
+                      variant={
+                        quotaStatus.remaining?.projects === 0
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      {quotaStatus.remaining?.projects || 0} remaining
+                    </Badge>
+                  </div>
+                </div>
+                {quotaStatus.remaining?.projects === 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm text-red-700">
+                      Monthly project limit reached. Upgrade your plan to create
+                      more projects.
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-yellow-700">
+                  No active subscription. Please subscribe to create projects.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         <Card>
@@ -358,13 +488,17 @@ export default function MyProjectsPage() {
                 <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs lg:text-sm text-gray-600">Total Projects</p>
-                <p className="text-lg lg:text-2xl font-bold">{projects.length}</p>
+                <p className="text-xs lg:text-sm text-gray-600">
+                  Total Projects
+                </p>
+                <p className="text-lg lg:text-2xl font-bold">
+                  {projects.length}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
@@ -374,13 +508,13 @@ export default function MyProjectsPage() {
               <div>
                 <p className="text-xs lg:text-sm text-gray-600">Completed</p>
                 <p className="text-lg lg:text-2xl font-bold">
-                  {projects.filter(p => p.status === "completed").length}
+                  {projects.filter((p) => p.status === "completed").length}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
@@ -390,13 +524,22 @@ export default function MyProjectsPage() {
               <div>
                 <p className="text-xs lg:text-sm text-gray-600">In Progress</p>
                 <p className="text-lg lg:text-2xl font-bold">
-                  {projects.filter(p => ["submitted", "assigning", "accepted", "in_progress"].includes(p.status)).length}
+                  {
+                    projects.filter((p) =>
+                      [
+                        "submitted",
+                        "assigning",
+                        "accepted",
+                        "in_progress",
+                      ].includes(p.status)
+                    ).length
+                  }
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
@@ -406,7 +549,10 @@ export default function MyProjectsPage() {
               <div>
                 <p className="text-xs lg:text-sm text-gray-600">Total Budget</p>
                 <p className="text-lg lg:text-2xl font-bold">
-                  ${projects.reduce((sum, p) => sum + (p.budget || 0), 0).toLocaleString()}
+                  $
+                  {projects
+                    .reduce((sum, p) => sum + (p.budget || 0), 0)
+                    .toLocaleString()}
                 </p>
               </div>
             </div>
@@ -445,7 +591,10 @@ export default function MyProjectsPage() {
               </SelectContent>
             </Select>
             {/* Page size */}
-            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => setPageSize(Number(v))}
+            >
               <SelectTrigger className="w-full sm:w-36 text-sm lg:text-base">
                 <SelectValue placeholder="Page size" />
               </SelectTrigger>
@@ -461,12 +610,36 @@ export default function MyProjectsPage() {
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 lg:space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4 lg:space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-gray-100">
-          <TabsTrigger value="all" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">All ({getTabCount("all")})</TabsTrigger>
-          <TabsTrigger value="active" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">Active ({getTabCount("active")})</TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">Completed ({getTabCount("completed")})</TabsTrigger>
-          <TabsTrigger value="draft" className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150">Draft ({getTabCount("draft")})</TabsTrigger>
+          <TabsTrigger
+            value="all"
+            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+          >
+            All ({getTabCount("all")})
+          </TabsTrigger>
+          <TabsTrigger
+            value="active"
+            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+          >
+            Active ({getTabCount("active")})
+          </TabsTrigger>
+          <TabsTrigger
+            value="completed"
+            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+          >
+            Completed ({getTabCount("completed")})
+          </TabsTrigger>
+          <TabsTrigger
+            value="draft"
+            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+          >
+            Draft ({getTabCount("draft")})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-3 lg:space-y-4">
@@ -478,17 +651,19 @@ export default function MyProjectsPage() {
                   No projects found
                 </h3>
                 <p className="text-sm lg:text-base text-gray-500  mb-3 lg:mb-4">
-                  {searchTerm || statusFilter !== "all" 
+                  {searchTerm || statusFilter !== "all"
                     ? "Try adjusting your search or filters"
-                    : "Get started by creating your first project"
-                  }
+                    : "Get started by creating your first project"}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-3 lg:gap-4">
               {visibleProjects.map((project) => (
-                <Card key={project.id} className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-gray-200 hover:border-gray-300">
+                <Card
+                  key={project.id}
+                  className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-gray-200 hover:border-gray-300"
+                >
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
                       <div className="flex items-start gap-3 lg:gap-4 flex-1">
@@ -500,20 +675,24 @@ export default function MyProjectsPage() {
                             <h3 className="text-base lg:text-lg font-semibold text-gray-900  truncate">
                               {project.name}
                             </h3>
-                            <Badge className={`${getStatusColor(project.status)} text-xs lg:text-sm`}>
+                            <Badge
+                              className={`${getStatusColor(project.status)} text-xs lg:text-sm`}
+                            >
                               <div className="flex items-center gap-1">
                                 {getStatusIcon(project.status)}
-                                <span className="hidden sm:inline">{getStatusText(project.status)}</span>
+                                <span className="hidden sm:inline">
+                                  {getStatusText(project.status)}
+                                </span>
                               </div>
                             </Badge>
                           </div>
-                          
+
                           {project.description && (
                             <p className="text-sm lg:text-base text-gray-600  mb-2 lg:mb-3 line-clamp-2">
                               {project.description}
                             </p>
                           )}
-                          
+
                           <div className="flex flex-wrap items-center gap-2 lg:gap-4 text-xs lg:text-sm text-gray-500">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -522,7 +701,8 @@ export default function MyProjectsPage() {
                             {project.budget && (
                               <div className="flex items-center gap-1">
                                 <DollarSign className="h-3 w-3 lg:h-4 lg:w-4" />
-                                {project.budget.toLocaleString()} {project.currency}
+                                {project.budget.toLocaleString()}{" "}
+                                {project.currency}
                               </div>
                             )}
                             {project.candidatesCount !== undefined && (
@@ -534,49 +714,65 @@ export default function MyProjectsPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-wrap items-center gap-1 lg:gap-2">
                         <Link href={`/projects/${project.id}`}>
-                          <Button variant="outline" size="sm" className="text-xs lg:text-sm h-8 lg:h-9 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-150">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs lg:text-sm h-8 lg:h-9 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-150"
+                          >
                             <Eye className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
                             View
                           </Button>
                         </Link>
                         {project.status === "completed" && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className={`text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150 ${
-                              reviewedProjects.has(project.id) 
-                                ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500" 
+                              reviewedProjects.has(project.id)
+                                ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500"
                                 : "hover:bg-green-50 hover:border-green-300 hover:text-green-700"
                             }`}
-                            onClick={() => handleReviewProject(project.id, project.name)}
+                            onClick={() =>
+                              handleReviewProject(project.id, project.name)
+                            }
                             disabled={reviewedProjects.has(project.id)}
                           >
                             <MessageSquare className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                            {reviewedProjects.has(project.id) ? "Reviewed" : "Review"}
+                            {reviewedProjects.has(project.id)
+                              ? "Reviewed"
+                              : "Review"}
                           </Button>
                         )}
-                        {(project.status !== "completed" && project.status !== "draft" && project.status !== "canceled") && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleCompleteProject(project.id)}
-                            disabled={completingProjects.has(project.id)}
-                            className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150"
-                          >
-                            {completingProjects.has(project.id) ? (
-                              <Clock className="h-3 w-3 lg:h-4 lg:w-4 mr-1 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                            )}
-                            <span className="hidden sm:inline">
-                              {completingProjects.has(project.id) ? "Completing..." : "Mark Complete"}
-                            </span>
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="h-8 lg:h-9">
+                        {project.status !== "completed" &&
+                          project.status !== "draft" &&
+                          project.status !== "canceled" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCompleteProject(project.id)}
+                              disabled={completingProjects.has(project.id)}
+                              className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150"
+                            >
+                              {completingProjects.has(project.id) ? (
+                                <Clock className="h-3 w-3 lg:h-4 lg:w-4 mr-1 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
+                              )}
+                              <span className="hidden sm:inline">
+                                {completingProjects.has(project.id)
+                                  ? "Completing..."
+                                  : "Mark Complete"}
+                              </span>
+                            </Button>
+                          )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 lg:h-9"
+                        >
                           <MoreHorizontal className="h-3 w-3 lg:h-4 lg:w-4" />
                         </Button>
                       </div>
@@ -593,15 +789,49 @@ export default function MyProjectsPage() {
       {filteredProjects.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
           <div className="text-sm text-gray-600">
-            Showing <span className="font-medium">{startIdx + 1}</span> – <span className="font-medium">{Math.min(endIdx, filteredProjects.length)}</span>
-            {" "}of <span className="font-medium">{filteredProjects.length}</span> projects
+            Showing <span className="font-medium">{startIdx + 1}</span> –{" "}
+            <span className="font-medium">
+              {Math.min(endIdx, filteredProjects.length)}
+            </span>{" "}
+            of <span className="font-medium">{filteredProjects.length}</span>{" "}
+            projects
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page === 1}>First</Button>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Prev</Button>
-            <span className="text-sm text-gray-700">Page {page} of {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
-            <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page === totalPages}>Last</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Prev
+            </Button>
+            <span className="text-sm text-gray-700">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+            >
+              Last
+            </Button>
           </div>
         </div>
       )}
@@ -620,7 +850,6 @@ export default function MyProjectsPage() {
           onComplete={handleReviewComplete}
         />
       )}
-      
     </div>
   );
 }
