@@ -14,7 +14,7 @@ export function HeroProject() {
       const formContainer = formContentRef.current;
       if (formContainer) {
         // Get the height from the title element to the bottom of the form
-        const titleElement = formContainer.querySelector('h1');
+        const titleElement = formContainer.querySelector("h1");
         if (titleElement) {
           const titleRect = titleElement.getBoundingClientRect();
           const formRect = formContainer.getBoundingClientRect();
@@ -25,7 +25,10 @@ export function HeroProject() {
       }
     };
     sync();
-    const ro = typeof window !== "undefined" && "ResizeObserver" in window ? new ResizeObserver(sync) : null;
+    const ro =
+      typeof window !== "undefined" && "ResizeObserver" in window
+        ? new ResizeObserver(sync)
+        : null;
     if (ro && formContentRef.current) ro.observe(formContentRef.current);
     window.addEventListener("resize", sync);
     return () => {
@@ -34,13 +37,13 @@ export function HeroProject() {
     };
   }, []);
   return (
-    <section className="w-full py-8 md:py-16">
+    <section className="w-full py-8 md:py-4">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.1fr] lg:grid-cols-[0.8fr_1.2fr] gap-6 md:gap-8 items-start">
           {/* Left: Form column */}
           <div className="md:pr-4" ref={formContentRef}>
             <div className="bg-[#FFFFFF] rounded-lg p-6 border-0">
-              <ProjectPostForm 
+              <ProjectPostForm
                 title="Post Project"
                 description=""
                 showLoginLink={true}
@@ -50,9 +53,11 @@ export function HeroProject() {
 
           {/* Right: Image column */}
           <div className="w-full">
-            <div 
+            <div
               className="bg-[#FFFAF3] overflow-hidden flex items-center justify-center p-8 mt-16"
-              style={{ height: rightHeight ? `${rightHeight * 0.9}px` : 'auto' }}
+              style={{
+                height: rightHeight ? `${rightHeight * 0.9}px` : "auto",
+              }}
             >
               <img
                 alt="Hire freelancer directly"
