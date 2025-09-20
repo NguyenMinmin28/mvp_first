@@ -2,10 +2,21 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/ui/components/tooltip";
 
 function SolidCalendarIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm13 9H4v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8ZM5 7a1 1 0 0 0-1 1v1h16V8a1 1 0 0 0-1-1H5Z" />
     </svg>
   );
@@ -13,7 +24,12 @@ function SolidCalendarIcon({ className = "w-5 h-5" }: { className?: string }) {
 
 function SolidClockIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm1 5a1 1 0 1 0-2 0v5c0 .266.106.52.293.707l3 3a1 1 0 1 0 1.414-1.414L13 10.586V7Z" />
     </svg>
   );
@@ -21,16 +37,39 @@ function SolidClockIcon({ className = "w-5 h-5" }: { className?: string }) {
 
 function HollowClockIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="9" fill="#ffffff" stroke="#000000" strokeWidth="2" />
-      <path d="M12 7v5l3 3" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        fill="#ffffff"
+        stroke="#000000"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 7v5l3 3"
+        fill="none"
+        stroke="#000000"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function SolidEarningIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path d="M4 18a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm0-5a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm0-5a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Z" />
     </svg>
   );
@@ -42,14 +81,33 @@ function FeatureItem({ text }: { text: string }) {
       <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#6D6D6D] text-white shrink-0">
         <Check className="w-2.5 h-2.5" />
       </span>
-      <span className="leading-relaxed whitespace-nowrap">{text}</span>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <span className="leading-relaxed whitespace-nowrap truncate cursor-help">
+            {text}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
     </li>
   );
 }
 
-function PlanCard({ name, price, period, features }: { name: string; price: string; period: string; features: string[] }) {
+function PlanCard({
+  name,
+  price,
+  period,
+  features,
+}: {
+  name: string;
+  price: string;
+  period: string;
+  features: string[];
+}) {
   return (
-    <div className="rounded-2xl border bg-white/70 p-6 flex flex-col">
+    <div className="rounded-2xl border bg-white/70 p-6 flex flex-col h-full">
       <div className="mb-6">
         <h3 className="font-semibold text-lg text-left">{name}</h3>
         <div className="mt-2 mx-1 h-px bg-[#DEE0E2]"></div>
@@ -58,12 +116,21 @@ function PlanCard({ name, price, period, features }: { name: string; price: stri
         <span className="text-3xl font-bold">{price}</span>
         <span className="ml-2 text-sm text-gray-600">/{period}</span>
       </div>
-      <Link href="/pricing" className="h-12 inline-flex items-center justify-center rounded-full bg-black text-white px-6 text-sm">
-        {name === "Basic Plan" ? "Current Plan" : name === "Plus Plan" ? "Upgrade to Plus" : name === "Pro Plan" ? "Upgrade to Pro" : "Choose your plan"}
+      <Link
+        href="/pricing"
+        className="h-10 inline-flex items-center justify-center rounded-full bg-black text-white px-6 text-sm"
+      >
+        {name === "Basic Plan"
+          ? "Current Plan"
+          : name === "Plus Plan"
+            ? "Upgrade to Plus"
+            : name === "Pro Plan"
+              ? "Upgrade to Pro"
+              : "Choose your plan"}
       </Link>
-      <div className="mt-8 rounded-xl bg-[#FAFAFA] p-6">
+      <div className="mt-8 rounded-xl bg-[#FAFAFA] p-4">
         <p className="font-semibold mb-3">Service Include:</p>
-        <ul className="space-y-2 text-xs text-gray-700">
+        <ul className="space-y-2 text-sm text-gray-700">
           {features.map((f, i) => (
             <FeatureItem key={i} text={f} />
           ))}
@@ -73,15 +140,59 @@ function PlanCard({ name, price, period, features }: { name: string; price: stri
   );
 }
 
+function BenefitCard() {
+  return (
+    <div className="w-full h-full max-w-full rounded-2xl border bg-white/70 p-6 flex flex-col">
+      <h3 className="font-semibold text-xl mb-6">Benefits</h3>
+      <ul className="space-y-6 text-gray-800">
+        <li className="flex items-start gap-4">
+          <span className="inline-flex h-10 w-10 items-center justify-center">
+            <img
+              src="/images/home/calendar.jpg"
+              alt="calendar"
+              className="w-6 h-6 object-contain"
+            />
+          </span>
+          <p className="font-medium">
+            Post projects anytime and connect instantly
+          </p>
+        </li>
+        <li className="flex items-start gap-4">
+          <span className="inline-flex h-10 w-10 items-center justify-center">
+            <HollowClockIcon className="w-6 h-6" />
+          </span>
+          <p className="font-medium">
+            Flexible contracts with direct agreements
+          </p>
+        </li>
+        <li className="flex items-start gap-4">
+          <span className="inline-flex h-10 w-10 items-center justify-center">
+            <img
+              src="/images/home/pay.png"
+              alt="earnings"
+              className="w-6 h-6 object-contain"
+            />
+          </span>
+          <p className="font-medium">Keep 100% earnings, zero commission</p>
+        </li>
+      </ul>
+      <Link href="/pricing" className="inline-block mt-auto underline">
+        See terms
+      </Link>
+    </div>
+  );
+}
+
 export default function Subscription() {
   return (
-    <section className="w-full py-10 md:py-16">
-      <div className="container mx-auto max-w-8xl px-0">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
-          <div className="lg:col-span-3">
-            <h2 className="text-4xl font-extrabold tracking-tight mb-8">Subscription for clients</h2>
-          {/* Subscription Plans Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+    <TooltipProvider>
+      <section className="w-full py-10 md:py-16 px-8">
+        <div className="container mx-auto max-w-8xl px-0">
+          <h2 className="text-4xl font-extrabold tracking-tight mb-8">
+            Subscription for clients
+          </h2>
+          {/* 4 Equal Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <PlanCard
               name="Basic Plan"
               price="$0"
@@ -112,38 +223,10 @@ export default function Subscription() {
                 "Get notified when freelancers show interest",
               ]}
             />
-          </div>
-          </div>
-          
-          {/* Benefits Section */}
-          <div className="lg:col-span-1 flex justify-center">
-            <div className="w-full max-w-sm rounded-2xl border bg-white/70 p-6 flex flex-col mt-8 mb-8">
-              <h3 className="font-semibold text-xl mb-6">Benefits</h3>
-              <ul className="space-y-6 text-gray-800">
-                <li className="flex items-start gap-4">
-                  <span className="inline-flex h-10 w-10 items-center justify-center">
-                    <img src="/images/home/calendar.jpg" alt="calendar" className="w-6 h-6 object-contain" />
-                  </span>
-                  <p className="font-medium">Post projects anytime and connect instantly</p>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="inline-flex h-10 w-10 items-center justify-center"><HollowClockIcon className="w-6 h-6" /></span>
-                  <p className="font-medium">Flexible contracts with direct agreements</p>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="inline-flex h-10 w-10 items-center justify-center">
-                    <img src="/images/home/pay.png" alt="earnings" className="w-6 h-6 object-contain" />
-                  </span>
-                  <p className="font-medium">Keep 100% earnings, zero commission</p>
-                </li>
-              </ul>
-              <Link href="/pricing" className="inline-block mt-auto underline">See terms</Link>
-            </div>
+            <BenefitCard />
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </TooltipProvider>
   );
 }
-
-

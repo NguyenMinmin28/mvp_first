@@ -39,8 +39,7 @@ export default function RoleSelection({
         "Track project progress",
         "Pay through platform",
       ],
-      color:
-        "bg-blue-50 border-blue-200 hover:bg-blue-100"
+      color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
     },
     {
       type: "DEVELOPER" as const,
@@ -53,8 +52,7 @@ export default function RoleSelection({
         "Manage professional profile",
         "Receive direct payments",
       ],
-      color:
-        "bg-green-50 border-green-200 hover:bg-green-100"
+      color: "bg-green-50 border-green-200 hover:bg-green-100",
     },
   ];
 
@@ -134,11 +132,11 @@ export default function RoleSelection({
             ) : (
               <>
                 <Users className="mr-2 h-5 w-5" />
-                Continue with role{" "}
+                Join as{" "}
                 {selectedRole === "CLIENT"
                   ? "Client"
                   : selectedRole === "DEVELOPER"
-                    ? "Developer"
+                    ? "Freelancer"
                     : ""}
               </>
             )}
