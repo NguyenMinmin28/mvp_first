@@ -77,9 +77,8 @@ export async function POST(request: NextRequest) {
       where: {
         clientId: clientProfile.id,
         developerId: developerId,
-        projectId: null, // Direct message (no project)
         responseStatus: "pending"
-      }
+      } as any
     });
 
     if (existingCandidate) {
@@ -94,29 +93,30 @@ export async function POST(request: NextRequest) {
       data: {
         clientId: clientProfile.id,
         developerId: developerId,
-        projectId: null, // No project for direct messages
-        batchId: null, // No batch for direct messages
+        projectId: undefined, // No project for direct messages
+        batchId: undefined, // No batch for direct messages
         level: developer.level || "MID", // Default level
         assignedAt: new Date(),
         acceptanceDeadline: null, // No deadline for direct messages
         responseStatus: "pending",
         source: "MANUAL_INVITE",
         clientMessage: message.trim(),
+        usualResponseTimeMsSnapshot: developer.usualResponseTimeMs || 0,
         metadata: {
           title: title?.trim() || null,
           budget: budget?.trim() || null,
           description: description?.trim() || null,
           isDirectMessage: true
         }
-      }
+      } as any
     });
 
     // Send notification to developer
     try {
       await notify({
         type: "SERVICE_LEAD_CREATED",
-        recipientId: developer.userId,
-        data: {
+        recipients: [developer.userId],
+        payload: {
           candidateId: candidate.id,
           clientName: clientProfile.user.name || "A client",
           message: message.trim(),

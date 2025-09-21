@@ -32,6 +32,12 @@ export function ContactCard({ isOpen, onClose, developer, projectId }: ContactCa
     onClose();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+    }
+  };
+
   const logContactView = async () => {
     try {
       setLoggingView(true);
@@ -88,7 +94,7 @@ export function ContactCard({ isOpen, onClose, developer, projectId }: ContactCa
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Developer Contact</DialogTitle>

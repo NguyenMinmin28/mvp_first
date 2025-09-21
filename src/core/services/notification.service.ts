@@ -75,7 +75,7 @@ export class NotificationService {
           await notify({
             type: "assignment.invited",
             recipients: [candidate.developer.userId],
-            projectId: candidate.projectId,
+            projectId: candidate.projectId || undefined,
             payload: {
               projectTitle: candidate.project?.title,
               acceptanceDeadline: notification.acceptanceDeadline,
@@ -238,7 +238,7 @@ You've been assigned to a new project:
             ? new Date(batch.project.expectedEndAt).toISOString()
             : "Flexible",
           skills: batch.project.skillsRequired,
-          acceptanceDeadline: candidate.acceptanceDeadline
+          acceptanceDeadline: candidate.acceptanceDeadline || new Date()
         };
 
         const result = await this.sendProjectAssignmentNotification(notification);

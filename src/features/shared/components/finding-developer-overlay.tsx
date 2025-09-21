@@ -22,8 +22,14 @@ export function FindingDeveloperOverlay({
     onClose();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <div className="flex flex-col items-center justify-center py-8 space-y-4">
           <div className="relative">

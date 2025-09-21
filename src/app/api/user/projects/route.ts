@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         orderBy: {
           assignedAt: 'desc'
         }
-      });
+      }) as AssignmentWithProject[];
       
       console.log("🔍 Basic assignments query successful, getting additional data...");
       

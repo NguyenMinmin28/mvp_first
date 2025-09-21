@@ -41,13 +41,15 @@ export async function POST(
 
     // Check if the assignment has actually expired
     const now = new Date();
-    const deadline = new Date(assignment.acceptanceDeadline);
-    
-    if (now <= deadline) {
-      return NextResponse.json(
-        { error: "Assignment has not expired yet" },
-        { status: 400 }
-      );
+    if (assignment.acceptanceDeadline) {
+      const deadline = new Date(assignment.acceptanceDeadline);
+      
+      if (now <= deadline) {
+        return NextResponse.json(
+          { error: "Assignment has not expired yet" },
+          { status: 400 }
+        );
+      }
     }
 
     // Update assignment status to expired
