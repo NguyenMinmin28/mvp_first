@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
+import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-const GetInTouchModal = dynamic(() => import("./GetInTouchModal"), { ssr: false, loading: () => <div className="h-48 w-full animate-pulse bg-gray-100" /> });
 const ServiceDetailOverlay = dynamic(() => import("./ServiceDetailOverlay"), { ssr: false, loading: () => <div className="h-80 w-full animate-pulse bg-gray-100" /> });
 import { Pagination } from "@/features/shared/components/pagination";
 const DeveloperReviewsModal = dynamic(() => import("@/features/client/components/developer-reviews-modal"), { ssr: false, loading: () => <div className="h-48 w-full animate-pulse bg-gray-100" /> });
@@ -53,11 +52,9 @@ interface ServicesGridProps {
 }
 
 export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [] }: ServicesGridProps) {
-  const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [showReviews, setShowReviews] = useState<{ open: boolean; developerId?: string; developerName?: string }>({ open: false });
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -111,9 +108,6 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     };
   }, [pagination.page, searchQuery, sortBy, filters]);
 
-  const handleGetInTouch = (service: Service) => {
-    router.push(`/developer/${service.developer.id}`);
-  };
 
   const handleOpenOverlay = (service: Service) => {
     setSelectedService(service);
@@ -329,13 +323,12 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                 </p>
 
                 {/* Get in Touch Button */}
-                <Button 
-                  className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900" 
+                <GetInTouchButton
+                  developerId={service.developer.id}
+                  developerName={service.developer.name || undefined}
+                  className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900"
                   variant="outline"
-                  onClick={(e) => { e.stopPropagation(); handleGetInTouch(service); }}
-                >
-                  Get in Touch
-                </Button>
+                />
               </div>
             </CardContent>
           </Card>
@@ -356,7 +349,10 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         isOpen={isOverlayOpen}
         service={selectedService ? { ...selectedService, likesCount: selectedService.likesCount, } as any : null}
         onClose={() => setIsOverlayOpen(false)}
-        onGetInTouch={() => selectedService && handleGetInTouch(selectedService)}
+        onGetInTouch={() => {
+          // GetInTouchButton will handle the modal display
+          console.log("Get in Touch clicked from overlay");
+        }}
         onPrev={() => {
           if (!selectedService) return;
           const idx = services.findIndex(s => s.id === selectedService.id);
@@ -377,18 +373,6 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         onServiceUpdate={handleServiceUpdate}
       />
 
-      {selectedService && (
-        <GetInTouchModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedService(null);
-          }}
-          serviceId={selectedService.id}
-          serviceTitle={selectedService.title}
-          developerName={selectedService.developer.name || undefined}
-        />
-      )}
 
       {/* Developer Reviews Overlay */}
       {showReviews.open && showReviews.developerId && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Heart, Info, Share, X, Link as LinkIcon } from "lucide-react";
+import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 
 // Utilities: build responsive src/srcSet for Unsplash (reduces pixelation)
 function appendParams(url: string, params: Record<string, string | number>) {
@@ -51,6 +52,7 @@ export interface ServiceDetailData {
   skills: string[];
   categories: string[];
   leadsCount: number;
+  responseStatus?: string; // For project candidates: "pending", "accepted", "rejected", "expired", "invalidated"
 }
 
 interface ServiceDetailOverlayProps {
@@ -65,6 +67,9 @@ interface ServiceDetailOverlayProps {
 }
 
 export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow, onServiceUpdate }: ServiceDetailOverlayProps) {
+  // Debug logging
+  console.log("ServiceDetailOverlay - service responseStatus:", service?.responseStatus);
+  console.log("ServiceDetailOverlay - button should be disabled:", service?.responseStatus !== "accepted");
   const [today, setToday] = useState("");
   const [likeCount, setLikeCount] = useState<number>(service?.likesCount ?? Math.max(1, Math.round((service?.views || 0) / 40)));
   const [isLiking, setIsLiking] = useState(false);
@@ -300,12 +305,13 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
               >
                 Follow
               </button>
-              <button
-                onClick={onGetInTouch}
-                className="px-3 sm:px-4 h-9 sm:h-10 rounded-md bg-black text-white hover:bg-black/90 w-36 sm:w-40"
-              >
-                Get in Touch
-              </button>
+              <GetInTouchButton
+                developerId={service?.developer?.id || ""}
+                developerName={service?.developer?.name || undefined}
+                className="px-3 sm:px-4 h-9 sm:h-10 rounded-md w-36 sm:w-40 bg-black text-white hover:bg-black/90"
+                variant="default"
+                size="default"
+              />
               <div className="hidden sm:block w-[2px] h-6 bg-gray-500" />
               <button
                 onClick={onPrev}
@@ -671,11 +677,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                       </button>
                       <button
                         onClick={() => {
-                          if (service?.developer?.id) {
-                            window.location.href = `/developer/${service.developer.id}`;
-                          } else {
-                            onGetInTouch?.();
-                          }
+                          onGetInTouch?.();
                         }}
                         className="px-5 h-11 rounded-xl bg-black text-white hover:bg-black/90 w-36 sm:w-40"
                       >

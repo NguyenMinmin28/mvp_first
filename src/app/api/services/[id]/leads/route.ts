@@ -6,6 +6,123 @@ import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import { notify } from "@/core/services/notify.service";
 
+// Helper function to get client activity logs
+async function getClientActivityLogs(clientId: string) {
+  try {
+    // Get client's project history
+    const projects = await (prisma as any).project.findMany({
+      where: { clientId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        budget: true,
+        skillsRequired: true,
+        createdAt: true,
+        postedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10, // Last 10 projects
+    });
+
+    // Get client's communication patterns
+    const contactReveals = await (prisma as any).contactRevealEvent.findMany({
+      where: { clientId },
+      select: {
+        revealedAt: true,
+        channel: true,
+        developerId: true,
+      },
+      orderBy: { revealedAt: 'desc' },
+      take: 20, // Last 20 contact reveals
+    });
+
+    // Get client's review patterns
+    const reviews = await (prisma as any).review.findMany({
+      where: { 
+        fromUserId: clientId,
+        type: "client_for_developer"
+      },
+      select: {
+        rating: true,
+        comment: true,
+        createdAt: true,
+        projectId: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10, // Last 10 reviews
+    });
+
+    // Get client's subscription history
+    const subscriptions = await (prisma as any).subscription.findMany({
+      where: { clientId },
+      select: {
+        status: true,
+        startAt: true,
+        currentPeriodEnd: true,
+        package: {
+          select: {
+            name: true,
+            projectsPerMonth: true,
+          },
+        },
+      },
+      orderBy: { startAt: 'desc' },
+      take: 5, // Last 5 subscriptions
+    });
+
+    return {
+      projects: projects.map((p: any) => ({
+        title: p.title,
+        status: p.status,
+        budget: p.budget,
+        skillsCount: p.skillsRequired?.length || 0,
+        createdAt: p.createdAt,
+        postedAt: p.postedAt,
+      })),
+      contactPatterns: {
+        totalReveals: contactReveals.length,
+        preferredChannel: contactReveals.reduce((acc: any, curr: any) => {
+          acc[curr.channel] = (acc[curr.channel] || 0) + 1;
+          return acc;
+        }, {}),
+        lastReveal: contactReveals[0]?.revealedAt,
+      },
+      reviewPatterns: {
+        totalReviews: reviews.length,
+        averageRating: reviews.length > 0 ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length : 0,
+        lastReview: reviews[0]?.createdAt,
+      },
+      subscriptionHistory: subscriptions.map((s: any) => ({
+        packageName: s.package.name,
+        projectsPerMonth: s.package.projectsPerMonth,
+        status: s.status,
+        startAt: s.startAt,
+        currentPeriodEnd: s.currentPeriodEnd,
+      })),
+      summary: {
+        totalProjects: projects.length,
+        activeProjects: projects.filter((p: any) => ['in_progress', 'accepted'].includes(p.status)).length,
+        completedProjects: projects.filter((p: any) => p.status === 'completed').length,
+        totalSpent: projects.reduce((sum: number, p: any) => sum + (p.budget || 0), 0),
+        preferredSkills: projects.flatMap((p: any) => p.skillsRequired || []).reduce((acc: any, skill: string) => {
+          acc[skill] = (acc[skill] || 0) + 1;
+          return acc;
+        }, {}),
+      },
+    };
+  } catch (error) {
+    console.error("Error getting client activity logs:", error);
+    return {
+      projects: [],
+      contactPatterns: { totalReveals: 0, preferredChannel: {}, lastReveal: null },
+      reviewPatterns: { totalReviews: 0, averageRating: 0, lastReview: null },
+      subscriptionHistory: [],
+      summary: { totalProjects: 0, activeProjects: 0, completedProjects: 0, totalSpent: 0, preferredSkills: {} },
+    };
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -18,7 +135,7 @@ export async function POST(
 
     const serviceId = params.id;
     const body = await request.json();
-    const { message, contactVia = "IN_APP" } = body;
+    const { message, budget, description, contactVia = "IN_APP" } = body;
 
     // Verify service exists and is published
     const service = await (prisma as any).service.findFirst({
@@ -54,6 +171,9 @@ export async function POST(
       return NextResponse.json({ error: "Lead already exists" }, { status: 400 });
     }
 
+    // Get client activity logs for sharing
+    const clientActivityLogs = await getClientActivityLogs(session.user.id);
+
     // Create the lead
     const lead = await (prisma as any).serviceLead.create({
       data: {
@@ -62,6 +182,13 @@ export async function POST(
         message: message?.trim() || null,
         contactVia,
         status: "NEW",
+        // Store activity logs and additional project details in metadata
+        metadata: {
+          activityLogs: clientActivityLogs,
+          budget: budget?.trim() || null,
+          description: description?.trim() || null,
+          sharedAt: new Date().toISOString(),
+        },
       },
     });
 

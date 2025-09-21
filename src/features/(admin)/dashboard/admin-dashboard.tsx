@@ -23,6 +23,8 @@ import {
   Search,
   Filter,
   Download,
+  MessageSquare,
+  Briefcase,
 } from "lucide-react";
 
 import { AdminLayout } from "@/features/shared/components/admin-layout";
@@ -44,7 +46,9 @@ import { Input } from "@/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { AdminProjectAssignmentModal } from "@/features/admin/components/admin-project-assignment-modal";
-import { UserCronManagement } from "@/features/admin/components/user-cron-management";
+import { AdminProjectDetailsModal } from "@/features/admin/components/admin-project-details-modal";
+import { SmartExpireCronMonitor } from "@/features/admin/components/smart-expire-cron-monitor";
+import { SubscriptionCronMonitor } from "@/features/admin/components/subscription-cron-monitor";
 
 interface AdminDashboardProps {
   user: {
@@ -149,7 +153,33 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [projectsPerPage] = useState(10);
+  
+  // Developers pagination state
+  const [currentDevPage, setCurrentDevPage] = useState(1);
+  const [totalDevPages, setTotalDevPages] = useState(1);
+  const [totalDevelopers, setTotalDevelopers] = useState(0);
+  const [developersPerPage] = useState(10);
+  
+  // Stats state
+  const [stats, setStats] = useState({
+    totalProjects: 0,
+    activeProjects: 0,
+    completedProjects: 0,
+    totalDevelopers: 0,
+    approvedDevelopers: 0,
+    pendingApprovals: 0,
+    totalBlogPosts: 0,
+    publishedPosts: 0,
+    draftPosts: 0,
+  });
 
   useEffect(() => {
     // Defer to next tick to avoid any SSR/CSR mismatch on first paint
@@ -159,27 +189,45 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     return () => clearTimeout(id);
   }, []);
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (page: number = currentPage) => {
     try {
-      const [projectsRes, developersRes, blogPostsRes] = await Promise.all([
-        fetch("/api/admin/projects"),
-        fetch("/api/admin/developers"),
+      const [projectsRes, developersRes, blogPostsRes, statsRes] = await Promise.all([
+        fetch(`/api/admin/projects?page=${page}&limit=${projectsPerPage}`),
+        fetch(`/api/admin/developers?page=${currentDevPage}&limit=${developersPerPage}`),
         fetch("/api/admin/blog/posts"),
+        fetch("/api/admin/stats"),
       ]);
 
       if (projectsRes.ok) {
         const projectsData = await projectsRes.json();
         setProjects(projectsData.projects || []);
+        
+        // Update pagination info
+        if (projectsData.pagination) {
+          setTotalPages(projectsData.pagination.totalPages);
+          setTotalProjects(projectsData.pagination.total);
+        }
       }
 
       if (developersRes.ok) {
         const developersData = await developersRes.json();
         setDevelopers(developersData.developers || []);
+        
+        // Update developers pagination info
+        if (developersData.pagination) {
+          setTotalDevPages(developersData.pagination.totalPages);
+          setTotalDevelopers(developersData.pagination.totalCount);
+        }
       }
 
       if (blogPostsRes.ok) {
         const blogPostsData = await blogPostsRes.json();
         setBlogPosts(blogPostsData.posts || []);
+      }
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData.stats || {});
       }
     } catch (error) {
       console.error("Error fetching admin data:", error);
@@ -222,8 +270,68 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     setAssignmentModalOpen(true);
   };
 
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project);
+    setDetailsModalOpen(true);
+  };
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchAdminData(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  // Developers pagination handlers
+  const handleDevPageChange = (page: number) => {
+    setCurrentDevPage(page);
+    fetchDevelopersData(page);
+  };
+
+  const fetchDevelopersData = async (page: number = currentDevPage) => {
+    try {
+      const developersRes = await fetch(`/api/admin/developers?page=${page}&limit=${developersPerPage}`);
+      
+      if (developersRes.ok) {
+        const developersData = await developersRes.json();
+        setDevelopers(developersData.developers || []);
+        
+        // Update developers pagination info
+        if (developersData.pagination) {
+          setTotalDevPages(developersData.pagination.totalPages);
+          setTotalDevelopers(developersData.pagination.totalCount);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching developers data:", error);
+    }
+  };
+
+  const handleDevPreviousPage = () => {
+    if (currentDevPage > 1) {
+      handleDevPageChange(currentDevPage - 1);
+    }
+  };
+
+  const handleDevNextPage = () => {
+    if (currentDevPage < totalDevPages) {
+      handleDevPageChange(currentDevPage + 1);
+    }
+  };
+
   const handleAssignmentComplete = () => {
-    fetchAdminData();
+    fetchAdminData(currentPage);
   };
 
   const getStatusColor = (status: ProjectStatus) => {
@@ -307,26 +415,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       developer.user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const stats = {
-    totalProjects: projects.length,
-    activeProjects: projects.filter(
-      (p) =>
-        p.status === "assigning" ||
-        p.status === "accepted" ||
-        p.status === "in_progress"
-    ).length,
-    completedProjects: projects.filter((p) => p.status === "completed").length,
-    totalDevelopers: developers.length,
-    approvedDevelopers: developers.filter(
-      (d) => d.adminApprovalStatus === "approved"
-    ).length,
-    pendingApprovals: developers.filter(
-      (d) => d.adminApprovalStatus === "pending"
-    ).length,
-    totalBlogPosts: blogPosts.length,
-    publishedPosts: blogPosts.filter((p) => p.status === "PUBLISHED").length,
-    draftPosts: blogPosts.filter((p) => p.status === "DRAFT").length,
-  };
+  // Stats are now fetched from API and stored in state
 
   if (isLoading) {
     return (
@@ -581,72 +670,86 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                 className="w-64 pl-8"
               />
             </div>
-            <Button onClick={fetchAdminData}>
+            <Button onClick={() => fetchAdminData(currentPage)}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
           </div>
 
-          <div
-            className="overflow-x-auto rounded-lg border truncate w-full"
-            style={{ width: "100%" }}
-          >
-            <table className="w-full border-collapse" style={{ width: "100%" }}>
-              <thead className="border-b">
+          <div className="overflow-x-auto rounded-lg border bg-white">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-left p-3 font-bold text-gray-800 border-r">
-                    Project
+                  <th className="text-left p-4 font-semibold text-gray-700 border-r min-w-[200px]">
+                    Project Name
                   </th>
-                  <th className="text-left p-3 font-bold text-gray-800 border-r">
+                  <th className="text-left p-4 font-semibold text-gray-700 border-r min-w-[150px]">
                     Client
                   </th>
-                  <th className="text-left p-3 font-bold text-gray-800 border-r">
-                    Skills Required
+                  <th className="text-left p-4 font-semibold text-gray-700 border-r min-w-[120px]">
+                    Status
                   </th>
-                  <th className="text-left p-3 font-bold text-gray-800 border-r">
-                    Stats
+                  <th className="text-left p-4 font-semibold text-gray-700 border-r min-w-[150px]">
+                    Required Skills
                   </th>
-                  <th className="text-left p-3 font-bold text-gray-800 border-r">
+                  <th className="text-left p-4 font-semibold text-gray-700 border-r min-w-[100px]">
+                    Statistics
+                  </th>
+                  <th className="text-left p-4 font-semibold text-gray-700 border-r min-w-[120px]">
                     Current Batch
                   </th>
-                  <th className="text-left p-3 font-bold text-gray-800">
+                  <th className="text-left p-4 font-semibold text-gray-700 min-w-[120px]">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProjects.map((project) => (
-                  <tr key={project.id} className="border-b hover:bg-gray-100">
-                    <td className="p-3 border-r">
+                  <tr key={project.id} className="border-b hover:bg-gray-50 transition-colors">
+                    {/* Tên Project */}
+                    <td className="p-4 border-r">
                       <div>
-                        <div className="font-medium">{project.title}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="font-semibold text-gray-900 mb-1">
+                          {project.title}
+                        </div>
+                        <div className="text-sm text-gray-600 line-clamp-2">
                           {project.description}
                         </div>
-                        <div className="mt-1">
-                          <Badge className={getStatusColor(project.status)}>
-                            {getStatusText(project.status)}
-                          </Badge>
+                        <div className="text-xs text-gray-500 mt-2">
+                          Created: {new Date(project.createdAt).toLocaleDateString("en-US")}
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 border-r">
+
+                    {/* Client */}
+                    <td className="p-4 border-r">
                       <div>
-                        <div className="font-medium">
-                          {project.client.user.name ||
-                            project.client.user.email}
+                        <div className="font-medium text-gray-900">
+                          {project.client.user.name || "No name"}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {project.client.user.email}
                         </div>
                         {project.contactRevealEnabled && (
-                          <div className="text-xs text-green-600">
-                            Contact revealed ({project.contactRevealsCount}{" "}
-                            times)
+                          <div className="text-xs text-green-600 mt-1">
+                            <Eye className="h-3 w-3 inline mr-1" />
+                            Revealed {project.contactRevealsCount} times
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="p-3 border-r">
+
+                    {/* Trạng thái */}
+                    <td className="p-4 border-r">
+                      <Badge className={getStatusColor(project.status)}>
+                        {getStatusText(project.status)}
+                      </Badge>
+                    </td>
+
+                    {/* Kỹ năng yêu cầu */}
+                    <td className="p-4 border-r">
                       <div className="flex flex-wrap gap-1">
-                        {project.skillsRequired.slice(0, 3).map((skill) => (
+                        {project.skillsRequired.slice(0, 2).map((skill) => (
                           <Badge
                             key={skill}
                             variant="secondary"
@@ -655,70 +758,150 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                             {skill}
                           </Badge>
                         ))}
-                        {project.skillsRequired.length > 3 && (
+                        {project.skillsRequired.length > 2 && (
                           <Badge variant="secondary" className="text-xs">
-                            +{project.skillsRequired.length - 3}
+                            +{project.skillsRequired.length - 2}
                           </Badge>
                         )}
                       </div>
                     </td>
-                    <td className="p-3 border-r">
-                      <div className="text-sm">
-                        <div>{project._count.assignmentBatches} batches</div>
-                        <div>
-                          {project._count.assignmentCandidates} candidates
+
+                    {/* Thống kê */}
+                    <td className="p-4 border-r">
+                      <div className="text-sm space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Briefcase className="h-3 w-3 text-gray-500" />
+                          <span>{project._count.assignmentBatches} batches</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3 text-gray-500" />
+                          <span>{project._count.assignmentCandidates} candidates</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3 text-gray-500" />
+                          <span>{project._count.progressUpdates} updates</span>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 border-r">
+
+                    {/* Batch hiện tại */}
+                    <td className="p-4 border-r">
                       {project.currentBatch ? (
-                        <div className="text-sm">
-                          <div>
-                            <span className="text-muted-foreground">
-                              Status:
-                            </span>{" "}
-                            {project.currentBatch.status}
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              #{project.currentBatch.batchNumber}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {project.currentBatch.status}
+                            </Badge>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Candidates:
-                            </span>{" "}
-                            {project.currentBatch.candidates.length}
+                          <div className="text-xs text-gray-600">
+                            {project.currentBatch.candidates.length} candidates
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Accepted:
-                            </span>{" "}
-                            {
-                              project.currentBatch.candidates.filter(
-                                (c) => c.responseStatus === "accepted"
-                              ).length
-                            }
+                          <div className="text-xs text-green-600">
+                            {project.currentBatch.candidates.filter(
+                              (c) => c.responseStatus === "accepted"
+                            ).length} accepted
                           </div>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">
-                          No active batch
+                        <span className="text-gray-500 text-sm">
+                          No batch
                         </span>
                       )}
                     </td>
-                    <td className="p-3">
-                      {project.status === "assigning" && (
+
+                    {/* Hành động */}
+                    <td className="p-4">
+                      <div className="flex flex-col gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleAssignDeveloper(project)}
+                          onClick={() => handleViewDetails(project)}
+                          className="w-full"
                         >
-                          <Users className="h-4 w-4 mr-2" />
-                          Assign Developer
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
                         </Button>
-                      )}
+                        {project.status === "assigning" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignDeveloper(project)}
+                            className="w-full"
+                          >
+                            <Users className="h-4 w-4 mr-2" />
+                            Assign Developer
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+              <div className="flex items-center text-sm text-gray-700">
+                <span>
+                  Showing {((currentPage - 1) * projectsPerPage) + 1} to{" "}
+                  {Math.min(currentPage * projectsPerPage, totalProjects)} of{" "}
+                  {totalProjects} projects
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* Developers Tab */}
@@ -733,7 +916,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                 className="w-64 pl-8"
               />
             </div>
-            <Button onClick={fetchAdminData}>
+            <Button onClick={() => fetchAdminData(currentPage)}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -907,6 +1090,66 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               </tbody>
             </table>
           </div>
+
+          {/* Developers Pagination */}
+          {totalDevPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+              <div className="flex items-center text-sm text-gray-700">
+                <span>
+                  Showing {((currentDevPage - 1) * developersPerPage) + 1} to{" "}
+                  {Math.min(currentDevPage * developersPerPage, totalDevelopers)} of{" "}
+                  {totalDevelopers} developers
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDevPreviousPage}
+                  disabled={currentDevPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalDevPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalDevPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentDevPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentDevPage >= totalDevPages - 2) {
+                      pageNum = totalDevPages - 4 + i;
+                    } else {
+                      pageNum = currentDevPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentDevPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleDevPageChange(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDevNextPage}
+                  disabled={currentDevPage === totalDevPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* Blog Management Tab */}
@@ -1123,7 +1366,10 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
         {/* Cron Jobs Tab */}
         <TabsContent value="cron" className="space-y-6">
-          <UserCronManagement />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SmartExpireCronMonitor />
+            <SubscriptionCronMonitor />
+          </div>
         </TabsContent>
 
         {/* Settings Tab */}
@@ -1263,6 +1509,13 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         onClose={() => setAssignmentModalOpen(false)}
         project={selectedProject}
         onAssignmentComplete={handleAssignmentComplete}
+      />
+
+      {/* Admin Project Details Modal */}
+      <AdminProjectDetailsModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        project={selectedProject}
       />
     </AdminLayout>
   );

@@ -84,10 +84,10 @@ export async function GET(
       isCurrentBatch: batchWithAccepted.id === project.currentBatchId
     } : 'None found');
     
-    // Find the batch with accepted candidates, or fallback to currentBatchId
+    // Use currentBatchId as primary, only fallback to batch with accepted if currentBatchId is null
     let targetBatchId = project.currentBatchId;
-    if (batchWithAccepted && batchWithAccepted.id !== project.currentBatchId) {
-      console.log('Using batch with accepted candidates instead of currentBatchId');
+    if (!targetBatchId && batchWithAccepted) {
+      console.log('No currentBatchId, using batch with accepted candidates as fallback');
       targetBatchId = batchWithAccepted.id;
     }
     
@@ -96,7 +96,8 @@ export async function GET(
     if (targetBatchId) {
       candidates = await prisma.assignmentCandidate.findMany({
         where: {
-          batchId: targetBatchId
+          batchId: targetBatchId,
+          responseStatus: { in: ["pending", "accepted"] } // 👈 chỉ 2 trạng thái này
         },
         include: {
           developer: {
@@ -156,9 +157,8 @@ export async function GET(
       }
     });
 
-    // Determine lock status: if any candidate accepted OR project status is accepted/in_progress/completed
-    const hasAccepted = allBatches.some(b => b.candidates.some(c => c.responseStatus === 'accepted'));
-    const locked = hasAccepted || ["accepted", "in_progress", "completed"].includes(project.status as any);
+    // Determine lock status: only lock if project status is in_progress/completed (not just accepted)
+    const locked = ["in_progress", "completed"].includes(project.status as any);
 
     return NextResponse.json({
       project: {
@@ -183,6 +183,7 @@ export async function GET(
         const mappedCandidates = candidates.map(candidate => ({
           id: candidate.id,
           developerId: candidate.developerId,
+          batchId: candidate.batchId, // Add batchId for deduplication logic
           level: candidate.level,
           responseStatus: candidate.responseStatus,
           acceptanceDeadline: candidate.acceptanceDeadline,
@@ -216,11 +217,28 @@ export async function GET(
       developerName: c.developer.user.name
     })));
     
-    // Deduplicate candidates - keep only the latest one for each developer
+    // Deduplicate candidates - prioritize candidates from current batch, then by assignedAt
     const uniqueCandidates = mappedCandidates.reduce((acc, candidate) => {
       const existingCandidate = acc[candidate.developer.id];
-      if (!existingCandidate || candidate.assignedAt > existingCandidate.assignedAt) {
+      if (!existingCandidate) {
         acc[candidate.developer.id] = candidate;
+      } else {
+        // Prioritize candidate from current batch (targetBatchId)
+        const isCurrentBatch = candidate.batchId === targetBatchId;
+        const isExistingCurrentBatch = existingCandidate.batchId === targetBatchId;
+        
+        if (isCurrentBatch && !isExistingCurrentBatch) {
+          // Current batch candidate takes priority
+          acc[candidate.developer.id] = candidate;
+        } else if (!isCurrentBatch && isExistingCurrentBatch) {
+          // Keep existing current batch candidate
+          // Do nothing
+        } else {
+          // Both from same batch type, use latest assignedAt
+          if (candidate.assignedAt > existingCandidate.assignedAt) {
+            acc[candidate.developer.id] = candidate;
+          }
+        }
       }
       return acc;
     }, {} as Record<string, any>);

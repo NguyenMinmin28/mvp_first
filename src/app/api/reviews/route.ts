@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
+import { FollowNotificationService } from "@/core/services/follow-notification.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -89,6 +90,32 @@ export async function POST(request: NextRequest) {
           type: "client_for_developer"
         }
       });
+
+      // Send follow notification for new review
+      try {
+        const client = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true }
+        });
+        
+        const developerUser = await prisma.user.findUnique({
+          where: { id: developer.userId },
+          select: { name: true }
+        });
+
+        if (client?.name && developerUser?.name) {
+          await FollowNotificationService.notifyReviewReceived(
+            developer.userId,
+            developerUser.name,
+            review.id,
+            rating,
+            client.name
+          );
+        }
+      } catch (error) {
+        console.error("Error sending follow notification for review:", error);
+        // Don't fail the review creation if notification fails
+      }
 
       createdReviews.push({
         id: review.id,

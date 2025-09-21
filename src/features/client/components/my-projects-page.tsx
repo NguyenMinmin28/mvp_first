@@ -32,6 +32,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ProjectReviewModal } from "./project-review-modal";
+import { MessageDetailModal } from "./message-detail-modal";
 
 interface Project {
   id: string;
@@ -91,10 +92,32 @@ export default function MyProjectsPage() {
   const [reviewedProjects, setReviewedProjects] = useState<Set<string>>(
     new Set()
   );
+  const [manualInvitations, setManualInvitations] = useState<Record<string, any[]>>({});
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   useEffect(() => {
     fetchProjects();
+    fetchManualInvitations();
   }, []);
+
+  const fetchManualInvitations = async () => {
+    try {
+      const response = await fetch("/api/projects/manual-invitations");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const invitationsMap: Record<string, any[]> = {};
+          data.data.forEach((item: any) => {
+            invitationsMap[item.projectId] = item.invitations;
+          });
+          setManualInvitations(invitationsMap);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching manual invitations:", error);
+    }
+  };
 
   // Check review status for all completed projects
   useEffect(() => {
@@ -340,7 +363,8 @@ export default function MyProjectsPage() {
           project.status
         )) ||
       (activeTab === "completed" && project.status === "completed") ||
-      (activeTab === "draft" && project.status === "draft");
+      (activeTab === "draft" && project.status === "draft") ||
+      (activeTab === "messages"); // Don't show projects in messages tab
 
     return matchesSearch && matchesStatus && matchesTab;
   });
@@ -373,10 +397,63 @@ export default function MyProjectsPage() {
     setPage(1);
   }, [searchTerm, statusFilter, activeTab]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / pageSize));
+  // Get all manual invitations as separate items
+  const getAllManualInvitations = () => {
+    const allInvitations: any[] = [];
+    Object.entries(manualInvitations).forEach(([projectId, invitations]) => {
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        invitations.forEach((invitation: any) => {
+          allInvitations.push({
+            ...invitation,
+            projectTitle: project.name,
+            projectId: projectId,
+            client: {
+              name: invitation.client?.name || 'Client',
+              companyName: invitation.client?.companyName || null
+            }
+          });
+        });
+      }
+    });
+    return allInvitations;
+  };
+
+  const allManualInvitations = getAllManualInvitations();
+
+  const handleViewMessageDetail = (invitation: any) => {
+    setSelectedMessage(invitation);
+    setShowMessageModal(true);
+  };
+
+  const handleCloseMessageModal = () => {
+    setShowMessageModal(false);
+    setSelectedMessage(null);
+  };
+  
+  // Filter manual invitations based on search term
+  const filteredManualInvitations = allManualInvitations.filter((invitation) => {
+    const matchesSearch = 
+      invitation.projectTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invitation.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invitation.budget?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invitation.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  const totalItems = activeTab === "messages" 
+    ? filteredManualInvitations.length 
+    : filteredProjects.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const startIdx = (page - 1) * pageSize;
   const endIdx = startIdx + pageSize;
-  const visibleProjects = filteredProjects.slice(startIdx, endIdx);
+  
+  const visibleProjects = activeTab === "messages" 
+    ? [] 
+    : filteredProjects.slice(startIdx, endIdx);
+  const visibleManualInvitations = activeTab === "messages" 
+    ? filteredManualInvitations.slice(startIdx, endIdx)
+    : [];
 
   const getTabCount = (tab: string) => {
     switch (tab) {
@@ -392,10 +469,91 @@ export default function MyProjectsPage() {
         return projects.filter((p) => p.status === "completed").length;
       case "draft":
         return projects.filter((p) => p.status === "draft").length;
+      case "messages":
+        return allManualInvitations.length;
       default:
         return 0;
     }
   };
+
+  const renderManualInvitationCard = (invitation: any, projectTitle: string) => (
+    <Card
+      key={`invitation-${invitation.id}`}
+      className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-blue-200 hover:border-blue-300 bg-blue-50"
+    >
+      <CardContent className="p-4 lg:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
+          <div className="flex items-start gap-3 lg:gap-4 flex-1">
+            <div className="flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 lg:gap-3 mb-2">
+                <h3 className="text-base lg:text-lg font-semibold text-blue-900 truncate">
+                  {invitation.title || `Message to ${invitation.developer.name || "Developer"}`}
+                </h3>
+                <Badge
+                  className={`text-xs lg:text-sm ${
+                    invitation.responseStatus === "accepted" ? "bg-green-100 text-green-800" :
+                    invitation.responseStatus === "rejected" ? "bg-red-100 text-red-800" :
+                    invitation.responseStatus === "pending" ? "bg-yellow-100 text-yellow-800" :
+                    "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-1">
+                    {invitation.responseStatus === "accepted" ? "✅" :
+                     invitation.responseStatus === "rejected" ? "❌" :
+                     invitation.responseStatus === "pending" ? "⏳" : ""}
+                    <span className="hidden sm:inline">
+                      {invitation.responseStatus === "accepted" ? "Accepted" :
+                       invitation.responseStatus === "rejected" ? "Rejected" :
+                       invitation.responseStatus === "pending" ? "Pending" :
+                       invitation.responseStatus}
+                    </span>
+                  </div>
+                </Badge>
+              </div>
+
+              <div className="text-sm lg:text-base text-blue-700 mb-2 lg:mb-3">
+                <strong>Project:</strong> {projectTitle}
+              </div>
+
+              {invitation.clientMessage && (
+                <p className="text-sm lg:text-base text-blue-600 mb-2 lg:mb-3 italic">
+                  "{invitation.clientMessage}"
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 lg:gap-4 text-xs lg:text-sm text-blue-500">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 lg:h-4 lg:w-4" />
+                  {new Date(invitation.assignedAt).toLocaleDateString()}
+                </div>
+                {invitation.budget && (
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3 lg:h-4 lg:w-4" />
+                    Budget: {invitation.budget}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1 lg:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+              onClick={() => handleViewMessageDetail(invitation)}
+            >
+              <MessageSquare className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
+              View Details
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (isLoading) {
     return (
@@ -615,7 +773,7 @@ export default function MyProjectsPage() {
         onValueChange={setActiveTab}
         className="space-y-4 lg:space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 bg-gray-100">
           <TabsTrigger
             value="all"
             className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
@@ -640,25 +798,39 @@ export default function MyProjectsPage() {
           >
             Draft ({getTabCount("draft")})
           </TabsTrigger>
+          <TabsTrigger
+            value="messages"
+            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+          >
+            Messages ({getTabCount("messages")})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-3 lg:space-y-4">
-          {filteredProjects.length === 0 ? (
+          {totalItems === 0 ? (
             <Card>
               <CardContent className="p-6 lg:p-8 text-center">
                 <FileText className="h-8 w-8 lg:h-12 lg:w-12 text-gray-400 mx-auto mb-3 lg:mb-4" />
                 <h3 className="text-base lg:text-lg font-medium text-gray-900  mb-2">
-                  No projects found
+                  {activeTab === "messages" ? "No messages found" : "No projects found"}
                 </h3>
                 <p className="text-sm lg:text-base text-gray-500  mb-3 lg:mb-4">
                   {searchTerm || statusFilter !== "all"
                     ? "Try adjusting your search or filters"
-                    : "Get started by creating your first project"}
+                    : activeTab === "messages" 
+                      ? "You haven't sent any messages to developers yet"
+                      : "Get started by creating your first project"}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-3 lg:gap-4">
+              {/* Render manual invitations for messages tab */}
+              {activeTab === "messages" && visibleManualInvitations.map((invitation) => (
+                renderManualInvitationCard(invitation, invitation.projectTitle)
+              ))}
+              
+              {/* Render projects */}
               {visibleProjects.map((project) => (
                 <Card
                   key={project.id}
@@ -712,6 +884,7 @@ export default function MyProjectsPage() {
                               </div>
                             )}
                           </div>
+
                         </div>
                       </div>
 
@@ -786,15 +959,15 @@ export default function MyProjectsPage() {
       </Tabs>
 
       {/* Pagination Controls */}
-      {filteredProjects.length > 0 && (
+      {totalItems > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
           <div className="text-sm text-gray-600">
             Showing <span className="font-medium">{startIdx + 1}</span> –{" "}
             <span className="font-medium">
-              {Math.min(endIdx, filteredProjects.length)}
+              {Math.min(endIdx, totalItems)}
             </span>{" "}
-            of <span className="font-medium">{filteredProjects.length}</span>{" "}
-            projects
+            of <span className="font-medium">{totalItems}</span>{" "}
+            items
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -850,6 +1023,13 @@ export default function MyProjectsPage() {
           onComplete={handleReviewComplete}
         />
       )}
+
+      {/* Message Detail Modal */}
+      <MessageDetailModal
+        isOpen={showMessageModal}
+        onClose={handleCloseMessageModal}
+        message={selectedMessage}
+      />
     </div>
   );
 }

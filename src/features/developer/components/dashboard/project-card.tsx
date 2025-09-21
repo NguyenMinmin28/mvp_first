@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Badge } from "@/ui/components/badge";
 import { cn } from "@/core/utils/utils";
 import { useSkills } from "./use-skills";
+import { MessageCircle } from "lucide-react";
 
 interface ProjectCardProps {
   project: {
@@ -16,6 +17,17 @@ interface ProjectCardProps {
     currency?: string | null;
     skills?: string[];
     assignmentStatus?: string;
+    assignment?: {
+      id: string;
+      acceptanceDeadline: string;
+      responseStatus: string;
+      assignedAt: string;
+      batchId: string;
+      source?: "AUTO_ROTATION" | "MANUAL_INVITE";
+      clientMessage?: string;
+    };
+    isManualInvite?: boolean;
+    originalProjectId?: string;
   };
   isSelected: boolean;
   onClick: () => void;
@@ -75,6 +87,7 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
               {project.description}
             </p>
           )}
+
 
           {/* Budget */}
           {formatBudget(project.budget, project.currency) && (

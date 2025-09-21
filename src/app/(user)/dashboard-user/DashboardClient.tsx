@@ -9,10 +9,11 @@ import ProfileSummary from "@/features/developer/components/dashboard/profile-su
 import IdeaSparkList from "@/features/developer/components/dashboard/ideaspark-list";
 import ProjectStatusFilter, { type ProjectStatus as PS } from "@/features/developer/components/project-status-filter";
 import { Button } from "@/ui/components/button";
-import { ChevronLeft, ChevronRight, TestTube } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const ProjectsSidebar = dynamic(() => import("@/features/developer/components/dashboard/projects-sidebar"), { ssr: false, loading: () => <ClevrsLoader /> });
 const ProjectDetail = dynamic(() => import("@/features/developer/components/dashboard/project-detail"), { ssr: false, loading: () => <ClevrsLoader /> });
+const ManualInvitationDetail = dynamic(() => import("@/features/developer/components/dashboard/manual-invitation-detail"), { ssr: false, loading: () => <ClevrsLoader /> });
 
 type UserIdeaSummary = {
   id: string;
@@ -32,7 +33,17 @@ type AssignedProjectItem = {
   currency?: string | null;
   skills?: string[];
   assignmentStatus?: string;
-  assignment?: { id: string; acceptanceDeadline: string; responseStatus: "pending" | "accepted" | "rejected" | "expired"; assignedAt: string; batchId: string };
+  assignment?: { 
+    id: string; 
+    acceptanceDeadline: string; 
+    responseStatus: "pending" | "accepted" | "rejected" | "expired"; 
+    assignedAt: string; 
+    batchId: string;
+    source?: "AUTO_ROTATION" | "MANUAL_INVITE";
+    clientMessage?: string;
+  };
+  isManualInvite?: boolean;
+  originalProjectId?: string;
 };
 
 export default function DashboardClient({
@@ -53,8 +64,9 @@ export default function DashboardClient({
   const [projects, setProjects] = useState<AssignedProjectItem[]>(Array.isArray(initialProjects?.projects) ? initialProjects!.projects : []);
   const [projectStatus, setProjectStatus] = useState<PS>("NEW");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projects[0]?.id ?? null);
+  const [selectedInvitationId, setSelectedInvitationId] = useState<string | null>(null);
+  const [selectedInvitation, setSelectedInvitation] = useState<any>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [isTestingBatch, setIsTestingBatch] = useState(false);
 
   const projectDetailRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -68,15 +80,19 @@ export default function DashboardClient({
     const now = Date.now();
     return projects.filter((p) => {
       const isPendingActive = p.assignment?.responseStatus === "pending" && p.assignment?.acceptanceDeadline && new Date(p.assignment.acceptanceDeadline).getTime() > now;
+      const isAcceptedAndNotCompleted = p.assignment?.responseStatus === "accepted" && p.status !== "completed";
+      
       switch (projectStatus) {
         case "NEW":
           return p.status === "recent" && isPendingActive;
         case "IN_PROGRESS":
-          return p.status === "in_progress";
+          // Show projects where freelancer accepted and client hasn't completed
+          return isAcceptedAndNotCompleted;
         case "COMPLETED":
           return p.status === "completed";
         case "APPROVED":
-          return p.status === "approved";
+          // Show projects where freelancer accepted (can overlap with IN_PROGRESS)
+          return p.assignment?.responseStatus === "accepted";
         case "REJECTED":
           return p.status === "rejected";
         default:
@@ -115,22 +131,6 @@ export default function DashboardClient({
     } catch {}
   }, [safeFetch]);
 
-  const handleTestBatchAssignment = useCallback(async () => {
-    try {
-      setIsTestingBatch(true);
-      const res = await safeFetch("/api/test-assign-batch", { method: "POST", headers: { "Content-Type": "application/json" } });
-      if (res.ok) {
-        toast.success("🧪 Test batch assignment created!");
-        await reload();
-        window.dispatchEvent(new CustomEvent("notification-refresh"));
-      } else {
-        const e = await res.json().catch(() => ({}));
-        toast.error(`Failed to create test assignment${e.error ? `: ${e.error}` : ""}`);
-      }
-    } finally {
-      setIsTestingBatch(false);
-    }
-  }, [reload, safeFetch]);
 
   const previousProject = () => {
     if (currentIndex > 0) {
@@ -245,17 +245,6 @@ export default function DashboardClient({
           <ProjectStatusFilter value={projectStatus} onChange={(v) => startTransition(() => setProjectStatus(v))} />
         </div>
 
-        <div className="mt-4 sm:mt-6">
-          <div className="rounded-lg border">
-            <div className="p-4 flex items-center gap-3">
-              <TestTube className="h-5 w-5" />
-              <div className="flex-1 text-sm text-gray-600">Create a test batch assignment to simulate receiving a new project invitation and notification.</div>
-              <Button onClick={handleTestBatchAssignment} disabled={isTestingBatch} variant="outline">
-                {isTestingBatch ? "Creating…" : "Create Test Batch Assignment"}
-              </Button>
-            </div>
-          </div>
-        </div>
 
         <div className="mt-4 sm:mt-6">
           {filteredProjects.length > 0 && (
@@ -279,23 +268,84 @@ export default function DashboardClient({
                 onProjectSelect={(p) => {
                   startTransition(() => {
                     setSelectedProjectId(p?.id ?? null);
+                    setSelectedInvitationId(null); // Clear invitation selection
                     const idx = p ? filteredProjects.findIndex(x => x.id === p.id) : -1;
                     if (idx >= 0) setCurrentIndex(idx);
                   });
                 }}
                 projects={projects}
+                selectedInvitationId={selectedInvitationId}
+                onInvitationSelect={(invitation) => {
+                  setSelectedInvitationId(invitation?.id ?? null);
+                  setSelectedInvitation(invitation);
+                  setSelectedProjectId(null); // Clear project selection
+                }}
               />
             </div>
 
             <div className="xl:col-span-2" ref={projectDetailRef}>
-              <ProjectDetail
-                project={selectedProject}
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onExpired={handleExpired}
-                onAcceptAssignment={handleAcceptAssignment}
-                onRejectAssignment={handleRejectAssignment}
-              />
+              {projectStatus === "MANUAL_INVITATIONS" ? (
+                <ManualInvitationDetail
+                  invitation={selectedInvitation}
+                  onAccept={async (invitationId) => {
+                    console.log(`🔄 Accepting invitation: ${invitationId}`);
+                    try {
+                      const response = await fetch(`/api/candidates/${invitationId}/accept`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        credentials: 'include'
+                      });
+
+                      if (response.ok) {
+                        toast.success("Invitation accepted successfully!");
+                        // Refresh the projects list
+                        window.location.reload();
+                      } else {
+                        const errorData = await response.json();
+                        toast.error(errorData.error || "Failed to accept invitation");
+                      }
+                    } catch (error) {
+                      console.error("Error accepting invitation:", error);
+                      toast.error("Something went wrong. Please try again.");
+                    }
+                  }}
+                  onReject={async (invitationId) => {
+                    console.log(`🔄 Rejecting invitation: ${invitationId}`);
+                    try {
+                      const response = await fetch(`/api/candidates/${invitationId}/reject`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        credentials: 'include'
+                      });
+
+                      if (response.ok) {
+                        toast.success("Invitation rejected successfully!");
+                        // Refresh the projects list
+                        window.location.reload();
+                      } else {
+                        const errorData = await response.json();
+                        toast.error(errorData.error || "Failed to reject invitation");
+                      }
+                    } catch (error) {
+                      console.error("Error rejecting invitation:", error);
+                      toast.error("Something went wrong. Please try again.");
+                    }
+                  }}
+                />
+              ) : (
+                <ProjectDetail
+                  project={selectedProject}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  onExpired={handleExpired}
+                  onAcceptAssignment={handleAcceptAssignment}
+                  onRejectAssignment={handleRejectAssignment}
+                />
+              )}
             </div>
           </div>
         </div>

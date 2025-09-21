@@ -149,7 +149,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   }, []);
 
   // Auto-refresh data every 15 seconds to sync acceptance status
-  // Disable auto refresh once any developer has accepted (project locked) or when user disables it
+  // Keep auto refresh enabled even when developers have accepted (to find more freelancers)
   useEffect(() => {
     // Đảm bảo ref luôn được cập nhật ngay lập tức khi state thay đổi
     freelancersRef.current = freelancers;
@@ -161,13 +161,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       developerName: f.developer.user.name
     })));
     
-    // Kiểm tra điều kiện dừng auto-refresh ngay khi state thay đổi
-    const hasAccepted = freelancers.some(f => f.responseStatus === "accepted");
-    
-    if (hasAccepted && autoRefreshEnabled) {
-      console.log('Auto-disabling refresh due to accepted candidate (from state sync)');
-      setAutoRefreshEnabled(false);
-    }
+    // No longer auto-disable refresh when candidates are accepted
+    // This allows continuous searching for more freelancers while keeping accepted ones
   }, [freelancers, autoRefreshEnabled]);
 
   useEffect(() => {
@@ -187,15 +182,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     
     refreshTimerRef.current = setInterval(async () => {
       try {
-        // Kiểm tra trạng thái trước khi fetch
-        const currentlyHasAccepted = freelancersRef.current.some(f => f.responseStatus === "accepted");
-        
-        if (currentlyHasAccepted) {
-          console.log('Found accepted candidate, stopping auto-refresh');
-          setAutoRefreshEnabled(false);
-          return;
-        }
-
+        // Continue auto-refresh even when candidates are accepted
+        // This allows finding more freelancers while keeping accepted ones
         console.log('Auto-refreshing data...');
         await fetchFreelancers();
         
@@ -237,7 +225,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       if (response.ok) {
         const data = await response.json();
         const candidates = data.candidates || [];
-        if (data.project?.locked || ["accepted", "in_progress", "completed"].includes(String(data.project?.status || ""))) {
+        // Only lock if project status is in_progress or completed, not just accepted
+        if (data.project?.locked || ["in_progress", "completed"].includes(String(data.project?.status || ""))) {
           setIsLocked(true);
           setAutoRefreshEnabled(false);
         } else {
@@ -359,10 +348,15 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   const generateNewBatch = async () => {
     try {
+      console.log("🔄 Starting refresh batch for project:", project.id);
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/projects/${project.id}/batches/generate`, {
+      // Use refresh batch API instead of generate to preserve accepted candidates
+      const refreshUrl = `/api/projects/${project.id}/batches/refresh`;
+      console.log(`🔄 Calling refresh batch API: ${refreshUrl}`);
+      
+      const response = await fetch(refreshUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -374,20 +368,25 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         })
       });
       
+      console.log("🔄 Refresh batch API response:", response.status, response.ok);
+      
       if (response.ok) {
-        // Refresh the freelancers list after generating new batch
+        const responseData = await response.json();
+        console.log("🔄 Refresh batch API success:", responseData);
+        // Refresh the freelancers list after refreshing batch
         await fetchFreelancers();
       } else {
         const errorData = await response.json();
+        console.error("🔄 Refresh batch API error:", errorData);
         if (errorData.error?.includes("No eligible candidates")) {
           setError("All candidates have been assigned to this project");
         } else {
-          setError(errorData.error || "Failed to generate new batch");
+          setError(errorData.error || "Failed to refresh batch");
         }
       }
     } catch (error) {
-      console.error("Error generating batch:", error);
-      setError("An error occurred while generating new batch");
+      console.error("🔄 Error refreshing batch:", error);
+      setError("An error occurred while refreshing batch");
     } finally {
       setIsLoading(false);
     }
@@ -796,13 +795,14 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             </div>
           ) : (
                 <PeopleGrid 
-                  overrideDevelopers={overrideDevelopers} 
+                  overrideDevelopers={isLoading ? [] : overrideDevelopers} 
                   autoRefreshEnabled={autoRefreshEnabled}
                   onAutoRefreshToggle={setAutoRefreshEnabled}
                   freelancerResponseStatuses={freelancerResponseStatuses}
                   freelancerDeadlines={freelancerDeadlines}
                   onGenerateNewBatch={isLocked ? undefined : generateNewBatch}
                   locked={isLocked}
+                  projectId={project.id}
                 />
           )}
         </div>

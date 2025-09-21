@@ -6,9 +6,13 @@ export interface InvitationCandidate {
   assignedAt: string;
   respondedAt?: string;
   isFirstAccepted: boolean;
+  source?: "AUTO_ROTATION" | "MANUAL_INVITE";
+  clientMessage?: string;
   batch: {
     id: string;
     status: string;
+    type?: "AUTO_ROTATION" | "MANUAL_INVITE";
+    isNoExpire?: boolean;
     project: {
       id: string;
       title: string;

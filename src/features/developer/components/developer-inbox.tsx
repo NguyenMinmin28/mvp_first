@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { RoleMismatchNotice } from "@/ui/components/role-mismatch-notice";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { User, TestTube } from "lucide-react";
+import { User } from "lucide-react";
 import { toast } from "sonner";
 import PendingInvitations from "./components/PendingInvitations";
 import RecentActivity from "./components/RecentActivity";
@@ -26,7 +26,6 @@ export default function DeveloperInbox() {
   const [isLoading, setIsLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isTestingBatch, setIsTestingBatch] = useState(false);
 
   // Real-time countdown timer
   useEffect(() => {
@@ -111,35 +110,6 @@ export default function DeveloperInbox() {
     }
   };
 
-  // Test batch assignment function
-  const handleTestBatchAssignment = async () => {
-    setIsTestingBatch(true);
-    try {
-      const response = await fetch("/api/test-assign-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success("🧪 Test batch assignment created! Check your notifications and inbox.");
-        
-        // Refresh invitations to show the new test assignment
-        await fetchInvitations();
-        
-        // Trigger notification refresh in header
-        window.dispatchEvent(new CustomEvent('notification-refresh'));
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to create test batch assignment");
-      }
-    } catch (error) {
-      console.error("Error creating test batch assignment:", error);
-      toast.error("Something went wrong");
-    } finally {
-      setIsTestingBatch(false);
-    }
-  };
 
   // UI helpers moved to components/utils
 
@@ -159,40 +129,6 @@ export default function DeveloperInbox() {
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
       
-      {/* Test Batch Assignment Button */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <TestTube className="h-5 w-5" />
-            Test Tools
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600">
-              Create a test batch assignment to simulate receiving a new project invitation and notification.
-            </p>
-            <Button
-              onClick={handleTestBatchAssignment}
-              disabled={isTestingBatch}
-              variant="outline"
-              className="w-full sm:w-auto"
-            >
-              {isTestingBatch ? (
-                <>
-                  <LoadingSpinner size="sm" className="mr-2" />
-                  Creating Test Assignment...
-                </>
-              ) : (
-                <>
-                  <TestTube className="h-4 w-4 mr-2" />
-                  Create Test Batch Assignment
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
       
       {/* Pending Invitations */}
       <PendingInvitations

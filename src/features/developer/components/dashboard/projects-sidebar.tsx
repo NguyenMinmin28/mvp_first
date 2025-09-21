@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Badge } from "@/ui/components/badge";
+import { Pagination } from "@/ui/components/pagination";
 import { cn } from "@/core/utils/utils";
 import ProjectCard from "./project-card";
+import ManualInvitationsSidebar from "./manual-invitations-sidebar";
 import type { ProjectStatus } from "../project-status-filter";
 
 interface AssignedProjectItem {
@@ -17,7 +19,17 @@ interface AssignedProjectItem {
   currency?: string | null;
   skills?: string[];
   assignmentStatus?: string;
-  assignment?: any;
+  assignment?: {
+    id: string;
+    acceptanceDeadline: string;
+    responseStatus: string;
+    assignedAt: string;
+    batchId: string;
+    source?: "AUTO_ROTATION" | "MANUAL_INVITE";
+    clientMessage?: string;
+  };
+  isManualInvite?: boolean;
+  originalProjectId?: string;
 }
 
 interface ProjectsSidebarProps {
@@ -25,15 +37,21 @@ interface ProjectsSidebarProps {
   selectedProjectId: string | null;
   onProjectSelect: (project: AssignedProjectItem | null) => void;
   projects?: AssignedProjectItem[];
+  selectedInvitationId?: string | null;
+  onInvitationSelect?: (invitation: any | null) => void;
 }
 
 export default function ProjectsSidebar({ 
   filter, 
   selectedProjectId, 
   onProjectSelect,
-  projects = []
+  projects = [],
+  selectedInvitationId,
+  onInvitationSelect
 }: ProjectsSidebarProps) {
   const [loading, setLoading] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 5; // Show 5 projects per page
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -41,21 +59,43 @@ export default function ProjectsSidebar({
       p.assignment?.responseStatus === "pending" &&
       p.assignment?.acceptanceDeadline &&
       new Date(p.assignment.acceptanceDeadline) > now;
+    
+    const isAcceptedAndNotCompleted = (p: AssignedProjectItem) =>
+      p.assignment?.responseStatus === "accepted" && p.status !== "completed";
+    
     switch (filter) {
       case "NEW":
-        return projects.filter((p) => p.status === "recent" && isPendingActive(p));
+        return projects.filter((p) => 
+          p.status === "recent" && isPendingActive(p)
+        );
       case "IN_PROGRESS":
-        return projects.filter((p) => p.status === "in_progress");
+        // Show projects where freelancer accepted and client hasn't completed
+        return projects.filter((p) => isAcceptedAndNotCompleted(p));
       case "COMPLETED":
         return projects.filter((p) => p.status === "completed");
       case "APPROVED":
-        return projects.filter((p) => p.status === "approved");
+        // Show projects where freelancer accepted (can overlap with IN_PROGRESS)
+        return projects.filter((p) => p.assignment?.responseStatus === "accepted");
       case "REJECTED":
         return projects.filter((p) => p.status === "rejected");
+      case "MANUAL_INVITATIONS":
+        // Return empty array for manual invitations - they will be handled separately
+        return [];
       default:
         return projects;
     }
   }, [filter, projects]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProjects = filtered.slice(startIndex, endIndex);
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   const getFilterLabel = (filter: ProjectStatus) => {
     switch (filter) {
@@ -73,6 +113,16 @@ export default function ProjectsSidebar({
         return "All Projects";
     }
   };
+
+  // Show Manual Invitations Sidebar when filter is MANUAL_INVITATIONS
+  if (filter === "MANUAL_INVITATIONS") {
+    return (
+      <ManualInvitationsSidebar
+        selectedInvitationId={selectedInvitationId || null}
+        onInvitationSelect={onInvitationSelect || (() => {})}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -108,7 +158,7 @@ export default function ProjectsSidebar({
           </div>
         ) : (
           <div className="space-y-2 sm:space-y-3">
-            {filtered.map((project) => (
+            {paginatedProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
@@ -119,6 +169,17 @@ export default function ProjectsSidebar({
           </div>
         )}
       </CardContent>
+      
+      {/* Pagination Controls */}
+      {filtered.length > itemsPerPage && (
+        <div className="border-t p-3 sm:p-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
     </Card>
   );
 }

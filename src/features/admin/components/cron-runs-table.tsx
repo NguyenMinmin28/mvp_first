@@ -252,31 +252,6 @@ export function CronRunsTable() {
                 >
                   {loading ? <LoadingSpinner size="sm" /> : "Refresh"}
                 </Button>
-                <Button 
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/cron/reconcile-subscriptions?test=true', {
-                        method: 'GET',
-                        headers: {
-                          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'test-secret'}`
-                        }
-                      });
-                      const result = await response.json();
-                      if (result.success) {
-                        alert(`Reconciliation completed successfully!\nProcessed: ${result.data.processed}\nUpdated: ${result.data.updated}\nErrors: ${result.data.errors}`);
-                        fetchRuns(pagination?.page || 1); // Refresh the list
-                      } else {
-                        alert(`Reconciliation failed: ${result.error}`);
-                      }
-                    } catch (error) {
-                      alert(`Error running reconciliation: ${error}`);
-                    }
-                  }}
-                  variant="default" 
-                  size="sm"
-                >
-                  Test Now
-                </Button>
               </div>
             </div>
           </div>

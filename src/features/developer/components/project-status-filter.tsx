@@ -4,7 +4,7 @@ import React from "react";
 import { Button } from "@/ui/components/button";
 import { cn } from "@/core/utils/utils";
 
-export type ProjectStatus = "NEW" | "IN_PROGRESS" | "COMPLETED" | "APPROVED" | "REJECTED";
+export type ProjectStatus = "NEW" | "IN_PROGRESS" | "COMPLETED" | "APPROVED" | "REJECTED" | "MANUAL_INVITATIONS";
 
 export interface ProjectStatusFilterProps {
   value: ProjectStatus;
@@ -18,6 +18,7 @@ const statusItems: { key: ProjectStatus; label: string }[] = [
   { key: "COMPLETED", label: "Completed" },
   { key: "APPROVED", label: "Approved" },
   { key: "REJECTED", label: "Rejected" },
+  { key: "MANUAL_INVITATIONS", label: "Manual Invitations" },
 ];
 
 export default function ProjectStatusFilter({

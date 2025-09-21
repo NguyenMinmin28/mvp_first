@@ -80,6 +80,22 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
   });
   const isFavorited = !!favorite;
 
+  // Get follower count for this developer
+  const followersCount = await (prisma as any).follow.count({
+    where: { followingId: developer.userId }
+  });
+
+  // Check if current client is following this developer
+  const followStatus = await (prisma as any).follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: clientId,
+        followingId: developer.userId,
+      },
+    },
+  });
+  const isFollowing = !!followStatus;
+
   const profile = {
     name: developer.user.name,
     email: (isConnected || isFavorited) ? developer.user.email : null,
@@ -97,6 +113,10 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     isConnected, // Pass connection status to components
     isFavorited,
     whatsappNumber: (developer as any).whatsappNumber || null,
+    // Follow information
+    followersCount,
+    isFollowing,
+    userId: developer.userId, // Add userId for follow functionality
   } as any;
 
   return (

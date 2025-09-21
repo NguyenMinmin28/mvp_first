@@ -43,11 +43,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log("✅ Cron job completed:", result);
+      console.log("✅ Smart cron job completed:", result);
 
       return NextResponse.json({
         success: true,
         data: result,
+        message: `Expired ${result.expiredCount} candidates and refreshed ${result.refreshedBatches} batches`
       });
     } catch (error) {
       // Update cron run record with failure

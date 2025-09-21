@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { IdeaSparkService } from "@/core/services/ideaspark.service";
+import { FollowNotificationService } from "@/core/services/follow-notification.service";
+import { prisma } from "@/core/database/db";
 type IdeaStatus = string;
 type IdeaAdminTag = string;
 
@@ -66,6 +68,26 @@ export async function POST(request: NextRequest) {
       coverUrl,
       skillIds,
     });
+
+    // Send follow notification for new idea
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true }
+      });
+
+      if (user?.name) {
+        await FollowNotificationService.notifyIdeaPosted(
+          session.user.id,
+          user.name,
+          idea.id,
+          title
+        );
+      }
+    } catch (error) {
+      console.error("Error sending follow notification for idea:", error);
+      // Don't fail the idea creation if notification fails
+    }
 
     return NextResponse.json(idea, { status: 201 });
   } catch (error) {

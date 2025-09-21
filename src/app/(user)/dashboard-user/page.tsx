@@ -140,27 +140,33 @@ async function fetchProjectsForDeveloper(userId: string) {
     });
 
     // Transform assignments to match the expected format
-    const mapped = assignments.map((assignment: any) => ({
-      id: assignment.projectId,
-      name: assignment.project?.name || assignment.project?.title || "Unknown Project",
-      description: assignment.project?.description || "",
-      status: assignment.responseStatus === "accepted" ? "approved" as const : 
-              assignment.responseStatus === "rejected" ? "rejected" as const :
-              assignment.responseStatus === "expired" ? "rejected" as const :
-              "recent" as const,
-      date: (assignment.assignedAt instanceof Date ? assignment.assignedAt : new Date(assignment.assignedAt)).toISOString(),
-      budget: assignment.project?.budget,
-      currency: assignment.project?.currency,
-      skills: assignment.project?.skillsRequired || assignment.project?.requiredSkills || [],
-      assignmentStatus: assignment.responseStatus,
-      assignment: {
-        id: assignment.id,
-        acceptanceDeadline: assignment.acceptanceDeadline ? (assignment.acceptanceDeadline instanceof Date ? assignment.acceptanceDeadline : new Date(assignment.acceptanceDeadline)).toISOString() : new Date().toISOString(),
-        responseStatus: assignment.responseStatus,
-        assignedAt: (assignment.assignedAt instanceof Date ? assignment.assignedAt : new Date(assignment.assignedAt)).toISOString(),
-        batchId: assignment.batchId,
-      },
-    }));
+    // Only include auto-rotation assignments, exclude manual invites
+    const mapped = assignments
+      .filter((assignment: any) => assignment.source !== "MANUAL_INVITE")
+      .map((assignment: any) => ({
+        id: assignment.projectId,
+        name: assignment.project?.name || assignment.project?.title || "Unknown Project",
+        description: assignment.project?.description || "",
+        status: assignment.responseStatus === "accepted" ? "approved" as const : 
+                assignment.responseStatus === "rejected" ? "rejected" as const :
+                assignment.responseStatus === "expired" ? "rejected" as const :
+                "recent" as const,
+        date: (assignment.assignedAt instanceof Date ? assignment.assignedAt : new Date(assignment.assignedAt)).toISOString(),
+        budget: assignment.project?.budget,
+        currency: assignment.project?.currency,
+        skills: assignment.project?.skillsRequired || assignment.project?.requiredSkills || [],
+        assignmentStatus: assignment.responseStatus,
+        assignment: {
+          id: assignment.id,
+          acceptanceDeadline: assignment.acceptanceDeadline ? (assignment.acceptanceDeadline instanceof Date ? assignment.acceptanceDeadline : new Date(assignment.acceptanceDeadline)).toISOString() : new Date().toISOString(),
+          responseStatus: assignment.responseStatus,
+          assignedAt: (assignment.assignedAt instanceof Date ? assignment.assignedAt : new Date(assignment.assignedAt)).toISOString(),
+          batchId: assignment.batchId,
+          source: assignment.source,
+          clientMessage: assignment.clientMessage,
+        },
+        isManualInvite: false,
+      }));
 
     // Deduplicate by projectId, keep the most recent assignment
     const latestByProject = new Map<string, any>();

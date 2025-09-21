@@ -581,6 +581,9 @@ export function Header({ user }: HeaderProps) {
                               }
                               if (n.type === "quota.project_limit_reached") {
                                 router.push("/pricing");
+                              } else if (n.type === "assignment.manual_invite") {
+                                // Navigate to dashboard with manual invitations filter
+                                router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
                               } else if (n.projectId) {
                                 router.push(`/projects/${n.projectId}`);
                               }
@@ -594,15 +597,33 @@ export function Header({ user }: HeaderProps) {
                                     ? "Project Limit Reached" 
                                     : n.type === "assignment.invited"
                                     ? "New Project Assignment"
+                                    : n.type === "assignment.manual_invite"
+                                    ? "Manual Invitation Received"
                                     : n.type}
                                 </div>
-                                {n.payload?.message && (
+                                {n.type === "assignment.manual_invite" && (
+                                  <>
+                                    {n.payload?.clientMessage && (
+                                      <div className="text-xs text-gray-600 italic">"{n.payload.clientMessage}"</div>
+                                    )}
+                                    {n.payload?.projectTitle && (
+                                      <div className="text-xs text-gray-600">Project: {n.payload.projectTitle}</div>
+                                    )}
+                                    {n.payload?.clientName && (
+                                      <div className="text-xs text-gray-500">From: {n.payload.clientName}</div>
+                                    )}
+                                    {n.payload?.budget && (
+                                      <div className="text-xs text-green-600">Budget: {n.payload.budget}</div>
+                                    )}
+                                  </>
+                                )}
+                                {n.type !== "assignment.manual_invite" && n.payload?.message && (
                                   <div className="text-xs text-gray-600">{n.payload.message}</div>
                                 )}
-                                {n.payload?.description && (
+                                {n.type !== "assignment.manual_invite" && n.payload?.description && (
                                   <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
                                 )}
-                                {n.payload?.projectTitle && (
+                                {n.type !== "assignment.manual_invite" && n.payload?.projectTitle && (
                                   <div className="text-xs text-gray-600">{n.payload.projectTitle}</div>
                                 )}
                                 <div className="text-[11px] text-gray-400">{formatDateStable(n.createdAt)}</div>

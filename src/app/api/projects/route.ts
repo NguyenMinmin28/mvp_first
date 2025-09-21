@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(`🔍 Fetching projects for user: ${session.user.id}, role: ${session.user.role}`);
+
     // Get user's projects based on role
     let projects = [];
     
@@ -62,10 +64,10 @@ export async function GET(request: NextRequest) {
       });
 
       if (clientProfile) {
+        console.log(`🔍 Found client profile: ${clientProfile.id}`);
         projects = await prisma.project.findMany({
           where: { clientId: clientProfile.id },
           orderBy: { postedAt: "desc" },
-          take: 20,
           select: {
             id: true,
             title: true,
@@ -74,9 +76,17 @@ export async function GET(request: NextRequest) {
             postedAt: true,
             budgetMin: true,
             currency: true,
-            skillsRequired: true
+            skillsRequired: true,
+            _count: {
+              select: {
+                assignmentCandidates: true
+              }
+            }
           }
         });
+        console.log(`🔍 Found ${projects.length} projects for client`);
+      } else {
+        console.log(`❌ No client profile found for user: ${session.user.id}`);
       }
     } else if (session.user.role === "DEVELOPER") {
       // Get developer's assigned projects
@@ -101,8 +111,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          orderBy: { assignedAt: "desc" },
-          take: 20
+          orderBy: { assignedAt: "desc" }
         });
         
         projects = assignments.map((assignment: any) => ({
@@ -127,10 +136,13 @@ export async function GET(request: NextRequest) {
         budget: project.budgetMin,
         currency: project.currency,
         skills: project.skillsRequired,
+        candidatesCount: project._count?.assignmentCandidates || 0,
         assignmentStatus: project.assignmentStatus
       };
     });
 
+    console.log(`✅ Returning ${transformedProjects.length} transformed projects`);
+    
     return NextResponse.json({
       projects: transformedProjects
     });

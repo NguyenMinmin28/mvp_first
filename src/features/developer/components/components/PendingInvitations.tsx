@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
-import { Clock, Building2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Clock, Building2, CheckCircle, XCircle, AlertTriangle, MessageCircle } from "lucide-react";
 import { InvitationCandidate } from "./types";
 import { computeTimeRemaining } from "./utils";
 
@@ -83,6 +83,19 @@ export default function PendingInvitations({ items, now, isProcessing, onRespond
                   </div>
 
                   <p className="text-gray-700 line-clamp-3">{invitation.batch.project.description}</p>
+
+                  {/* Show manual invite message if available */}
+                  {invitation.source === "MANUAL_INVITE" && invitation.clientMessage && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <MessageCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-blue-800">Message from client:</p>
+                          <p className="text-sm text-blue-700 italic">"{invitation.clientMessage}"</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {invitation.skills && invitation.skills.length > 0 && (
                     <div className="space-y-1">

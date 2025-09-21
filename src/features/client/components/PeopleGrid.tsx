@@ -13,6 +13,8 @@ import dynamic from "next/dynamic";
 import { Suspense, useCallback, memo, useMemo } from "react";
 import type { ServiceDetailData } from "@/features/client/components/ServiceDetailOverlay";
 import { toast } from "sonner";
+import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
+import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
 
 const ServiceDetailOverlay = dynamic(
   () => import("@/features/client/components/ServiceDetailOverlay"),
@@ -109,9 +111,22 @@ interface PeopleGridProps {
   freelancerDeadlines?: Record<string, string>; // developerId -> acceptanceDeadline
   onGenerateNewBatch?: () => Promise<void>; // Function to generate new batch
   locked?: boolean; // Lock UI actions
+  projectId?: string; // Project ID for contact system
 }
 
-export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, overrideDevelopers, autoRefreshEnabled: externalAutoRefresh, onAutoRefreshToggle, freelancerResponseStatuses, freelancerDeadlines, onGenerateNewBatch, locked = false }: PeopleGridProps) {
+export function PeopleGrid({ 
+  searchQuery = "", 
+  sortBy = "popular", 
+  filters, 
+  overrideDevelopers, 
+  autoRefreshEnabled: externalAutoRefresh, 
+  onAutoRefreshToggle, 
+  freelancerResponseStatuses, 
+  freelancerDeadlines, 
+  onGenerateNewBatch, 
+  locked = false, 
+  projectId 
+}: PeopleGridProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [developers, setDevelopers] = useState<Developer[]>([]);
@@ -119,11 +134,24 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
   const [developerServices, setDeveloperServices] = useState<Record<string, DeveloperService[]>>({});
   const [selectedService, setSelectedService] = useState<ServiceDetailData | null>(null);
   const [isServiceOverlayOpen, setIsServiceOverlayOpen] = useState(false);
-  const isOverride = Array.isArray(overrideDevelopers) && overrideDevelopers.length > 0;
+  const [selectedFreelancer, setSelectedFreelancer] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const isOverride = Array.isArray(overrideDevelopers);
   
   // Internal state với fallback từ props
   const [internalAutoRefresh, setInternalAutoRefresh] = useState(externalAutoRefresh ?? true);
   
+  // Reset state when projectId changes to avoid showing stale data
+  const prevProjectIdRef = useRef(projectId);
+  useEffect(() => {
+    if (projectId !== prevProjectIdRef.current) {
+      console.log('ProjectId changed, resetting PeopleGrid state');
+      setDevelopers([]);
+      setLoading(true);
+      prevProjectIdRef.current = projectId;
+    }
+  }, [projectId]);
+
   // Sync với external state khi props thay đổi (chỉ khi external state thực sự thay đổi)
   const prevExternalRef = useRef(externalAutoRefresh);
   useEffect(() => {
@@ -226,6 +254,7 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
         if (prevIds === nextIds) return prev;
         return overrideDevelopers;
       });
+      // Always set loading to false when using overrideDevelopers, even if empty
       setLoading(false);
       return;
     }
@@ -528,9 +557,11 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
           skills: json.data.skills || [],
           categories: json.data.categories || [],
           leadsCount: json.data.leadsCount || 0,
+          responseStatus: freelancerResponseStatuses?.[developer.id], // Add response status for project candidates
         };
         
         console.log("Opening overlay with service data:", serviceData);
+        console.log("Response status for developer:", developer.id, "is:", freelancerResponseStatuses?.[developer.id]);
         setSelectedService(serviceData);
         setIsServiceOverlayOpen(true);
       } else {
@@ -541,8 +572,11 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
     }
   };
 
-  const handleDeveloperClick = (developer: Developer) => {
-    router.push(`/developer/${developer.id}`);
+  const handleDeveloperClick = (developer: Developer, e?: React.MouseEvent) => {
+    // Only redirect to developer profile if not in project detail page
+    if (!projectId) {
+      router.push(`/developer/${developer.id}`);
+    }
   };
 
   if (loading && filteredDevList.length === 0) {
@@ -705,21 +739,20 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
       <div className="space-y-6">
         {filteredDevList.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-500 text-lg mb-2">No developers found</div>
+            <div className="text-gray-500 text-lg mb-2">Loading</div>
             <p className="text-gray-400">
-              {searchQuery ? `No results for "${searchQuery}"` : "Try adjusting your search criteria"}
+              {searchQuery ? `No results for "${searchQuery}"` : "Please wait for the results to load"}
             </p>
           </div>
         ) : (
           filteredDevList.map((developer, devIndex) => (
           <div
             key={developer.id}
-            className={`bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg group overflow-hidden cursor-pointer ${
+            className={`bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg group overflow-hidden ${
               freelancerResponseStatuses?.[developer.id] === 'accepted'
                 ? 'border-green-500 border-2 hover:border-green-600'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
-            onClick={() => handleDeveloperClick(developer)}
             onMouseEnter={() => router.prefetch(`/developer/${developer.id}`)}
           >
             {/* Freelancer Header Row */}
@@ -729,7 +762,10 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                   <div className="flex items-start space-x-2 flex-1">
                     <div className="flex flex-col">
                       <div className="flex items-center space-x-3">
-                        <Avatar className="w-16 h-16">
+                        <Avatar 
+                          className="w-16 h-16 cursor-pointer"
+                          onClick={() => handleDeveloperClick(developer)}
+                        >
                           <AvatarImage 
                             src={developer.user.image || ''} 
                             alt={developer.user.name}
@@ -745,7 +781,10 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                         <div>
                           {/* Name */}
                           <div className="mb-2">
-                            <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
+                            <h3 
+                              className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer"
+                              onClick={() => handleDeveloperClick(developer)}
+                            >
                               {developer.user.name}
                             </h3>
                           </div>
@@ -852,6 +891,8 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                         disabled={pendingFollowIds.has(developer.id)}
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
+                          e.nativeEvent.stopImmediatePropagation();
                           // Optimistic UI & toast
                           if (!isOverride) {
                             setDevelopers(prev => prev.map(d => d.id === developer.id ? { ...d, userLiked: true } : d));
@@ -859,15 +900,18 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                             setLikedDeveloperIds(prev => new Set(prev).add(developer.id));
                           }
                           setPendingFollowIds(prev => new Set(prev).add(developer.id));
-                          toast.success(`Followed ${developer.user.name}`);
+                          toast.success(`Following ${developer.user.name} - you'll get updates about their portfolio, reviews, and ideas!`);
                           // Fire-and-forget API that survives navigation
                           try {
-                            const payload = JSON.stringify({ developerId: developer.id, ensure: true });
+                            const payload = JSON.stringify({ 
+                              developerId: developer.user.id, 
+                              action: "follow" 
+                            });
                             if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
                               const blob = new Blob([payload], { type: 'application/json' });
-                              navigator.sendBeacon('/api/user/favorites', blob);
+                              navigator.sendBeacon('/api/user/follow', blob);
                             } else {
-                              fetch('/api/user/favorites', {
+                              fetch('/api/user/follow', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: payload,
@@ -880,15 +924,15 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                         Follow
                       </Button>
                     )}
-                    <Button
+                    <GetInTouchButton
+                      developerId={developer.id}
+                      developerName={developer.user.name || undefined}
+                      projectId={projectId}
                       className="w-28 bg-black text-white hover:bg-gray-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/developer/${developer.id}`);
-                      }}
-                    >
-                      Get in Touch
-                    </Button>
+                      variant="default"
+                      size="default"
+                      responseStatus={projectId ? freelancerResponseStatuses?.[developer.id] : undefined}
+                    />
                   </div>
                 </div>
               </div>
@@ -905,6 +949,7 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                           className="relative w-full h-56 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
+                            e.preventDefault();
                             handleServiceClick(service, developer);
                           }}
                         >
@@ -929,7 +974,15 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
                   {/* View All Services Button */}
                   {developerServices[developer.id].length > 4 && (
                     <div className="text-center mt-4">
-                      <Button variant="link" className="p-0 h-auto text-blue-600 hover:text-blue-700">
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-blue-600 hover:text-blue-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleDeveloperClick(developer);
+                        }}
+                      >
                         View All {developerServices[developer.id].length} Services
                       </Button>
                     </div>
@@ -982,8 +1035,15 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
           setSelectedService(null);
         }}
         onGetInTouch={() => {
-          // Handle get in touch action
-          console.log("Get in touch with service:", selectedService?.id);
+          // Close service overlay and open get in touch modal
+          setIsServiceOverlayOpen(false);
+          if (selectedService?.developer) {
+            setSelectedFreelancer({
+              id: selectedService.developer.id,
+              name: selectedService.developer.name || "Developer"
+            });
+            setIsModalOpen(true);
+          }
         }}
         onFollow={() => {
           // Handle follow action
@@ -994,6 +1054,20 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
           setSelectedService(updatedService);
         }}
       />
+
+      {/* Get in Touch Modal */}
+      {selectedFreelancer && (
+        <GetInTouchModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedFreelancer(null);
+          }}
+          serviceId={selectedFreelancer.id}
+          serviceTitle={selectedFreelancer.name || "Freelancer"}
+          developerName={selectedFreelancer.name || undefined}
+        />
+      )}
     </>
   );
 }
@@ -1001,6 +1075,7 @@ export function PeopleGrid({ searchQuery = "", sortBy = "popular", filters, over
 function areEqual(prev: PeopleGridProps, next: PeopleGridProps) {
   if (prev.searchQuery !== next.searchQuery) return false;
   if (prev.sortBy !== next.sortBy) return false;
+  if (prev.projectId !== next.projectId) return false; // Add projectId comparison
   const prevFilters = prev.filters || [];
   const nextFilters = next.filters || [];
   if (prevFilters.length !== nextFilters.length) return false;

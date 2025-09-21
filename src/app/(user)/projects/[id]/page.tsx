@@ -42,11 +42,15 @@ export default async function ProjectDetail({ params }: ProjectDetailPageProps) 
       clientId: clientProfile.id
     },
     include: {
-      assignmentCandidates: {
+      currentBatch: {
         include: {
-          developer: {
+          candidates: {
             include: {
-              user: true
+              developer: {
+                include: {
+                  user: true
+                }
+              }
             }
           }
         }

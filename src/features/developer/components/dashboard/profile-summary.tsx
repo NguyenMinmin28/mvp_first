@@ -48,6 +48,7 @@ export default function ProfileSummary({ profile, hideControls = false, develope
   const [reviewStats, setReviewStats] = useState<ReviewStats>({ averageRating: 0, totalReviews: 0 });
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isFavoritedLocal, setIsFavoritedLocal] = useState<boolean>(Boolean((profile as any)?.isFavorited));
+  const [isFollowingLocal, setIsFollowingLocal] = useState<boolean>(Boolean((profile as any)?.isFollowing));
   const [showReviewsOverlay, setShowReviewsOverlay] = useState(false);
 
   // Function to render star rating
@@ -276,18 +277,31 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                   </a>
                 ) : (
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
+                    className={`h-8 px-3 text-xs ${
+                      isFollowingLocal || profile?.isFollowing 
+                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200" 
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    }`}
                     onClick={() => {
-                      // Optimistic follow
-                      setIsFavoritedLocal(true);
-                      toast.success(`Followed ${profile?.name || "freelancer"}`);
+                      const action = (isFollowingLocal || profile?.isFollowing) ? "unfollow" : "follow";
+                      const message = action === "follow" 
+                        ? `Following ${profile?.name || "freelancer"} - you'll get updates about their portfolio, reviews, and ideas!`
+                        : `Unfollowed ${profile?.name || "freelancer"}`;
+                      
+                      // Optimistic update
+                      setIsFollowingLocal(action === "follow");
+                      toast.success(message);
+                      
                       try {
-                        const payload = JSON.stringify({ developerId: developerId, ensure: true });
+                        const payload = JSON.stringify({ 
+                          developerId: profile?.userId, 
+                          action: action 
+                        });
                         if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
                           const blob = new Blob([payload], { type: 'application/json' });
-                          navigator.sendBeacon('/api/user/favorites', blob);
+                          navigator.sendBeacon('/api/user/follow', blob);
                         } else {
-                          fetch('/api/user/favorites', {
+                          fetch('/api/user/follow', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: payload,
@@ -297,7 +311,7 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                       } catch {}
                     }}
                   >
-                    Follow
+                    {isFollowingLocal || profile?.isFollowing ? "Following" : "Follow"}
                   </Button>
                 )
               )}
@@ -375,6 +389,17 @@ export default function ProfileSummary({ profile, hideControls = false, develope
               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
                 <div className="text-gray-500 text-xs sm:text-sm">Approve: </div>
                 <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">{(profile as any)?.adminApprovalStatus || ""}</div>
+              </div>
+              <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
+                <div className="text-gray-500 text-xs sm:text-sm">Followers: </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs sm:text-sm">{(profile as any)?.followersCount || 0}</span>
+                  {developerId && (profile as any)?.isFollowing !== undefined && (
+                    <span className="text-xs text-gray-500">
+                      {profile.isFollowing ? "(You follow)" : ""}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-start gap-1.5">
                 <div className="text-gray-500 text-xs sm:text-sm">Skills: </div>

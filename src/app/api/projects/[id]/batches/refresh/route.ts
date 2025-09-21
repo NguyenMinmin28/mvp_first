@@ -16,6 +16,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log("🚨 REFRESH BATCH API CALLED - SERVER SIDE LOG!");
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -45,28 +46,34 @@ export async function POST(
       }
     });
 
-    // Block if project status is locked
-    if (currentBatch && ["accepted", "in_progress", "completed"].includes(currentBatch.status as any)) {
+    console.log("🔄 Current batch info:", {
+      projectId,
+      currentBatchId: currentBatch?.currentBatchId,
+      projectStatus: currentBatch?.status,
+      candidatesCount: currentBatch?.currentBatch?.candidates?.length,
+      responseStatusCounts: currentBatch?.currentBatch?.candidates?.reduce((acc, c) => {
+        acc[c.responseStatus] = (acc[c.responseStatus] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
+
+    // Block if project status is locked (but allow refresh if only candidates are accepted)
+    if (currentBatch && ["in_progress", "completed"].includes(currentBatch.status as any)) {
+      console.log("🔄 Project is locked, cannot refresh");
       return NextResponse.json(
         { error: "Cannot refresh batch: project is locked" },
         { status: 400 }
       );
     }
 
-    if (currentBatch?.currentBatch?.candidates) {
-      const hasAcceptedCandidates = currentBatch.currentBatch.candidates.some(candidate => 
-        candidate.responseStatus === "accepted"
-      );
-      
-      if (hasAcceptedCandidates) {
-        return NextResponse.json(
-          { error: "Cannot refresh batch: project already has accepted candidates" },
-          { status: 400 }
-        );
-      }
-    }
-
+    // Allow refresh even if project has accepted candidates - we'll preserve them
+    console.log("🔄 Calling RotationService.refreshBatch...");
     const result = await RotationService.refreshBatch(projectId, customSelection);
+    console.log("🔄 RotationService.refreshBatch completed:", {
+      batchId: result.batchId,
+      candidatesCount: result.candidates.length,
+      selection: result.selection
+    });
 
     console.log("✅ Batch refreshed successfully:", {
       batchId: result.batchId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { prisma as db } from "@/core/database/db";
+import { FollowNotificationService } from "@/core/services/follow-notification.service";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -80,7 +81,30 @@ export async function PUT(request: NextRequest) {
       if (Object.keys(developerUpdateData).length > 0) {
         const existing = await db.developerProfile.findUnique({ where: { userId } });
         if (existing) {
+          // Check if portfolio was updated
+          const portfolioUpdated = developerUpdateData.portfolioLinks !== undefined || 
+                                  developerUpdateData.bio !== undefined ||
+                                  developerUpdateData.linkedinUrl !== undefined;
+          
+          // Check if availability status changed
+          const availabilityChanged = developerUpdateData.currentStatus !== undefined && 
+                                     developerUpdateData.currentStatus !== existing.currentStatus;
+
           await db.developerProfile.update({ where: { userId }, data: developerUpdateData });
+
+          // Send follow notifications
+          if (portfolioUpdated) {
+            await FollowNotificationService.notifyPortfolioUpdate(userId, session.user.name || "Developer");
+          }
+          
+          if (availabilityChanged) {
+            await FollowNotificationService.notifyAvailabilityChange(
+              userId, 
+              session.user.name || "Developer", 
+              existing.currentStatus, 
+              developerUpdateData.currentStatus
+            );
+          }
         } else {
           // Provide required defaults for new developer profiles
           await db.developerProfile.create({

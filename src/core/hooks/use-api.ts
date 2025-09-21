@@ -37,6 +37,7 @@ export function useApi<T = any>(
             "Content-Type": "application/json",
             ...requestOptions.headers,
           },
+          credentials: 'include',
           ...requestOptions,
         });
 

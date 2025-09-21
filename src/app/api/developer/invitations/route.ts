@@ -35,10 +35,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all invitations for this developer
+    // Get all pending invitations for this developer
     const invitations = await prisma.assignmentCandidate.findMany({
       where: {
-        developerId: developerProfile.id
+        developerId: developerProfile.id,
+        responseStatus: "pending"
       },
       include: {
         batch: {
@@ -85,9 +86,13 @@ export async function GET(request: NextRequest) {
           assignedAt: invitation.assignedAt,
           respondedAt: invitation.respondedAt,
           isFirstAccepted: invitation.isFirstAccepted,
+          source: invitation.source,
+          clientMessage: invitation.clientMessage,
           batch: {
             id: invitation.batch.id,
             status: invitation.batch.status,
+            type: invitation.batch.type,
+            isNoExpire: invitation.batch.isNoExpire,
             project: {
               id: invitation.batch.project.id,
               title: invitation.batch.project.title,

@@ -142,6 +142,18 @@ enum DevLevel {
   EXPERT
 }
 
+enum ContactGrantReason {
+  ACCEPTED_PROJECT
+  MANUAL_OVERRIDE
+  PURCHASED
+  ADMIN
+}
+
+enum BatchType {
+  AUTO_ROTATION
+  MANUAL_INVITE
+}
+
 enum AdminApprovalStatus {
   draft
   pending
@@ -258,6 +270,12 @@ model User {
   serviceLikes       ServiceLike[]
   notifications      NotificationUser[]
 
+  // Follow Relations
+  follows            Follow[]            @relation("UserFollows")
+  followedBy         Follow[]            @relation("UserFollowedBy")
+  followNotifications FollowNotification[] @relation("UserFollowNotifications")
+  developerFollowNotifications FollowNotification[] @relation("DeveloperFollowNotifications")
+
   @@index([lastLoginAt])
 }
 
@@ -333,6 +351,8 @@ model ClientProfile {
   projects              Project[]            @relation("ClientProjects")
   contactReveals        ContactRevealEvent[] @relation("ClientContactReveals")
   favoriteDevelopers    FavoriteDeveloper[]  @relation("ClientFavorites")
+  contactGrants         ContactGrant[]       @relation("ClientContactGrants")
+  candidates            AssignmentCandidate[] @relation("ClientCandidates")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -555,6 +575,7 @@ model DeveloperProfile {
   rotationCursors         RotationCursor[]      @relation("DeveloperToRotationCursors")
   favoritedBy             FavoriteDeveloper[]   @relation("DeveloperFavorites")
   services                Service[]
+  contactGrants           ContactGrant[]        @relation("DeveloperContactGrants")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -659,6 +680,7 @@ model Project {
   assignmentCandidates AssignmentCandidate[] @relation("ProjectCandidates")
   contactRevealEvents  ContactRevealEvent[]    @relation("ProjectContactReveals")
   reviews              Review[]                @relation("ProjectReviews")
+  contactGrants        ContactGrant[]          @relation("ProjectContactGrants")
 
   @@index([clientId], map: "idx_projects_clientId")
   @@index([status], map: "idx_projects_status")
@@ -702,6 +724,8 @@ model AssignmentBatch {
   selection   Json // {skillIds: array, fresherCount: number, midCount: number, expertCount: number}
 
   status        BatchStatus @default(active)
+  type          BatchType   @default(AUTO_ROTATION)
+  isNoExpire    Boolean     @default(false) // true for manual batches
   expiresAt     DateTime? // Optional
   refreshReason String? // When client requests new list
 
@@ -714,6 +738,7 @@ model AssignmentBatch {
 
   @@index([projectId], map: "idx_assignment_batches_projectId")
   @@index([status], map: "idx_assignment_batches_status")
+  @@index([type], map: "idx_assignment_batches_type")
   @@index([expiresAt], map: "idx_assignment_batches_expiresAt")
 }
 
@@ -723,20 +748,23 @@ model AssignmentBatch {
 model AssignmentCandidate {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  batchId String          @db.ObjectId
-  batch   AssignmentBatch @relation("BatchCandidates", fields: [batchId], references: [id])
+  batchId String?         @db.ObjectId // Can be null for direct messages
+  batch   AssignmentBatch? @relation("BatchCandidates", fields: [batchId], references: [id])
 
-  projectId String  @db.ObjectId
-  project   Project @relation("ProjectCandidates", fields: [projectId], references: [id])
+  projectId String? @db.ObjectId // Can be null for direct messages
+  project   Project? @relation("ProjectCandidates", fields: [projectId], references: [id])
   
   notificationLogs NotificationLog[] @relation("CandidateNotifications")
 
+  clientId    String?          @db.ObjectId // Can be null for system-generated candidates
+  client      ClientProfile?   @relation("ClientCandidates", fields: [clientId], references: [id])
+  
   developerId String           @db.ObjectId
   developer   DeveloperProfile @relation("DeveloperCandidates", fields: [developerId], references: [id])
 
   level              DevLevel // Snapshot
   assignedAt         DateTime
-  acceptanceDeadline DateTime // = assignedAt + 15m
+  acceptanceDeadline DateTime? // nullable for manual invites
 
   responseStatus ResponseStatus @default(pending)
   respondedAt    DateTime? // Optional
@@ -747,12 +775,66 @@ model AssignmentCandidate {
   isFirstAccepted Boolean   @default(false) // Marks first acceptor
   invalidatedAt   DateTime? // When batch replaced
 
+  // Manual invite fields
+  source         BatchType @default(AUTO_ROTATION)
+  clientMessage  String?   // Message from client for manual invites
+  metadata       Json?     // Additional data like budget, description, etc.
+
+  @@unique([batchId, developerId], map: "uq_assignment_candidates_batch_developer") // 👈 Tránh case race condition lấy lại chính dev đó
   @@index([batchId], map: "idx_assignment_candidates_batchId")
   @@index([projectId], map: "idx_assignment_candidates_projectId")
+  @@index([clientId], map: "idx_assignment_candidates_clientId")
   @@index([developerId], map: "idx_assignment_candidates_developerId")
   @@index([responseStatus], map: "idx_assignment_candidates_responseStatus")
   @@index([acceptanceDeadline], map: "idx_assignment_candidates_deadline")
   @@index([responseStatus, developerId], map: "idx_assignment_candidates_pending_counts")
+  @@index([source], map: "idx_assignment_candidates_source")
+}
+
+/**
+ * ===== Contact Grant System =====
+ */
+model ContactGrant {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId    String?  @db.ObjectId // grant tied to project (preferred), can be null for package/other permissions
+  clientId     String   @db.ObjectId
+  developerId  String   @db.ObjectId
+  allowEmail   Boolean  @default(true)
+  allowPhone   Boolean  @default(true)
+  allowWhatsApp Boolean @default(true)
+  reason       ContactGrantReason
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime? // null = permanent
+
+  // Relations
+  project   Project? @relation("ProjectContactGrants", fields: [projectId], references: [id])
+  client    ClientProfile @relation("ClientContactGrants", fields: [clientId], references: [id])
+  developer DeveloperProfile @relation("DeveloperContactGrants", fields: [developerId], references: [id])
+  viewLogs  ContactViewLog[]
+
+  @@unique([clientId, developerId, projectId], map: "uq_contact_grant_client_dev_project") // 1 client – 1 dev – 1 project only 1 grant
+  @@index([clientId], map: "idx_contact_grant_clientId")
+  @@index([developerId], map: "idx_contact_grant_developerId")
+  @@index([projectId], map: "idx_contact_grant_projectId")
+  @@index([expiresAt], map: "idx_contact_grant_expiresAt")
+}
+
+model ContactViewLog {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  grantId      String   @db.ObjectId
+  viewerId     String   @db.ObjectId // client id
+  developerId  String   @db.ObjectId
+  projectId    String?  @db.ObjectId
+  context      String?  // page/url
+  viewedAt     DateTime @default(now())
+
+  // Relations
+  grant ContactGrant @relation(fields: [grantId], references: [id])
+
+  @@index([grantId], map: "idx_contact_view_log_grantId")
+  @@index([viewerId], map: "idx_contact_view_log_viewerId")
+  @@index([developerId], map: "idx_contact_view_log_developerId")
+  @@index([viewedAt], map: "idx_contact_view_log_viewedAt")
 }
 
 /**
@@ -1232,6 +1314,50 @@ model FavoriteDeveloper {
   @@unique([clientId, developerId], map: "idx_favorite_developers_unique")
   @@index([clientId])
   @@index([developerId])
+}
+
+/**
+ * ===== Follow System =====
+ */
+model Follow {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  followerId     String @db.ObjectId // Client who follows
+  followingId    String @db.ObjectId // Developer being followed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  follower  User @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId], map: "idx_follows_unique")
+  @@index([followerId])
+  @@index([followingId])
+  @@index([createdAt])
+}
+
+/**
+ * ===== Follow Notifications =====
+ */
+model FollowNotification {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  followerId     String @db.ObjectId // Client who follows
+  developerId    String @db.ObjectId // Developer being followed
+  type           String // "portfolio_update", "review_received", "availability_change", "idea_posted"
+  title          String
+  message        String
+  metadata       Json? // Additional data like ideaId, reviewId, etc.
+  isRead         Boolean @default(false)
+  createdAt      DateTime @default(now())
+
+  // Relations
+  follower  User @relation("UserFollowNotifications", fields: [followerId], references: [id], onDelete: Cascade)
+  developer User @relation("DeveloperFollowNotifications", fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([followerId, isRead])
+  @@index([developerId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 /**
