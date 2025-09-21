@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 const ServiceDetailOverlay = dynamic(() => import("./ServiceDetailOverlay"), { ssr: false, loading: () => <div className="h-80 w-full animate-pulse bg-gray-100" /> });
-import { Pagination } from "@/features/shared/components/pagination";
+import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
 const DeveloperReviewsModal = dynamic(() => import("@/features/client/components/developer-reviews-modal"), { ssr: false, loading: () => <div className="h-48 w-full animate-pulse bg-gray-100" /> });
 
 interface Service {
@@ -52,61 +52,104 @@ interface ServicesGridProps {
 }
 
 export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [] }: ServicesGridProps) {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [showReviews, setShowReviews] = useState<{ open: boolean; developerId?: string; developerName?: string }>({ open: false });
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 12,
-    totalCount: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
 
-  // Reset to page 1 when search or filters change
-  useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-  }, [searchQuery, sortBy, filters]);
+  // Temporary: Use simple state for debugging
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        
-        // Build query parameters
-        const params = new URLSearchParams({
-          page: pagination.page.toString(),
-          limit: pagination.limit.toString(),
-          sort: sortBy,
-        });
-        
-        if (searchQuery.trim()) {
-          params.append("search", searchQuery.trim());
-        }
-        
-        const res = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
-        const json = await res.json();
-        if (res.ok && json?.success && Array.isArray(json.data) && mounted) {
-          setServices(json.data);
-          if (json.pagination) {
-            setPagination(json.pagination);
-          }
-        }
-      } catch (e) {
-        console.error("Error loading services:", e);
-      } finally {
-        mounted && setLoading(false);
+  // Create fetch function
+  const fetchServices = useCallback(async (page: number, limit: number) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sort: sortBy,
+    });
+    
+    if (searchQuery.trim()) {
+      params.append("search", searchQuery.trim());
+    }
+    
+    console.log('Fetching services:', `/api/services?${params.toString()}`);
+    const res = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
+    const json = await res.json();
+    
+    console.log('Services API response:', { status: res.status, json });
+    
+    if (!res.ok || !json?.success) {
+      throw new Error(json?.message || 'Failed to fetch services');
+    }
+    
+    return {
+      data: json.data || [],
+      pagination: json.pagination || {
+        page,
+        limit,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
       }
     };
-    load();
-    return () => {
-      mounted = false;
+  }, [searchQuery, sortBy]);
+
+  // Load initial data
+  useEffect(() => {
+    let mounted = true;
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await fetchServices(1, 12);
+        if (mounted) {
+          setServices(result.data);
+          setTotalCount(result.pagination.totalCount);
+          setHasNextPage(result.pagination.hasNextPage);
+          setCurrentPage(1);
+        }
+      } catch (err) {
+        if (mounted) {
+          console.error('Error loading services:', err);
+          setError('Failed to load services');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
-  }, [pagination.page, searchQuery, sortBy, filters]);
+
+    loadInitialData();
+    return () => { mounted = false; };
+  }, [fetchServices]);
+
+  // Load more function
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasNextPage) return;
+    
+    try {
+      setLoadingMore(true);
+      const result = await fetchServices(currentPage + 1, 12);
+      setServices(prev => [...prev, ...result.data]);
+      setHasNextPage(result.pagination.hasNextPage);
+      setCurrentPage(prev => prev + 1);
+    } catch (err) {
+      console.error('Error loading more services:', err);
+      setError('Failed to load more services');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasNextPage, currentPage, fetchServices]);
+
+  // Set up scroll-based loading
+  useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);
 
 
   const handleOpenOverlay = (service: Service) => {
@@ -114,18 +157,10 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     setIsOverlayOpen(true);
   };
 
-  const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, page }));
-  };
 
   const handleServiceUpdate = (updatedService: any) => {
-    setServices(prev => prev.map(service => 
-      service.id === updatedService.id ? {
-        ...service,
-        likesCount: updatedService.likesCount,
-        userLiked: updatedService.userLiked,
-      } : service
-    ));
+    // Note: This would need to be updated to work with the infinite scroll data
+    // For now, we'll just update the selected service
     if (selectedService && selectedService.id === updatedService.id) {
       setSelectedService({
         ...selectedService,
@@ -194,9 +229,9 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
               <>
                 <span className="text-amber-600">Please enter at least 2 characters to search</span>
               </>
-            ) : pagination.totalCount > 0 ? (
+            ) : totalCount > 0 ? (
               <>
-                Found <span className="font-semibold text-gray-900">{pagination.totalCount}</span> services for "
+                Found <span className="font-semibold text-gray-900">{totalCount}</span> services for "
                 <span className="font-semibold text-gray-900">"{searchQuery}"</span>"
               </>
             ) : (
@@ -335,14 +370,34 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         ))}
       </div>
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={pagination.page}
-        totalPages={pagination.totalPages}
-        onPageChange={handlePageChange}
-        totalCount={pagination.totalCount}
-        limit={pagination.limit}
-      />
+      {/* Loading more indicator */}
+      {loadingMore && (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-600">Loading more services...</span>
+          </div>
+        </div>
+      )}
+
+      {/* End of results indicator */}
+      {!hasNextPage && services.length > 0 && (
+        <div className="text-center py-8">
+          <div className="text-sm text-gray-500">
+            You've reached the end of the results
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="text-center py-8">
+          <div className="text-red-600 mb-4">{error}</div>
+          <Button onClick={loadMore} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      )}
 
       {/* Slide-in overlay for service detail */}
       <ServiceDetailOverlay

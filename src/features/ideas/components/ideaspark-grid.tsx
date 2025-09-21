@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/ui/components/button";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { optimisticLike, optimisticBookmark } from "@/core/utils/fireAndForget";
 import { 
   FileText, 
   TrendingUp, 
@@ -39,6 +40,10 @@ interface Idea {
     likes: number;
     comments: number;
     bookmarks: number;
+  };
+  userInteraction?: {
+    liked: boolean;
+    bookmarked: boolean;
   };
   createdAt: string;
 }
@@ -144,58 +149,68 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
     }
   };
 
-  const handleLike = async (ideaId: string) => {
+  const handleLike = (ideaId: string) => {
     if (!session?.user) {
       router.push('/auth/signin?callbackUrl=/ideas');
       return;
     }
     
-    try {
-      const response = await fetch(`/api/ideas/${ideaId}/like`, {
-        method: 'POST',
-      });
-      if (response.ok) {
-        const { liked, likeCount } = await response.json();
+    // Find the current idea to get current state
+    const currentIdea = ideas.find(idea => idea.id === ideaId);
+    if (!currentIdea) return;
+    
+    const currentLiked = userInteractions[ideaId]?.liked || currentIdea.userInteraction?.liked || false;
+    const currentLikeCount = currentIdea._count.likes;
+    
+    optimisticLike(
+      ideaId,
+      currentLiked,
+      currentLikeCount,
+      (newLiked, newCount) => {
+        // Update UI immediately
         setUserInteractions(prev => ({
           ...prev,
-          [ideaId]: { ...prev[ideaId], liked }
+          [ideaId]: { ...prev[ideaId], liked: newLiked }
         }));
         setIdeas(prev => prev.map(idea => 
           idea.id === ideaId 
-            ? { ...idea, _count: { ...idea._count, likes: likeCount } }
+            ? { ...idea, _count: { ...idea._count, likes: newCount } }
             : idea
         ));
       }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+    );
   };
 
-  const handleBookmark = async (ideaId: string) => {
+  const handleBookmark = (ideaId: string) => {
     if (!session?.user) {
       router.push('/auth/signin?callbackUrl=/ideas');
       return;
     }
     
-    try {
-      const response = await fetch(`/api/ideas/${ideaId}/bookmark`, {
-        method: 'POST',
-      });
-      if (response.ok) {
-        const { bookmarked, bookmarkCount } = await response.json();
+    // Find the current idea to get current state
+    const currentIdea = ideas.find(idea => idea.id === ideaId);
+    if (!currentIdea) return;
+    
+    const currentBookmarked = userInteractions[ideaId]?.bookmarked || currentIdea.userInteraction?.bookmarked || false;
+    const currentBookmarkCount = currentIdea._count.bookmarks;
+    
+    optimisticBookmark(
+      ideaId,
+      currentBookmarked,
+      currentBookmarkCount,
+      (newBookmarked, newCount) => {
+        // Update UI immediately
         setUserInteractions(prev => ({
           ...prev,
-          [ideaId]: { ...prev[ideaId], bookmarked }
+          [ideaId]: { ...prev[ideaId], bookmarked: newBookmarked }
         }));
         setIdeas(prev => prev.map(idea => 
           idea.id === ideaId 
-            ? { ...idea, _count: { ...idea._count, bookmarks: bookmarkCount } }
+            ? { ...idea, _count: { ...idea._count, bookmarks: newCount } }
             : idea
         ));
       }
-    } catch (error) {
-      console.error('Error toggling bookmark:', error);
-    }
+    );
   };
 
   const handleShare = (ideaId: string) => {
@@ -318,24 +333,28 @@ export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
                             <button
                               onClick={() => handleLike(idea.id)}
                               className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
-                                userInteractions[idea.id]?.liked
-                                  ? 'text-red-500 bg-red-50'
+                                userInteractions[idea.id]?.liked || idea.userInteraction?.liked
+                                  ? 'text-white bg-red-500 hover:bg-red-600'
                                   : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
                               }`}
                             >
-                              <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <ThumbsUp className={`h-3 w-3 sm:h-4 sm:w-4 ${
+                                userInteractions[idea.id]?.liked || idea.userInteraction?.liked ? 'fill-current' : ''
+                              }`} />
                               <span className="text-xs sm:text-sm font-medium">{idea._count.likes}</span>
                             </button>
 
                             <button
                               onClick={() => handleBookmark(idea.id)}
                               className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
-                                userInteractions[idea.id]?.bookmarked
-                                  ? 'text-pink-500 bg-pink-50'
-                                  : 'text-gray-500 hover:text-pink-500 hover:bg-pink-50'
+                                userInteractions[idea.id]?.bookmarked || idea.userInteraction?.bookmarked
+                                  ? 'text-white bg-blue-500 hover:bg-blue-600'
+                                  : 'text-gray-500 hover:text-blue-500 hover:bg-blue-50'
                               }`}
                             >
-                              <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <Heart className={`h-3 w-3 sm:h-4 sm:w-4 ${
+                                userInteractions[idea.id]?.bookmarked || idea.userInteraction?.bookmarked ? 'fill-current' : ''
+                              }`} />
                               <span className="text-sm font-medium">{idea._count.bookmarks}</span>
                             </button>
                           </>

@@ -15,6 +15,7 @@ import type { ServiceDetailData } from "@/features/client/components/ServiceDeta
 import { toast } from "sonner";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
+import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
 
 const ServiceDetailOverlay = dynamic(
   () => import("@/features/client/components/ServiceDetailOverlay"),
@@ -129,8 +130,6 @@ export function PeopleGrid({
 }: PeopleGridProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const [developers, setDevelopers] = useState<Developer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [developerServices, setDeveloperServices] = useState<Record<string, DeveloperService[]>>({});
   const [selectedService, setSelectedService] = useState<ServiceDetailData | null>(null);
   const [isServiceOverlayOpen, setIsServiceOverlayOpen] = useState(false);
@@ -146,8 +145,6 @@ export function PeopleGrid({
   useEffect(() => {
     if (projectId !== prevProjectIdRef.current) {
       console.log('ProjectId changed, resetting PeopleGrid state');
-      setDevelopers([]);
-      setLoading(true);
       prevProjectIdRef.current = projectId;
     }
   }, [projectId]);
@@ -167,20 +164,6 @@ export function PeopleGrid({
   console.log('PeopleGrid render - currentAutoRefresh:', currentAutoRefresh, 'externalAutoRefresh:', externalAutoRefresh, 'internalAutoRefresh:', internalAutoRefresh);
   const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const abortControllersRef = useRef<Record<string, AbortController>>({});
-  const listFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const listAbortControllerRef = useRef<AbortController | null>(null);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 12,
-    totalCount: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
-  const listContainerRef = useRef<HTMLDivElement | null>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const ITEM_HEIGHT = 300; // approximate fixed height per row-card
-  const OVERSCAN = 3;
   const [levelFilter, setLevelFilter] = useState<"all" | "beginner" | "professional" | "expert" | "ready">("all");
   const [timeRemaining, setTimeRemaining] = useState<Record<string, number>>({});
   const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
@@ -233,85 +216,106 @@ export function PeopleGrid({
     }
   }, [onGenerateNewBatch, isGeneratingBatch]);
 
-  const handleScroll = useCallback(() => {
-    if (!listContainerRef.current) return;
-    setScrollTop(listContainerRef.current.scrollTop);
-  }, []);
+  // Temporary: Use simple state for debugging (only when not using overrideDevelopers)
+  const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Reset to page 1 when search or filters change (guard against unstable array refs)
-  const filtersKey = (filters || []).join("|");
-  useEffect(() => {
-    setPagination(prev => (prev.page === 1 ? prev : { ...prev, page: 1 }));
-  }, [searchQuery, sortBy, filtersKey]);
+  // Create fetch function
+  const fetchDevelopers = useCallback(async (page: number, limit: number) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sort: sortBy,
+    });
 
+    if (searchQuery.trim()) {
+      params.append("search", searchQuery.trim());
+    }
+
+    console.log('Fetching developers:', `/api/developers?${params.toString()}`);
+    const res = await fetch(`/api/developers?${params.toString()}` as RequestInfo, { cache: "no-store" } as RequestInit);
+    const json = await res.json();
+    
+    console.log('Developers API response:', { status: res.status, json });
+    
+    if (!res.ok || !json?.success) {
+      throw new Error(json?.message || 'Failed to fetch developers');
+    }
+    
+    return {
+      data: json.data || [],
+      pagination: json.pagination || {
+        page,
+        limit,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      }
+    };
+  }, [searchQuery, sortBy]);
+
+  // Load initial data (only when not using overrideDevelopers)
   useEffect(() => {
     if (isOverride) {
-      // Avoid unnecessary setState loops by only updating when IDs actually change
-      setDevelopers(prev => {
-        if (!Array.isArray(overrideDevelopers)) return prev;
-        const prevIds = prev.map(d => d.id).join(',');
-        const nextIds = overrideDevelopers.map(d => d.id).join(',');
-        if (prevIds === nextIds) return prev;
-        return overrideDevelopers;
-      });
-      // Always set loading to false when using overrideDevelopers, even if empty
       setLoading(false);
       return;
     }
+
     let mounted = true;
-    // debounce and abort previous request
-    if (listFetchTimeoutRef.current) {
-      clearTimeout(listFetchTimeoutRef.current);
-      listFetchTimeoutRef.current = null;
-    }
-    if (listAbortControllerRef.current) {
-      listAbortControllerRef.current.abort();
-      listAbortControllerRef.current = null;
-    }
-
-    setLoading(true);
-    listFetchTimeoutRef.current = setTimeout(async () => {
-      const controller = new AbortController();
-      listAbortControllerRef.current = controller;
+    const loadInitialData = async () => {
       try {
-        const params = new URLSearchParams({
-          page: pagination.page.toString(),
-          limit: pagination.limit.toString(),
-          sort: sortBy,
-        });
-
-        if (searchQuery.trim()) {
-          params.append("search", searchQuery.trim());
+        setLoading(true);
+        setError(null);
+        const result = await fetchDevelopers(1, 12);
+        if (mounted) {
+          setDevelopers(result.data);
+          setTotalCount(result.pagination.totalCount);
+          setHasNextPage(result.pagination.hasNextPage);
+          setCurrentPage(1);
         }
-
-        const res = await fetch(`/api/developers?${params.toString()}` as RequestInfo, { cache: "no-store", signal: controller.signal } as RequestInit);
-        const json = await res.json();
-        if (res.ok && json?.success && Array.isArray(json.data) && mounted) {
-          setDevelopers(json.data);
-          if (json.pagination) {
-            setPagination(json.pagination);
-          }
-        }
-      } catch (e) {
-        if ((e as any)?.name !== "AbortError") {
-          console.error("Error loading developers:", e);
+      } catch (err) {
+        if (mounted) {
+          console.error('Error loading developers:', err);
+          setError('Failed to load developers');
         }
       } finally {
-        if (mounted) setLoading(false);
-      }
-    }, 200);
-    return () => {
-      mounted = false;
-      if (listFetchTimeoutRef.current) {
-        clearTimeout(listFetchTimeoutRef.current);
-        listFetchTimeoutRef.current = null;
-      }
-      if (listAbortControllerRef.current) {
-        listAbortControllerRef.current.abort();
-        listAbortControllerRef.current = null;
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
-  }, [pagination.page, searchQuery, sortBy, filters, overrideDevelopers, isOverride]);
+
+    loadInitialData();
+    return () => { mounted = false; };
+  }, [fetchDevelopers, isOverride]);
+
+  // Load more function
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasNextPage || isOverride) return;
+    
+    try {
+      setLoadingMore(true);
+      const result = await fetchDevelopers(currentPage + 1, 12);
+      setDevelopers(prev => [...prev, ...result.data]);
+      setHasNextPage(result.pagination.hasNextPage);
+      setCurrentPage(prev => prev + 1);
+    } catch (err) {
+      console.error('Error loading more developers:', err);
+      setError('Failed to load more developers');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasNextPage, currentPage, fetchDevelopers, isOverride]);
+
+  // Set up scroll-based loading (only when not using overrideDevelopers)
+  useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);
+
 
   // Decide which developer list to render
   const devList: Developer[] = isOverride && Array.isArray(overrideDevelopers) ? overrideDevelopers : developers;
@@ -447,9 +451,6 @@ export function PeopleGrid({
     };
   }, [devIdsKey, isOverride]);
 
-  const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, page }));
-  };
 
   const handleLike = async (developerId: string) => {
     // TODO: Implement like functionality for developers
@@ -691,9 +692,9 @@ export function PeopleGrid({
               <>
                 <span className="text-amber-600">Please enter at least 2 characters to search</span>
               </>
-            ) : pagination.totalCount > 0 ? (
+            ) : totalCount > 0 ? (
               <>
-                Found <span className="font-semibold text-gray-900">{pagination.totalCount}</span> developers for "
+                Found <span className="font-semibold text-gray-900">{totalCount}</span> developers for "
                 <span className="font-semibold text-gray-900">"{searchQuery}"</span>"
               </>
             ) : (
@@ -894,11 +895,7 @@ export function PeopleGrid({
                           e.preventDefault();
                           e.nativeEvent.stopImmediatePropagation();
                           // Optimistic UI & toast
-                          if (!isOverride) {
-                            setDevelopers(prev => prev.map(d => d.id === developer.id ? { ...d, userLiked: true } : d));
-                          } else {
-                            setLikedDeveloperIds(prev => new Set(prev).add(developer.id));
-                          }
+                          setLikedDeveloperIds(prev => new Set(prev).add(developer.id));
                           setPendingFollowIds(prev => new Set(prev).add(developer.id));
                           toast.success(`Following ${developer.user.name} - you'll get updates about their portfolio, reviews, and ideas!`);
                           // Fire-and-forget API that survives navigation
@@ -994,35 +991,32 @@ export function PeopleGrid({
         )))}
       </div>
 
-      {/* Pagination */}
-  {(!overrideDevelopers || overrideDevelopers.length === 0) && pagination.totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0 py-4">
-          <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-            <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.totalCount)}</span> of{" "}
-            <span className="font-medium">{pagination.totalCount}</span> developers
+      {/* Loading more indicator */}
+      {!isOverride && loadingMore && (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-600">Loading more developers...</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-gray-600">
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-            >
-              Next
-            </Button>
+        </div>
+      )}
+
+      {/* End of results indicator */}
+      {!isOverride && !hasNextPage && filteredDevList.length > 0 && (
+        <div className="text-center py-8">
+          <div className="text-sm text-gray-500">
+            You've reached the end of the results
           </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {!isOverride && error && (
+        <div className="text-center py-8">
+          <div className="text-red-600 mb-4">{error}</div>
+          <Button onClick={loadMore} variant="outline">
+            Try Again
+          </Button>
         </div>
       )}
 

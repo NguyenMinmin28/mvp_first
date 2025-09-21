@@ -11,6 +11,9 @@ const ideaSparkService = new IdeaSparkService();
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") as IdeaStatus;
     const tags = searchParams.get("tags")?.split(",") as IdeaAdminTag[];
@@ -27,6 +30,7 @@ export async function GET(request: NextRequest) {
       cursor: cursor || undefined,
       limit,
       skillIds,
+      userId, // Pass userId to get userInteraction
     });
 
     return NextResponse.json(result);

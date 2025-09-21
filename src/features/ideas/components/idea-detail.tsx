@@ -15,6 +15,7 @@ import {
   Tag
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { optimisticLike, optimisticBookmark } from "@/core/utils/fireAndForget";
 
 interface Idea {
   id: string;
@@ -64,42 +65,28 @@ export function IdeaDetail({ idea, currentUserId }: IdeaDetailProps) {
   const [likeCount, setLikeCount] = useState(idea._count.likes);
   const [bookmarkCount, setBookmarkCount] = useState(idea._count.bookmarks);
 
-  const handleLike = async () => {
-    try {
-      const response = await fetch(`/api/ideas/${idea.id}/like`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setIsLiked(result.liked);
-        setLikeCount(result.likeCount);
+  const handleLike = () => {
+    optimisticLike(
+      idea.id,
+      isLiked,
+      likeCount,
+      (newLiked, newCount) => {
+        setIsLiked(newLiked);
+        setLikeCount(newCount);
       }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+    );
   };
 
-  const handleBookmark = async () => {
-    try {
-      const response = await fetch(`/api/ideas/${idea.id}/bookmark`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setIsBookmarked(result.bookmarked);
-        setBookmarkCount(result.bookmarkCount);
+  const handleBookmark = () => {
+    optimisticBookmark(
+      idea.id,
+      isBookmarked,
+      bookmarkCount,
+      (newBookmarked, newCount) => {
+        setIsBookmarked(newBookmarked);
+        setBookmarkCount(newCount);
       }
-    } catch (error) {
-      console.error('Error toggling bookmark:', error);
-    }
+    );
   };
 
   const handleConnect = async () => {
@@ -243,18 +230,26 @@ export function IdeaDetail({ idea, currentUserId }: IdeaDetailProps) {
               <Button
                 variant={isLiked ? "default" : "outline"}
                 onClick={handleLike}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 ${
+                  isLiked 
+                    ? 'bg-red-500 hover:bg-red-600 text-white border-red-500' 
+                    : 'hover:border-red-500 hover:text-red-500'
+                }`}
               >
-                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current text-white' : 'text-gray-500'}`} />
                 <span>{likeCount}</span>
               </Button>
 
               <Button
                 variant={isBookmarked ? "default" : "outline"}
                 onClick={handleBookmark}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 ${
+                  isBookmarked 
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500' 
+                    : 'hover:border-blue-500 hover:text-blue-500'
+                }`}
               >
-                <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current text-white' : 'text-gray-500'}`} />
                 <span>{bookmarkCount}</span>
               </Button>
 

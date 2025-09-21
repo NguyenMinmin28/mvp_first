@@ -104,16 +104,18 @@ export class IdeaSparkService {
     limit?: number;
     sortBy?: 'latest' | 'top' | 'most_commented';
     skillIds?: string[];
+    userId?: string; // Add userId parameter
   }): Promise<{
     ideas: (Idea & {
       author: { id: string; name: string | null; image: string | null } | null;
       cover: { id: string; storageKey: string } | null;
       skills: { Skill: { id: string; name: string; category: string } }[];
       _count: { likes: number; comments: number; bookmarks: number; connects: number };
+      userInteraction?: { liked: boolean; bookmarked: boolean };
     })[];
     nextCursor?: string;
   }> {
-    const { status, adminTags, search, cursor, limit = 20, sortBy = 'latest', skillIds } = params;
+    const { status, adminTags, search, cursor, limit = 20, sortBy = 'latest', skillIds, userId } = params;
 
     const where: any = { 
       status: status || IdeaStatus.APPROVED,
@@ -194,6 +196,20 @@ export class IdeaSparkService {
     if (ideas.length > limit) {
       const nextItem = ideas.pop();
       nextCursor = nextItem?.id;
+    }
+
+    // Add userInteraction for each idea if userId is provided
+    if (userId) {
+      const ideasWithInteraction = await Promise.all(
+        ideas.map(async (idea) => {
+          const userInteraction = await this.getUserInteractionStatus(idea.id, userId);
+          return {
+            ...idea,
+            userInteraction,
+          };
+        })
+      );
+      return { ideas: ideasWithInteraction, nextCursor };
     }
 
     return { ideas, nextCursor };
