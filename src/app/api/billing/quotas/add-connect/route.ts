@@ -39,13 +39,14 @@ export async function POST(request: NextRequest) {
     }
 
     // If plan has 0 connects (e.g., Free), bump connectsPerMonth in dev for testing
-    if (((subscription.package as any).connectsPerMonth ?? 0) === 0) {
+    let pkg = await prisma.package.findUnique({ where: { id: subscription.packageId } } as any);
+    const currentConnectsPerMonth = (pkg as any)?.connectsPerMonth ?? 0;
+    if (currentConnectsPerMonth === 0) {
       await prisma.package.update({
         where: { id: subscription.packageId },
         data: { connectsPerMonth: 5 }
       } as any);
-      // reload subscription.package values
-      (subscription as any).package.connectsPerMonth = 5;
+      pkg = await prisma.package.findUnique({ where: { id: subscription.packageId } } as any);
     }
 
     // Get current usage for period
@@ -66,10 +67,10 @@ export async function POST(request: NextRequest) {
 
     await prisma.subscriptionUsage.update({
       where: { id: usage.id },
-      data: { connectsUsed: newUsed }
+      data: { connectsUsed: newUsed } as any
     });
 
-    const connectsPerMonth = (subscription.package as any).connectsPerMonth ?? 0;
+    const connectsPerMonth = ((pkg as any)?.connectsPerMonth ?? 0) as number;
     const remaining = Math.max(0, connectsPerMonth - newUsed);
 
     return NextResponse.json({
