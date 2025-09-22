@@ -2,7 +2,7 @@ import { prisma } from "@/core/database/db";
 
 export interface FollowNotificationData {
   developerId: string;
-  type: "portfolio_update" | "review_received" | "availability_change" | "idea_posted";
+  type: "portfolio_update" | "review_received" | "availability_change" | "idea_posted" | "service_posted";
   title: string;
   message: string;
   metadata?: any;
@@ -129,6 +129,28 @@ export class FollowNotificationService {
         developerName, 
         ideaId, 
         ideaTitle 
+      },
+    });
+  }
+
+  /**
+   * Notify followers when developer posts a new service
+   */
+  static async notifyServicePosted(
+    developerId: string,
+    developerName: string,
+    serviceId: string,
+    serviceTitle: string
+  ): Promise<void> {
+    await this.notifyFollowers({
+      developerId,
+      type: "service_posted",
+      title: "New Service Posted",
+      message: `${developerName} has just posted a new service: "${serviceTitle}"`,
+      metadata: {
+        developerName,
+        serviceId,
+        serviceTitle,
       },
     });
   }

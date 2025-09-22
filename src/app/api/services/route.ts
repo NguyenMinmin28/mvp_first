@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import authOptions from "../../../../config/auth.config";
 import { prisma } from "@/core/database/db";
+import { FollowNotificationService } from "@/core/services/follow-notification.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
         priceMax: pricing?.amount || 0,
         deliveryDays: timeline ? parseInt(timeline.replace(/\D/g, '')) : null,
         revisions: 3, // Default revisions
-        status: 'DRAFT',
+        status: 'PUBLISHED',
         visibility: 'PUBLIC',
         ratingAvg: 0,
         ratingCount: 0,
@@ -101,6 +102,18 @@ export async function POST(request: NextRequest) {
           sortOrder
         }))
       });
+    }
+
+    // Notify followers (fire-and-forget)
+    try {
+      await FollowNotificationService.notifyServicePosted(
+        developer.userId,
+        developer.user?.name || "Developer",
+        service.id,
+        service.title
+      );
+    } catch (e) {
+      console.warn("Failed to send follow notifications for service:", e);
     }
 
     return NextResponse.json({
@@ -210,10 +223,6 @@ export async function GET(request: NextRequest) {
 
     // Process services to include galleryImages and showcaseImages
     const processedServices = services.map(service => {
-      // Categorize images based on sortOrder
-      // sortOrder 0 = main image (coverUrl)
-      // sortOrder 1-9 = gallery images (first 9)
-      // sortOrder 10+ = showcase images
       const galleryImages = service.media
         .filter((media: any) => media.sortOrder >= 1 && media.sortOrder <= 9)
         .map((media: any) => media.url);

@@ -32,13 +32,23 @@ interface HeaderProps {
   user?: UserType;
 }
 
+type UnifiedNotif = {
+  id: string;
+  type: string;
+  createdAt: string;
+  read: boolean;
+  payload?: any;
+  projectId?: string;
+  origin: "general" | "follow";
+};
+
 export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [unread, setUnread] = useState<number>(0);
   const [openNotif, setOpenNotif] = useState(false);
-  const [items, setItems] = useState<Array<{id:string; type:string; createdAt:string; payload:any; projectId?:string; read:boolean;}>>([]);
+  const [items, setItems] = useState<UnifiedNotif[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const notifRef = useRef<HTMLDivElement | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -96,45 +106,36 @@ export function Header({ user }: HeaderProps) {
     return () => window.removeEventListener('profile-updated', handleProfileUpdate);
   }, [user?.id]);
 
-  // Function to refresh notification count
+  // Function to refresh notification count (sum of general + follow)
   const refreshNotificationCount = async () => {
     try {
-      const res = await fetch(`/api/notifications?only=unread&limit=10&_=${Date.now()}` , { 
-        cache: "no-store",
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const items = Array.isArray(data.items) ? data.items : [];
-      const serverUnread = typeof data.unreadCount === 'number' ? data.unreadCount : undefined;
-      const localUnread = items.reduce((acc: number, it: any) => acc + (it.read ? 0 : 1), 0);
-      setUnread(serverUnread && serverUnread > 0 ? serverUnread : localUnread);
-      console.log('🔔 Notification count refreshed:', data.unreadCount);
+      const [generalRes, followRes] = await Promise.all([
+        fetch(`/api/notifications?only=unread&limit=10&_=${Date.now()}`, { cache: "no-store", credentials: 'include', headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'Expires': '0' } }),
+        fetch(`/api/user/follow-notifications?only=unread&limit=10&_=${Date.now()}`, { cache: "no-store", credentials: 'include' })
+      ]);
+      let total = 0;
+      if (generalRes.ok) {
+        const data = await generalRes.json();
+        total += Number(data.unreadCount || 0);
+      }
+      if (followRes.ok) {
+        const data = await followRes.json();
+        total += Number(data.unreadCount || 0);
+      }
+      setUnread(total);
     } catch (error) {
       console.error('🔔 Failed to refresh notification count:', error);
     }
   };
 
-  // No polling: only load once on initial mount (handled below)
-
   // Refresh unread count immediately when user becomes authenticated
   useEffect(() => {
     if (user?.id) {
       refreshNotificationCount();
-      // small debounce retry in case session becomes ready right after mount
       const t = setTimeout(() => refreshNotificationCount(), 1500);
       return () => clearTimeout(t);
     }
   }, [user?.id]);
-
-  // No focus/visibility refresh: user requested only on full page load
-
-  // No custom refresh events: load only once per page load
 
   // Close notifications dropdown on outside click / Esc
   useEffect(() => {
@@ -171,11 +172,6 @@ export function Header({ user }: HeaderProps) {
   // Get user role from session
   const userRole = user?.role as string | undefined;
   
-  // Debug logging
-  console.log("🔍 Header - User:", user);
-  console.log("🔍 Header - User Role:", userRole);
-  console.log("🔍 Header - Is Authenticated:", isAuthenticated);
-
   // Auto-sync portal with user role
   useEffect(() => {
     if (mounted && isAuthenticated && userRole) {
@@ -191,18 +187,15 @@ export function Header({ user }: HeaderProps) {
     console.log("Login clicked for portal:", pendingPortal);
     setShowLoginModal(false);
     setPendingPortal(null);
-    // Redirect to login page with portal parameter
     router.push(`/auth/signin?portal=${pendingPortal}`);
   };
 
   const handlePortalSwitch = (targetPortal: "client" | "freelancer") => {
     if (!isAuthenticated) {
-      // Case 4: Chưa đăng nhập -> chuyển về trang đăng nhập
       showLoginModalForPortal(targetPortal);
       return;
     }
 
-    // Case 3: Đã có role và bấm vào role của chính họ -> chuyển về dashboard
     if (userRole === "CLIENT" && targetPortal === "client") {
       setActivePortal("client");
       router.push("/client-dashboard");
@@ -213,30 +206,24 @@ export function Header({ user }: HeaderProps) {
       return;
     }
 
-    // Case 1 & 2: Kiểm tra role và xử lý chuyển đổi
     const isClientRole = userRole === "CLIENT";
     const isDeveloperRole = userRole === "DEVELOPER";
     
     if (targetPortal === "client" && isDeveloperRole) {
-      // Case 1: Developer bấm vào Client -> hiển thị modal xác nhận
       setPendingLogoutPortal("client");
       setShowLogoutConfirm(true);
       return;
     } else if (targetPortal === "freelancer" && isClientRole) {
-      // Case 2: Client bấm vào Freelancer -> hiển thị modal xác nhận
       setPendingLogoutPortal("freelancer");
       setShowLogoutConfirm(true);
       return;
     } else if (targetPortal === "client" && isClientRole) {
-      // Client bấm vào Client -> chuyển đổi portal và về dashboard
       setActivePortal("client");
       router.push("/client-dashboard");
     } else if (targetPortal === "freelancer" && isDeveloperRole) {
-      // Developer bấm vào Freelancer -> chuyển đổi portal và về dashboard
       setActivePortal("freelancer");
       router.push("/dashboard-user");
     } else {
-      // Role không khớp -> logout và chuyển về trang đăng nhập
       setActivePortal(targetPortal);
     }
   };
@@ -259,7 +246,6 @@ export function Header({ user }: HeaderProps) {
   const formatDateStable = (isoString: string) => {
     try {
       const d = new Date(isoString);
-      // Format in UTC to be deterministic between server and client
       const yyyy = d.getUTCFullYear();
       const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
       const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -512,45 +498,30 @@ export function Header({ user }: HeaderProps) {
                     className="relative inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-white hover:text-black"
                     onClick={async () => {
                       const willOpen = !openNotif;
-                      console.log('🔔 Bell icon clicked. Will open:', willOpen);
                       setOpenNotif(willOpen);
                       if (willOpen) {
-                        console.log('🔔 Fetching notifications...');
                         try {
-                          const res = await fetch(`/api/notifications?limit=10&_=${Date.now()}` , { 
-                            cache: "no-store",
-                            headers: {
-                              'Cache-Control': 'no-cache, no-store, must-revalidate',
-                              'Pragma': 'no-cache',
-                              'Expires': '0'
-                            }
-                          });
-                          console.log('🔔 Fetch response status:', res.status);
-                          if (res.ok) {
-                            const data = await res.json();
-                            console.log('🔔 Notifications fetched:', data);
-                            console.log('🔔 Items details:', data.items.map((item: any) => ({
-                              id: item.id,
-                              type: item.type,
-                              read: item.read,
-                              createdAt: item.createdAt,
-                              payload: item.payload
-                            })));
-                            const items = data.items || [];
-                            setItems(items);
-                            setCursor(data.nextCursor || null);
-                            // Fallback: if API unreadCount is missing/0 but we have unread items, compute locally
-                            const localUnread = items.reduce((acc: number, it: any) => acc + (it.read ? 0 : 1), 0);
-                            const serverUnread = typeof data.unreadCount === 'number' ? data.unreadCount : undefined;
-                            setUnread(serverUnread && serverUnread > 0 ? serverUnread : localUnread);
-                          } else {
-                            console.error('🔔 Failed to fetch notifications:', res.status);
+                          const [genRes, folRes] = await Promise.all([
+                            fetch(`/api/notifications?limit=10&_=${Date.now()}`, { cache: "no-store" }),
+                            fetch(`/api/user/follow-notifications?limit=10&_=${Date.now()}`, { cache: "no-store" })
+                          ]);
+                          const unified: UnifiedNotif[] = [];
+                          if (genRes.ok) {
+                            const d = await genRes.json();
+                            setCursor(d.nextCursor || null);
+                            for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" });
                           }
+                          if (folRes.ok) {
+                            const d = await folRes.json();
+                            for (const it of (d.items || [])) unified.push({ id: it.id, type: `follow.${it.type}`, createdAt: it.createdAt, read: !!it.isRead, payload: { ...it.metadata, title: it.title, message: it.message }, origin: "follow" });
+                          }
+                          unified.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                          setItems(unified);
+                          // recompute unread sum
+                          setUnread(unified.reduce((acc, n) => acc + (n.read ? 0 : 1), 0));
                         } catch (error) {
                           console.error('🔔 Fetch error:', error);
                         }
-                      } else {
-                        console.log('🔔 Closing notification dropdown');
                       }
                     }}
                   >
@@ -571,9 +542,12 @@ export function Header({ user }: HeaderProps) {
                         <button
                           className="text-xs underline"
                           onClick={async () => {
-                            await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read_all' }) });
-                            setUnread(0);
-                            setItems((prev) => prev.map((i) => ({ ...i, read: true })));
+                            try {
+                              await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read_all' }) });
+                              await fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read_all' }) });
+                              setUnread(0);
+                              setItems((prev) => prev.map((i) => ({ ...i, read: true })));
+                            } catch {}
                           }}
                         >
                           Mark all as read
@@ -585,21 +559,33 @@ export function Header({ user }: HeaderProps) {
                         )}
                         {items.map((n) => (
                           <li
-                            key={n.id}
+                            key={`${n.origin}:${n.id}`}
                             className="p-3 text-sm hover:bg-gray-50 cursor-pointer"
                             onClick={async () => {
                               if (!n.read) {
-                                await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
-                                setUnread((u) => Math.max(0, u - 1));
-                                setItems((prev) => prev.map((i) => (i.id === n.id ? { ...i, read: true } : i)));
+                                try {
+                                  if (n.origin === "general") {
+                                    await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                  } else {
+                                    await fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                  }
+                                  setUnread((u) => Math.max(0, u - 1));
+                                  setItems((prev) => prev.map((i) => (i.id === n.id && i.origin === n.origin ? { ...i, read: true } : i)));
+                                } catch {}
                               }
-                              if (n.type === "quota.project_limit_reached") {
-                                router.push("/pricing");
-                              } else if (n.type === "assignment.manual_invite") {
-                                // Navigate to dashboard with manual invitations filter
-                                router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
-                              } else if (n.projectId) {
-                                router.push(`/projects/${n.projectId}`);
+                              // Routing
+                              if (n.origin === "general") {
+                                if (n.type === "quota.project_limit_reached") {
+                                  router.push("/pricing");
+                                } else if (n.type === "assignment.manual_invite") {
+                                  router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
+                                } else if (n.projectId) {
+                                  router.push(`/projects/${n.projectId}`);
+                                }
+                              } else if (n.origin === "follow") {
+                                if (n.type === "follow.service_posted" && n.payload?.serviceId) {
+                                  router.push(`/services?serviceId=${encodeURIComponent(n.payload.serviceId)}`);
+                                }
                               }
                             }}
                           >
@@ -607,38 +593,40 @@ export function Header({ user }: HeaderProps) {
                               <span className={`mt-1 h-2 w-2 rounded-full ${n.read ? 'bg-gray-300' : 'bg-blue-600'}`} />
                               <div className="flex-1">
                                 <div className="font-medium text-gray-800">
-                                  {n.type === "quota.project_limit_reached" 
-                                    ? "Project Limit Reached" 
-                                    : n.type === "assignment.invited"
-                                    ? "New Project Assignment"
-                                    : n.type === "assignment.manual_invite"
-                                    ? "Manual Invitation Received"
-                                    : n.type}
+                                  {n.origin === "general" 
+                                    ? (n.type === "quota.project_limit_reached" 
+                                        ? "Project Limit Reached" 
+                                        : n.type === "assignment.invited"
+                                        ? "New Project Assignment"
+                                        : n.type === "assignment.manual_invite"
+                                        ? "Manual Invitation Received"
+                                        : n.type)
+                                    : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
                                 </div>
-                                {n.type === "assignment.manual_invite" && (
+                                {n.origin === "general" ? (
                                   <>
-                                    {n.payload?.clientMessage && (
+                                    {n.type === "assignment.manual_invite" && n.payload?.clientMessage && (
                                       <div className="text-xs text-gray-600 italic">"{n.payload.clientMessage}"</div>
+                                    )}
+                                    {n.payload?.message && (
+                                      <div className="text-xs text-gray-600">{n.payload.message}</div>
+                                    )}
+                                    {n.payload?.description && (
+                                      <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
                                     )}
                                     {n.payload?.projectTitle && (
                                       <div className="text-xs text-gray-600">Project: {n.payload.projectTitle}</div>
                                     )}
-                                    {n.payload?.clientName && (
-                                      <div className="text-xs text-gray-500">From: {n.payload.clientName}</div>
+                                  </>
+                                ) : (
+                                  <>
+                                    {n.payload?.title && (
+                                      <div className="text-xs text-gray-800">{n.payload.title}</div>
                                     )}
-                                    {n.payload?.budget && (
-                                      <div className="text-xs text-green-600">Budget: {n.payload.budget}</div>
+                                    {n.payload?.message && (
+                                      <div className="text-xs text-gray-600">{n.payload.message}</div>
                                     )}
                                   </>
-                                )}
-                                {n.type !== "assignment.manual_invite" && n.payload?.message && (
-                                  <div className="text-xs text-gray-600">{n.payload.message}</div>
-                                )}
-                                {n.type !== "assignment.manual_invite" && n.payload?.description && (
-                                  <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
-                                )}
-                                {n.type !== "assignment.manual_invite" && n.payload?.projectTitle && (
-                                  <div className="text-xs text-gray-600">{n.payload.projectTitle}</div>
                                 )}
                                 <div className="text-[11px] text-gray-400">{formatDateStable(n.createdAt)}</div>
                               </div>
@@ -650,10 +638,12 @@ export function Header({ user }: HeaderProps) {
                             <button
                               className="text-xs underline"
                               onClick={async () => {
+                                // Load more only for general notifications for now
                                 const res = await fetch(`/api/notifications?limit=10&cursor=${cursor}`);
                                 if (res.ok) {
                                   const data = await res.json();
-                                  setItems((prev) => [...prev, ...(data.items || [])]);
+                                  const more: UnifiedNotif[] = (data.items || []).map((it: any) => ({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" }));
+                                  setItems((prev) => [...prev, ...more].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
                                   setCursor(data.nextCursor || null);
                                 }
                               }}
@@ -762,27 +752,26 @@ export function Header({ user }: HeaderProps) {
                       className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
                       onClick={async () => {
                         const willOpen = !openNotif;
-                        console.log('🔔 Bell icon clicked (mobile). Will open:', willOpen);
                         setOpenNotif(willOpen);
                         if (willOpen) {
-                          console.log('🔔 Fetching notifications (mobile)...');
                           try {
-                            const res = await fetch(`/api/notifications?limit=10&_=${Date.now()}` , { 
-                              cache: "no-store",
-                              headers: {
-                                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                                'Pragma': 'no-cache',
-                                'Expires': '0'
-                              }
-                            });
-                            console.log('🔔 Fetch response status (mobile):', res.status);
-                            if (res.ok) {
-                              const data = await res.json();
-                              console.log('🔔 Notifications data (mobile):', data);
-                              setItems(data.items || []);
-                              setCursor(data.nextCursor || null);
-                              setUnread(data.unreadCount || 0);
+                            const [genRes, folRes] = await Promise.all([
+                              fetch(`/api/notifications?limit=10&_=${Date.now()}`, { cache: "no-store" }),
+                              fetch(`/api/user/follow-notifications?limit=10&_=${Date.now()}`, { cache: "no-store" })
+                            ]);
+                            const unified: UnifiedNotif[] = [];
+                            if (genRes.ok) {
+                              const d = await genRes.json();
+                              setCursor(d.nextCursor || null);
+                              for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" });
                             }
+                            if (folRes.ok) {
+                              const d = await folRes.json();
+                              for (const it of (d.items || [])) unified.push({ id: it.id, type: `follow.${it.type}`, createdAt: it.createdAt, read: !!it.isRead, payload: { ...it.metadata, title: it.title, message: it.message }, origin: "follow" });
+                            }
+                            unified.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                            setItems(unified);
+                            setUnread(unified.reduce((acc, n) => acc + (n.read ? 0 : 1), 0));
                           } catch (error) {
                             console.error('🔔 Error fetching notifications (mobile):', error);
                           }
@@ -820,43 +809,38 @@ export function Header({ user }: HeaderProps) {
                           ) : (
                             <ul className="divide-y divide-gray-100">
                               {items.map((n) => (
-                                <li key={n.id} className={`p-3 hover:bg-gray-50 ${!n.read ? 'bg-blue-50' : ''}`}>
+                                <li key={`${n.origin}:${n.id}`} className={`p-3 hover:bg-gray-50 ${!n.read ? 'bg-blue-50' : ''}`}
+                                  onClick={async () => {
+                                    if (!n.read) {
+                                      try {
+                                        if (n.origin === "general") {
+                                          await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                        } else {
+                                          await fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                        }
+                                        setUnread((u) => Math.max(0, u - 1));
+                                        setItems((prev) => prev.map((i) => (i.id === n.id && i.origin === n.origin ? { ...i, read: true } : i)));
+                                      } catch {}
+                                    }
+                                    if (n.origin === "general") {
+                                      if (n.type === "quota.project_limit_reached") router.push("/pricing");
+                                      else if (n.type === "assignment.manual_invite") router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
+                                      else if (n.projectId) router.push(`/projects/${n.projectId}`);
+                                    } else if (n.origin === "follow") {
+                                      if (n.type === "follow.service_posted" && n.payload?.serviceId) {
+                                        router.push(`/services?serviceId=${encodeURIComponent(n.payload.serviceId)}`);
+                                      }
+                                    }
+                                  }}
+                                >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0">
-                                      <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                                    </div>
+                                    <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium text-gray-900">
-                                        {n.type === "assignment.auto_invite"
-                                          ? "Auto Invitation Received"
-                                          : n.type === "assignment.manual_invite"
-                                          ? "Manual Invitation Received"
-                                          : n.type}
+                                        {n.origin === "general" ? n.type : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
                                       </div>
-                                      {n.type === "assignment.manual_invite" && (
-                                        <>
-                                          {n.payload?.clientMessage && (
-                                            <div className="text-xs text-gray-600 italic mt-1">"{n.payload.clientMessage}"</div>
-                                          )}
-                                          {n.payload?.projectTitle && (
-                                            <div className="text-xs text-gray-600 mt-1">Project: {n.payload.projectTitle}</div>
-                                          )}
-                                          {n.payload?.clientName && (
-                                            <div className="text-xs text-gray-500 mt-1">From: {n.payload.clientName}</div>
-                                          )}
-                                          {n.payload?.budget && (
-                                            <div className="text-xs text-green-600 mt-1">Budget: {n.payload.budget}</div>
-                                          )}
-                                        </>
-                                      )}
-                                      {n.type !== "assignment.manual_invite" && n.payload?.message && (
+                                      {n.payload?.message && (
                                         <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
-                                      )}
-                                      {n.type !== "assignment.manual_invite" && n.payload?.description && (
-                                        <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
-                                      )}
-                                      {n.type !== "assignment.manual_invite" && n.payload?.projectTitle && (
-                                        <div className="text-xs text-gray-600 mt-1">{n.payload.projectTitle}</div>
                                       )}
                                       <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
                                     </div>
@@ -911,27 +895,26 @@ export function Header({ user }: HeaderProps) {
                       className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
                       onClick={async () => {
                         const willOpen = !openNotif;
-                        console.log('🔔 Bell icon clicked (mobile). Will open:', willOpen);
                         setOpenNotif(willOpen);
                         if (willOpen) {
-                          console.log('🔔 Fetching notifications (mobile)...');
                           try {
-                            const res = await fetch(`/api/notifications?limit=10&_=${Date.now()}` , { 
-                              cache: "no-store",
-                              headers: {
-                                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                                'Pragma': 'no-cache',
-                                'Expires': '0'
-                              }
-                            });
-                            console.log('🔔 Fetch response status (mobile):', res.status);
-                            if (res.ok) {
-                              const data = await res.json();
-                              console.log('🔔 Notifications data (mobile):', data);
-                              setItems(data.items || []);
-                              setCursor(data.nextCursor || null);
-                              setUnread(data.unreadCount || 0);
+                            const [genRes, folRes] = await Promise.all([
+                              fetch(`/api/notifications?limit=10&_=${Date.now()}`, { cache: "no-store" }),
+                              fetch(`/api/user/follow-notifications?limit=10&_=${Date.now()}`, { cache: "no-store" })
+                            ]);
+                            const unified: UnifiedNotif[] = [];
+                            if (genRes.ok) {
+                              const d = await genRes.json();
+                              setCursor(d.nextCursor || null);
+                              for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" });
                             }
+                            if (folRes.ok) {
+                              const d = await folRes.json();
+                              for (const it of (d.items || [])) unified.push({ id: it.id, type: `follow.${it.type}`, createdAt: it.createdAt, read: !!it.isRead, payload: { ...it.metadata, title: it.title, message: it.message }, origin: "follow" });
+                            }
+                            unified.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                            setItems(unified);
+                            setUnread(unified.reduce((acc, n) => acc + (n.read ? 0 : 1), 0));
                           } catch (error) {
                             console.error('🔔 Error fetching notifications (mobile):', error);
                           }
@@ -969,43 +952,38 @@ export function Header({ user }: HeaderProps) {
                           ) : (
                             <ul className="divide-y divide-gray-100">
                               {items.map((n) => (
-                                <li key={n.id} className={`p-3 hover:bg-gray-50 ${!n.read ? 'bg-blue-50' : ''}`}>
+                                <li key={`${n.origin}:${n.id}`} className={`p-3 hover:bg-gray-50 ${!n.read ? 'bg-blue-50' : ''}`}
+                                  onClick={async () => {
+                                    if (!n.read) {
+                                      try {
+                                        if (n.origin === "general") {
+                                          await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                        } else {
+                                          await fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                        }
+                                        setUnread((u) => Math.max(0, u - 1));
+                                        setItems((prev) => prev.map((i) => (i.id === n.id && i.origin === n.origin ? { ...i, read: true } : i)));
+                                      } catch {}
+                                    }
+                                    if (n.origin === "general") {
+                                      if (n.type === "quota.project_limit_reached") router.push("/pricing");
+                                      else if (n.type === "assignment.manual_invite") router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
+                                      else if (n.projectId) router.push(`/projects/${n.projectId}`);
+                                    } else if (n.origin === "follow") {
+                                      if (n.type === "follow.service_posted" && n.payload?.serviceId) {
+                                        router.push(`/services?serviceId=${encodeURIComponent(n.payload.serviceId)}`);
+                                      }
+                                    }
+                                  }}
+                                >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0">
-                                      <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                                    </div>
+                                    <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium text-gray-900">
-                                        {n.type === "assignment.auto_invite"
-                                          ? "Auto Invitation Received"
-                                          : n.type === "assignment.manual_invite"
-                                          ? "Manual Invitation Received"
-                                          : n.type}
+                                        {n.origin === "general" ? n.type : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
                                       </div>
-                                      {n.type === "assignment.manual_invite" && (
-                                        <>
-                                          {n.payload?.clientMessage && (
-                                            <div className="text-xs text-gray-600 italic mt-1">"{n.payload.clientMessage}"</div>
-                                          )}
-                                          {n.payload?.projectTitle && (
-                                            <div className="text-xs text-gray-600 mt-1">Project: {n.payload.projectTitle}</div>
-                                          )}
-                                          {n.payload?.clientName && (
-                                            <div className="text-xs text-gray-500 mt-1">From: {n.payload.clientName}</div>
-                                          )}
-                                          {n.payload?.budget && (
-                                            <div className="text-xs text-green-600 mt-1">Budget: {n.payload.budget}</div>
-                                          )}
-                                        </>
-                                      )}
-                                      {n.type !== "assignment.manual_invite" && n.payload?.message && (
+                                      {n.payload?.message && (
                                         <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
-                                      )}
-                                      {n.type !== "assignment.manual_invite" && n.payload?.description && (
-                                        <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
-                                      )}
-                                      {n.type !== "assignment.manual_invite" && n.payload?.projectTitle && (
-                                        <div className="text-xs text-gray-600 mt-1">{n.payload.projectTitle}</div>
                                       )}
                                       <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
                                     </div>

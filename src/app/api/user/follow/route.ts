@@ -21,18 +21,22 @@ export async function GET(request: NextRequest) {
 
     if (developerId) {
       // Check if current user follows this developer
-      const follow = await prisma.follow.findUnique({
-        where: {
-          followerId_followingId: {
-            followerId: sessionUser.id,
-            followingId: developerId,
+      const [follow, followersCount] = await Promise.all([
+        prisma.follow.findUnique({
+          where: {
+            followerId_followingId: {
+              followerId: sessionUser.id,
+              followingId: developerId,
+            },
           },
-        },
-      });
+        }),
+        prisma.follow.count({ where: { followingId: developerId } }),
+      ]);
 
       return NextResponse.json({ 
         isFollowing: !!follow,
-        followId: follow?.id || null 
+        followId: follow?.id || null,
+        followersCount,
       });
     }
 

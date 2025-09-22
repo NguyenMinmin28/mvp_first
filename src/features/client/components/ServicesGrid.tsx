@@ -38,6 +38,8 @@ interface Service {
   skills: string[];
   categories: string[];
   leadsCount: number;
+  galleryImages?: string[];
+  showcaseImages?: string[];
 }
 
 interface PaginationInfo {
@@ -140,6 +142,24 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     loadInitialData();
     return () => { mounted = false; };
   }, [fetchServices]);
+
+  // Listen for deep-link open events
+  useEffect(() => {
+    const handler = async (e: any) => {
+      const serviceId = e?.detail?.serviceId as string | undefined;
+      if (!serviceId) return;
+      try {
+        const res = await fetch(`/api/services/${serviceId}`);
+        const json = await res.json();
+        if (res.ok && json?.success) {
+          setSelectedService(json.data);
+          setIsOverlayOpen(true);
+        }
+      } catch {}
+    };
+    window.addEventListener("open-service-overlay", handler as any);
+    return () => window.removeEventListener("open-service-overlay", handler as any);
+  }, []);
 
   // Load more function
   const loadMore = useCallback(async () => {

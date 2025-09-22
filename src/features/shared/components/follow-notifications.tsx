@@ -6,6 +6,7 @@ import { Badge } from "@/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface FollowNotification {
   id: string;
@@ -32,6 +33,7 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchNotifications();
@@ -104,6 +106,8 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
         return "🔄";
       case "idea_posted":
         return "💡";
+      case "service_posted":
+        return "🧩";
       default:
         return "📢";
     }
@@ -119,6 +123,8 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
         return "bg-green-50 border-green-200";
       case "idea_posted":
         return "bg-purple-50 border-purple-200";
+      case "service_posted":
+        return "bg-rose-50 border-rose-200";
       default:
         return "bg-gray-50 border-gray-200";
     }
@@ -200,6 +206,11 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
               onClick={() => {
                 if (!notification.isRead) {
                   markAsRead([notification.id]);
+                }
+                if (notification.type === "service_posted" && notification.metadata?.serviceId) {
+                  // Navigate to services page and open overlay
+                  const sid = encodeURIComponent(notification.metadata.serviceId);
+                  router.push(`/services?serviceId=${sid}`);
                 }
               }}
             >

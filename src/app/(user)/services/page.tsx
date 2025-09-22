@@ -32,6 +32,20 @@ export default function ServicesPage() {
     }
   }, [searchParams]);
 
+  // Handle deep-link to open a specific service overlay
+  useEffect(() => {
+    const serviceId = searchParams.get("serviceId");
+    if (!serviceId) return;
+    // Navigate to service tab
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("tab");
+    // Broadcast an event for ServicesGrid to open overlay
+    window.dispatchEvent(new CustomEvent("open-service-overlay", { detail: { serviceId } }));
+    // Clean serviceId from URL after opening to keep back button sane
+    const url = `/services?${params.toString()}`;
+    window.history.replaceState(null, "", url);
+  }, [searchParams]);
+
   // Handle tab change and update URL
   const handleTabChange = (tab: "people" | "service") => {
     setActiveTab(tab);

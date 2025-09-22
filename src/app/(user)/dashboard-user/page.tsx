@@ -38,6 +38,9 @@ export default async function DashboardUserPage() {
       redirect("/auth/signin?callbackUrl=/dashboard-user");
     }
 
+    // Fetch follower count for this developer
+    const followersCount = await db.follow.count({ where: { followingId: session.user.id } });
+
     // Combine user data with profile data (same logic as API)
     const userData = {
       id: user.id,
@@ -48,6 +51,7 @@ export default async function DashboardUserPage() {
       phoneE164: user.phoneE164,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      followersCount,
       // Include profile-specific fields
       ...(user.clientProfile && {
         companyName: user.clientProfile.companyName,
