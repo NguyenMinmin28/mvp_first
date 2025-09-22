@@ -16,14 +16,14 @@ interface ManualInvitation {
     budget: number;
     currency: string;
     status: string;
-  };
+  } | null;
   client: {
     id: string;
     name: string;
     email: string;
     image: string | null;
-    companyName: string;
-  };
+    companyName: string | null;
+  } | null;
   message: string;
   title?: string; // Client-entered title
   budget?: string; // Client-entered budget
@@ -77,21 +77,15 @@ export default function ManualInvitationDetail({
     });
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
-
   const isPending = invitation.responseStatus === "pending";
+  const title = invitation.project?.title || invitation.title || "Message";
 
   return (
     <Card className="h-full">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-xl">{invitation.project.title}</CardTitle>
+            <CardTitle className="text-xl">{title}</CardTitle>
             <Badge 
               variant={isPending ? "default" : "secondary"}
               className="w-fit"
@@ -111,15 +105,17 @@ export default function ManualInvitationDetail({
           </h3>
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={invitation.client.image || undefined} />
+              <AvatarImage src={invitation.client?.image || undefined} />
               <AvatarFallback>
-                {invitation.client.name.charAt(0).toUpperCase()}
+                {(invitation.client?.name || 'C').charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="font-medium">{invitation.client.name}</p>
-              <p className="text-sm text-gray-600">{invitation.client.email}</p>
-              {invitation.client.companyName && (
+              <p className="font-medium">{invitation.client?.name || 'Client'}</p>
+              {invitation.client?.email && (
+                <p className="text-sm text-gray-600">{invitation.client.email}</p>
+              )}
+              {invitation.client?.companyName && (
                 <div className="flex items-center gap-1 mt-1">
                   <Building className="h-3 w-3 text-gray-500" />
                   <span className="text-sm text-gray-500">
@@ -131,9 +127,9 @@ export default function ManualInvitationDetail({
           </div>
         </div>
 
-        {/* Project Details */}
+        {/* Project/Message Details */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-lg">Project Details</h3>
+          <h3 className="font-semibold text-lg">Details</h3>
           <div className="space-y-3">
             {invitation.budget && (
               <div className="flex items-center gap-2">
@@ -144,7 +140,6 @@ export default function ManualInvitationDetail({
                 </span>
               </div>
             )}
-            
             {invitation.description && (
               <div>
                 <span className="font-medium">Description:</span>

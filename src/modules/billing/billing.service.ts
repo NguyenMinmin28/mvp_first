@@ -6,8 +6,10 @@ import type { Package, Subscription, SubscriptionUsage } from "@prisma/client";
 export interface BillingQuotas {
   projectsPerMonth: number;
   contactClicksPerProject: number;
+  connectsPerMonth: number;
   projectsUsed: number;
   contactClicksUsed: Record<string, number>; // projectId -> clicks
+  connectsUsed: number;
 }
 
 export interface QuotaCheckResult {
@@ -200,6 +202,70 @@ class BillingService {
   }
 
   /**
+   * Check if user can use a connect (send get-in-touch message)
+   */
+  async canUseConnect(clientId: string): Promise<QuotaCheckResult> {
+    const subscription = await this.getActiveSubscription(clientId);
+    if (!subscription) {
+      return { allowed: false, reason: "No active subscription found" };
+    }
+
+    const usage = await this.getOrCreateCurrentUsage(subscription.id);
+    const connectsLimit = (subscription.package as any).connectsPerMonth ?? 0;
+    const connectsUsed = (usage as any).connectsUsed ?? 0;
+    const remaining = connectsLimit - connectsUsed;
+
+    const allowed = remaining > 0;
+    logger.billing.quota(
+      clientId,
+      "connect",
+      allowed ? "allowed" : "denied",
+      {
+        subscriptionId: subscription.id,
+        packageName: subscription.package.name,
+        limit: connectsLimit,
+        used: connectsUsed,
+        remaining
+      }
+    );
+
+    return {
+      allowed,
+      reason: allowed ? undefined : "Monthly connect limit reached",
+      remaining: {
+        projects: subscription.package.projectsPerMonth,
+        contactClicks: Math.max(0, remaining)
+      }
+    };
+  }
+
+  /**
+   * Increment connects usage after successful lead creation
+   */
+  async incrementConnectUsage(clientId: string): Promise<void> {
+    const subscription = await this.getActiveSubscription(clientId);
+    if (!subscription) {
+      throw new Error("No active subscription found");
+    }
+
+    const usage = await this.getOrCreateCurrentUsage(subscription.id);
+    const current = ((usage as any).connectsUsed ?? 0) + 1;
+
+    await prisma.subscriptionUsage.update({
+      where: { id: usage.id },
+      data: {
+        connectsUsed: current
+      }
+    });
+
+    logger.billing.usage(subscription.id, "Incremented connect usage", {
+      previous: (usage as any).connectsUsed ?? 0,
+      new: current,
+      clientId
+    });
+  }
+
+  /**
    * Increment project post count
    */
   async incrementProjectUsage(clientId: string): Promise<void> {
@@ -272,7 +338,8 @@ class BillingService {
         periodStart,
         periodEnd,
         projectsPostedCount: 0,
-        contactClicksByProject: {}
+        contactClicksByProject: {},
+        connectsUsed: 0
       }
     });
 
@@ -298,8 +365,10 @@ class BillingService {
     return {
       projectsPerMonth: subscription.package.projectsPerMonth,
       contactClicksPerProject: subscription.package.contactClicksPerProject,
+      connectsPerMonth: (subscription.package as any).connectsPerMonth ?? 0,
       projectsUsed: usage.projectsPostedCount,
-      contactClicksUsed: contactClicks
+      contactClicksUsed: contactClicks,
+      connectsUsed: (usage as any).connectsUsed ?? 0
     };
   }
 

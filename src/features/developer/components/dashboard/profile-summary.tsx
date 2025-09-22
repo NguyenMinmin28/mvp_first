@@ -49,6 +49,7 @@ export default function ProfileSummary({ profile, hideControls = false, develope
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isFavoritedLocal, setIsFavoritedLocal] = useState<boolean>(Boolean((profile as any)?.isFavorited));
   const [isFollowingLocal, setIsFollowingLocal] = useState<boolean>(Boolean((profile as any)?.isFollowing));
+  const [followersCountLocal, setFollowersCountLocal] = useState<number>(Number((profile as any)?.followersCount || 0));
   const [showReviewsOverlay, setShowReviewsOverlay] = useState(false);
 
   // Function to render star rating
@@ -265,17 +266,19 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                   {String(profile.adminApprovalStatus).toLowerCase()}
                 </Badge>
               )}
-              {!profile?.isConnected && developerId && (
-                ((isFavoritedLocal || profile?.isFavorited) && profile?.whatsappNumber) ? (
-                  <a
-                    href={`https://wa.me/${String(profile.whatsappNumber).replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-8 px-3 text-xs inline-flex items-center rounded-md border border-green-600 text-green-700 hover:bg-green-50"
-                  >
-                    WhatsApp: {profile.whatsappNumber}
-                  </a>
-                ) : (
+              {developerId && (
+                <div className="flex items-center gap-2">
+                  {!profile?.isConnected && (isFavoritedLocal || profile?.isFavorited) && profile?.whatsappNumber ? (
+                    <a
+                      href={`https://wa.me/${String(profile.whatsappNumber).replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="h-8 px-3 text-xs inline-flex items-center rounded-md border border-green-600 text-green-700 hover:bg-green-50"
+                    >
+                      WhatsApp: {profile.whatsappNumber}
+                    </a>
+                  ) : null}
+
                   <Button 
                     className={`h-8 px-3 text-xs ${
                       isFollowingLocal || profile?.isFollowing 
@@ -288,8 +291,9 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                         ? `Following ${profile?.name || "freelancer"} - you'll get updates about their portfolio, reviews, and ideas!`
                         : `Unfollowed ${profile?.name || "freelancer"}`;
                       
-                      // Optimistic update
+                      // Optimistic update: toggle and adjust follower count immediately
                       setIsFollowingLocal(action === "follow");
+                      setFollowersCountLocal(prev => Math.max(0, prev + (action === 'follow' ? 1 : -1)));
                       toast.success(message);
                       
                       try {
@@ -311,9 +315,9 @@ export default function ProfileSummary({ profile, hideControls = false, develope
                       } catch {}
                     }}
                   >
-                    {isFollowingLocal || profile?.isFollowing ? "Following" : "Follow"}
+                    {isFollowingLocal || profile?.isFollowing ? "Unfollow" : "Follow"}
                   </Button>
-                )
+                </div>
               )}
             </div>
           )}
@@ -393,7 +397,7 @@ export default function ProfileSummary({ profile, hideControls = false, develope
               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
                 <div className="text-gray-500 text-xs sm:text-sm">Followers: </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs sm:text-sm">{(profile as any)?.followersCount || 0}</span>
+                  <span className="font-bold text-xs sm:text-sm">{followersCountLocal}</span>
                   {developerId && (profile as any)?.isFollowing !== undefined && (
                     <span className="text-xs text-gray-500">
                       {profile.isFollowing ? "(You follow)" : ""}

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import { notify } from "@/core/services/notify.service";
+import { billingService } from "@/modules/billing/billing.service";
 
 export async function POST(
   request: NextRequest,
@@ -117,6 +118,19 @@ export async function POST(
       );
     }
 
+    // Connect quota check (charge for sending get-in-touch from project page)
+    const clientProfile = await prisma.clientProfile.findFirst({
+      where: { userId: session.user.id }
+    });
+    if (!clientProfile) {
+      return NextResponse.json({ error: "Client profile not found" }, { status: 400 });
+    }
+
+    const canConnect = await billingService.canUseConnect(clientProfile.id);
+    if (!canConnect.allowed) {
+      return NextResponse.json({ error: canConnect.reason || "Connect quota exceeded" }, { status: 402 });
+    }
+
     // Create manual invite batch and candidate
     const result = await prisma.$transaction(async (tx) => {
       // Create manual batch
@@ -160,6 +174,13 @@ export async function POST(
 
       return { batch, candidate };
     });
+
+    // Increment connect usage after success
+    try {
+      await billingService.incrementConnectUsage(clientProfile.id);
+    } catch (usageErr) {
+      console.error("Failed to increment connect usage:", usageErr);
+    }
 
     // Send notification to developer about the manual invite
     try {

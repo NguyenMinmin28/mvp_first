@@ -24,14 +24,25 @@ const ServiceDetailOverlay = dynamic(
 
 function DevelopersSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="bg-white rounded-2xl border p-6 animate-pulse">
-          <div className="flex items-start space-x-4">
-            <div className="w-16 h-16 bg-gray-200 rounded-full" />
-            <div className="flex-1">
-              <div className="h-6 bg-gray-200 rounded w-1/3 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/4" />
+        <div key={i} className="bg-white rounded-2xl border p-4 sm:p-6 animate-pulse">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div className="flex items-start space-x-3 sm:space-x-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-full flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="h-5 sm:h-6 bg-gray-200 rounded w-1/3 mb-2" />
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/4 mb-2" />
+                <div className="flex space-x-2 sm:space-x-4">
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded w-16" />
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded w-12" />
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded w-14" />
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+              <div className="h-8 bg-gray-200 rounded w-full sm:w-28" />
+              <div className="h-8 bg-gray-200 rounded w-full sm:w-28" />
             </div>
           </div>
         </div>
@@ -113,6 +124,7 @@ interface PeopleGridProps {
   onGenerateNewBatch?: () => Promise<void>; // Function to generate new batch
   locked?: boolean; // Lock UI actions
   projectId?: string; // Project ID for contact system
+  hideHeaderControls?: boolean; // Hide internal filter toolbar & level tabs
 }
 
 export function PeopleGrid({ 
@@ -126,7 +138,8 @@ export function PeopleGrid({
   freelancerDeadlines, 
   onGenerateNewBatch, 
   locked = false, 
-  projectId 
+  projectId,
+  hideHeaderControls = false
 }: PeopleGridProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -169,6 +182,7 @@ export function PeopleGrid({
   const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
   const [likedDeveloperIds, setLikedDeveloperIds] = useState<Set<string>>(new Set());
   const [pendingFollowIds, setPendingFollowIds] = useState<Set<string>>(new Set());
+  const [followedUserIds, setFollowedUserIds] = useState<Set<string>>(new Set());
   
   // Fire-and-forget favorite request that survives navigation
   const backgroundFavorite = (developerId: string) => {
@@ -295,6 +309,32 @@ export function PeopleGrid({
     return () => { mounted = false; };
   }, [fetchDevelopers, isOverride]);
 
+  // After list loaded, check follow status in bulk (by userId) for both modes
+  useEffect(() => {
+    const list = (isOverride && Array.isArray(overrideDevelopers)) ? overrideDevelopers : developers;
+    if (!Array.isArray(list) || list.length === 0) return;
+    const userIds = list.map(d => d.user.id);
+    (async () => {
+      try {
+        const res = await fetch('/api/user/follow/check-bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds }),
+          cache: 'no-store'
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const set = new Set<string>();
+        Object.entries(json.map || {}).forEach(([uid, followed]) => {
+          if (followed) set.add(uid);
+        });
+        setFollowedUserIds(set);
+      } catch (e) {
+        console.error('check-bulk follow failed', e);
+      }
+    })();
+  }, [developers, overrideDevelopers, isOverride]);
+
   // Load more function
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasNextPage || isOverride) return;
@@ -318,7 +358,10 @@ export function PeopleGrid({
 
 
   // Decide which developer list to render
-  const devList: Developer[] = isOverride && Array.isArray(overrideDevelopers) ? overrideDevelopers : developers;
+  const devList: Developer[] = (isOverride && Array.isArray(overrideDevelopers)) ? overrideDevelopers : developers;
+  if (isOverride && Array.isArray(overrideDevelopers)) {
+    console.log('PeopleGrid using overrideDevelopers, count:', overrideDevelopers.length);
+  }
   
   // Filter developers based on level filter and remove duplicates
   const filteredDevList = useMemo(() => {
@@ -551,14 +594,18 @@ export function PeopleGrid({
           userLiked: json.data.userLiked,
           developer: {
             id: developer.id,
-            name: developer.user.name,
-            image: developer.user.image,
+            user: {
+              name: developer.user.name,
+              image: developer.user.image,
+            },
             location: developer.location,
           },
           skills: json.data.skills || [],
           categories: json.data.categories || [],
           leadsCount: json.data.leadsCount || 0,
           responseStatus: freelancerResponseStatuses?.[developer.id], // Add response status for project candidates
+          galleryImages: json.data.galleryImages || [],
+          showcaseImages: json.data.showcaseImages || [],
         };
         
         console.log("Opening overlay with service data:", serviceData);
@@ -580,7 +627,7 @@ export function PeopleGrid({
     }
   };
 
-  if (loading && filteredDevList.length === 0) {
+  if (!isOverride && loading && filteredDevList.length === 0) {
     return (
       <DevelopersSkeleton />
     );
@@ -590,61 +637,33 @@ export function PeopleGrid({
 
   return (
     <>
-      {/* Top toolbar: Filter button */}
-      <div className="mb-6 flex items-center gap-6">
-        <button
-          type="button"
-          aria-label="Filter"
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log("Open filter drawer");
-          }}
-          className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-lg transition-shadow"
-        >
-          <SlidersHorizontal className="w-6 h-6 text-black" />
-          <span className="text-lg font-bold text-black">Filter</span>
-        </button>
+      {/* Top toolbar: Filter button and controls */}
+      {!hideHeaderControls && (
+      <div className="mb-6 space-y-4">
+        {/* First row: Filter button and action buttons */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <button
+            type="button"
+            aria-label="Filter"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("Open filter drawer");
+            }}
+            className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-lg transition-shadow"
+          >
+            <SlidersHorizontal className="w-6 h-6 text-black" />
+            <span className="text-lg font-bold text-black">Filter</span>
+          </button>
 
-        {/* Level filter tabs */}
-        <div className="flex items-center gap-6">
-          {[
-            { key: "all", label: "All" },
-            { key: "beginner", label: "Beginner" },
-            { key: "professional", label: "Professional" },
-            { key: "expert", label: "Expert" },
-            { key: "ready", label: "Ready to Work" },
-          ].map((opt) => {
-            const selected = levelFilter === (opt.key as any);
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLevelFilter(opt.key as any);
-                }}
-                className={`w-40 h-10 rounded-lg border transition-colors whitespace-nowrap flex items-center justify-center ${
-                  selected
-                    ? "bg-[#F5F6F9] border-gray-200"
-                    : "bg-transparent border-transparent"
-                }`}
-                style={{ color: selected ? "#111827" : "#999999" }}
-              >
-                <span className="font-semibold text-base">{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Auto-refresh toggle and Generate New Batch button - positioned at the right */}
-        <div className="ml-auto flex items-center gap-4">
+          {/* Action buttons - positioned at the right on larger screens */}
+          <div className="flex items-center gap-4 ml-auto">
           {/* Generate New Batch Button */}
           {onGenerateNewBatch && (
             <button
               type="button"
               onClick={handleGenerateNewBatch}
               disabled={isGeneratingBatch || locked}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-black/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isGeneratingBatch ? (
                 <>
@@ -662,7 +681,7 @@ export function PeopleGrid({
             </button>
           )}
           
-          {/* Auto-refresh toggle */}
+          {/* Auto-refresh toggle
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Auto-refresh</span>
             <button
@@ -680,9 +699,42 @@ export function PeopleGrid({
                 }`}
               />
             </button>
+          </div> */}
           </div>
         </div>
+
+        {/* Level filter tabs - responsive layout */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          {[
+            { key: "all", label: "All" },
+            { key: "beginner", label: "Beginner" },
+            { key: "professional", label: "Professional" },
+            { key: "expert", label: "Expert" },
+            { key: "ready", label: "Ready to Work" },
+          ].map((opt) => {
+            const selected = levelFilter === (opt.key as any);
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLevelFilter(opt.key as any);
+                }}
+                className={`px-3 py-2 sm:px-4 sm:py-2 sm:w-40 h-10 rounded-lg border transition-colors whitespace-nowrap flex items-center justify-center text-sm sm:text-base ${
+                  selected
+                    ? "bg-[#F5F6F9] border-gray-200"
+                    : "bg-transparent border-transparent"
+                }`}
+                style={{ color: selected ? "#111827" : "#999999" }}
+              >
+                <span className="font-semibold">{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
+      )}
 
       {/* Search results info */}
       {searchQuery && !loading && (
@@ -740,10 +792,19 @@ export function PeopleGrid({
       <div className="space-y-6">
         {filteredDevList.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-500 text-lg mb-2">Loading</div>
-            <p className="text-gray-400">
-              {searchQuery ? `No results for "${searchQuery}"` : "Please wait for the results to load"}
-            </p>
+            {isOverride ? (
+              <>
+                <div className="text-gray-500 text-lg mb-2">No candidates found</div>
+                <p className="text-gray-400">There are no pending/accepted candidates in this batch.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-gray-500 text-lg mb-2">Loading</div>
+                <p className="text-gray-400">
+                  {searchQuery ? `No results for "${searchQuery}"` : "Please wait for the results to load"}
+                </p>
+              </>
+            )}
           </div>
         ) : (
           filteredDevList.map((developer, devIndex) => (
@@ -757,14 +818,14 @@ export function PeopleGrid({
             onMouseEnter={() => router.prefetch(`/developer/${developer.id}`)}
           >
             {/* Freelancer Header Row */}
-            <div className="p-6">
-                <div className="flex items-start justify-between">
+            <div className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   {/* Left: Avatar, Name, Stats */}
-                  <div className="flex items-start space-x-2 flex-1">
-                    <div className="flex flex-col">
-                      <div className="flex items-center space-x-3">
+                  <div className="flex items-start space-x-3 sm:space-x-2 flex-1">
+                    <div className="flex flex-col w-full">
+                      <div className="flex items-start space-x-3">
                         <Avatar 
-                          className="w-16 h-16 cursor-pointer"
+                          className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0"
                           onClick={() => handleDeveloperClick(developer)}
                         >
                           <AvatarImage 
@@ -774,67 +835,73 @@ export function PeopleGrid({
                             loading={devIndex < 4 ? "eager" : "lazy"}
                             decoding="async"
                           />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg">
                             {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
                           </AvatarFallback>
                         </Avatar>
                         
-                        <div>
+                        <div className="flex-1 min-w-0">
                           {/* Name */}
                           <div className="mb-2">
                             <h3 
-                              className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer"
+                              className="font-bold text-base sm:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer truncate"
                               onClick={() => handleDeveloperClick(developer)}
                             >
                               {developer.user.name}
                             </h3>
                           </div>
                           
-                          {/* PRO Badge, Location, Status and Countdown on same line */}
-                          <div className="flex items-center gap-2">
-                            <Badge className="text-white text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: '#515151' }}>
-                              PRO
-                            </Badge>
-                            <p className="text-sm" style={{ color: '#999999' }}>
-                              {developer.location || "Location not specified"}
-                            </p>
-                            
-                            {/* Freelancer Response Status Badge */}
-                            {freelancerResponseStatuses?.[developer.id] && (
-                              <Badge 
-                                className={`text-xs font-medium px-2 py-0.5 rounded ${
-                                  freelancerResponseStatuses[developer.id] === 'accepted' 
-                                    ? 'bg-green-500 text-white' 
-                                    : freelancerResponseStatuses[developer.id] === 'rejected'
-                                    ? 'bg-red-500 text-white'
-                                    : freelancerResponseStatuses[developer.id] === 'expired'
-                                    ? 'bg-gray-500 text-white'
-                                    : 'bg-yellow-500 text-white'
-                                }`}
-                              >
-                                {freelancerResponseStatuses[developer.id] === 'accepted' && '✅ Approved'}
-                                {freelancerResponseStatuses[developer.id] === 'rejected' && '❌ Rejected'}
-                                {freelancerResponseStatuses[developer.id] === 'expired' && '⏰ Expired'}
-                                {freelancerResponseStatuses[developer.id] === 'pending' && '⏳ Pending'}
+                          {/* PRO Badge, Location, Status and Countdown - responsive layout */}
+                          <div className="space-y-2 sm:space-y-0">
+                            {/* First row: PRO Badge and Location */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge className="text-white text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: '#515151' }}>
+                                PRO
                               </Badge>
-                            )}
+                              <p className="text-xs sm:text-sm" style={{ color: '#999999' }}>
+                                {developer.location || "Location not specified"}
+                              </p>
+                            </div>
                             
-                            
-                            {freelancerDeadlines?.[developer.id] && (
-                              <div className="flex items-center gap-1 ml-auto">
-                                <Clock className="w-3 h-3 text-orange-500" />
-                                <span className="text-xs font-medium text-orange-600">
-                                  {formatTimeRemaining(timeRemaining[developer.id] || 0)}
-                                </span>
-                              </div>
-                            )}
+                            {/* Second row: Status and Countdown - show on mobile only; desktop shows at right column */}
+                            <div className="flex items-center justify-between sm:justify-start sm:gap-2 sm:hidden">
+                              {/* Freelancer Response Status Badge */}
+                              {freelancerResponseStatuses?.[developer.id] && (
+                                <Badge 
+                                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                    freelancerResponseStatuses[developer.id] === 'accepted' 
+                                      ? 'bg-green-500 text-white' 
+                                      : freelancerResponseStatuses[developer.id] === 'rejected'
+                                      ? 'bg-red-500 text-white'
+                                      : freelancerResponseStatuses[developer.id] === 'expired'
+                                      ? 'bg-gray-500 text-white'
+                                      : 'bg-yellow-500 text-white'
+                                  }`}
+                                >
+                                  {freelancerResponseStatuses[developer.id] === 'accepted' && '✅ Approved'}
+                                  {freelancerResponseStatuses[developer.id] === 'rejected' && '❌ Rejected'}
+                                  {freelancerResponseStatuses[developer.id] === 'expired' && '⏰ Expired'}
+                                  {freelancerResponseStatuses[developer.id] === 'pending' && '⏳ Pending'}
+                                </Badge>
+                              )}
+                              
+                              {/* Countdown Timer - compact design */}
+                              {freelancerDeadlines?.[developer.id] && (
+                                <div className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                                  <Clock className="w-3 h-3 text-orange-500" />
+                                  <span className="text-xs font-semibold text-orange-700">
+                                    {formatTimeRemaining(timeRemaining[developer.id] || 0)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Stats Row below avatar */}
-                      <div className="flex items-start mt-3">
-                        <div className="flex items-start space-x-6 text-sm">
+                      {/* Stats Row below avatar - responsive */}
+                      <div className="flex flex-col sm:flex-row sm:items-start mt-3 gap-3">
+                        <div className="flex items-start space-x-4 sm:space-x-6 text-xs sm:text-sm">
                           <div className="flex flex-col">
                             <span className="font-bold text-gray-900">$100K+</span>
                             <span style={{ color: '#999999' }}>Earned</span>
@@ -845,7 +912,7 @@ export function PeopleGrid({
                           </div>
                           <div className="flex flex-col">
                             <div className="flex items-center">
-                              <Star className="w-4 h-4 fill-black text-black mr-1" />
+                              <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-black text-black mr-1" />
                               <span className="font-bold text-gray-900">5.0</span>
                             </div>
                             <span style={{ color: '#999999' }}>Rating</span>
@@ -857,19 +924,19 @@ export function PeopleGrid({
                         </div>
                         
                         {/* Freelancer Level Badge */}
-                        <div className="ml-12 self-end">
+                        <div className="sm:ml-12 self-start sm:self-end">
                           {(() => {
                             const freelancerLevel = getFreelancerLevel(developer);
                             return (
-                              <div className="flex items-center gap-2 px-4 py-1 rounded border" style={{ backgroundColor: '#F9FAFB' }}>
+                              <div className="flex items-center gap-2 px-3 py-1 sm:px-4 rounded border" style={{ backgroundColor: '#F9FAFB' }}>
                                 <img 
                                   src={freelancerLevel.icon} 
                                   alt={freelancerLevel.level} 
-                                  className="w-4 h-4 object-contain"
+                                  className="w-3 h-3 sm:w-4 sm:h-4 object-contain"
                                   loading={devIndex < 4 ? "eager" : "lazy"}
                                   decoding="async"
                                 />
-                                <span className="text-sm font-medium text-gray-900">Top {freelancerLevel.level}</span>
+                                <span className="text-xs sm:text-sm font-medium text-gray-900">Top {freelancerLevel.level}</span>
                               </div>
                             );
                           })()}
@@ -878,17 +945,43 @@ export function PeopleGrid({
                     </div>
                   </div>
 
-                {/* Right: Top Badge and Action Buttons */}
-                <div className="flex flex-col items-end space-y-3">
-                 
-                
-                  
+                {/* Right: Status/Countdown (desktop) + Action Buttons */}
+                <div className="flex flex-col sm:flex-col items-stretch sm:items-end space-y-2 sm:space-y-3 w-full sm:w-auto">
+                  {/* Desktop/laptop: Pending badge and countdown placed neatly at top right */}
+                  <div className="hidden sm:flex items-center gap-2">
+                    {freelancerResponseStatuses?.[developer.id] && (
+                      <Badge 
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          freelancerResponseStatuses[developer.id] === 'accepted' 
+                            ? 'bg-green-500 text-white' 
+                            : freelancerResponseStatuses[developer.id] === 'rejected'
+                            ? 'bg-red-500 text-white'
+                            : freelancerResponseStatuses[developer.id] === 'expired'
+                            ? 'bg-gray-500 text-white'
+                            : 'bg-yellow-500 text-white'
+                        }`}
+                      >
+                        {freelancerResponseStatuses[developer.id] === 'accepted' && '✅ Approved'}
+                        {freelancerResponseStatuses[developer.id] === 'rejected' && '❌ Rejected'}
+                        {freelancerResponseStatuses[developer.id] === 'expired' && '⏰ Expired'}
+                        {freelancerResponseStatuses[developer.id] === 'pending' && '⏳ Pending'}
+                      </Badge>
+                    )}
+                    {freelancerDeadlines?.[developer.id] && (
+                      <div className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                        <Clock className="w-3 h-3 text-orange-500" />
+                        <span className="text-xs font-semibold text-orange-700">
+                          {formatTimeRemaining(timeRemaining[developer.id] || 0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   {/* Action Buttons */}
-                  <div className="flex space-x-2">
-                    {!(developer.userLiked || likedDeveloperIds.has(developer.id)) && (
+                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                    {!(developer.userLiked || likedDeveloperIds.has(developer.id) || followedUserIds.has(developer.user.id)) && (
                       <Button
                         variant="outline"
-                        className="w-28 border-gray-300 text-gray-700 hover:bg-gray-50"
+                        className="w-full sm:w-28 border-gray-300 text-gray-700 hover:bg-gray-50 text-sm"
                         disabled={pendingFollowIds.has(developer.id)}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -896,6 +989,7 @@ export function PeopleGrid({
                           e.nativeEvent.stopImmediatePropagation();
                           // Optimistic UI & toast
                           setLikedDeveloperIds(prev => new Set(prev).add(developer.id));
+                          setFollowedUserIds(prev => new Set(prev).add(developer.user.id));
                           setPendingFollowIds(prev => new Set(prev).add(developer.id));
                           toast.success(`Following ${developer.user.name} - you'll get updates about their portfolio, reviews, and ideas!`);
                           // Fire-and-forget API that survives navigation
@@ -925,7 +1019,7 @@ export function PeopleGrid({
                       developerId={developer.id}
                       developerName={developer.user.name || undefined}
                       projectId={projectId}
-                      className="w-28 bg-black text-white hover:bg-gray-800"
+                      className="w-full sm:w-28 bg-black text-white hover:bg-gray-800 text-sm"
                       variant="default"
                       size="default"
                       responseStatus={projectId ? freelancerResponseStatuses?.[developer.id] : undefined}
@@ -935,15 +1029,15 @@ export function PeopleGrid({
               </div>
             </div>
 
-            {/* Services Grid - 4 Services (Images Only) */}
+            {/* Services Grid - 4 Services (Images Only) - responsive */}
             {developerServices[developer.id] && developerServices[developer.id].length > 0 && (
-              <div className="px-6 pb-6">
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                 <div className="pt-4">
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {developerServices[developer.id].slice(0, 4).map((service, serviceIdx) => (
                       <div key={service.id} className="group/service">
                         <div 
-                          className="relative w-full h-56 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                          className="relative w-full h-32 sm:h-56 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
@@ -959,7 +1053,7 @@ export function PeopleGrid({
                               decoding="async"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-semibold">
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm sm:text-lg font-semibold">
                               {service.title.split(' ').map(word => word[0]).join('').substring(0, 2)}
                             </div>
                           )}
@@ -970,10 +1064,10 @@ export function PeopleGrid({
                   
                   {/* View All Services Button */}
                   {developerServices[developer.id].length > 4 && (
-                    <div className="text-center mt-4">
+                    <div className="text-center mt-3 sm:mt-4">
                       <Button 
                         variant="link" 
-                        className="p-0 h-auto text-blue-600 hover:text-blue-700"
+                        className="p-0 h-auto text-blue-600 hover:text-blue-700 text-sm sm:text-base"
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -1034,7 +1128,7 @@ export function PeopleGrid({
           if (selectedService?.developer) {
             setSelectedFreelancer({
               id: selectedService.developer.id,
-              name: selectedService.developer.name || "Developer"
+              name: selectedService.developer.user.name || "Developer"
             });
             setIsModalOpen(true);
           }
@@ -1047,6 +1141,7 @@ export function PeopleGrid({
           // Update service data if needed
           setSelectedService(updatedService);
         }}
+        projectId={projectId}
       />
 
       {/* Get in Touch Modal */}

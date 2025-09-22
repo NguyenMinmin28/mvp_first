@@ -71,16 +71,17 @@ export async function GET(request: NextRequest) {
     const invitations = await prisma.assignmentCandidate.findMany({
       where: {
         developerId: developerProfile.id,
-        responseStatus: { in: ["pending", "expired"] },
-        project: {
-          client: {
-            user: {
-              id: {
-                not: undefined
-              }
-            }
+        // For direct messages: never auto-expire; show all non-canceled
+        OR: [
+          {
+            source: 'MANUAL_INVITE' as any,
+            responseStatus: { in: ["pending", "accepted", "rejected"] as any },
+          },
+          {
+            source: { not: 'MANUAL_INVITE' as any },
+            responseStatus: { in: ["pending", "accepted", "expired"] },
           }
-        }
+        ],
       },
       include: {
         project: {
@@ -88,14 +89,16 @@ export async function GET(request: NextRequest) {
             client: {
               include: {
                 user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true
-                  }
+                  select: { id: true, name: true, email: true, image: true }
                 }
               }
+            }
+          }
+        },
+        client: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, image: true }
             }
           }
         }
@@ -137,42 +140,44 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: updatedInvitations.map((invitation: any) => ({
-        id: invitation.id,
-        project: {
-          id: invitation.project.id,
-          title: invitation.project.title,
-          description: invitation.project.description,
-          budget: invitation.project.budget,
-          currency: invitation.project.currency,
-          status: invitation.project.status
-        },
-        client: {
-          id: invitation.project.client.id,
-          name: invitation.project.client.user.name,
-          email: invitation.project.client.user.email,
-          image: invitation.project.client.user.image,
-          companyName: invitation.project.client.companyName
-        },
-        message: invitation.clientMessage, // Only for manual invites
-        // For manual invites, use client-entered data; for auto invites, use project data
-        title: invitation.source === "MANUAL_INVITE" && invitation.metadata?.title 
-          ? invitation.metadata.title 
-          : null,
-        budget: invitation.source === "MANUAL_INVITE" && invitation.metadata?.budget 
-          ? invitation.metadata.budget 
-          : invitation.project.budget,
-        description: invitation.source === "MANUAL_INVITE" && invitation.metadata?.description 
-          ? invitation.metadata.description 
-          : invitation.project.description,
-        isManualInvite: invitation.source === "MANUAL_INVITE",
-        hasDeadline: invitation.acceptanceDeadline !== null,
-        acceptanceDeadline: invitation.acceptanceDeadline,
-        assignedAt: invitation.assignedAt,
-        level: invitation.level,
-        statusTextForClient: invitation.statusTextForClient,
-        responseStatus: invitation.responseStatus // Add missing responseStatus field
-      }))
+      data: updatedInvitations.map((invitation: any) => {
+        const isManual = invitation.source === 'MANUAL_INVITE';
+        const project = invitation.project || null;
+        const client = project?.client || invitation.client || null;
+        return {
+          id: invitation.id,
+          project: project
+            ? {
+                id: project.id,
+                title: project.title,
+                description: project.description,
+                budget: project.budget,
+                currency: project.currency,
+                status: project.status,
+              }
+            : null,
+          client: client
+            ? {
+                id: client.id,
+                name: client.user?.name,
+                email: client.user?.email,
+                image: client.user?.image,
+                companyName: client.companyName || null,
+              }
+            : null,
+          message: invitation.clientMessage,
+          title: isManual && invitation.metadata?.title ? invitation.metadata.title : (project ? null : null),
+          budget: isManual && invitation.metadata?.budget ? invitation.metadata.budget : project?.budget,
+          description: isManual && invitation.metadata?.description ? invitation.metadata.description : project?.description,
+          isManualInvite: isManual,
+          hasDeadline: invitation.acceptanceDeadline !== null,
+          acceptanceDeadline: invitation.acceptanceDeadline,
+          assignedAt: invitation.assignedAt,
+          level: invitation.level,
+          statusTextForClient: invitation.statusTextForClient,
+          responseStatus: invitation.responseStatus,
+        };
+      })
     });
 
   } catch (error) {

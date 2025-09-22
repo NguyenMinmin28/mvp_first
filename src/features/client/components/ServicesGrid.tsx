@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
@@ -25,10 +26,13 @@ interface Service {
   views: number;
   likesCount?: number;
   userLiked?: boolean;
+  status?: string;
   developer: {
     id: string;
-    name?: string | null;
-    image?: string | null;
+    user: {
+      name?: string | null;
+      image?: string | null;
+    };
     location?: string | null;
   };
   skills: string[];
@@ -49,9 +53,11 @@ interface ServicesGridProps {
   searchQuery?: string;
   sortBy?: string;
   filters?: string[];
+  isDeveloper?: boolean;
 }
 
-export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [] }: ServicesGridProps) {
+export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [], isDeveloper = false }: ServicesGridProps) {
+  const { data: session } = useSession();
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [showReviews, setShowReviews] = useState<{ open: boolean; developerId?: string; developerName?: string }>({ open: false });
@@ -77,6 +83,11 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
       params.append("search", searchQuery.trim());
     }
     
+    // Handle "My Services" filter for developers
+    if (isDeveloper && filters.includes("My Services")) {
+      params.append("myServices", "true");
+    }
+    
     console.log('Fetching services:', `/api/services?${params.toString()}`);
     const res = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
     const json = await res.json();
@@ -98,7 +109,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         hasPrevPage: false,
       }
     };
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, isDeveloper, filters]);
 
   // Load initial data
   useEffect(() => {
@@ -281,10 +292,10 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                 {/* Developer Info */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
-                    {service.developer.image ? (
+                    {service.developer.user.image ? (
                       <Image 
-                        src={service.developer.image} 
-                        alt={service.developer.name || "Developer"} 
+                        src={service.developer.user.image} 
+                        alt={service.developer.user.name || "Developer"} 
                         width={48} 
                         height={48} 
                         className="object-cover w-12 h-12" 
@@ -295,7 +306,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 leading-tight">
-                      {service.developer.name || "Unknown"}
+                      {service.developer.user.name || "Unknown"}
                     </div>
                     <div className="text-xs text-gray-500">
                       {service.developer.location || ""}
@@ -304,9 +315,16 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                 </div>
 
                 {/* Service Title */}
-                <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2">
-                  {service.title}
-                </h3>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-semibold text-gray-900 text-lg line-clamp-2 flex-1">
+                    {service.title}
+                  </h3>
+                  {service.status && service.status === 'DRAFT' && (
+                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full flex-shrink-0">
+                      Draft
+                    </span>
+                  )}
+                </div>
 
                 {/* Stats */}
                 <div className="flex items-center justify-between mb-4 text-sm">
@@ -314,7 +332,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                     <div className="font-semibold leading-tight">{service.ratingAvg.toFixed(1)}</div>
                     <div className="mt-1 flex items-center">
                       {Array.from({ length: 5 }).map((_, i) => {
-                        const ratingValue = Math.round(service.ratingAvg);
+                        const ratingValue = Math.floor(service.ratingAvg);
                         const filled = i < ratingValue;
                         return (
                           <span
@@ -330,7 +348,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                         className="ml-2 text-gray-600 text-xs sm:text-sm hover:underline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setShowReviews({ open: true, developerId: service.developer.id, developerName: service.developer.name || "Developer" });
+                          setShowReviews({ open: true, developerId: service.developer.id, developerName: service.developer.user.name || "Developer" });
                         }}
                       >
                         ({service.ratingCount} reviews)
@@ -357,13 +375,15 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                   {service.shortDesc}
                 </p>
 
-                {/* Get in Touch Button */}
-                <GetInTouchButton
-                  developerId={service.developer.id}
-                  developerName={service.developer.name || undefined}
-                  className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900"
-                  variant="outline"
-                />
+                {/* Get in Touch Button - Hidden for developers */}
+                {session?.user?.role !== "DEVELOPER" && (
+                  <GetInTouchButton
+                    developerId={service.developer.id}
+                    developerName={service.developer.user.name || undefined}
+                    className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900"
+                    variant="outline"
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

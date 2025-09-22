@@ -94,51 +94,105 @@ export async function GET(
     console.log('Using targetBatchId:', targetBatchId, 'instead of currentBatchId:', project.currentBatchId);
     
     if (targetBatchId) {
-      candidates = await prisma.assignmentCandidate.findMany({
-        where: {
-          batchId: targetBatchId,
-          responseStatus: { in: ["pending", "accepted"] } // 👈 chỉ 2 trạng thái này
-        },
-        include: {
-          developer: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  image: true,
-                }
-              },
-              skills: {
-                include: {
-                  skill: {
-                    select: {
-                      name: true
+      const fetchCandidatesForBatch = async (batchId: string) => {
+        return prisma.assignmentCandidate.findMany({
+          where: {
+            batchId,
+            responseStatus: { in: ["pending", "accepted"] }
+          },
+          include: {
+            developer: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true,
+                  }
+                },
+                skills: {
+                  include: {
+                    skill: {
+                      select: { name: true }
                     }
                   }
-                }
-              },
-              // expose optional public fields for card
-              _count: false
+                },
+                _count: false
+              }
             }
-          }
-        },
-        orderBy: [
-          { level: "desc" }, // EXPERT first
-          { assignedAt: "asc" }
-        ]
-      });
-      
+          },
+          orderBy: [
+            { level: "desc" },
+            { assignedAt: "asc" }
+          ]
+        });
+      };
+
+      // First try targetBatchId
+      candidates = await fetchCandidatesForBatch(targetBatchId);
+
+      // If empty, fallback to most recent batch that has any pending/accepted candidates
+      if (candidates.length === 0) {
+        const fallbackBatch = await prisma.assignmentBatch.findFirst({
+          where: {
+            projectId: params.id,
+            candidates: {
+              some: { responseStatus: { in: ["pending", "accepted"] } }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        if (fallbackBatch && fallbackBatch.id !== targetBatchId) {
+          console.log('Fallback to batch with candidates:', { id: fallbackBatch.id, batchNumber: (fallbackBatch as any).batchNumber });
+          targetBatchId = fallbackBatch.id;
+          candidates = await fetchCandidatesForBatch(targetBatchId);
+        }
+      }
+
+      // If still empty, fallback to latest batch and include expired so UI can show context and CTA
+      if (candidates.length === 0) {
+        const latestBatch = await prisma.assignmentBatch.findFirst({
+          where: { projectId: params.id },
+          orderBy: { createdAt: 'desc' }
+        });
+        if (latestBatch) {
+          targetBatchId = latestBatch.id;
+          candidates = await prisma.assignmentCandidate.findMany({
+            where: {
+              batchId: targetBatchId,
+              responseStatus: { in: ["pending", "accepted", "expired"] }
+            },
+            include: {
+              developer: {
+                include: {
+                  user: {
+                    select: { id: true, name: true, email: true, image: true }
+                  },
+                  skills: {
+                    include: { skill: { select: { name: true } } }
+                  },
+                  _count: false
+                }
+              }
+            },
+            orderBy: [
+              { level: 'desc' },
+              { assignedAt: 'asc' }
+            ]
+          });
+          console.log('Fallback including expired - candidates count:', candidates.length);
+        }
+      }
+
       console.log('Query result - candidates count:', candidates.length);
       console.log('Query result - responseStatus counts:', candidates.reduce((acc, c) => {
         acc[c.responseStatus] = (acc[c.responseStatus] || 0) + 1;
         return acc;
       }, {} as Record<string, number>));
       
-      // Debug: Check if any candidate has responded recently
       const recentResponses = candidates.filter(c => c.respondedAt && 
-        new Date(c.respondedAt).getTime() > Date.now() - 5 * 60 * 1000); // Last 5 minutes
+        new Date(c.respondedAt).getTime() > Date.now() - 5 * 60 * 1000);
       console.log('Recent responses (last 5 minutes):', recentResponses.map(c => ({
         developerName: c.developer.user.name,
         responseStatus: c.responseStatus,

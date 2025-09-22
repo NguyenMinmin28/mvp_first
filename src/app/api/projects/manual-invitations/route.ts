@@ -5,6 +5,8 @@ import { prisma } from "@/core/database/db";
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get('search') || '').trim();
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -33,48 +35,55 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all manual invitations for client's projects
-    const manualInvitations = await (prisma as any).assignmentCandidate.findMany({
+    // Single query: fetch all candidate messages visible to this client
+    // - Direct messages initiated by this client (clientId match)
+    // - Any candidates under this client's projects
+    const allClientCandidates = await (prisma as any).assignmentCandidate.findMany({
       where: {
-        project: {
-          clientId: clientProfile.id
-        },
-        source: "MANUAL_INVITE"
+        OR: [
+          { clientId: clientProfile.id },
+          { project: { clientId: clientProfile.id } },
+        ],
       },
       include: {
-        project: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
-        developer: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                email: true
-              }
-            }
-          }
-        }
+        project: { select: { id: true, title: true } },
+        developer: { include: { user: { select: { name: true, email: true } } } }
       },
-      orderBy: {
-        assignedAt: "desc"
-      }
+      orderBy: { assignedAt: "desc" }
     });
 
     // Group by project
-    const invitationsByProject = manualInvitations.reduce((acc: any, invitation: any) => {
-      const projectId = invitation.project.id;
-      if (!acc[projectId]) {
-        acc[projectId] = {
-          projectId,
-          projectTitle: invitation.project.title,
-          invitations: []
-        };
+    // Optional search (fuzzy contains on title/message/description)
+    const normalize = (s: any) =>
+      String(s || '')
+        .normalize('NFD')
+        .replace(/\p{Diacritic}+/gu, '')
+        .toLowerCase();
+    const query = normalize(q);
+
+    const matchesQuery = (inv: any) => {
+      if (!query) return true;
+      const hay = [
+        inv.metadata?.title,
+        inv.clientMessage,
+        inv.metadata?.description,
+        inv.project?.title,
+        inv.developer?.user?.name,
+      ]
+        .map(normalize)
+        .join(' ');
+      return hay.includes(query);
+    };
+
+    const filtered = q ? allClientCandidates.filter(matchesQuery) : allClientCandidates;
+
+    const invitationsByProject = filtered.reduce((acc: any, invitation: any) => {
+      const key = invitation.project?.id || 'direct';
+      const title = invitation.project?.title || 'Direct Messages';
+      if (!acc[key]) {
+        acc[key] = { projectId: key, projectTitle: title, invitations: [] };
       }
-      acc[projectId].invitations.push({
+      acc[key].invitations.push({
         id: invitation.id,
         responseStatus: invitation.responseStatus,
         assignedAt: invitation.assignedAt,
@@ -88,7 +97,7 @@ export async function GET(request: NextRequest) {
         }
       });
       return acc;
-    }, {});
+    }, {} as Record<string, any>);
 
     return NextResponse.json({
       success: true,

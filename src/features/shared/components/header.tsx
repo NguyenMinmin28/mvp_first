@@ -12,7 +12,7 @@ import {
 } from "@/ui/components/dropdown-menu";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { LogOut, User, Settings, Plus, FolderOpen, Menu, X, Bell, ChevronDown, Zap, DollarSign } from "lucide-react";
+import { LogOut, User, Settings, Plus, FolderOpen, Menu, X, Bell, ChevronDown, Zap, DollarSign, Briefcase } from "lucide-react";
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -317,6 +317,20 @@ export function Header({ user }: HeaderProps) {
                 >
                   <FolderOpen className="h-4 w-4" />
                   My Projects
+                </Button>
+              </Link>
+              <Link href="/services?tab=people">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`flex items-center gap-2 ${
+                    (typeof window !== 'undefined' && window.location.pathname.startsWith('/services'))
+                      ? 'bg-black text-white hover:bg-black hover:text-white'
+                      : (!isAuthenticated ? 'text-white hover:bg-white hover:text-black' : 'text-black hover:bg-black hover:text-white')
+                  }`}
+                >
+                  <Briefcase className="h-4 w-4" />
+                  Services
                 </Button>
               </Link>
               {/* Removed Post Project link as requested */}
@@ -742,6 +756,120 @@ export function Header({ user }: HeaderProps) {
               {/* Navigation Links Mobile */}
               {isAuthenticated && userRole === "CLIENT" && (
                 <nav className="space-y-2">
+                  {/* Notifications Mobile */}
+                  <div className="relative">
+                    <button
+                      className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
+                      onClick={async () => {
+                        const willOpen = !openNotif;
+                        console.log('🔔 Bell icon clicked (mobile). Will open:', willOpen);
+                        setOpenNotif(willOpen);
+                        if (willOpen) {
+                          console.log('🔔 Fetching notifications (mobile)...');
+                          try {
+                            const res = await fetch(`/api/notifications?limit=10&_=${Date.now()}` , { 
+                              cache: "no-store",
+                              headers: {
+                                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                'Pragma': 'no-cache',
+                                'Expires': '0'
+                              }
+                            });
+                            console.log('🔔 Fetch response status (mobile):', res.status);
+                            if (res.ok) {
+                              const data = await res.json();
+                              console.log('🔔 Notifications data (mobile):', data);
+                              setItems(data.items || []);
+                              setCursor(data.nextCursor || null);
+                              setUnread(data.unreadCount || 0);
+                            }
+                          } catch (error) {
+                            console.error('🔔 Error fetching notifications (mobile):', error);
+                          }
+                        }
+                      }}
+                    >
+                      <Bell className="h-4 w-4" />
+                      <span>Notifications</span>
+                      {unread > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                          {unread}
+                        </span>
+                      )}
+                    </button>
+                    
+                    {/* Mobile Notifications Dropdown */}
+                    {openNotif && (
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                        <div className="p-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-900">Notifications</h3>
+                            <button
+                              onClick={() => setOpenNotif(false)}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {items.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">
+                              No notifications yet
+                            </div>
+                          ) : (
+                            <ul className="divide-y divide-gray-100">
+                              {items.map((n) => (
+                                <li key={n.id} className={`p-3 hover:bg-gray-50 ${!n.read ? 'bg-blue-50' : ''}`}>
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0">
+                                      <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {n.type === "assignment.auto_invite"
+                                          ? "Auto Invitation Received"
+                                          : n.type === "assignment.manual_invite"
+                                          ? "Manual Invitation Received"
+                                          : n.type}
+                                      </div>
+                                      {n.type === "assignment.manual_invite" && (
+                                        <>
+                                          {n.payload?.clientMessage && (
+                                            <div className="text-xs text-gray-600 italic mt-1">"{n.payload.clientMessage}"</div>
+                                          )}
+                                          {n.payload?.projectTitle && (
+                                            <div className="text-xs text-gray-600 mt-1">Project: {n.payload.projectTitle}</div>
+                                          )}
+                                          {n.payload?.clientName && (
+                                            <div className="text-xs text-gray-500 mt-1">From: {n.payload.clientName}</div>
+                                          )}
+                                          {n.payload?.budget && (
+                                            <div className="text-xs text-green-600 mt-1">Budget: {n.payload.budget}</div>
+                                          )}
+                                        </>
+                                      )}
+                                      {n.type !== "assignment.manual_invite" && n.payload?.message && (
+                                        <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
+                                      )}
+                                      {n.type !== "assignment.manual_invite" && n.payload?.description && (
+                                        <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
+                                      )}
+                                      {n.type !== "assignment.manual_invite" && n.payload?.projectTitle && (
+                                        <div className="text-xs text-gray-600 mt-1">{n.payload.projectTitle}</div>
+                                      )}
+                                      <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
+                                    </div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   <Link href="/my-projects" className="block py-2 text-gray-700 hover:text-black">
                     <div className="flex items-center gap-2">
                       <FolderOpen className="h-4 w-4" />
@@ -777,6 +905,126 @@ export function Header({ user }: HeaderProps) {
 
               {isAuthenticated && userRole === "DEVELOPER" && (
                 <nav className="space-y-2">
+                  {/* Notifications Mobile */}
+                  <div className="relative">
+                    <button
+                      className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
+                      onClick={async () => {
+                        const willOpen = !openNotif;
+                        console.log('🔔 Bell icon clicked (mobile). Will open:', willOpen);
+                        setOpenNotif(willOpen);
+                        if (willOpen) {
+                          console.log('🔔 Fetching notifications (mobile)...');
+                          try {
+                            const res = await fetch(`/api/notifications?limit=10&_=${Date.now()}` , { 
+                              cache: "no-store",
+                              headers: {
+                                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                'Pragma': 'no-cache',
+                                'Expires': '0'
+                              }
+                            });
+                            console.log('🔔 Fetch response status (mobile):', res.status);
+                            if (res.ok) {
+                              const data = await res.json();
+                              console.log('🔔 Notifications data (mobile):', data);
+                              setItems(data.items || []);
+                              setCursor(data.nextCursor || null);
+                              setUnread(data.unreadCount || 0);
+                            }
+                          } catch (error) {
+                            console.error('🔔 Error fetching notifications (mobile):', error);
+                          }
+                        }
+                      }}
+                    >
+                      <Bell className="h-4 w-4" />
+                      <span>Notifications</span>
+                      {unread > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                          {unread}
+                        </span>
+                      )}
+                    </button>
+                    
+                    {/* Mobile Notifications Dropdown */}
+                    {openNotif && (
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                        <div className="p-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-900">Notifications</h3>
+                            <button
+                              onClick={() => setOpenNotif(false)}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {items.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">
+                              No notifications yet
+                            </div>
+                          ) : (
+                            <ul className="divide-y divide-gray-100">
+                              {items.map((n) => (
+                                <li key={n.id} className={`p-3 hover:bg-gray-50 ${!n.read ? 'bg-blue-50' : ''}`}>
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0">
+                                      <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {n.type === "assignment.auto_invite"
+                                          ? "Auto Invitation Received"
+                                          : n.type === "assignment.manual_invite"
+                                          ? "Manual Invitation Received"
+                                          : n.type}
+                                      </div>
+                                      {n.type === "assignment.manual_invite" && (
+                                        <>
+                                          {n.payload?.clientMessage && (
+                                            <div className="text-xs text-gray-600 italic mt-1">"{n.payload.clientMessage}"</div>
+                                          )}
+                                          {n.payload?.projectTitle && (
+                                            <div className="text-xs text-gray-600 mt-1">Project: {n.payload.projectTitle}</div>
+                                          )}
+                                          {n.payload?.clientName && (
+                                            <div className="text-xs text-gray-500 mt-1">From: {n.payload.clientName}</div>
+                                          )}
+                                          {n.payload?.budget && (
+                                            <div className="text-xs text-green-600 mt-1">Budget: {n.payload.budget}</div>
+                                          )}
+                                        </>
+                                      )}
+                                      {n.type !== "assignment.manual_invite" && n.payload?.message && (
+                                        <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
+                                      )}
+                                      {n.type !== "assignment.manual_invite" && n.payload?.description && (
+                                        <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
+                                      )}
+                                      {n.type !== "assignment.manual_invite" && n.payload?.projectTitle && (
+                                        <div className="text-xs text-gray-600 mt-1">{n.payload.projectTitle}</div>
+                                      )}
+                                      <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
+                                    </div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Link href="/services" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Services
+                    </div>
+                  </Link>
                   <Link href="/ideas" className="block py-2 text-gray-700 hover:text-black">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4" />

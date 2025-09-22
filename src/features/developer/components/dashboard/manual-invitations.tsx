@@ -15,11 +15,11 @@ interface ManualInvitation {
     description: string;
     budget?: number;
     currency?: string;
-  };
+  } | null;
   client: {
     name: string;
-    companyName?: string;
-  };
+    companyName?: string | null;
+  } | null;
   message: string;
   title?: string; // Client-entered title
   budget?: string; // Client-entered budget
@@ -32,6 +32,8 @@ export default function ManualInvitations() {
   const [invitations, setInvitations] = useState<ManualInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   const fetchInvitations = async () => {
     try {
@@ -63,6 +65,12 @@ export default function ManualInvitations() {
     const interval = setInterval(fetchInvitations, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  // Keep page in bounds
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(invitations.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [invitations, page, pageSize]);
 
   const handleResponse = async (candidateId: string, action: "accept" | "reject") => {
     console.log(`🔄 Starting ${action} for candidate:`, candidateId);
@@ -147,6 +155,29 @@ export default function ManualInvitations() {
     );
   }
 
+  const totalItems = invitations.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const visibleInvitations = invitations.slice(startIndex, endIndex);
+
+  const getPageList = () => {
+    const pages: (number | string)[] = [];
+    const maxButtons = 5;
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    const left = Math.max(1, page - 1);
+    const right = Math.min(totalPages, page + 1);
+    if (left > 1) pages.push(1);
+    if (left > 2) pages.push('...');
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push('...');
+    if (right < totalPages) pages.push(totalPages);
+    return pages;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -156,7 +187,7 @@ export default function ManualInvitations() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {invitations.map((invitation) => {
+        {visibleInvitations.map((invitation) => {
           const isProcessing = processingIds.has(invitation.id);
           
           console.log("Rendering invitation:", {
@@ -170,12 +201,12 @@ export default function ManualInvitations() {
             <Card key={invitation.id} className="border-blue-200 bg-blue-50">
               <CardContent className="pt-4">
                 <div className="space-y-3">
-                  <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold text-lg">{invitation.title || invitation.project.title}</h3>
+              <h3 className="font-semibold text-lg">{invitation.title || invitation.project?.title || 'Message'}</h3>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span>From: {invitation.client.name}</span>
-                        {invitation.client.companyName && (
+                <span>From: {invitation.client?.name || 'Client'}</span>
+                {invitation.client?.companyName && (
                           <span>• {invitation.client.companyName}</span>
                         )}
                       </div>
@@ -260,6 +291,49 @@ export default function ManualInvitations() {
             </Card>
           );
         })}
+
+        {/* Pagination controls (shadcn style) */}
+        {totalItems > 0 && (
+          <div className="border-t pt-3 sm:pt-4">
+            <div className="flex items-center justify-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-md px-3"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 mr-2"><path d="m15 18-6-6 6-6"/></svg>
+                Previous
+              </Button>
+              {getPageList().map((pItem, idx) => (
+                typeof pItem === 'number' ? (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    className={`h-9 rounded-md px-3 ${pItem === page ? 'bg-black text-white border-black' : ''}`}
+                    onClick={() => setPage(pItem as number)}
+                  >
+                    {pItem}
+                  </Button>
+                ) : (
+                  <span key={idx} className="px-3 py-2 text-sm text-muted-foreground">...</span>
+                )
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-md px-3"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 ml-2"><path d="m9 18 6-6-6-6"/></svg>
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

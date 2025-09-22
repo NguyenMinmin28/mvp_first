@@ -85,9 +85,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [selectedDevelopers, setSelectedDevelopers] = useState<any[]>([]);
   const [showDeveloperReviewsModal, setShowDeveloperReviewsModal] = useState(false);
   const [selectedDeveloperForReviews, setSelectedDeveloperForReviews] = useState<{id: string, name: string} | null>(null);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const freelancersRef = useRef<Freelancer[]>([]);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
@@ -148,10 +146,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     };
   }, []);
 
-  // Auto-refresh data every 15 seconds to sync acceptance status
-  // Keep auto refresh enabled even when developers have accepted (to find more freelancers)
+  // Update freelancers ref when freelancers change
   useEffect(() => {
-    // Đảm bảo ref luôn được cập nhật ngay lập tức khi state thay đổi
     freelancersRef.current = freelancers;
     console.log('Updating freelancersRef.current with:', freelancers.map(f => ({
       id: f.id,
@@ -160,47 +156,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       responseStatus: f.responseStatus,
       developerName: f.developer.user.name
     })));
-    
-    // No longer auto-disable refresh when candidates are accepted
-    // This allows continuous searching for more freelancers while keeping accepted ones
-  }, [freelancers, autoRefreshEnabled]);
+  }, [freelancers]);
 
-  useEffect(() => {
-    // Clear timer trước khi tạo timer mới
-    if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
-
-    // Chỉ tạo timer mới khi auto-refresh được bật
-    if (!autoRefreshEnabled) {
-      console.log('Auto-refresh disabled, not starting timer');
-      return;
-    }
-
-    console.log('Starting auto-refresh timer');
-    
-    refreshTimerRef.current = setInterval(async () => {
-      try {
-        // Continue auto-refresh even when candidates are accepted
-        // This allows finding more freelancers while keeping accepted ones
-        console.log('Auto-refreshing data...');
-        await fetchFreelancers();
-        
-      } catch (e) {
-        console.error('Auto-refresh error:', e);
-      }
-    }, 15000);
-
-    // Cleanup function
-    return () => {
-      if (refreshTimerRef.current) {
-        console.log('Cleaning up auto-refresh timer');
-        clearInterval(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
-    };
-  }, [autoRefreshEnabled]); // Chỉ phụ thuộc vào autoRefreshEnabled
 
   const fetchFreelancers = useCallback(async () => {
     try {
@@ -212,11 +169,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       const controller = new AbortController();
       fetchAbortRef.current = controller;
       
-      // Chỉ set loading = true khi không phải auto-refresh
-      const isAutoRefresh = refreshTimerRef.current !== null;
-      if (!isAutoRefresh) {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       
       setError(null);
       
@@ -228,7 +181,6 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         // Only lock if project status is in_progress or completed, not just accepted
         if (data.project?.locked || ["in_progress", "completed"].includes(String(data.project?.status || ""))) {
           setIsLocked(true);
-          setAutoRefreshEnabled(false);
         } else {
           setIsLocked(false);
         }
@@ -311,11 +263,6 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           });
         }
 
-        // Disable auto-refresh nếu có người accept
-        if (acceptedCandidates.length > 0) {
-          console.log('Disabling auto-refresh due to accepted candidates');
-          setAutoRefreshEnabled(false);
-        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to fetch freelancers");
@@ -484,7 +431,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   }, [freelancers, activeFilter, sortBy]);
 
   const overrideDevelopers = useMemo(() => {
-    return filteredFreelancers.map((f) => {
+    const mappedList = filteredFreelancers.map((f) => {
       const dev: any = f.developer;
       const mapped: PeopleGridDeveloper = {
         id: dev.id,
@@ -502,13 +449,20 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         views: dev.views,
         likesCount: dev.likesCount,
         userLiked: dev.userLiked || (f as any).isFavorited === true,
-        level: dev.level, // Add level field from API
-        skills: (dev.skills || []).map((s: any) => ({ skill: { id: s.skill.id, name: s.skill.name } })),
+        level: dev.level,
+        skills: (dev.skills || []).map((s: any) => ({
+          skill: {
+            id: (s.skill.id ?? s.skill.name ?? '').toString(),
+            name: s.skill.name,
+          }
+        })),
         services: [],
         createdAt: dev.createdAt,
       };
       return mapped;
     });
+    console.log('overrideDevelopers mapped count:', mappedList.length);
+    return mappedList;
   }, [filteredFreelancers]);
 
   const renderStars = (rating: number) => {
@@ -680,17 +634,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       name: f.developer.user.name,
       responseStatus: f.responseStatus
     })));
-    setAutoRefreshEnabled(false); // Tạm dừng auto-refresh
     await fetchFreelancers();
     setTimeout(() => {
       console.log('After force refresh - freelancersRef.current:', freelancersRef.current.map(f => ({
         name: f.developer.user.name,
         responseStatus: f.responseStatus
       })));
-      const hasAccepted = freelancersRef.current.some(f => f.responseStatus === "accepted");
-      if (!hasAccepted) {
-        setAutoRefreshEnabled(true); // Bật lại auto-refresh nếu chưa có ai accept
-      }
     }, 1000);
   };
 
@@ -757,26 +706,15 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             </div>
           </div>
 
-          {/* Auto-refresh indicator */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                <span>Auto-refresh: {lastRefreshTime.toLocaleTimeString()}</span>
-                
-                
-                
-                
-                
-               
-              </div>
+              {hasAcceptedCandidates() && (
+                <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                  <span>🔒</span>
+                  <span>Project locked - someone has accepted</span>
+                </div>
+              )}
             </div>
-            {hasAcceptedCandidates() && (
-              <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                <span>🔒</span>
-                <span>Project locked - someone has accepted</span>
-              </div>
-            )}
           </div>
 
           {/* Freelancer Cards */}
@@ -796,8 +734,6 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           ) : (
                 <PeopleGrid 
                   overrideDevelopers={isLoading ? [] : overrideDevelopers} 
-                  autoRefreshEnabled={autoRefreshEnabled}
-                  onAutoRefreshToggle={setAutoRefreshEnabled}
                   freelancerResponseStatuses={freelancerResponseStatuses}
                   freelancerDeadlines={freelancerDeadlines}
                   onGenerateNewBatch={isLocked ? undefined : generateNewBatch}

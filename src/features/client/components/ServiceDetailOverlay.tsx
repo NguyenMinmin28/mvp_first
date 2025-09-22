@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Heart, Info, Share, X, Link as LinkIcon } from "lucide-react";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 
@@ -28,8 +29,10 @@ function buildUnsplashSrcSet(url: string, targetSquare?: boolean) {
 
 type Developer = {
   id: string;
-  name?: string | null;
-  image?: string | null;
+  user: {
+    name?: string | null;
+    image?: string | null;
+  };
   location?: string | null;
 };
 
@@ -53,6 +56,8 @@ export interface ServiceDetailData {
   categories: string[];
   leadsCount: number;
   responseStatus?: string; // For project candidates: "pending", "accepted", "rejected", "expired", "invalidated"
+  galleryImages?: string[]; // Gallery images (3x3 grid)
+  showcaseImages?: string[]; // Showcase images (2 large images)
 }
 
 interface ServiceDetailOverlayProps {
@@ -64,9 +69,12 @@ interface ServiceDetailOverlayProps {
   onNext?: () => void;
   onFollow?: () => void;
   onServiceUpdate?: (service: ServiceDetailData) => void;
+  projectId?: string;
 }
 
-export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow, onServiceUpdate }: ServiceDetailOverlayProps) {
+export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow, onServiceUpdate, projectId }: ServiceDetailOverlayProps) {
+  const { data: session } = useSession();
+  
   // Debug logging
   console.log("ServiceDetailOverlay - service responseStatus:", service?.responseStatus);
   console.log("ServiceDetailOverlay - button should be disabled:", service?.responseStatus !== "accepted");
@@ -80,18 +88,39 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
   const [pendingLikeUrl, setPendingLikeUrl] = useState<string | null>(null);
   const [timelineStart, setTimelineStart] = useState("");
   const [timelineEnd, setTimelineEnd] = useState("");
+  const [recentServices, setRecentServices] = useState<any[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
     };
+    
     if (isOpen) {
       document.addEventListener("keydown", handleEsc);
+      // Store current scroll position before hiding overflow
+      const scrollY = window.scrollY;
       document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
     }
+    
     return () => {
       document.removeEventListener("keydown", handleEsc);
-      document.body.style.overflow = "";
+      
+      if (isOpen) {
+        // Restore scroll position when closing
+        const scrollY = document.body.style.top;
+        document.body.style.overflow = "";
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        if (scrollY) {
+          window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        }
+      }
+      
       // Best-effort delivery if user closes quickly/navigates away while like in-flight
       if (pendingLikeUrl && isLiking && typeof navigator !== "undefined" && 'sendBeacon' in navigator) {
         try { (navigator as any).sendBeacon(pendingLikeUrl); } catch (_) { /* ignore */ }
@@ -116,12 +145,41 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
     setTimelineEnd(end.toLocaleDateString(undefined, fmt));
   }, []);
 
+  // Fetch recent services for the developer
+  const fetchRecentServices = async (developerId: string) => {
+    if (!developerId) return;
+    
+    try {
+      setLoadingServices(true);
+      const res = await fetch(`/api/developers/${developerId}/services?limit=3`, { cache: "no-store" });
+      const json = await res.json();
+      
+      if (res.ok && json?.success && Array.isArray(json.data)) {
+        setRecentServices(json.data);
+      }
+    } catch (error) {
+      console.error("Error fetching recent services:", error);
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
   // Sync heart state when service changes
   useEffect(() => {
     if (service) {
+      console.log('ServiceDetailOverlay - service changed:', { 
+        serviceId: service.id, 
+        userLiked: (service as any).userLiked,
+        likesCount: service.likesCount 
+      });
       setIsLiked((service as any).userLiked ?? false);
       setLikeCount(service.likesCount ?? Math.max(1, Math.round((service.views || 0) / 40)));
       setIsDetailsOpen(false);
+      
+      // Fetch recent services for this developer
+      if (service.developer?.id) {
+        fetchRecentServices(service.developer.id);
+      }
     }
   }, [service?.id]);
 
@@ -286,33 +344,40 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {service?.developer?.image ? (
-                  <img src={service.developer.image} alt={service.developer.name || ""} className="w-full h-full object-cover" />
+                {service?.developer?.user?.image ? (
+                  <img src={service.developer.user.image} alt={service.developer.user.name || ""} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gray-200" />
                 )}
               </div>
               <div className="min-w-0">
                 <div className="text-[15px] sm:text-base font-semibold text-gray-900 truncate max-w-[70vw] sm:max-w-none">{service?.title ?? "Service"}</div>
-                <div className="text-xs sm:text-sm text-gray-500 truncate">{service?.developer?.name ?? ""}</div>
+                <div className="text-xs sm:text-sm text-gray-500 truncate">{service?.developer?.user?.name ?? ""}</div>
               </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-              <button
-                onClick={onFollow}
-                className="px-3 sm:px-4 h-9 sm:h-10 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-36 sm:w-40"
-              >
-                Follow
-              </button>
-              <GetInTouchButton
-                developerId={service?.developer?.id || ""}
-                developerName={service?.developer?.name || undefined}
-                className="px-3 sm:px-4 h-9 sm:h-10 rounded-md w-36 sm:w-40 bg-black text-white hover:bg-black/90"
-                variant="default"
-                size="default"
-              />
-              <div className="hidden sm:block w-[2px] h-6 bg-gray-500" />
+              {/* Hide Follow and Get in Touch buttons for developers */}
+              {session?.user?.role !== "DEVELOPER" && (
+                <>
+                  <button
+                    onClick={onFollow}
+                    className="px-3 sm:px-4 h-9 sm:h-10 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-36 sm:w-40"
+                  >
+                    Follow
+                  </button>
+                  <GetInTouchButton
+                    developerId={service?.developer?.id || ""}
+                    developerName={service?.developer?.user?.name || undefined}
+                    className="px-3 sm:px-4 h-9 sm:h-10 rounded-md w-36 sm:w-40 bg-black text-white hover:bg-black/90"
+                    variant="default"
+                    size="default"
+                    projectId={projectId}
+                    responseStatus={service?.responseStatus}
+                  />
+                  <div className="hidden sm:block w-[2px] h-6 bg-gray-500" />
+                </>
+              )}
               <button
                 onClick={onPrev}
                 aria-label="Previous"
@@ -482,68 +547,85 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
             </div>
 
             {/* Galleries (grid images) */}
-            <div className="px-1 sm:px-2 mb-12">
-              <div className="mx-auto w-full max-w-[96%]">
-                <div className="grid grid-cols-3 grid-rows-3 gap-3 sm:gap-4">
-                  {[
-                    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1491553895911-0055eca6402d?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1512295767273-ac109ac3acfa?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1481277542470-605612bd2d61?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1492724441997-5dc865305da7?q=80&w=800&auto=format&fit=crop"
-                  ].map((src, idx) => (
-                    <div key={idx} className="relative w-full">
+            {(() => {
+              console.log('Gallery check:', { 
+                hasService: !!service, 
+                hasGalleryImages: !!service?.galleryImages, 
+                galleryLength: service?.galleryImages?.length,
+                galleryImages: service?.galleryImages 
+              });
+              return service?.galleryImages && service.galleryImages.length > 0;
+            })() && (
+              <div className="px-1 sm:px-2 mb-12">
+                <div className="mx-auto w-full max-w-[96%]">
+                  <div className="grid grid-cols-3 grid-rows-3 gap-3 sm:gap-4">
+                    {service?.galleryImages?.slice(0, 9).map((src, idx) => (
+                      <div key={idx} className="relative w-full">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {(() => {
+                          const u = buildUnsplashSrcSet(src, true);
+                          return (
+                            <img
+                              src={u.src}
+                              srcSet={u.srcSet}
+                              sizes={u.sizes}
+                              alt={`Gallery ${idx + 1}`}
+                              className="absolute inset-0 w-full h-full object-cover rounded-md"
+                              loading="lazy"
+                              onError={(e) => {
+                                // Fallback to original URL if Unsplash optimization fails
+                                e.currentTarget.src = src;
+                                e.currentTarget.srcset = '';
+                              }}
+                            />
+                          );
+                        })()}
+                        <div className="pt-[100%]" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Two additional large showcase images */}
+            {(() => {
+              console.log('Showcase check:', { 
+                hasService: !!service, 
+                hasShowcaseImages: !!service?.showcaseImages, 
+                showcaseLength: service?.showcaseImages?.length,
+                showcaseImages: service?.showcaseImages 
+              });
+              return service?.showcaseImages && service.showcaseImages.length > 0;
+            })() && (
+              <div className="space-y-8 mb-8">
+                {service?.showcaseImages?.slice(0, 2).map((img, i) => (
+                  <div key={i} className="px-0.5 sm:px-1">
+                    <div className="relative mx-auto w-full max-w-[95%]" style={{ paddingTop: "56.25%" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {(() => {
-                        const u = buildUnsplashSrcSet(src, true);
+                        const u = buildUnsplashSrcSet(img, false);
                         return (
                           <img
                             src={u.src}
                             srcSet={u.srcSet}
-                            sizes={u.sizes}
-                            alt={`Gallery ${idx + 1}`}
+                            sizes="(min-width: 1024px) 60vw, 100vw"
+                            alt={`Showcase ${i + 1}`}
                             className="absolute inset-0 w-full h-full object-cover rounded-md"
                             loading="lazy"
+                            onError={(e) => {
+                              // Fallback to original URL if Unsplash optimization fails
+                              e.currentTarget.src = img;
+                              e.currentTarget.srcset = '';
+                            }}
                           />
                         );
                       })()}
-                      <div className="pt-[100%]" />
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Two additional large showcase images */}
-            <div className="space-y-8 mb-8">
-              {[
-                "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b",
-                "https://images.unsplash.com/photo-1492724441997-5dc865305da7?q=80&w=800&auto=format&fit=crop"
-              ].map((img, i) => (
-                <div key={i} className="px-0.5 sm:px-1">
-                  <div className="relative mx-auto w-full max-w-[95%]" style={{ paddingTop: "56.25%" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {(() => {
-                      const u = buildUnsplashSrcSet(img, false);
-                      return (
-                        <img
-                          src={u.src}
-                          srcSet={u.srcSet}
-                          sizes="(min-width: 1024px) 60vw, 100vw"
-                          alt={`Showcase ${i + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover rounded-md"
-                          loading="lazy"
-                        />
-                      );
-                    })()}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Detailed Description section */}
             <div className="px-4 sm:px-6 mb-16">
@@ -655,54 +737,78 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                   <div className="flex flex-col items-center text-center">
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {service?.developer?.image ? (
-                        <img src={service.developer.image} alt={service.developer.name || "Freelancer"} className="w-full h-full object-cover" />
+                      {service?.developer?.user?.image ? (
+                        <img src={service.developer.user.image} alt={service.developer.user.name || "Freelancer"} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gray-200" />
                       )}
                     </div>
                     <div className="mt-3 text-lg font-semibold text-gray-900">
-                      {service?.developer?.name || "Freelancer"}
+                      {service?.developer?.user?.name || "Freelancer"}
                     </div>
                     {service?.developer?.location && (
                       <div className="text-sm text-gray-500">{service.developer.location}</div>
                     )}
 
-                    <div className="mt-4 flex items-center gap-3">
-                      <button
-                        onClick={onFollow}
-                        className="px-5 h-11 rounded-xl border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 shadow-sm w-36 sm:w-40"
-                      >
-                        Follow
-                      </button>
-                      <button
-                        onClick={() => {
-                          onGetInTouch?.();
-                        }}
-                        className="px-5 h-11 rounded-xl bg-black text-white hover:bg-black/90 w-36 sm:w-40"
-                      >
-                        Get in Touch
-                      </button>
-                    </div>
+                    {/* Hide Follow and Get in Touch buttons for developers */}
+                    {session?.user?.role !== "DEVELOPER" && (
+                      <div className="mt-4 flex items-center gap-3">
+                        <button
+                          onClick={onFollow}
+                          className="px-5 h-11 rounded-xl border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 shadow-sm w-36 sm:w-40"
+                        >
+                          Follow
+                        </button>
+                        <button
+                          onClick={() => {
+                            onGetInTouch?.();
+                          }}
+                          className="px-5 h-11 rounded-xl bg-black text-white hover:bg-black/90 w-36 sm:w-40"
+                        >
+                          Get in Touch
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Recent services gallery */}
                 <div className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {[
-                      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=600&auto=format&fit=crop",
-                      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=600&auto=format&fit=crop",
-                      "https://images.unsplash.com/photo-1512295767273-ac109ac3acfa?q=80&w=600&auto=format&fit=crop"
-                    ].map((img, i) => (
-                      <div key={i}>
-                        <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingTop: "66.66%" }}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img} alt={`Recent ${i + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+                    {loadingServices ? (
+                      // Loading skeleton
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="relative w-full overflow-hidden rounded-lg bg-gray-200" style={{ paddingTop: "66.66%" }} />
+                          <div className="mt-2 h-4 bg-gray-200 rounded w-3/4"></div>
                         </div>
-                        <div className="mt-2 text-sm font-medium text-gray-800">Project name</div>
+                      ))
+                    ) : recentServices.length > 0 ? (
+                      recentServices.map((service, i) => (
+                        <div key={service.id}>
+                          <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingTop: "66.66%" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {service.coverUrl ? (
+                              <img 
+                                src={service.coverUrl} 
+                                alt={service.title} 
+                                className="absolute inset-0 w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+                                {service.title.split(' ').map((word: string) => word[0]).join('').substring(0, 2)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-2 text-sm font-medium text-gray-800 truncate">{service.title}</div>
+                        </div>
+                      ))
+                    ) : (
+                      // No services available
+                      <div className="col-span-3 text-center py-8 text-gray-500">
+                        No recent services available
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>

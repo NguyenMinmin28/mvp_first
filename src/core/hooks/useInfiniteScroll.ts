@@ -155,25 +155,53 @@ export function useScrollInfiniteLoad(
   threshold = 200
 ) {
   const [isNearBottom, setIsNearBottom] = useState(false);
+  const lastScrollTimeRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
+      const now = Date.now();
+      lastScrollTimeRef.current = now;
 
-      const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
-      const nearBottom = distanceFromBottom < threshold;
-
-      setIsNearBottom(nearBottom);
-
-      if (nearBottom && hasNextPage && !loadingMore) {
-        loadMore();
+      // Debounce scroll events to prevent excessive calculations
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        // Only process if this is still the latest scroll event
+        if (lastScrollTimeRef.current !== now) return;
+
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+
+        // Add safety check for valid document height
+        if (documentHeight <= windowHeight) return;
+
+        const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
+        const nearBottom = distanceFromBottom < threshold;
+
+        setIsNearBottom(nearBottom);
+
+        if (nearBottom && hasNextPage && !loadingMore) {
+          loadMore();
+        }
+      }, 100); // 100ms debounce
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Also listen for resize events that might affect layout
+    window.addEventListener('resize', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, [loadMore, hasNextPage, loadingMore, threshold]);
 
   return isNearBottom;

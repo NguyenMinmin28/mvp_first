@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import Image from "next/image";
@@ -22,10 +23,13 @@ interface Service {
   ratingCount: number;
   views: number;
   likesCount: number;
+  status?: string;
   developer: {
     id: string;
-    name?: string | null;
-    image?: string | null;
+    user: {
+      name?: string | null;
+      image?: string | null;
+    };
     location?: string | null;
   };
   skills: string[];
@@ -34,6 +38,7 @@ interface Service {
 }
 
 export function ServicesStrip() {
+  const { data: session } = useSession();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -177,10 +182,10 @@ export function ServicesStrip() {
               {/* Freelancer Info */}
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100">
-                  {service.developer.image ? (
+                  {service.developer.user.image ? (
                     <Image 
-                      src={service.developer.image} 
-                      alt={service.developer.name || "Freelancer"} 
+                      src={service.developer.user.image} 
+                      alt={service.developer.user.name || "Freelancer"} 
                       width={24} 
                       height={24} 
                       className="object-cover w-6 h-6" 
@@ -191,7 +196,7 @@ export function ServicesStrip() {
                 </div>
                 <div className="flex-1">
                   <div className="text-xs font-medium text-gray-900 leading-tight">
-                    {service.developer.name || "Unknown"}
+                    {service.developer.user.name || "Unknown"}
                   </div>
                   <div className="text-[10px] text-gray-500">
                     {service.developer.location || ""}
@@ -205,7 +210,7 @@ export function ServicesStrip() {
                   <div className="font-semibold leading-tight">{service.ratingAvg.toFixed(1)}</div>
                   <div className="mt-1 flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => {
-                      const ratingValue = Math.round(service.ratingAvg);
+                      const ratingValue = Math.floor(service.ratingAvg);
                       const filled = i < ratingValue;
                       return (
                         <span
@@ -238,16 +243,19 @@ export function ServicesStrip() {
                 {service.shortDesc}
               </p>
 
-              <Button 
-                className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm" 
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleGetInTouch(service);
-                }}
-              >
-                Get in Touch
-              </Button>
+              {/* Hide Get in Touch button for developers */}
+              {session?.user?.role !== "DEVELOPER" && (
+                <Button
+                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm" 
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGetInTouch(service);
+                  }}
+                >
+                  Get in Touch
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -262,7 +270,7 @@ export function ServicesStrip() {
           }}
           serviceId={selectedService.id}
           serviceTitle={selectedService.title}
-          developerName={selectedService.developer.name || undefined}
+          developerName={selectedService.developer.user.name || undefined}
         />
       )}
 

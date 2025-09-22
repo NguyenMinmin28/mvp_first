@@ -1,347 +1,115 @@
-export const runtime = "nodejs";
-
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import authOptions from "../../../../config/auth.config";
 import { prisma } from "@/core/database/db";
-import { getServerSessionUser } from "@/features/auth/auth-server";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(parseInt(searchParams.get("page") || "1"), 1);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "12"), 50);
-    const sort = searchParams.get("sort") || "popular";
-    const search = searchParams.get("search") || "";
-    const offset = (page - 1) * limit;
-
-    // Build where clause for published services
-    const where: any = {
-      status: "PUBLISHED",
-      visibility: "PUBLIC",
-    };
-
-    // Add search functionality with improved precision
-    if (search.trim()) {
-      const searchTerm = search.trim().toLowerCase();
-      
-      // Only search if term is at least 2 characters to avoid too broad results
-      if (searchTerm.length >= 2) {
-        // Only search in relevant fields for better precision
-        where.OR = [
-          // Priority 1: Exact title match
-          {
-            title: {
-              contains: searchTerm,
-              mode: "insensitive",
-            },
-          },
-          // Priority 2: Skills match (most relevant for service search)
-          {
-            skills: {
-              some: {
-                skill: {
-                  name: {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                  },
-                },
-              },
-            },
-          },
-          // Priority 3: Categories match
-          {
-            categories: {
-              some: {
-                category: {
-                  name: {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                  },
-                },
-              },
-            },
-          },
-          // Priority 4: Short description (only if search term is substantial)
-          ...(searchTerm.length >= 3 ? [{
-            shortDesc: {
-              contains: searchTerm,
-              mode: "insensitive",
-            },
-          }] : []),
-          // Priority 5: Developer name (only if search term is substantial)
-          ...(searchTerm.length >= 3 ? [{
-            developer: {
-              user: {
-                name: {
-                  contains: searchTerm,
-                  mode: "insensitive",
-                },
-              },
-            },
-          }] : []),
-        ];
-      } else {
-        // For very short search terms, only search in title and skills
-        where.OR = [
-          {
-            title: {
-              contains: searchTerm,
-              mode: "insensitive",
-            },
-          },
-          {
-            skills: {
-              some: {
-                skill: {
-                  name: {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                  },
-                },
-              },
-            },
-          },
-        ];
-      }
-    }
-
-    // Build orderBy based on sort parameter
-    let orderBy: any[] = [];
+    const session = await getServerSession(authOptions);
     
-    // If searching, prioritize relevance first
-    if (search.trim()) {
-      // For search results, prioritize by relevance then by popularity
-      orderBy = [
-        { views: "desc" }, 
-        { likesCount: "desc" }, 
-        { ratingAvg: "desc" },
-        { createdAt: "desc" }
-      ];
-    } else {
-      // For non-search results, use normal sorting
-      switch (sort) {
-        case "new":
-          orderBy = [{ createdAt: "desc" }];
-          break;
-        case "rating":
-          orderBy = [{ ratingAvg: "desc" }, { ratingCount: "desc" }];
-          break;
-        case "random":
-          // For random sorting, we'll use a random seed approach
-          // First get all service IDs, then shuffle and take the limit
-          const allServices = await (prisma as any).service.findMany({
-            where,
-            select: { id: true },
-          });
-          
-          // Shuffle the array using Fisher-Yates algorithm
-          const shuffled = allServices.sort(() => Math.random() - 0.5);
-          const randomIds = shuffled.slice(0, limit).map((s: any) => s.id);
-          
-          // Return early with random services
-          const randomServices = await (prisma as any).service.findMany({
-            where: {
-              ...where,
-              id: { in: randomIds }
-            },
-            include: {
-              developer: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      image: true,
-                    },
-                  },
-                },
-              },
-              skills: {
-                take: 3,
-                include: {
-                  skill: {
-                    select: { name: true },
-                  },
-                },
-              },
-              categories: {
-                take: 2,
-                include: {
-                  category: {
-                    select: { name: true },
-                  },
-                },
-              },
-              _count: {
-                select: {
-                  leads: true,
-                  likes: true,
-                  favorites: true,
-                },
-              },
-            },
-          });
-
-          // Determine which of these services current user has liked
-          const sessionUser = await getServerSessionUser();
-          let likedServiceIds = new Set<string>();
-          if (sessionUser?.id && randomServices.length > 0) {
-            const ids = randomServices.map((s: any) => s.id);
-            const likes = await (prisma as any).serviceLike.findMany({
-              where: { userId: sessionUser.id, serviceId: { in: ids } },
-              select: { serviceId: true },
-            });
-            likedServiceIds = new Set(likes.map((l: any) => l.serviceId));
-          }
-
-          const randomData = randomServices.map((service: any) => ({
-            id: service.id,
-            slug: service.slug,
-            title: service.title,
-            shortDesc: service.shortDesc,
-            coverUrl: service.coverUrl,
-            priceType: service.priceType,
-            priceMin: service.priceMin,
-            priceMax: service.priceMax,
-            deliveryDays: service.deliveryDays,
-            ratingAvg: service.ratingAvg,
-            ratingCount: service.ratingCount,
-            views: service.views,
-            likesCount: service.likesCount,
-            favoritesCount: service.favoritesCount,
-            userLiked: likedServiceIds.has(service.id),
-            developer: {
-              id: service.developer.id,
-              name: service.developer.user?.name,
-              image: service.developer.user?.image || service.developer.photoUrl,
-              location: service.developer.location,
-            },
-            skills: service.skills.map((s: any) => s.skill?.name).filter(Boolean),
-            categories: service.categories.map((c: any) => c.category?.name).filter(Boolean),
-            leadsCount: service._count?.leads || 0,
-          }));
-
-          return NextResponse.json({ 
-            success: true, 
-            data: randomData,
-            pagination: {
-              page,
-              limit,
-              totalCount: allServices.length,
-              totalPages: Math.ceil(allServices.length / limit),
-              hasNextPage: false, // Random doesn't support pagination
-              hasPrevPage: false,
-            }
-          });
-        case "popular":
-        default:
-          orderBy = [{ views: "desc" }, { likesCount: "desc" }, { ratingAvg: "desc" }];
-          break;
-      }
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get total count for pagination
-    const totalCount = await (prisma as any).service.count({ where });
+    const body = await request.json();
+    const {
+      title,
+      description,
+      skills,
+      pricing,
+      timeline,
+      location,
+      mainImage,
+      galleryImages,
+      showcaseImages,
+      images // fallback for combined images
+    } = body;
 
-    const services = await (prisma as any).service.findMany({
-      where,
+    // Validation
+    if (!title || !description || !mainImage || !galleryImages || galleryImages.length === 0) {
+      return NextResponse.json(
+        { error: "Title, description, main image, and at least one gallery image are required" },
+        { status: 400 }
+      );
+    }
+
+    // Get developer profile
+    const developer = await prisma.developerProfile.findUnique({
+      where: { userId: session.user.id },
+      include: { user: true }
+    });
+
+    if (!developer) {
+      return NextResponse.json(
+        { error: "Developer profile not found" },
+        { status: 404 }
+      );
+    }
+
+    // Create service
+    const service = await prisma.service.create({
+      data: {
+        slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        title,
+        shortDesc: description.substring(0, 160), // First 160 chars as short description
+        description,
+        coverUrl: mainImage,
+        priceType: pricing?.type === 'hourly' ? 'HOURLY' : 'FIXED',
+        priceMin: pricing?.amount || 0,
+        priceMax: pricing?.amount || 0,
+        deliveryDays: timeline ? parseInt(timeline.replace(/\D/g, '')) : null,
+        revisions: 3, // Default revisions
+        status: 'DRAFT',
+        visibility: 'PUBLIC',
+        ratingAvg: 0,
+        ratingCount: 0,
+        views: 0,
+        likesCount: 0,
+        favoritesCount: 0,
+        developerId: developer.id
+      },
       include: {
         developer: {
           include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-              },
-            },
-          },
-        },
-        skills: {
-          take: 3,
-          include: {
-            skill: {
-              select: { name: true },
-            },
-          },
-        },
-        categories: {
-          take: 2,
-          include: {
-            category: {
-              select: { name: true },
-            },
-          },
-        },
-        _count: {
-          select: {
-            leads: true,
-            likes: true,
-            favorites: true,
-          },
-        },
-      },
-      orderBy,
-      skip: offset,
-      take: limit,
-    });
-
-    // Determine which of these services current user has liked
-    const sessionUser = await getServerSessionUser();
-    let likedServiceIds = new Set<string>();
-    if (sessionUser?.id && services.length > 0) {
-      const ids = services.map((s: any) => s.id);
-      const likes = await (prisma as any).serviceLike.findMany({
-        where: { userId: sessionUser.id, serviceId: { in: ids } },
-        select: { serviceId: true },
-      });
-      likedServiceIds = new Set(likes.map((l: any) => l.serviceId));
-    }
-
-    const data = services.map((service: any) => ({
-      id: service.id,
-      slug: service.slug,
-      title: service.title,
-      shortDesc: service.shortDesc,
-      coverUrl: service.coverUrl,
-      priceType: service.priceType,
-      priceMin: service.priceMin,
-      priceMax: service.priceMax,
-      deliveryDays: service.deliveryDays,
-      ratingAvg: service.ratingAvg,
-      ratingCount: service.ratingCount,
-      views: service.views,
-      likesCount: service.likesCount,
-      favoritesCount: service.favoritesCount,
-      userLiked: likedServiceIds.has(service.id),
-      developer: {
-        id: service.developer.id,
-        name: service.developer.user?.name,
-        image: service.developer.user?.image || service.developer.photoUrl,
-        location: service.developer.location,
-      },
-      skills: service.skills.map((s: any) => s.skill?.name).filter(Boolean),
-      categories: service.categories.map((c: any) => c.category?.name).filter(Boolean),
-      leadsCount: service._count?.leads || 0,
-    }));
-
-    const totalPages = Math.ceil(totalCount / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
-
-    return NextResponse.json({ 
-      success: true, 
-      data,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages,
-        hasNextPage,
-        hasPrevPage,
+            user: true
+          }
+        }
       }
     });
+
+    // Create service media for images with proper categorization
+    const allImages = [
+      { url: mainImage, kind: 'IMAGE', sortOrder: 0 },
+      ...galleryImages.map((url: string, index: number) => ({
+        url,
+        kind: 'IMAGE' as const,
+        sortOrder: index + 1
+      })),
+      ...(showcaseImages || []).map((url: string, index: number) => ({
+        url,
+        kind: 'IMAGE' as const,
+        sortOrder: index + galleryImages.length + 1
+      }))
+    ];
+
+    if (allImages.length > 0) {
+      await prisma.serviceMedia.createMany({
+        data: allImages.map(({ url, kind, sortOrder }) => ({
+          serviceId: service.id,
+          url,
+          kind,
+          sortOrder
+        }))
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      service
+    });
+
   } catch (error) {
-    console.error("Error fetching services:", error);
+    console.error("Error creating service:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -349,3 +117,144 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    console.log('Services API GET called');
+    
+    // Get session for myServices filter
+    const session = await getServerSession(authOptions);
+    
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '12');
+    const search = searchParams.get('search') || '';
+    const skills = searchParams.get('skills')?.split(',') || [];
+    const pricingType = searchParams.get('pricingType') || '';
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    const myServices = searchParams.get('myServices') === 'true';
+
+    const skip = (page - 1) * limit;
+
+    console.log('Services API called with params:', { page, limit, search, skills, pricingType, minPrice, maxPrice, myServices });
+
+    // Build where clause - simplified
+    const where: any = {
+      status: 'PUBLISHED'
+    };
+
+    // Handle "My Services" filter
+    if (myServices && session?.user?.id) {
+      // Get developer profile for current user
+      const developer = await prisma.developerProfile.findUnique({
+        where: { userId: session.user.id }
+      });
+      
+      if (developer) {
+        where.developerId = developer.id;
+        // For "My Services", show both DRAFT and PUBLISHED services
+        where.status = {
+          in: ['DRAFT', 'PUBLISHED']
+        };
+      } else {
+        // If user is not a developer, return empty results
+        where.developerId = 'nonexistent';
+      }
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    if (pricingType) {
+      where.priceType = pricingType.toUpperCase();
+    }
+
+    if (minPrice || maxPrice) {
+      where.priceMin = {};
+      if (minPrice) where.priceMin.gte = parseInt(minPrice);
+      if (maxPrice) where.priceMin.lte = parseInt(maxPrice);
+    }
+
+    console.log('Where clause:', where);
+
+    // Get services with pagination - simplified query first
+    const [services, total] = await Promise.all([
+      prisma.service.findMany({
+        where,
+        include: {
+          developer: {
+            include: {
+              user: true
+            }
+          },
+          media: {
+            orderBy: {
+              sortOrder: 'asc'
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip,
+        take: limit
+      }),
+      prisma.service.count({ where })
+    ]);
+
+    console.log('Query results:', { servicesCount: services.length, total });
+
+    // Process services to include galleryImages and showcaseImages
+    const processedServices = services.map(service => {
+      // Categorize images based on sortOrder
+      // sortOrder 0 = main image (coverUrl)
+      // sortOrder 1-9 = gallery images (first 9)
+      // sortOrder 10+ = showcase images
+      const galleryImages = service.media
+        .filter((media: any) => media.sortOrder >= 1 && media.sortOrder <= 9)
+        .map((media: any) => media.url);
+      
+      const showcaseImages = service.media
+        .filter((media: any) => media.sortOrder >= 10)
+        .map((media: any) => media.url);
+
+      return {
+        ...service,
+        galleryImages,
+        showcaseImages
+      };
+    });
+
+    const response = {
+      success: true,
+      data: processedServices,
+      pagination: {
+        page,
+        limit,
+        totalCount: total,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1
+      }
+    };
+
+    console.log('API response:', response);
+    return NextResponse.json(response);
+
+  } catch (error) {
+    console.error("Error fetching services:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+    return NextResponse.json(
+      { 
+        success: false,
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
+  }
+}

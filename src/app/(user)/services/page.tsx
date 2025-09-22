@@ -78,6 +78,7 @@ export default function ServicesPage() {
           onTabChange={handleTabChange}
           onFiltersChange={setSelectedFilters}
           activeTab={activeTab}
+          isDeveloper={isDeveloper}
         />
       </div>
 
@@ -88,12 +89,14 @@ export default function ServicesPage() {
             searchQuery={searchQuery}
             sortBy="popular"
             filters={selectedFilters}
+            isDeveloper={isDeveloper}
           />
         ) : (
           <PeopleGrid 
             searchQuery={searchQuery}
             sortBy="popular"
             filters={selectedFilters}
+            hideHeaderControls
           />
         )}
       </div>

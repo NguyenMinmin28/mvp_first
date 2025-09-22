@@ -17,14 +17,14 @@ interface ManualInvitation {
     budget: number;
     currency: string;
     status: string;
-  };
+  } | null;
   client: {
     id: string;
     name: string;
     email: string;
     image: string | null;
-    companyName: string;
-  };
+    companyName: string | null;
+  } | null;
   message: string;
   title?: string; // Client-entered title
   budget?: string; // Client-entered budget
@@ -49,6 +49,8 @@ export default function ManualInvitationsSidebar({
 }: ManualInvitationsSidebarProps) {
   const [invitations, setInvitations] = useState<ManualInvitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const fetchInvitations = async () => {
     try {
@@ -84,6 +86,35 @@ export default function ManualInvitationsSidebar({
     // const interval = setInterval(fetchInvitations, 30000);
     // return () => clearInterval(interval);
   }, []);
+
+  // Adjust page if current page goes out of bounds after any refresh
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(invitations.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [invitations, page, pageSize]);
+
+  const totalItems = invitations.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const visibleInvitations = invitations.slice(startIndex, endIndex);
+
+  const getPageList = () => {
+    const pages: (number | string)[] = [];
+    const maxButtons = 5; // show up to 5 number buttons
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    const left = Math.max(1, page - 1);
+    const right = Math.min(totalPages, page + 1);
+    if (left > 1) pages.push(1);
+    if (left > 2) pages.push('...');
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push('...');
+    if (right < totalPages) pages.push(totalPages);
+    return pages;
+  };
 
   const handleAccept = async (invitationId: string) => {
     console.log('🔄 Starting accept for invitation:', invitationId);
@@ -195,14 +226,34 @@ export default function ManualInvitationsSidebar({
     <Card className="h-fit">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Manual Invitations</CardTitle>
-        <p className="text-sm text-gray-600">
-          {invitations.length} invitation{invitations.length !== 1 ? 's' : ''}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            {invitations.length} invitation{invitations.length !== 1 ? 's' : ''}
+          </p>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600">
+            <span>Per page:</span>
+            <select
+              className="border rounded px-1 py-0.5 text-xs"
+              value={String(pageSize)}
+              onChange={(e) => {
+                setPage(1);
+                setPageSize(Number(e.target.value));
+              }}
+            >
+              <option value="5">5</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {invitations.map((invitation) => {
+        {visibleInvitations.map((invitation) => {
           const isSelected = selectedInvitationId === invitation.id;
           const isPending = invitation.responseStatus === "pending";
+          const title = invitation.project?.title || invitation.title || 'Message';
+          const fromName = invitation.client?.name || 'Client';
+          const companyName = invitation.client?.companyName || null;
           
           return (
             <div
@@ -218,7 +269,7 @@ export default function ManualInvitationsSidebar({
               <div className="space-y-2">
                 <div className="flex justify-between items-start">
                   <h4 className="font-medium text-sm line-clamp-1">
-                    {invitation.project.title}
+                    {title}
                   </h4>
                   <Badge 
                     variant={isPending ? "default" : "secondary"}
@@ -229,11 +280,11 @@ export default function ManualInvitationsSidebar({
                 </div>
                 
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <span>From: {invitation.client.name}</span>
-                  {invitation.client.companyName && (
+                  <span>From: {fromName}</span>
+                  {companyName && (
                     <>
                       <span>•</span>
-                      <span>{invitation.client.companyName}</span>
+                      <span>{companyName}</span>
                     </>
                   )}
                 </div>
@@ -291,6 +342,42 @@ export default function ManualInvitationsSidebar({
             </div>
           );
         })}
+
+        {/* Pagination controls */}
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-xs text-gray-600">
+              Showing <span className="font-medium">{Math.min(totalItems, startIndex + 1)}</span> – {""}
+              <span className="font-medium">{Math.min(endIndex, totalItems)}</span> of {""}
+              <span className="font-medium">{totalItems}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-9 rounded-md px-3" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 mr-2"><path d="m15 18-6-6 6-6"/></svg>
+                Previous
+              </Button>
+              {getPageList().map((pItem, idx) => (
+                typeof pItem === 'number' ? (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    className={`h-9 rounded-md px-3 ${pItem === page ? 'bg-black text-white border-black' : ''}`}
+                    onClick={() => setPage(pItem as number)}
+                  >
+                    {pItem}
+                  </Button>
+                ) : (
+                  <span key={idx} className="px-3 py-2 text-sm text-muted-foreground">...</span>
+                )
+              ))}
+              <Button variant="outline" size="sm" className="h-9 rounded-md px-3" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 ml-2"><path d="m9 18 6-6-6-6"/></svg>
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

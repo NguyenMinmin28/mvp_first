@@ -500,6 +500,8 @@ model SubscriptionUsage {
 
   projectsPostedCount    Int  @default(0)
   contactClicksByProject Json // Map<projectId, number>
+  // Monthly connects usage (Get in touch messages)
+  connectsUsed           Int  @default(0)
 
   @@index([subscriptionId], map: "idx_subscription_usage_subscriptionId")
   @@index([periodStart], map: "idx_subscription_usage_periodStart")
@@ -512,6 +514,8 @@ model Package {
   priceUSD                Float
   projectsPerMonth        Int
   contactClicksPerProject Int
+  // Monthly connects quota for contacting developers/services
+  connectsPerMonth        Int      @default(0)
   features                String[]
   isPopular               Boolean  @default(false)
   active                  Boolean  @default(true)

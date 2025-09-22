@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/core/database/db";
 import { getServerSessionUser } from "@/features/auth/auth-server";
+import { billingService } from "@/modules/billing/billing.service";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  try {
-    const session = await getServerSessionUser();
-    if (!session) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    try {
+      const session = await getServerSessionUser();
+      // Allow public access to published services, but require auth for userLiked check
 
     const serviceId = params.id;
 
@@ -53,6 +52,15 @@ export async function GET(
             },
           },
         },
+        media: {
+          select: {
+            url: true,
+            sortOrder: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
         _count: {
           select: {
             leads: true,
@@ -65,9 +73,9 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Service not found" }, { status: 404 });
     }
 
-    // Check if current user has liked this service
+    // Check if current user has liked this service (only if authenticated)
     let userLiked = false;
-    if (session.id) {
+    if (session && session.id) {
       const like = await (prisma as any).serviceLike.findUnique({
         where: {
           userId_serviceId: {
@@ -77,7 +85,27 @@ export async function GET(
         },
       });
       userLiked = !!like;
+      console.log('Service GET - userLiked check:', { userId: session.id, serviceId: service.id, like, userLiked });
     }
+
+    // Categorize images based on sortOrder
+    // sortOrder 0 = main image (coverUrl)
+    // sortOrder 1-9 = gallery images (first 9)
+    // sortOrder 10+ = showcase images
+    const galleryImages = service.media
+      .filter((media: any) => media.sortOrder >= 1 && media.sortOrder <= 9)
+      .map((media: any) => media.url);
+    
+    const showcaseImages = service.media
+      .filter((media: any) => media.sortOrder >= 10)
+      .map((media: any) => media.url);
+
+    console.log('Service media categorization:', {
+      totalMedia: service.media.length,
+      galleryImages,
+      showcaseImages,
+      media: service.media
+    });
 
     // Format the response
     const data = {
@@ -104,6 +132,8 @@ export async function GET(
       skills: service.skills.map((s: any) => s.skill.name),
       categories: service.categories.map((c: any) => c.category.name),
       leadsCount: service._count.leads,
+      galleryImages,
+      showcaseImages,
     };
 
     return NextResponse.json({
@@ -113,6 +143,57 @@ export async function GET(
 
   } catch (error) {
     console.error("Error fetching service:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSessionUser();
+    if (!session?.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const serviceId = params.id;
+    const body = await request.json();
+    const { message, budget, description, contactVia } = body || {};
+
+    // Resolve client profile
+    const clientProfile = await (prisma as any).clientProfile.findFirst({
+      where: { userId: session.id }
+    });
+    if (!clientProfile) {
+      return NextResponse.json({ success: false, error: "Client profile not found" }, { status: 400 });
+    }
+
+    // Check connects quota
+    const canConnect = await billingService.canUseConnect(clientProfile.id);
+    if (!canConnect.allowed) {
+      return NextResponse.json({ success: false, error: canConnect.reason || "Connect quota exceeded" }, { status: 402 });
+    }
+
+    // Create lead
+    const lead = await (prisma as any).serviceLead.create({
+      data: {
+        serviceId,
+        clientId: session.id,
+        message: message ?? null,
+        contactVia: contactVia || "IN_APP",
+      }
+    });
+
+    // Increment connects usage
+    await billingService.incrementConnectUsage(clientProfile.id);
+
+    return NextResponse.json({ success: true, data: { id: lead.id } });
+  } catch (error) {
+    console.error("Error creating service lead:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

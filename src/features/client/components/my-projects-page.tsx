@@ -103,7 +103,15 @@ export default function MyProjectsPage() {
 
   const fetchManualInvitations = async () => {
     try {
-      const response = await fetch("/api/projects/manual-invitations");
+      const params = new URLSearchParams();
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      const response = await fetch(`/api/projects/manual-invitations?${params.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -371,6 +379,8 @@ export default function MyProjectsPage() {
 
   const [quotaStatus, setQuotaStatus] = useState<{
     hasActiveSubscription: boolean;
+    isHighestTier?: boolean;
+    packageName?: string;
     quotas?: { projectsPerMonth: number; contactClicksPerProject: number };
     usage?: { projectsUsed: number; contactClicksUsed: Record<string, number> };
     remaining?: { projects: number; contactClicks: Record<string, number> };
@@ -402,19 +412,20 @@ export default function MyProjectsPage() {
     const allInvitations: any[] = [];
     Object.entries(manualInvitations).forEach(([projectId, invitations]) => {
       const project = projects.find(p => p.id === projectId);
-      if (project) {
-        invitations.forEach((invitation: any) => {
-          allInvitations.push({
-            ...invitation,
-            projectTitle: project.name,
-            projectId: projectId,
-            client: {
-              name: invitation.client?.name || 'Client',
-              companyName: invitation.client?.companyName || null
-            }
-          });
+      const computedProjectTitle = project
+        ? project.name
+        : (projectId === 'direct' ? 'Direct Messages' : 'Messages');
+      invitations.forEach((invitation: any) => {
+        allInvitations.push({
+          ...invitation,
+          projectTitle: computedProjectTitle,
+          projectId,
+          client: {
+            name: invitation.client?.name || 'Client',
+            companyName: invitation.client?.companyName || null,
+          },
         });
-      }
+      });
     });
     return allInvitations;
   };
@@ -584,7 +595,7 @@ export default function MyProjectsPage() {
       </div>
 
       {/* Quota Status */}
-      {quotaStatus && (
+      {quotaStatus && !quotaStatus.isHighestTier && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -642,14 +653,14 @@ export default function MyProjectsPage() {
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
-              <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg">
+              <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg flex-shrink-0">
                 <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs lg:text-sm text-gray-600">
                   Total Projects
                 </p>
-                <p className="text-lg lg:text-2xl font-bold">
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold">
                   {projects.length}
                 </p>
               </div>
@@ -660,12 +671,12 @@ export default function MyProjectsPage() {
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
-              <div className="p-1.5 lg:p-2 bg-green-100 rounded-lg">
+              <div className="p-1.5 lg:p-2 bg-green-100 rounded-lg flex-shrink-0">
                 <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-green-600" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs lg:text-sm text-gray-600">Completed</p>
-                <p className="text-lg lg:text-2xl font-bold">
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold">
                   {projects.filter((p) => p.status === "completed").length}
                 </p>
               </div>
@@ -676,12 +687,12 @@ export default function MyProjectsPage() {
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
-              <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg">
+              <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg flex-shrink-0">
                 <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs lg:text-sm text-gray-600">In Progress</p>
-                <p className="text-lg lg:text-2xl font-bold">
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold">
                   {
                     projects.filter((p) =>
                       [
@@ -701,16 +712,24 @@ export default function MyProjectsPage() {
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex items-center gap-2 lg:gap-3">
-              <div className="p-1.5 lg:p-2 bg-yellow-100 rounded-lg">
+              <div className="p-1.5 lg:p-2 bg-yellow-100 rounded-lg flex-shrink-0">
                 <DollarSign className="h-4 w-4 lg:h-5 lg:w-5 text-yellow-600" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs lg:text-sm text-gray-600">Total Budget</p>
-                <p className="text-lg lg:text-2xl font-bold">
-                  $
-                  {projects
-                    .reduce((sum, p) => sum + (p.budget || 0), 0)
-                    .toLocaleString()}
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold truncate">
+                  {(() => {
+                    const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
+                    if (totalBudget >= 1000000000) {
+                      return `$${(totalBudget / 1000000000).toFixed(1)}B`;
+                    } else if (totalBudget >= 1000000) {
+                      return `$${(totalBudget / 1000000).toFixed(1)}M`;
+                    } else if (totalBudget >= 1000) {
+                      return `$${(totalBudget / 1000).toFixed(1)}K`;
+                    } else {
+                      return `$${totalBudget.toLocaleString()}`;
+                    }
+                  })()}
                 </p>
               </div>
             </div>
@@ -721,8 +740,9 @@ export default function MyProjectsPage() {
       {/* Filters and Search */}
       <Card>
         <CardContent className="p-4 lg:p-6">
-          <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-3 lg:gap-4">
+            {/* Search bar - full width */}
+            <div className="w-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -733,36 +753,92 @@ export default function MyProjectsPage() {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48 text-sm lg:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="assigning">Assigning</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="canceled">Canceled</SelectItem>
-              </SelectContent>
-            </Select>
-            {/* Page size */}
-            <Select
-              value={String(pageSize)}
-              onValueChange={(v) => setPageSize(Number(v))}
-            >
-              <SelectTrigger className="w-full sm:w-36 text-sm lg:text-base">
-                <SelectValue placeholder="Page size" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="6">6 / page</SelectItem>
-                <SelectItem value="8">8 / page</SelectItem>
-                <SelectItem value="12">12 / page</SelectItem>
-                <SelectItem value="16">16 / page</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {/* Mobile native selects */}
+            <div className="sm:hidden space-y-3">
+              <div>
+                <label className="sr-only">Status Filter</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="draft">Draft</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="assigning">Assigning</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="sr-only">Page Size</label>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150"
+                  value={String(pageSize)}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                >
+                  <option value="6">6 / page</option>
+                  <option value="8">8 / page</option>
+                  <option value="12">12 / page</option>
+                  <option value="16">16 / page</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Desktop/tablet shadcn selects */}
+            <div className="hidden sm:block">
+              <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full text-sm lg:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent
+                    className="z-50 max-h-[200px] overflow-y-auto
+                               w-[var(--radix-select-trigger-width)]
+                               max-w-[calc(100vw-24px)]"
+                    sideOffset={4}
+                    avoidCollisions
+                    collisionPadding={8}
+                  >
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="submitted">Submitted</SelectItem>
+                    <SelectItem value="assigning">Assigning</SelectItem>
+                    <SelectItem value="accepted">Accepted</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {/* Page size */}
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => setPageSize(Number(v))}
+                >
+                  <SelectTrigger className="w-full text-sm lg:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150">
+                    <SelectValue placeholder="Page size" />
+                  </SelectTrigger>
+                  <SelectContent
+                    className="z-50 max-h-[200px] overflow-y-auto
+                               w-[var(--radix-select-trigger-width)]
+                               max-w-[calc(100vw-24px)]"
+                    sideOffset={4}
+                    avoidCollisions
+                    collisionPadding={8}
+                  >
+                    <SelectItem value="6">6 / page</SelectItem>
+                    <SelectItem value="8">8 / page</SelectItem>
+                    <SelectItem value="12">12 / page</SelectItem>
+                    <SelectItem value="16">16 / page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -773,36 +849,59 @@ export default function MyProjectsPage() {
         onValueChange={setActiveTab}
         className="space-y-4 lg:space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 bg-gray-100">
+        <TabsList className="w-full bg-gray-100 gap-1 
+                             overflow-x-auto scrollbar-none 
+                             flex sm:grid sm:grid-cols-3 lg:grid-cols-5 min-w-0
+                             h-auto p-1">
           <TabsTrigger
             value="all"
-            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            All ({getTabCount("all")})
+            <span className="hidden sm:inline">All ({getTabCount("all")})</span>
+            <span className="sm:hidden">All</span>
           </TabsTrigger>
           <TabsTrigger
             value="active"
-            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            Active ({getTabCount("active")})
+            <span className="hidden sm:inline">Active ({getTabCount("active")})</span>
+            <span className="sm:hidden">Active</span>
           </TabsTrigger>
           <TabsTrigger
             value="completed"
-            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            Completed ({getTabCount("completed")})
+            <span className="hidden sm:inline">Completed ({getTabCount("completed")})</span>
+            <span className="sm:hidden">Done</span>
           </TabsTrigger>
           <TabsTrigger
             value="draft"
-            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            Draft ({getTabCount("draft")})
+            <span className="hidden sm:inline">Draft ({getTabCount("draft")})</span>
+            <span className="sm:hidden">Draft</span>
           </TabsTrigger>
           <TabsTrigger
             value="messages"
-            className="text-xs lg:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-150"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            Messages ({getTabCount("messages")})
+            <span className="hidden sm:inline">Messages ({getTabCount("messages")})</span>
+            <span className="sm:hidden">Chat</span>
           </TabsTrigger>
         </TabsList>
 
@@ -824,7 +923,7 @@ export default function MyProjectsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3 lg:gap-4">
+            <div className="grid gap-3 lg:gap-4 mobile-no-overflow">
               {/* Render manual invitations for messages tab */}
               {activeTab === "messages" && visibleManualInvitations.map((invitation) => (
                 renderManualInvitationCard(invitation, invitation.projectTitle)
@@ -834,21 +933,22 @@ export default function MyProjectsPage() {
               {visibleProjects.map((project) => (
                 <Card
                   key={project.id}
-                  className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-gray-200 hover:border-gray-300"
+                  className="hover:shadow-lg hover:scale-[1.01] transition-all duration-200 border border-gray-200 hover:border-gray-300 mobile-no-overflow"
                 >
-                  <CardContent className="p-4 lg:p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
-                      <div className="flex items-start gap-3 lg:gap-4 flex-1">
-                        <div className="flex items-center justify-center flex-shrink-0">
-                          <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-gray-600" />
+                  <CardContent className="p-3 sm:p-4 lg:p-6 mobile-overflow-safe">
+                    <div className="flex flex-col gap-3 sm:gap-4 mobile-overflow-safe">
+                      {/* Header: Icon, Title, Status */}
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <FileText className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-gray-600" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 lg:gap-3 mb-2">
-                            <h3 className="text-base lg:text-lg font-semibold text-gray-900  truncate">
+                        <div className="flex-1 min-w-0 mobile-overflow-safe">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 lg:gap-3 mb-2 mobile-overflow-safe">
+                            <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mobile-text-truncate min-w-0 flex-1">
                               {project.name}
                             </h3>
                             <Badge
-                              className={`${getStatusColor(project.status)} text-xs lg:text-sm`}
+                              className={`${getStatusColor(project.status)} text-xs lg:text-sm w-fit flex-shrink-0`}
                             >
                               <div className="flex items-center gap-1">
                                 {getStatusIcon(project.status)}
@@ -860,94 +960,124 @@ export default function MyProjectsPage() {
                           </div>
 
                           {project.description && (
-                            <p className="text-sm lg:text-base text-gray-600  mb-2 lg:mb-3 line-clamp-2">
+                            <p className="text-xs sm:text-sm lg:text-base text-gray-600 mb-2 sm:mb-3 line-clamp-safe">
                               {project.description}
                             </p>
                           )}
 
-                          <div className="flex flex-wrap items-center gap-2 lg:gap-4 text-xs lg:text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 lg:h-4 lg:w-4" />
-                              {project.date}
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm text-gray-500 mobile-overflow-safe">
+                            <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none mobile-overflow-safe">
+                              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                              <span className="mobile-text-truncate min-w-0">{project.date}</span>
                             </div>
                             {project.budget && (
-                              <div className="flex items-center gap-1">
-                                <DollarSign className="h-3 w-3 lg:h-4 lg:w-4" />
-                                {project.budget.toLocaleString()}{" "}
-                                {project.currency}
+                              <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none mobile-overflow-safe">
+                                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <span className="mobile-text-truncate min-w-0 font-medium">
+                                  {(() => {
+                                    const budget = project.budget;
+                                    if (budget >= 1000000000) {
+                                      return `$${(budget / 1000000000).toFixed(1)}B ${project.currency}`;
+                                    } else if (budget >= 1000000) {
+                                      return `$${(budget / 1000000).toFixed(1)}M ${project.currency}`;
+                                    } else if (budget >= 1000) {
+                                      return `$${(budget / 1000).toFixed(1)}K ${project.currency}`;
+                                    } else {
+                                      return `$${budget.toLocaleString()} ${project.currency}`;
+                                    }
+                                  })()}
+                                </span>
                               </div>
                             )}
                             {project.candidatesCount !== undefined && (
-                              <div className="flex items-center gap-1">
-                                <Users className="h-3 w-3 lg:h-4 lg:w-4" />
-                                {project.candidatesCount} candidates
+                              <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none mobile-overflow-safe">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <span className="mobile-text-truncate min-w-0">
+                                  {project.candidatesCount} candidates
+                                </span>
                               </div>
                             )}
                           </div>
-
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-1 lg:gap-2">
-                        <Link href={`/projects/${project.id}`}>
+                      {/* Action Buttons - Vertical stack on mobile, horizontal on desktop */}
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-2 pt-1 min-w-0">
+                        {/* View button - full width on mobile */}
+                        <Link href={`/projects/${project.id}`} className="w-full sm:flex-none min-w-0">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-xs lg:text-sm h-8 lg:h-9 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-150"
+                            className="text-xs sm:text-sm h-8 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-150 w-full"
                           >
-                            <Eye className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                            View
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">View</span>
                           </Button>
                         </Link>
-                        {project.status === "completed" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150 ${
-                              reviewedProjects.has(project.id)
-                                ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500"
-                                : "hover:bg-green-50 hover:border-green-300 hover:text-green-700"
-                            }`}
-                            onClick={() =>
-                              handleReviewProject(project.id, project.name)
-                            }
-                            disabled={reviewedProjects.has(project.id)}
-                          >
-                            <MessageSquare className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                            {reviewedProjects.has(project.id)
-                              ? "Reviewed"
-                              : "Review"}
-                          </Button>
-                        )}
-                        {project.status !== "completed" &&
-                          project.status !== "draft" &&
-                          project.status !== "canceled" && (
+                        
+                        {/* Action button (Complete/Review) - full width on mobile */}
+                        <div className="w-full sm:flex-none min-w-0">
+                          {project.status === "completed" && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleCompleteProject(project.id)}
-                              disabled={completingProjects.has(project.id)}
-                              className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 text-xs lg:text-sm h-8 lg:h-9 transition-all duration-150"
+                              className={`text-xs sm:text-sm h-8 transition-all duration-150 w-full ${
+                                reviewedProjects.has(project.id)
+                                  ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500"
+                                  : "hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                              }`}
+                              onClick={() =>
+                                handleReviewProject(project.id, project.name)
+                              }
+                              disabled={reviewedProjects.has(project.id)}
                             >
-                              {completingProjects.has(project.id) ? (
-                                <Clock className="h-3 w-3 lg:h-4 lg:w-4 mr-1 animate-spin" />
-                              ) : (
-                                <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                              )}
-                              <span className="hidden sm:inline">
-                                {completingProjects.has(project.id)
-                                  ? "Completing..."
-                                  : "Mark Complete"}
+                              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                              <span className="truncate">
+                                {reviewedProjects.has(project.id)
+                                  ? "Reviewed"
+                                  : "Review"}
                               </span>
                             </Button>
                           )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 lg:h-9"
-                        >
-                          <MoreHorizontal className="h-3 w-3 lg:h-4 lg:w-4" />
-                        </Button>
+                          {project.status !== "completed" &&
+                            project.status !== "draft" &&
+                            project.status !== "canceled" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCompleteProject(project.id)}
+                                disabled={completingProjects.has(project.id)}
+                                className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 text-xs sm:text-sm h-8 transition-all duration-150 w-full"
+                              >
+                                {completingProjects.has(project.id) ? (
+                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 animate-spin flex-shrink-0" />
+                                ) : (
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                                )}
+                                <span className="hidden sm:inline truncate">
+                                  {completingProjects.has(project.id)
+                                    ? "Completing..."
+                                    : "Mark Complete"}
+                                </span>
+                                <span className="sm:hidden truncate">
+                                  {completingProjects.has(project.id)
+                                    ? "Completing..."
+                                    : "Complete"}
+                                </span>
+                              </Button>
+                            )}
+                        </div>
+                        
+                        {/* More button - full width on mobile, inline on desktop */}
+                        <div className="w-full sm:w-auto sm:ml-auto">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 sm:h-8 lg:h-9 w-full sm:w-auto flex-shrink-0"
+                          >
+                            <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

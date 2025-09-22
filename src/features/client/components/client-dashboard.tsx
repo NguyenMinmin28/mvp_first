@@ -40,6 +40,8 @@ export default function ClientDashboard() {
 
   const [quotaStatus, setQuotaStatus] = useState<{
     hasActiveSubscription: boolean;
+    isHighestTier?: boolean;
+    packageName?: string;
     quotas?: { projectsPerMonth: number; contactClicksPerProject: number };
     usage?: { projectsUsed: number; contactClicksUsed: Record<string, number> };
     remaining?: { projects: number; contactClicks: Record<string, number> };
@@ -120,8 +122,8 @@ export default function ClientDashboard() {
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
 
-      {/* Quota Status */}
-      {quotaStatus && (
+      {/* Quota Status - Hide for highest tier users */}
+      {quotaStatus && !quotaStatus.isHighestTier && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

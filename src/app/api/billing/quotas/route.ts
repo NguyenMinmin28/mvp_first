@@ -38,24 +38,33 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get subscription details to check if it's the highest tier
+    const subscription = await billingService.getActiveSubscription(clientProfile.id);
+    const isHighestTier = subscription?.package.name === "Premium" || (subscription?.package.projectsPerMonth ?? 0) >= 15;
+
     // Calculate remaining quotas
     const remaining = {
       projects: Math.max(0, quotas.projectsPerMonth - quotas.projectsUsed),
       contactClicks: Object.entries(quotas.contactClicksUsed).reduce((acc: any, [projectId, used]: any) => {
         acc[projectId] = Math.max(0, quotas.contactClicksPerProject - used);
         return acc;
-      }, {} as Record<string, number>)
+      }, {} as Record<string, number>),
+      connects: Math.max(0, quotas.connectsPerMonth - (quotas.connectsUsed ?? 0))
     };
 
     return NextResponse.json({
       hasActiveSubscription: true,
+      isHighestTier,
+      packageName: subscription?.package.name,
       quotas: {
         projectsPerMonth: quotas.projectsPerMonth,
-        contactClicksPerProject: quotas.contactClicksPerProject
+        contactClicksPerProject: quotas.contactClicksPerProject,
+        connectsPerMonth: quotas.connectsPerMonth
       },
       usage: {
         projectsUsed: quotas.projectsUsed,
-        contactClicksUsed: quotas.contactClicksUsed
+        contactClicksUsed: quotas.contactClicksUsed,
+        connectsUsed: quotas.connectsUsed
       },
       remaining
     });

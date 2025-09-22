@@ -11,6 +11,7 @@ interface SearchAndFilterProps {
   onTabChange?: (tab: "people" | "service") => void;
   onFiltersChange?: (filters: string[]) => void;
   activeTab?: "people" | "service"; // allow parent to control active tab
+  isDeveloper?: boolean; // to show "My Services" filter for developers
 }
 
 export function SearchAndFilter({ 
@@ -18,6 +19,7 @@ export function SearchAndFilter({
   onTabChange, 
   onFiltersChange,
   activeTab: externalActiveTab,
+  isDeveloper = false,
 }: SearchAndFilterProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [internalActiveTab, setInternalActiveTab] = useState<"people" | "service">("service");
@@ -43,6 +45,8 @@ export function SearchAndFilter({
   }, [selectedFilters, onFiltersChange]);
 
   const filterOptions = [
+    // Show "My Services" first for developers when on service tab
+    ...(isDeveloper && activeTab === "service" ? ["My Services"] : []),
     "Featured",
     "Trending", 
     "Graphics & Design",

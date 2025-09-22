@@ -24,6 +24,21 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [quotaInfo, setQuotaInfo] = useState<{ connectsPerMonth: number; connectsUsed: number; remaining: number } | null>(null);
+
+  const fetchQuota = async () => {
+    try {
+      const res = await fetch('/api/billing/quotas', { cache: 'no-store' } as RequestInit);
+      const json = await res.json();
+      if (res.ok && json?.hasActiveSubscription) {
+        const connectsPerMonth = json.quotas?.connectsPerMonth ?? 0;
+        const connectsUsed = json.usage?.connectsUsed ?? 0;
+        const remaining = json.remaining?.connects ?? Math.max(0, connectsPerMonth - connectsUsed);
+        setQuotaInfo({ connectsPerMonth, connectsUsed, remaining });
+      }
+    } catch {}
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +55,12 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
       return;
     }
 
-    // No longer require project context for direct messages
+    // For direct messages (no project), show confirmation first
+    if (!projectId && !showConfirm) {
+      await fetchQuota();
+      setShowConfirm(true);
+      return;
+    }
 
     setIsSubmitting(true);
     
@@ -67,6 +87,7 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
       setBudget("");
       setDescription("");
       setCurrentStep(1);
+      setShowConfirm(false);
       onClose();
     }
   };
@@ -194,6 +215,46 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
                   </>
                 )}
               </div>
+              {/* Only show connects confirmation for direct messages (no project) */}
+              {!projectId && showConfirm && (
+                <div className="mt-3 p-3 rounded-md border bg-amber-50 border-amber-200">
+                  <div className="text-sm font-semibold text-amber-800">
+                    This will cost 1 connect quota.
+                  </div>
+                  <div className="text-xs text-amber-700 mt-1">
+                    Free: 3 projects/month, 0 connects. Plus: 10 projects, 5 connects. Pro: Unlimited projects, 10 connects.
+                  </div>
+                  {quotaInfo && (
+                    <div className="text-xs text-amber-800 mt-2">
+                      Remaining connects this month: <span className="font-semibold">{quotaInfo.remaining}</span> of {quotaInfo.connectsPerMonth}
+                    </div>
+                  )}
+                  {quotaInfo && quotaInfo.remaining <= 0 && (
+                    <div className="text-xs text-red-600 mt-2">
+                      You have no connects left. Upgrade your plan to continue contacting developers.
+                    </div>
+                  )}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/billing/quotas/add-connect', { method: 'POST' });
+                            await fetchQuota();
+                            // If we now have connects, also enable the submit button label
+                            // by re-rendering. No-op; state update already happens in fetchQuota
+                          } catch {}
+                        }}
+                        className="inline-flex items-center px-2 py-1 text-[11px] rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                        title="Dev only: add 1 connect"
+                      >
+                        +1 Connect (dev)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -234,10 +295,16 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
               ) : (
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !message.trim()}
+                  disabled={
+                    isSubmitting || !message.trim() || (!projectId && showConfirm && !!quotaInfo && quotaInfo.remaining <= 0)
+                  }
                   className="bg-black text-white hover:bg-black/90"
                 >
-                  {isSubmitting ? "Sending..." : "Send Message"}
+                  {projectId
+                    ? (isSubmitting ? "Sending..." : "Send Message")
+                    : (showConfirm
+                        ? (!!quotaInfo && quotaInfo.remaining <= 0 ? "No connects left" : (isSubmitting ? "Sending..." : "Accept & Send"))
+                        : (isSubmitting ? "Sending..." : "Send Message"))}
                 </Button>
               )}
             </div>

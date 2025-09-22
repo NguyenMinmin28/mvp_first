@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import Image from "next/image";
@@ -28,6 +29,7 @@ interface Freelancer {
 
 export function FreelancersStrip() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFreelancer, setSelectedFreelancer] = useState<Freelancer | null>(null);
@@ -159,7 +161,7 @@ export function FreelancersStrip() {
                     <div className="font-semibold leading-tight">{freelancer.reviews.averageRating.toFixed(1)}</div>
                     <div className="mt-1 flex items-center">
                       {Array.from({ length: 5 }).map((_, i) => {
-                        const ratingValue = Math.round(freelancer.reviews.averageRating);
+                        const ratingValue = Math.floor(freelancer.reviews.averageRating);
                         const filled = i < ratingValue;
                         return (
                           <span

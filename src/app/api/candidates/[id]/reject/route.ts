@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { RotationService } from "@/core/services/rotation.service";
 import { prisma } from "@/core/database/db";
+import { notify } from "@/core/services/notify.service";
 
 export async function POST(
   request: NextRequest,
@@ -19,37 +20,63 @@ export async function POST(
 
     console.log("🔄 Developer rejecting candidate:", candidateId, "by user:", session.user.id);
 
-    // Check if batch has accepted candidates (block immediately when someone accepts)
+    // Determine whether this is a direct message candidate (no project/batch)
     const candidate = await prisma.assignmentCandidate.findUnique({
       where: { id: candidateId },
       include: {
-        batch: {
-          include: {
-            candidates: {
-              select: {
-                acceptanceDeadline: true,
-                responseStatus: true,
-              }
-            }
-          }
-        }
-      }
+        project: { include: { client: true } },
+        client: true,
+      },
     });
 
-    if (candidate?.batch?.candidates) {
-      const hasAcceptedCandidates = candidate.batch.candidates.some(c => 
-        c.responseStatus === "accepted"
-      );
-      
-      if (hasAcceptedCandidates) {
-        return NextResponse.json(
-          { error: "Cannot reject candidate: project already has accepted candidates" },
-          { status: 400 }
-        );
-      }
+    if (!candidate) {
+      return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
     }
 
-    const result = await RotationService.rejectCandidate(candidateId, session.user.id);
+    let result: any;
+    const isDirect =
+      !candidate.batchId ||
+      !candidate.projectId ||
+      (candidate as any)?.metadata?.isDirectMessage === true ||
+      (candidate as any)?.source === 'MANUAL_INVITE';
+
+    if (isDirect) {
+      // Direct message: simple reject without rotation constraints
+      const updated = await prisma.assignmentCandidate.update({
+        where: { id: candidateId },
+        data: {
+          responseStatus: "rejected" as any,
+          respondedAt: new Date(),
+          statusTextForClient: "Developer rejected your message",
+        },
+      });
+      result = { success: true, candidate: { id: updated.id, responseStatus: updated.responseStatus } };
+    } else {
+      // For project assignments, use rotation rules
+      result = await RotationService.rejectCandidate(candidateId, session.user.id);
+    }
+
+    // Send notification to client for manual invites (messages)
+    try {
+      const sourceType = (candidate as any)?.source;
+      if (sourceType === 'MANUAL_INVITE') {
+        const clientProfile = (candidate as any).project?.client || (candidate as any).client;
+        const recipientUserId = clientProfile?.userId;
+        if (recipientUserId) {
+          await notify({
+            type: 'MANUAL_INVITE_REJECTED',
+            recipients: [recipientUserId],
+            payload: {
+              candidateId,
+              projectId: (candidate as any)?.projectId || null,
+              status: 'rejected',
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Notify client (reject) failed:', e);
+    }
 
     console.log("✅ Candidate rejected successfully:", {
       candidateId,

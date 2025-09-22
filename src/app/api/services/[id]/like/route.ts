@@ -13,6 +13,7 @@ export async function POST(
     }
 
     const serviceId = params.id;
+    console.log('Like API called:', { userId: user.id, serviceId });
 
     // Fetch service and its developer to prevent self-like
     const service = await (prisma as any).service.findUnique({
@@ -35,8 +36,11 @@ export async function POST(
       },
     });
 
+    console.log('Existing like:', existing);
+
     let liked = false;
     if (existing) {
+      console.log('Removing like...');
       await (prisma as any).serviceLike.delete({ where: { id: existing.id } });
       await (prisma as any).service.update({
         where: { id: serviceId },
@@ -44,6 +48,7 @@ export async function POST(
       });
       liked = false;
     } else {
+      console.log('Adding like...');
       await (prisma as any).serviceLike.create({
         data: { userId: user.id, serviceId },
       });
@@ -59,6 +64,7 @@ export async function POST(
       select: { likesCount: true },
     });
 
+    console.log('Final result:', { liked, likeCount: updated?.likesCount ?? 0 });
     return NextResponse.json({ liked, likeCount: updated?.likesCount ?? 0 });
   } catch (error) {
     console.error("Error toggling service like:", error);

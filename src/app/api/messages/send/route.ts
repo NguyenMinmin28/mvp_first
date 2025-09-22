@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 import { notify } from "@/core/services/notify.service";
+import { billingService } from "@/modules/billing/billing.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,6 +89,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Quota check for connects (monthly)
+    const canConnect = await billingService.canUseConnect(clientProfile.id);
+    if (!canConnect.allowed) {
+      return NextResponse.json(
+        { error: canConnect.reason || "Connect quota exceeded" },
+        { status: 402 }
+      );
+    }
+
     // Create direct message candidate
     const candidate = await prisma.assignmentCandidate.create({
       data: {
@@ -110,6 +120,13 @@ export async function POST(request: NextRequest) {
         }
       } as any
     });
+
+    // Increment connect usage after successful creation
+    try {
+      await billingService.incrementConnectUsage(clientProfile.id);
+    } catch (usageErr) {
+      console.error("Failed to increment connect usage:", usageErr);
+    }
 
     // Send notification to developer
     try {
