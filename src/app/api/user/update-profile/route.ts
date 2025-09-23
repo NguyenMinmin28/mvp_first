@@ -99,9 +99,8 @@ export async function PUT(request: NextRequest) {
           
           if (availabilityChanged) {
             await FollowNotificationService.notifyAvailabilityChange(
-              userId, 
+              existing.id, // developer profile ID
               session.user.name || "Developer", 
-              existing.currentStatus, 
               developerUpdateData.currentStatus
             );
           }
