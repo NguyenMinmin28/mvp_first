@@ -26,6 +26,17 @@ export async function POST(
       include: {
         project: { include: { client: true } },
         client: true,
+        developer: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              }
+            }
+          }
+        }
       },
     });
 
@@ -70,6 +81,11 @@ export async function POST(
               candidateId,
               projectId: (candidate as any)?.projectId || null,
               status: 'rejected',
+              developerName: candidate.developer?.user?.name || 'Developer',
+              developerImage: candidate.developer?.user?.image,
+              clientMessage: (candidate as any)?.metadata?.clientMessage || (candidate as any)?.clientMessage,
+              title: 'Invitation Declined',
+              message: `${candidate.developer?.user?.name || 'Developer'} has declined your invitation`,
             },
           });
         }

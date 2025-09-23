@@ -106,14 +106,21 @@ export async function POST(request: NextRequest) {
 
     // Notify followers (fire-and-forget)
     try {
+      console.log("🔔 Service created, sending follow notifications:", {
+        developerId: developer.id,
+        developerName: developer.user?.name || "Developer",
+        serviceId: service.id,
+        serviceTitle: service.title
+      });
       await FollowNotificationService.notifyServicePosted(
-        developer.userId,
+        developer.id, // Use developer profile ID, not user ID
         developer.user?.name || "Developer",
         service.id,
         service.title
       );
+      console.log("🔔 Follow notifications sent successfully");
     } catch (e) {
-      console.warn("Failed to send follow notifications for service:", e);
+      console.error("🔔 Failed to send follow notifications for service:", e);
     }
 
     return NextResponse.json({

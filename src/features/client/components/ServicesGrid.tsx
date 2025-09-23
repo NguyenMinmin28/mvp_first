@@ -161,6 +161,45 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     return () => window.removeEventListener("open-service-overlay", handler as any);
   }, []);
 
+  // Listen for developer service open events
+  useEffect(() => {
+    const handler = async (e: any) => {
+      const { developerId, serviceId } = e?.detail || {};
+      console.log("🔔 Received open-developer-service event:", { developerId, serviceId });
+      if (!developerId || !serviceId) {
+        console.log("🔔 Missing developerId or serviceId");
+        return;
+      }
+      try {
+        console.log("🔔 Fetching developer services for:", developerId);
+        // Fetch developer's services to find the specific service
+        const res = await fetch(`/api/developers/${developerId}/services?limit=10`);
+        const json = await res.json();
+        console.log("🔔 Developer services response:", { status: res.status, json });
+        if (res.ok && json?.success && Array.isArray(json.data)) {
+          console.log("🔔 All services from developer:", json.data);
+          const targetService = json.data.find((s: any) => s.id === serviceId);
+          console.log("🔔 Found target service:", targetService);
+          if (targetService) {
+            console.log("🔔 Setting selected service and opening overlay...");
+            setSelectedService(targetService);
+            setIsOverlayOpen(true);
+            console.log("🔔 Service overlay should be open now");
+          } else {
+            console.log("🔔 Target service not found in developer's services");
+            console.log("🔔 Available service IDs:", json.data.map((s: any) => s.id));
+          }
+        } else {
+          console.log("🔔 Failed to fetch developer services or invalid response");
+        }
+      } catch (error) {
+        console.error("🔔 Error in open-developer-service handler:", error);
+      }
+    };
+    window.addEventListener("open-developer-service", handler as any);
+    return () => window.removeEventListener("open-developer-service", handler as any);
+  }, []);
+
   // Load more function
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasNextPage) return;

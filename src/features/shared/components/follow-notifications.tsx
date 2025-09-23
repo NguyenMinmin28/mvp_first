@@ -155,7 +155,7 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
 
   if (notifications.length === 0) {
     return (
-      <Card className={className}>
+      <Card className={`w-full max-w-2xl ${className}`}>
         <CardHeader>
           <CardTitle className="text-lg">Follow Updates</CardTitle>
         </CardHeader>
@@ -171,7 +171,7 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
   }
 
   return (
-    <Card className={className}>
+    <Card className={`w-full max-w-2xl ${className}`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-lg">Follow Updates</CardTitle>
         <div className="flex items-center space-x-2">
@@ -194,60 +194,80 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              className={`relative flex items-start space-x-4 p-5 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
                 notification.isRead 
-                  ? "bg-white hover:bg-gray-50" 
-                  : getNotificationColor(notification.type)
+                  ? "bg-gray-50 hover:bg-gray-100" 
+                  : "bg-white shadow-sm border border-gray-200 hover:shadow-md"
               }`}
-              onClick={() => {
-                if (!notification.isRead) {
-                  markAsRead([notification.id]);
-                }
-                if (notification.type === "service_posted" && notification.metadata?.serviceId) {
-                  // Navigate to services page and open overlay
-                  const sid = encodeURIComponent(notification.metadata.serviceId);
-                  router.push(`/services?serviceId=${sid}`);
-                }
-              }}
+                onClick={() => {
+                  if (!notification.isRead) {
+                    markAsRead([notification.id]);
+                  }
+                  if (notification.type === "service_posted" && notification.metadata?.developerProfileId) {
+                    // Navigate to services page and trigger fake click to open the service
+                    router.push(`/services`);
+                    // Dispatch event to open service overlay for this developer
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("open-developer-service", {
+                        detail: { developerId: notification.metadata.developerProfileId, serviceId: notification.metadata.serviceId }
+                      }));
+                    }, 100);
+                  }
+                }}
             >
-              <Avatar className="w-8 h-8">
+              {/* Avatar */}
+              <Avatar className="w-10 h-10 flex-shrink-0">
                 <AvatarImage 
                   src={notification.developer.photoUrl || notification.developer.image} 
                 />
-                <AvatarFallback className="text-xs">
+                <AvatarFallback className="text-sm font-medium bg-blue-100 text-blue-700">
                   {notification.developer.name?.charAt(0) || "D"}
                 </AvatarFallback>
               </Avatar>
               
+              {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="text-lg">
-                    {getNotificationIcon(notification.type)}
-                  </span>
-                  <h4 className={`text-sm font-medium ${
-                    notification.isRead ? "text-gray-700" : "text-gray-900"
+                {/* Title and timestamp row */}
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className={`text-sm font-semibold ${
+                    notification.isRead ? "text-gray-600" : "text-gray-900"
                   }`}>
                     {notification.title}
                   </h4>
-                  {!notification.isRead && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  )}
+                  <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                  </span>
                 </div>
                 
-                <p className={`text-sm ${
+                {/* Message */}
+                <p className={`text-sm leading-relaxed ${
                   notification.isRead ? "text-gray-500" : "text-gray-700"
                 }`}>
                   {notification.message}
                 </p>
-                
-                <p className="text-xs text-gray-400 mt-1">
-                  {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                </p>
               </div>
+
+              {/* Dismiss button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markAsRead([notification.id]);
+                }}
+                className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Unread indicator */}
+              {!notification.isRead && (
+                <div className="absolute top-3 left-3 w-2 h-2 bg-blue-500 rounded-full"></div>
+              )}
             </div>
           ))}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { useCustomLogout } from "@/features/shared/hooks/use-custom-logout";
 import { Icons } from "@/features/shared/components/icons";
 
 import {
@@ -44,6 +44,7 @@ type UnifiedNotif = {
 
 export function Header({ user }: HeaderProps) {
   const router = useRouter();
+  const { logout } = useCustomLogout();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [unread, setUnread] = useState<number>(0);
@@ -116,12 +117,15 @@ export function Header({ user }: HeaderProps) {
       let total = 0;
       if (generalRes.ok) {
         const data = await generalRes.json();
+        console.log('🔔 General notifications unread count:', data.unreadCount);
         total += Number(data.unreadCount || 0);
       }
       if (followRes.ok) {
         const data = await followRes.json();
+        console.log('🔔 Follow notifications unread count:', data.unreadCount);
         total += Number(data.unreadCount || 0);
       }
+      console.log('🔔 Total unread notifications:', total);
       setUnread(total);
     } catch (error) {
       console.error('🔔 Failed to refresh notification count:', error);
@@ -171,7 +175,7 @@ export function Header({ user }: HeaderProps) {
   
   // Get user role from session
   const userRole = user?.role as string | undefined;
-  
+
   // Auto-sync portal with user role
   useEffect(() => {
     if (mounted && isAuthenticated && userRole) {
@@ -233,7 +237,7 @@ export function Header({ user }: HeaderProps) {
     if (pendingLogoutPortal) {
       setActivePortal(pendingLogoutPortal);
       setPendingLogoutPortal(null);
-      signOut({ callbackUrl: `/auth/signin?portal=${pendingLogoutPortal}` });
+      logout(`/auth/signin?portal=${pendingLogoutPortal}`);
     }
   };
 
@@ -536,17 +540,17 @@ export function Header({ user }: HeaderProps) {
                     <>
                       {/* click-away overlay */}
                       <div className="fixed inset-0 z-40" onClick={() => setOpenNotif(false)} />
-                      <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-auto bg-white border rounded-lg shadow-lg z-50">
+                      <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded-lg shadow-lg z-50">
                       <div className="flex items-center justify-between px-3 py-2 border-b">
                         <span className="text-sm font-medium">Notifications</span>
                         <button
                           className="text-xs underline"
                           onClick={async () => {
                             try {
-                              await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read_all' }) });
+                            await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read_all' }) });
                               await fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read_all' }) });
-                              setUnread(0);
-                              setItems((prev) => prev.map((i) => ({ ...i, read: true })));
+                            setUnread(0);
+                            setItems((prev) => prev.map((i) => ({ ...i, read: true })));
                             } catch {}
                           }}
                         >
@@ -560,77 +564,157 @@ export function Header({ user }: HeaderProps) {
                         {items.map((n) => (
                           <li
                             key={`${n.origin}:${n.id}`}
-                            className="p-3 text-sm hover:bg-gray-50 cursor-pointer"
+                            className={`relative flex items-start space-x-4 p-5 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                              n.read 
+                                ? "bg-gray-50 hover:bg-gray-100" 
+                                : "bg-white shadow-sm border border-gray-200 hover:shadow-md"
+                            }`}
                             onClick={async () => {
                               if (!n.read) {
                                 try {
                                   if (n.origin === "general") {
-                                    await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                await fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
                                   } else {
                                     await fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read', ids: [n.id] }) });
                                   }
-                                  setUnread((u) => Math.max(0, u - 1));
+                                setUnread((u) => Math.max(0, u - 1));
                                   setItems((prev) => prev.map((i) => (i.id === n.id && i.origin === n.origin ? { ...i, read: true } : i)));
                                 } catch {}
                               }
                               // Routing
                               if (n.origin === "general") {
-                                if (n.type === "quota.project_limit_reached") {
-                                  router.push("/pricing");
-                                } else if (n.type === "assignment.manual_invite") {
-                                  router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
-                                } else if (n.projectId) {
-                                  router.push(`/projects/${n.projectId}`);
+                              if (n.type === "quota.project_limit_reached") {
+                                router.push("/pricing");
+                              } else if (n.type === "assignment.manual_invite") {
+                                router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
+                              } else if (n.projectId) {
+                                router.push(`/projects/${n.projectId}`);
                                 }
                               } else if (n.origin === "follow") {
-                                if (n.type === "follow.service_posted" && n.payload?.serviceId) {
-                                  router.push(`/services?serviceId=${encodeURIComponent(n.payload.serviceId)}`);
+                                if (n.type === "follow.service_posted" && n.payload?.developerProfileId) {
+                                  console.log("🔔 Header: Clicking service notification", n.payload);
+                                  // Navigate to services page and trigger fake click to open the service
+                                  router.push(`/services`);
+                                  // Dispatch event to open service overlay for this developer
+                                  setTimeout(() => {
+                                    console.log("🔔 Header: Dispatching open-developer-service event", { 
+                                      developerId: n.payload.developerProfileId, 
+                                      serviceId: n.payload.serviceId 
+                                    });
+                                    window.dispatchEvent(new CustomEvent("open-developer-service", { 
+                                      detail: { developerId: n.payload.developerProfileId, serviceId: n.payload.serviceId } 
+                                    }));
+                                  }, 100);
                                 }
                               }
                             }}
                           >
-                            <div className="flex items-start gap-2">
-                              <span className={`mt-1 h-2 w-2 rounded-full ${n.read ? 'bg-gray-300' : 'bg-blue-600'}`} />
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-800">
-                                  {n.origin === "general" 
-                                    ? (n.type === "quota.project_limit_reached" 
-                                        ? "Project Limit Reached" 
-                                        : n.type === "assignment.invited"
-                                        ? "New Project Assignment"
-                                        : n.type === "assignment.manual_invite"
-                                        ? "Manual Invitation Received"
-                                        : n.type)
-                                    : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
+                            {/* Avatar placeholder */}
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-medium text-blue-700">
+                                {n.origin === "general" ? "S" : "F"}
+                              </span>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              {/* Title and timestamp row */}
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className={`text-sm font-semibold ${
+                                  n.read ? "text-gray-600" : "text-gray-900"
+                                }`}>
+                                {n.origin === "general" 
+                                  ? (n.type === "quota.project_limit_reached" 
+                                    ? "Project Limit Reached" 
+                                    : n.type === "assignment.invited"
+                                    ? "New Project Assignment"
+                                    : n.type === "assignment.manual_invite"
+                                    ? "Manual Invitation Received"
+                                      : n.type === "MANUAL_INVITE_REJECTED"
+                                      ? (n.payload?.title || "Invitation Declined")
+                                      : n.type)
+                                  : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
+                                </h4>
+                                <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                                  {formatDateStable(n.createdAt)}
+                                </span>
                                 </div>
+                              
+                              {/* Message */}
+                              <div className={`text-sm leading-relaxed ${
+                                n.read ? "text-gray-500" : "text-gray-700"
+                              }`}>
                                 {n.origin === "general" ? (
                                   <>
                                     {n.type === "assignment.manual_invite" && n.payload?.clientMessage && (
-                                      <div className="text-xs text-gray-600 italic">"{n.payload.clientMessage}"</div>
+                                      <div className="italic">"{n.payload.clientMessage}"</div>
+                                    )}
+                                    {n.type === "MANUAL_INVITE_REJECTED" && (
+                                      <>
+                                        <div className="font-medium text-gray-900 mb-2">
+                                          {n.payload?.developerName?.toUpperCase() || 'DEVELOPER'} declined your invitation
+                                        </div>
+                                    {n.payload?.clientMessage && (
+                                          <div className="text-sm text-gray-600 italic mb-2">
+                                            Your message: "{n.payload.clientMessage}"
+                                          </div>
+                                        )}
+                                        <div className="text-xs text-gray-500">
+                                          The developer is not available for this project at the moment
+                                        </div>
+                                      </>
                                     )}
                                     {n.payload?.message && (
-                                      <div className="text-xs text-gray-600">{n.payload.message}</div>
+                                      <div>{n.payload.message}</div>
                                     )}
                                     {n.payload?.description && (
-                                      <div className="text-xs text-gray-500 mt-1">{n.payload.description}</div>
+                                      <div className="text-gray-500 mt-1">{n.payload.description}</div>
                                     )}
                                     {n.payload?.projectTitle && (
-                                      <div className="text-xs text-gray-600">Project: {n.payload.projectTitle}</div>
+                                      <div>Project: {n.payload.projectTitle}</div>
                                     )}
                                   </>
                                 ) : (
                                   <>
                                     {n.payload?.title && (
-                                      <div className="text-xs text-gray-800">{n.payload.title}</div>
-                                    )}
+                                      <div className="font-medium">{n.payload.title}</div>
+                                )}
                                     {n.payload?.message && (
-                                      <div className="text-xs text-gray-600">{n.payload.message}</div>
-                                    )}
+                                      <div>{n.payload.message}</div>
+                                )}
                                   </>
                                 )}
-                                <div className="text-[11px] text-gray-400">{formatDateStable(n.createdAt)}</div>
                               </div>
                             </div>
+
+                            {/* Dismiss button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Mark as read
+                                if (!n.read) {
+                                  try {
+                                    if (n.origin === "general") {
+                                      fetch(`/api/notifications`, { method: 'POST', body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                    } else {
+                                      fetch(`/api/user/follow-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read', ids: [n.id] }) });
+                                    }
+                                    setUnread((u) => Math.max(0, u - 1));
+                                    setItems((prev) => prev.map((i) => (i.id === n.id && i.origin === n.origin ? { ...i, read: true } : i)));
+                                  } catch {}
+                                }
+                              }}
+                              className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+
+                            {/* Unread indicator */}
+                            {!n.read && (
+                              <div className="absolute top-3 left-3 w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
                           </li>
                         ))}
                         {cursor && (
@@ -698,7 +782,7 @@ export function Header({ user }: HeaderProps) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={async () => {
                     try {
-                      await signOut({ callbackUrl: '/' });
+                      await logout('/');
                     } catch (error) {
                       console.error('Sign out error:', error);
                       router.push('/');
@@ -789,7 +873,7 @@ export function Header({ user }: HeaderProps) {
                     
                     {/* Mobile Notifications Dropdown */}
                     {openNotif && (
-                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto mx-2">
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">Notifications</h3>
@@ -827,21 +911,50 @@ export function Header({ user }: HeaderProps) {
                                       else if (n.type === "assignment.manual_invite") router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
                                       else if (n.projectId) router.push(`/projects/${n.projectId}`);
                                     } else if (n.origin === "follow") {
-                                      if (n.type === "follow.service_posted" && n.payload?.serviceId) {
-                                        router.push(`/services?serviceId=${encodeURIComponent(n.payload.serviceId)}`);
+                                      if (n.type === "follow.service_posted" && n.payload?.developerProfileId) {
+                                        console.log("🔔 Header Mobile: Clicking service notification", n.payload);
+                                        // Navigate to services page and trigger fake click to open the service
+                                        router.push(`/services`);
+                                        // Dispatch event to open service overlay for this developer
+                                        setTimeout(() => {
+                                          console.log("🔔 Header Mobile: Dispatching open-developer-service event", { 
+                                            developerId: n.payload.developerProfileId, 
+                                            serviceId: n.payload.serviceId 
+                                          });
+                                          window.dispatchEvent(new CustomEvent("open-developer-service", { 
+                                            detail: { developerId: n.payload.developerProfileId, serviceId: n.payload.serviceId } 
+                                          }));
+                                        }, 100);
                                       }
                                     }
                                   }}
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                                      <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium text-gray-900">
-                                        {n.origin === "general" ? n.type : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
+                                        {n.origin === "general" 
+                                          ? (n.type === "MANUAL_INVITE_REJECTED" 
+                                              ? (n.payload?.title || "Invitation Declined")
+                                          : n.type === "assignment.manual_invite"
+                                          ? "Manual Invitation Received"
+                                              : n.type === "assignment.invited"
+                                              ? "New Project Assignment"
+                                              : n.type === "quota.project_limit_reached"
+                                              ? "Project Limit Reached"
+                                              : n.type)
+                                          : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
                                       </div>
-                                      {n.payload?.message && (
+                                      {n.type === "MANUAL_INVITE_REJECTED" ? (
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          <div className="font-medium">{n.payload?.developerName?.toUpperCase() || 'DEVELOPER'} declined your invitation</div>
+                                          {n.payload?.clientMessage && (
+                                            <div className="italic mt-1">Your message: "{n.payload.clientMessage}"</div>
+                                          )}
+                                        </div>
+                                      ) : n.payload?.message ? (
                                         <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
-                                      )}
+                                      ) : null}
                                       <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
                                     </div>
                                   </div>
@@ -932,7 +1045,7 @@ export function Header({ user }: HeaderProps) {
                     
                     {/* Mobile Notifications Dropdown */}
                     {openNotif && (
-                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto mx-2">
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">Notifications</h3>
@@ -970,21 +1083,50 @@ export function Header({ user }: HeaderProps) {
                                       else if (n.type === "assignment.manual_invite") router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
                                       else if (n.projectId) router.push(`/projects/${n.projectId}`);
                                     } else if (n.origin === "follow") {
-                                      if (n.type === "follow.service_posted" && n.payload?.serviceId) {
-                                        router.push(`/services?serviceId=${encodeURIComponent(n.payload.serviceId)}`);
+                                      if (n.type === "follow.service_posted" && n.payload?.developerProfileId) {
+                                        console.log("🔔 Header Mobile: Clicking service notification", n.payload);
+                                        // Navigate to services page and trigger fake click to open the service
+                                        router.push(`/services`);
+                                        // Dispatch event to open service overlay for this developer
+                                        setTimeout(() => {
+                                          console.log("🔔 Header Mobile: Dispatching open-developer-service event", { 
+                                            developerId: n.payload.developerProfileId, 
+                                            serviceId: n.payload.serviceId 
+                                          });
+                                          window.dispatchEvent(new CustomEvent("open-developer-service", { 
+                                            detail: { developerId: n.payload.developerProfileId, serviceId: n.payload.serviceId } 
+                                          }));
+                                        }, 100);
                                       }
                                     }
                                   }}
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                                      <div className={`w-2 h-2 rounded-full ${!n.read ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium text-gray-900">
-                                        {n.origin === "general" ? n.type : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
+                                        {n.origin === "general" 
+                                          ? (n.type === "MANUAL_INVITE_REJECTED" 
+                                              ? (n.payload?.title || "Invitation Declined")
+                                          : n.type === "assignment.manual_invite"
+                                          ? "Manual Invitation Received"
+                                              : n.type === "assignment.invited"
+                                              ? "New Project Assignment"
+                                              : n.type === "quota.project_limit_reached"
+                                              ? "Project Limit Reached"
+                                              : n.type)
+                                          : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
                                       </div>
-                                      {n.payload?.message && (
+                                      {n.type === "MANUAL_INVITE_REJECTED" ? (
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          <div className="font-medium">{n.payload?.developerName?.toUpperCase() || 'DEVELOPER'} declined your invitation</div>
+                                          {n.payload?.clientMessage && (
+                                            <div className="italic mt-1">Your message: "{n.payload.clientMessage}"</div>
+                                          )}
+                                        </div>
+                                      ) : n.payload?.message ? (
                                         <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
-                                      )}
+                                      ) : null}
                                       <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
                                     </div>
                                   </div>
@@ -1067,7 +1209,7 @@ export function Header({ user }: HeaderProps) {
                     className="w-full text-left py-2 text-red-600 hover:text-red-800"
                     onClick={async () => {
                       try {
-                        await signOut({ callbackUrl: '/' });
+                        await logout('/');
                       } catch (error) {
                         console.error('Sign out error:', error);
                         router.push('/');

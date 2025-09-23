@@ -1,6 +1,7 @@
 import { prisma } from "@/core/database/db"
 import { OtpService } from "@/core/services/otp.service"
 import { WhatsAppService } from "@/core/services/whatsapp.service"
+import { DeveloperStatusService } from "@/core/services/developer-status.service"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import type { NextAuthOptions } from "next-auth"
@@ -361,6 +362,17 @@ export default {
           token.role = dbUser.role
           token.isProfileCompleted = dbUser.isProfileCompleted
           token.adminApprovalStatus = dbUser.developerProfile?.adminApprovalStatus
+
+          // Update developer status to available when JWT is refreshed (user is active)
+          if (dbUser.role === "DEVELOPER" && dbUser.developerProfile) {
+            try {
+              console.log("🔄 JWT callback: Updating developer status to available");
+              await DeveloperStatusService.setDeveloperAvailable(dbUser.id);
+            } catch (statusError) {
+              console.error("❌ JWT callback: Failed to update developer status:", statusError);
+              // Don't throw error to avoid breaking the session
+            }
+          }
         } else {
           console.log("❌ JWT callback: User not found in database");
         }

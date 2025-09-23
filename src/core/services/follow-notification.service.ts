@@ -14,25 +14,48 @@ export class FollowNotificationService {
    */
   static async notifyFollowers(data: FollowNotificationData): Promise<void> {
     try {
-      // Get all followers of this developer
+      console.log("🔔 FollowNotificationService: Looking for followers of developer profile:", data.developerId);
+      
+      // First, get the user ID from the developer profile ID
+      const developerProfile = await prisma.developerProfile.findUnique({
+        where: { id: data.developerId },
+        select: { userId: true },
+      });
+
+      if (!developerProfile) {
+        console.log("🔔 FollowNotificationService: Developer profile not found:", data.developerId);
+        return;
+      }
+
+      console.log("🔔 FollowNotificationService: Found developer user ID:", developerProfile.userId);
+
+      // Get all followers of this developer (using user ID)
       const followers = await prisma.follow.findMany({
-        where: { followingId: data.developerId },
+        where: { followingId: developerProfile.userId },
         select: { followerId: true },
       });
 
+      console.log("🔔 FollowNotificationService: Found followers:", followers.length, followers);
+
       if (followers.length === 0) {
+        console.log("🔔 FollowNotificationService: No followers found, skipping notification");
         return; // No followers to notify
       }
 
       // Create notifications for all followers
       const notifications = followers.map((follow) => ({
         followerId: follow.followerId,
-        developerId: data.developerId,
+        developerId: developerProfile.userId, // Use user ID, not developer profile ID
         type: data.type,
         title: data.title,
         message: data.message,
-        metadata: data.metadata || {},
+        metadata: {
+          ...data.metadata,
+          developerProfileId: data.developerId, // Store developer profile ID in metadata
+        },
       }));
+
+      console.log("🔔 FollowNotificationService: Creating notifications:", notifications);
 
       await prisma.followNotification.createMany({
         data: notifications,
@@ -82,34 +105,6 @@ export class FollowNotificationService {
     });
   }
 
-  /**
-   * Notify followers when developer changes availability status
-   */
-  static async notifyAvailabilityChange(
-    developerId: string, 
-    developerName: string, 
-    oldStatus: string, 
-    newStatus: string
-  ): Promise<void> {
-    const statusLabels: Record<string, string> = {
-      available: "Available",
-      checking: "Checking",
-      busy: "Busy",
-      away: "Away",
-    };
-
-    await this.notifyFollowers({
-      developerId,
-      type: "availability_change",
-      title: "Availability Status Changed",
-      message: `${developerName} is now ${statusLabels[newStatus] || newStatus}.`,
-      metadata: { 
-        developerName, 
-        oldStatus, 
-        newStatus 
-      },
-    });
-  }
 
   /**
    * Notify followers when developer posts a new idea
@@ -149,8 +144,30 @@ export class FollowNotificationService {
       message: `${developerName} has just posted a new service: "${serviceTitle}"`,
       metadata: {
         developerName,
+        developerId,
         serviceId,
         serviceTitle,
+      },
+    });
+  }
+
+  /**
+   * Notify followers when developer becomes available
+   */
+  static async notifyAvailabilityChange(
+    developerId: string,
+    developerName: string,
+    newStatus: string
+  ): Promise<void> {
+    await this.notifyFollowers({
+      developerId,
+      type: "availability_change",
+      title: "Developer Status Update",
+      message: `${developerName} is now ${newStatus}`,
+      metadata: {
+        developerName,
+        developerId,
+        newStatus,
       },
     });
   }
