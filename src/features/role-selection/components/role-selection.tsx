@@ -117,37 +117,39 @@ export default function RoleSelection({
           })}
         </div>
 
-        <div className="text-center">
-          <Button
-            size="lg"
-            disabled={!selectedRole || isLoading}
-            onClick={() => selectedRole && onRoleSelect(selectedRole)}
-            className="px-8 py-3 text-lg"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                Creating profile...
-              </>
-            ) : (
-              <>
-                <Users className="mr-2 h-5 w-5" />
-                Join as{" "}
-                {selectedRole === "CLIENT"
-                  ? "Client"
-                  : selectedRole === "DEVELOPER"
-                    ? "Freelancer"
-                    : ""}
-              </>
-            )}
-          </Button>
+        {selectedRole && (
+          <div className="text-center">
+            <Button
+              size="lg"
+              disabled={!selectedRole || isLoading}
+              onClick={() => selectedRole && onRoleSelect(selectedRole)}
+              className="px-8 py-3 text-lg"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                  Creating profile...
+                </>
+              ) : (
+                <>
+                  <Users className="mr-2 h-5 w-5" />
+                  Join as{" "}
+                  {selectedRole === "CLIENT"
+                    ? "Client"
+                    : selectedRole === "DEVELOPER"
+                      ? "Freelancer"
+                      : ""}
+                </>
+              )}
+            </Button>
 
-          {!selectedRole && (
-            <p className="text-sm text-gray-500 mt-2">
-              Please select a role to continue
-            </p>
-          )}
-        </div>
+            {!selectedRole && (
+              <p className="text-sm text-gray-500 mt-2">
+                Please select a role to continue
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
