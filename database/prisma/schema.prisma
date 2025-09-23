@@ -324,13 +324,15 @@ model VerificationToken {
  */
 model OtpCode {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  phoneE164 String
+  phoneE164 String?
+  email     String?
   hash      String
   expiresAt DateTime
   attempts  Int      @default(0)
   createdAt DateTime @default(now())
 
   @@index([phoneE164])
+  @@index([email])
 }
 
 /**
