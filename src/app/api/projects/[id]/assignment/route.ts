@@ -100,7 +100,17 @@ export async function GET(
             batchId,
             responseStatus: { in: ["pending", "accepted"] }
           },
-          include: {
+          select: {
+            id: true,
+            batchId: true,
+            developerId: true,
+            level: true,
+            responseStatus: true,
+            acceptanceDeadline: true,
+            assignedAt: true,
+            respondedAt: true,
+            usualResponseTimeMsSnapshot: true,
+            statusTextForClient: true,
             developer: {
               include: {
                 user: {
@@ -163,15 +173,21 @@ export async function GET(
               batchId: targetBatchId,
               responseStatus: { in: ["pending", "accepted", "expired"] }
             },
-            include: {
+            select: {
+              id: true,
+              batchId: true,
+              developerId: true,
+              level: true,
+              responseStatus: true,
+              acceptanceDeadline: true,
+              assignedAt: true,
+              respondedAt: true,
+              usualResponseTimeMsSnapshot: true,
+              statusTextForClient: true,
               developer: {
                 include: {
-                  user: {
-                    select: { id: true, name: true, email: true, image: true }
-                  },
-                  skills: {
-                    include: { skill: { select: { name: true } } }
-                  },
+                  user: { select: { id: true, name: true, email: true, image: true } },
+                  skills: { include: { skill: { select: { name: true } } } },
                   _count: false
                 }
               }
