@@ -36,6 +36,9 @@ export function GetInTouchModal({
   const [showConfirm, setShowConfirm] = useState(false);
   const [quotaInfo, setQuotaInfo] = useState<{ connectsPerMonth: number; connectsUsed: number; remaining: number } | null>(null);
 
+  // Normalize step for numeric comparisons
+  const numericStep = typeof currentStep === "number" ? currentStep : 0;
+
   const fetchQuota = async () => {
     try {
       const res = await fetch('/api/billing/quotas', { cache: 'no-store' } as RequestInit);
@@ -109,14 +112,14 @@ export function GetInTouchModal({
   };
 
   const handleNext = () => {
-    if (currentStep !== "choice" && currentStep < 3) {
+    if (currentStep !== "choice" && numericStep < 3) {
       setCurrentStep((currentStep as number) + 1);
     }
   };
 
   const handleBack = () => {
     if (currentStep === "choice") return;
-    if (currentStep > 1) {
+    if (numericStep > 1) {
       setCurrentStep((currentStep as number) - 1);
     }
   };
@@ -287,14 +290,14 @@ export function GetInTouchModal({
           {/* Navigation Buttons */}
           <div className="flex justify-between space-x-3 pt-4">
             <div>
-              {currentStep > 1 && (
+              {numericStep > 1 && (
                 <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>Back</Button>
               )}
             </div>
             
             <div className="flex space-x-3">
               <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
-              {currentStep < 3 && !showConfirm ? (
+              {numericStep < 3 && !showConfirm ? (
                 <Button type="button" onClick={handleNext} className="bg-black text-white hover:bg-black/90" disabled={isNextDisabled}>Next</Button>
               ) : showConfirm ? (
                 <Button type="submit" disabled={isSubmitting || (!!quotaInfo && quotaInfo.remaining <= 0)} className="bg-black text-white hover:bg-black/90">{!!quotaInfo && quotaInfo.remaining <= 0 ? "No connects left" : (isSubmitting ? "Sending..." : "Send Lead")}</Button>
@@ -306,9 +309,9 @@ export function GetInTouchModal({
 
           {/* Step Indicator */}
           <div className="flex justify-center space-x-2 pt-2">
-            <div className={`w-2 h-2 rounded-full ${currentStep >= 1 ? 'bg-black' : 'bg-gray-300'}`} />
-            <div className={`w-2 h-2 rounded-full ${currentStep >= 2 ? 'bg-black' : 'bg-gray-300'}`} />
-            <div className={`w-2 h-2 rounded-full ${currentStep >= 3 ? 'bg-black' : 'bg-gray-300'}`} />
+            <div className={`w-2 h-2 rounded-full ${numericStep >= 1 ? 'bg-black' : 'bg-gray-300'}`} />
+            <div className={`w-2 h-2 rounded-full ${numericStep >= 2 ? 'bg-black' : 'bg-gray-300'}`} />
+            <div className={`w-2 h-2 rounded-full ${numericStep >= 3 ? 'bg-black' : 'bg-gray-300'}`} />
           </div>
         </form>
       </DialogContent>
