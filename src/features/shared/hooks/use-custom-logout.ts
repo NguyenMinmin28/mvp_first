@@ -6,27 +6,28 @@ export function useCustomLogout() {
 
   const logout = async (callbackUrl?: string) => {
     try {
-      // Call our custom logout API to update developer status
+      // Fire-and-forget: update developer status in the background to keep UI snappy
       if (session?.user?.role === "DEVELOPER") {
-        console.log("🔄 Custom logout: Calling logout API for developer");
         try {
-          await fetch("/api/auth/logout", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-          console.log("✅ Custom logout: Developer status updated to busy");
-        } catch (apiError) {
-          console.error("❌ Custom logout: Failed to call logout API:", apiError);
-          // Continue with logout even if API call fails
-        }
+          const payload = JSON.stringify({ action: "logout" });
+          if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+            const blob = new Blob([payload], { type: "application/json" });
+            navigator.sendBeacon("/api/auth/logout", blob);
+          } else {
+            fetch("/api/auth/logout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: payload,
+              keepalive: true,
+            }).catch(() => {});
+          }
+        } catch {}
       }
 
-      // Use NextAuth's signOut to clear the session
-      await signOut({ 
+      // Immediately sign out and redirect to give a smooth UX
+      await signOut({
         callbackUrl: callbackUrl || "/",
-        redirect: true 
+        redirect: true,
       });
     } catch (error) {
       console.error("❌ Custom logout error:", error);

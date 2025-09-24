@@ -41,7 +41,8 @@ export function ProjectPostForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<string>("fixed"); // Default to fixed price
-  const [budget, setBudget] = useState<string>("");
+  const [budgetMin, setBudgetMin] = useState<string>("");
+  const [budgetMax, setBudgetMax] = useState<string>("");
   const [currency, setCurrency] = useState<string>("USD");
   const [projectTitle, setProjectTitle] = useState<string>("");
   const [projectDescription, setProjectDescription] = useState<string>("");
@@ -69,7 +70,8 @@ export function ProjectPostForm({
           setProjectDescription(parsed.description || "");
           setSkills(parsed.skills || []);
           setPaymentMethod(parsed.paymentMethod || "fixed");
-          setBudget(parsed.budget || "");
+          setBudgetMin(parsed.budgetMin || "");
+          setBudgetMax(parsed.budgetMax || "");
           setCurrency(parsed.currency || "USD");
           console.log("✅ Form data loaded successfully");
         } catch (error) {
@@ -94,7 +96,8 @@ export function ProjectPostForm({
           setProjectTitle(parsed.title || "");
           setSkills(parsed.skills || []);
           setPaymentMethod(parsed.paymentMethod || "fixed");
-          setBudget(parsed.budget || "");
+          setBudgetMin(parsed.budgetMin || "");
+          setBudgetMax(parsed.budgetMax || "");
           setCurrency(parsed.currency || "USD");
           console.log("✅ Form data loaded successfully on mount");
         } catch (error) {
@@ -115,14 +118,16 @@ export function ProjectPostForm({
         projectTitle.trim() ||
         projectDescription.trim() ||
         skills.length > 0 ||
-        budget.trim()
+        budgetMin.trim() ||
+        budgetMax.trim()
       ) {
         const formData = {
           title: projectTitle,
           description: projectDescription,
           skills: skills,
           paymentMethod: paymentMethod,
-          budget: budget,
+          budgetMin: budgetMin,
+          budgetMax: budgetMax,
           currency: currency,
         };
         console.log(
@@ -139,7 +144,8 @@ export function ProjectPostForm({
     projectDescription,
     skills,
     paymentMethod,
-    budget,
+    budgetMin,
+    budgetMax,
     currency,
     status,
   ]);
@@ -272,7 +278,7 @@ export function ProjectPostForm({
     if (!Array.isArray(skills) || skills.length === 0) {
       errors.skills = true;
     }
-    if (!budget.trim()) {
+    if (!budgetMin.trim() && !budgetMax.trim()) {
       errors.budget = true;
     }
 
@@ -300,8 +306,9 @@ export function ProjectPostForm({
           description: projectDescription.trim(),
           skillsRequired: skills,
           paymentMethod: paymentMethod,
-          budget: budget ? Number(budget) : undefined,
-          currency: currency,
+          budgetMin: budgetMin ? Number(budgetMin) : undefined,
+          budgetMax: budgetMax ? Number(budgetMax) : undefined,
+          currency,
         }),
       });
       if (res.ok) {
@@ -485,7 +492,7 @@ export function ProjectPostForm({
             )}
           </div>
 
-          {/* Budget */}
+          {/* Budget Range */}
           <div>
             <div className="flex items-center space-x-3">
               <div className="relative flex-1">
@@ -494,16 +501,63 @@ export function ProjectPostForm({
                 </span>
                 <Input
                   type="number"
-                  placeholder="Budget"
-                  value={budget}
+                  placeholder="Min"
+                  value={budgetMin}
                   onChange={(e) => {
-                    setBudget(e.target.value);
+                    setBudgetMin(e.target.value);
                     clearFieldError("budget");
                   }}
                   className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
                   min="0"
                   step="0.01"
                   required
+                  inputMode="decimal"
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                  }}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    if (el.value === "") return;
+                    const n = Number(el.value);
+                    if (Number.isNaN(n)) {
+                      el.value = "";
+                      return;
+                    }
+                    if (n < 0) el.value = "0";
+                  }}
+                />
+              </div>
+              <span className="text-gray-600">-</span>
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  $
+                </span>
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={budgetMax}
+                  onChange={(e) => {
+                    setBudgetMax(e.target.value);
+                    clearFieldError("budget");
+                  }}
+                  className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
+                  min="0"
+                  step="0.01"
+                  required
+                  inputMode="decimal"
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                  }}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    if (el.value === "") return;
+                    const n = Number(el.value);
+                    if (Number.isNaN(n)) {
+                      el.value = "";
+                      return;
+                    }
+                    if (n < 0) el.value = "0";
+                  }}
                 />
               </div>
               <Select value={currency} onValueChange={setCurrency}>
@@ -517,7 +571,7 @@ export function ProjectPostForm({
               </Select>
             </div>
             {validationErrors.budget && (
-              <p className="text-red-500 text-sm mt-1">Budget is required</p>
+              <p className="text-red-500 text-sm mt-1">Enter budget range (min or max)</p>
             )}
           </div>
 

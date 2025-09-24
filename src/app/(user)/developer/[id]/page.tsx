@@ -110,6 +110,7 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     adminApprovalStatus: developer.adminApprovalStatus,
     skills: developer.skills.map((s: any) => ({ skillId: s.skillId, skillName: (s as any).skill?.name })),
     portfolioLinks: developer.portfolioLinks,
+    resumeUrl: (developer as any).resumeUrl || null,
     isConnected, // Pass connection status to components
     isFavorited,
     whatsappNumber: (developer as any).whatsappNumber || null,

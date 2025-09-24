@@ -24,7 +24,8 @@ export default function NewProjectForm() {
     title: "",
     description: "",
     skillsRequired: [] as string[],
-    budget: "",
+    budgetMin: "",
+    budgetMax: "",
     currency: "USD",
     paymentMethod: "hourly"
   });
@@ -138,7 +139,8 @@ export default function NewProjectForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          budget: formData.budget ? Number(formData.budget) : undefined
+          budgetMin: formData.budgetMin ? Number(formData.budgetMin) : undefined,
+          budgetMax: formData.budgetMax ? Number(formData.budgetMax) : undefined
         }),
       });
 
@@ -341,7 +343,7 @@ export default function NewProjectForm() {
           </CardContent>
         </Card>
 
-        {/* Budget and Currency */}
+        {/* Budget Range and Currency */}
         <Card>
           <CardHeader>
             <CardTitle>Budget (Optional)</CardTitle>
@@ -350,12 +352,50 @@ export default function NewProjectForm() {
             <div className="flex items-center space-x-3">
               <Input
                 type="number"
-                placeholder="Enter budget amount"
-                value={formData.budget}
-                onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
+                placeholder="Min"
+                value={formData.budgetMin}
+                onChange={(e) => setFormData(prev => ({ ...prev, budgetMin: e.target.value }))}
                 className="flex-1"
                 min="0"
                 step="0.01"
+                inputMode="decimal"
+                onKeyDown={(e) => {
+                  if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                }}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  if (el.value === "") return;
+                  const n = Number(el.value);
+                  if (Number.isNaN(n)) {
+                    el.value = "";
+                    return;
+                  }
+                  if (n < 0) el.value = "0";
+                }}
+              />
+              <span className="text-gray-600">-</span>
+              <Input
+                type="number"
+                placeholder="Max"
+                value={formData.budgetMax}
+                onChange={(e) => setFormData(prev => ({ ...prev, budgetMax: e.target.value }))}
+                className="flex-1"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                onKeyDown={(e) => {
+                  if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                }}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  if (el.value === "") return;
+                  const n = Number(el.value);
+                  if (Number.isNaN(n)) {
+                    el.value = "";
+                    return;
+                  }
+                  if (n < 0) el.value = "0";
+                }}
               />
               <select
                 value={formData.currency}
@@ -367,7 +407,7 @@ export default function NewProjectForm() {
               </select>
             </div>
             <p className="text-xs text-gray-500">
-              {formData.paymentMethod === "hourly" ? "Hourly rate" : "Total project budget"}
+              {formData.paymentMethod === "hourly" ? "Hourly rate range" : "Total project budget range"}
             </p>
           </CardContent>
         </Card>

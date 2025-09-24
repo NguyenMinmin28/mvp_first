@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/components/dialog";
 import { Button } from "@/ui/components/button";
 import { Textarea } from "@/ui/components/textarea";
@@ -18,6 +18,7 @@ interface MessageFormProps {
 }
 
 export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, projectId }: MessageFormProps) {
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
@@ -42,6 +43,7 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try { console.log("[MessageForm] submit fired", { projectId, currentStep, showConfirm }); } catch {}
     
     if (isSubmitting) return;
     
@@ -104,6 +106,17 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
     }
   };
 
+  // Auto-fetch connects quota when landing on the final step for direct messages (no project)
+  useEffect(() => {
+    if (!projectId && currentStep === 3 && !showConfirm) {
+      (async () => {
+        await fetchQuota();
+        setShowConfirm(true);
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, projectId]);
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md z-[70] [&>div]:z-[70]">
@@ -111,7 +124,7 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
           <DialogTitle>Send Message to Developer</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {/* Developer Info - Always visible */}
           <div>
             <Label htmlFor="developer-name" className="text-sm font-medium text-gray-700">
@@ -294,11 +307,20 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
                 </Button>
               ) : (
                 <Button
-                  type="submit"
+                  type="button"
                   disabled={
                     isSubmitting || !message.trim() || (!projectId && showConfirm && !!quotaInfo && quotaInfo.remaining <= 0)
                   }
                   className="bg-black text-white hover:bg-black/90"
+                  onClick={(ev) => {
+                    try { console.log("[MessageForm] submit button clicked"); } catch {}
+                    // Force form submission to ensure onSubmit fires in all contexts (e.g., inside portals)
+                    try {
+                      if (formRef.current) {
+                        formRef.current.requestSubmit();
+                      }
+                    } catch {}
+                  }}
                 >
                   {projectId
                     ? (isSubmitting ? "Sending..." : "Send Message")

@@ -146,6 +146,8 @@ export function PeopleGrid({
   const [developerServices, setDeveloperServices] = useState<Record<string, DeveloperService[]>>({});
   const [selectedService, setSelectedService] = useState<ServiceDetailData | null>(null);
   const [isServiceOverlayOpen, setIsServiceOverlayOpen] = useState(false);
+  const [isOverlayLoading, setIsOverlayLoading] = useState(false);
+  const serviceDetailCacheRef = useRef<Record<string, ServiceDetailData>>({});
   const [selectedFreelancer, setSelectedFreelancer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isOverride = Array.isArray(overrideDevelopers);
@@ -567,15 +569,11 @@ export function PeopleGrid({
     }
   };
 
-  const handleServiceClick = async (service: DeveloperService, developer: Developer) => {
-    console.log("Service clicked:", service.id, service.title);
+  const prefetchServiceDetail = async (serviceId: string, developer: Developer) => {
+    if (serviceDetailCacheRef.current[serviceId]) return;
     try {
-      // Fetch full service details
-      const res = await fetch(`/api/services/${service.id}`, { cache: "no-store" });
+      const res = await fetch(`/api/services/${serviceId}`, { cache: "no-store" });
       const json = await res.json();
-      
-      console.log("API response:", res.status, json);
-      
       if (res.ok && json?.success && json.data) {
         const serviceData: ServiceDetailData = {
           id: json.data.id,
@@ -594,29 +592,96 @@ export function PeopleGrid({
           userLiked: json.data.userLiked,
           developer: {
             id: developer.id,
-            user: {
-              name: developer.user.name,
-              image: developer.user.image,
-            },
+            user: { name: developer.user.name, image: developer.user.image },
             location: developer.location,
           },
           skills: json.data.skills || [],
           categories: json.data.categories || [],
           leadsCount: json.data.leadsCount || 0,
-          responseStatus: freelancerResponseStatuses?.[developer.id], // Add response status for project candidates
+          responseStatus: freelancerResponseStatuses?.[developer.id],
           galleryImages: json.data.galleryImages || [],
           showcaseImages: json.data.showcaseImages || [],
         };
-        
-        console.log("Opening overlay with service data:", serviceData);
-        console.log("Response status for developer:", developer.id, "is:", freelancerResponseStatuses?.[developer.id]);
-        setSelectedService(serviceData);
-        setIsServiceOverlayOpen(true);
-      } else {
-        console.error("API error:", json);
+        serviceDetailCacheRef.current[serviceId] = serviceData;
+      }
+    } catch (_) {
+      // ignore prefetch errors
+    }
+  };
+
+  const handleServiceClick = async (service: DeveloperService, developer: Developer) => {
+    console.log("Service clicked:", service.id, service.title);
+    // Open overlay immediately with minimal data and a loading state
+    setIsOverlayLoading(true);
+    setIsServiceOverlayOpen(true);
+    setSelectedService({
+      id: service.id,
+      title: service.title,
+      shortDesc: "",
+      coverUrl: service.coverUrl,
+      priceType: service.priceType,
+      ratingAvg: service.ratingAvg,
+      ratingCount: service.ratingCount,
+      views: service.views,
+      likesCount: service.likesCount,
+      developer: {
+        id: developer.id,
+        user: { name: developer.user.name, image: developer.user.image },
+        location: developer.location,
+      },
+      skills: [],
+      categories: [],
+      leadsCount: 0,
+      responseStatus: freelancerResponseStatuses?.[developer.id],
+      galleryImages: [],
+      showcaseImages: [],
+    });
+
+    try {
+      // Use cache if available
+      let detail = serviceDetailCacheRef.current[service.id];
+      if (!detail) {
+        const res = await fetch(`/api/services/${service.id}`, { cache: "no-store" });
+        const json = await res.json();
+        if (res.ok && json?.success && json.data) {
+          detail = {
+            id: json.data.id,
+            slug: json.data.slug,
+            title: json.data.title,
+            shortDesc: json.data.shortDesc,
+            coverUrl: json.data.coverUrl,
+            priceType: json.data.priceType,
+            priceMin: json.data.priceMin,
+            priceMax: json.data.priceMax,
+            deliveryDays: json.data.deliveryDays,
+            ratingAvg: json.data.ratingAvg,
+            ratingCount: json.data.ratingCount,
+            views: json.data.views,
+            likesCount: json.data.likesCount,
+            userLiked: json.data.userLiked,
+            developer: {
+              id: developer.id,
+              user: { name: developer.user.name, image: developer.user.image },
+              location: developer.location,
+            },
+            skills: json.data.skills || [],
+            categories: json.data.categories || [],
+            leadsCount: json.data.leadsCount || 0,
+            responseStatus: freelancerResponseStatuses?.[developer.id],
+            galleryImages: json.data.galleryImages || [],
+            showcaseImages: json.data.showcaseImages || [],
+          };
+          serviceDetailCacheRef.current[service.id] = detail;
+        }
+      }
+
+      if (detail) {
+        setSelectedService(detail);
       }
     } catch (e) {
       console.error("Error loading service details:", e);
+    } finally {
+      setIsOverlayLoading(false);
     }
   };
 
@@ -1043,6 +1108,7 @@ export function PeopleGrid({
                             e.preventDefault();
                             handleServiceClick(service, developer);
                           }}
+                          onMouseEnter={() => prefetchServiceDetail(service.id, developer)}
                         >
                           {service.coverUrl ? (
                             <img

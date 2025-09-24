@@ -321,7 +321,8 @@ export async function GET(
         
         return finalCandidates;
       })(),
-      skills
+      skills,
+      searching: !targetBatchId // If there is no batch yet, front-end can show searching state
     });
 
   } catch (error) {

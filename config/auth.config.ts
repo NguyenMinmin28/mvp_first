@@ -41,11 +41,14 @@ export default {
         },
       },
       async authorize(credentials) {
-        console.log("🔐 Email/Password authorize called with:", credentials)
-        console.log("🔐 Environment check - NEXTAUTH_URL:", process.env.NEXTAUTH_URL)
-        console.log("🔐 Environment check - NEXTAUTH_SECRET:", !!process.env.NEXTAUTH_SECRET)
-        console.log("🔐 Environment check - DATABASE_URL:", !!process.env.DATABASE_URL)
-        console.log("🔐 Environment check - NODE_ENV:", process.env.NODE_ENV)
+        const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === "true"
+        if (DEBUG_AUTH) {
+          console.log("🔐 Email/Password authorize called")
+          console.log("🔐 Environment check - NEXTAUTH_URL:", process.env.NEXTAUTH_URL)
+          console.log("🔐 Environment check - NEXTAUTH_SECRET:", !!process.env.NEXTAUTH_SECRET)
+          console.log("🔐 Environment check - DATABASE_URL:", !!process.env.DATABASE_URL)
+          console.log("🔐 Environment check - NODE_ENV:", process.env.NODE_ENV)
+        }
 
         if (!credentials?.email || !credentials?.password) {
           console.log("❌ Missing email or password")
@@ -53,7 +56,7 @@ export default {
         }
 
         try {
-          console.log("🔐 Attempting database connection...")
+          if (DEBUG_AUTH) console.log("🔐 Attempting database connection...")
           // Find user by email
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
@@ -68,10 +71,10 @@ export default {
             },
           })
 
-          console.log("🔐 Database query result:", !!user)
+          if (DEBUG_AUTH) console.log("🔐 Database query result:", !!user)
 
           if (!user || !user.passwordHash) {
-            console.log("❌ User not found or no password set")
+            if (DEBUG_AUTH) console.log("❌ User not found or no password set")
             return null
           }
 
@@ -82,11 +85,11 @@ export default {
           )
 
           if (!isValidPassword) {
-            console.log("❌ Invalid password")
+            if (DEBUG_AUTH) console.log("❌ Invalid password")
             return null
           }
 
-          console.log("✅ Email/Password authentication successful")
+          if (DEBUG_AUTH) console.log("✅ Email/Password authentication successful")
           return {
             id: user.id,
             name: user.name,
@@ -97,7 +100,6 @@ export default {
           }
         } catch (error) {
           console.error("Email/Password authorization error:", error)
-          console.error("Database connection error details:", error)
           return null
         }
       },
@@ -118,7 +120,8 @@ export default {
         },
       },
       async authorize(credentials) {
-        console.log("🔐 NextAuth authorize called with:", credentials)
+        const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === "true"
+        if (DEBUG_AUTH) console.log("🔐 NextAuth WhatsApp authorize called")
 
         if (!credentials?.phoneNumber || !credentials?.verificationCode) {
           console.log("❌ Missing credentials")
@@ -180,7 +183,8 @@ export default {
   ],
   callbacks: {
   async signIn({ user, account, profile }: any) {
-    console.log("🔐 SignIn callback called:", { user, account, profile })
+    const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === "true"
+    if (DEBUG_AUTH) console.log("🔐 SignIn callback called")
 
     // Nếu là Google OAuth
     if (account?.provider === "google") {
@@ -196,7 +200,7 @@ export default {
         })
 
         if (!existingUser) {
-          console.log("🔄 Google user not found, creating new user:", user.email)
+          if (DEBUG_AUTH) console.log("🔄 Google user not found, creating new user:", user.email)
           
           // Tự động tạo user mới với Google account
           const newUser = await prisma.$transaction(async (tx) => {
@@ -248,11 +252,26 @@ export default {
             return newUserRecord;
           });
 
-          console.log("✅ Google user created successfully:", newUser.id)
+          if (DEBUG_AUTH) console.log("✅ Google user created successfully:", newUser.id)
+          // Mark developer availability and last login if applicable
+          try {
+            await DeveloperStatusService.setDeveloperAvailable(newUser.id);
+          } catch {}
+          try {
+            await prisma.user.update({ where: { id: newUser.id }, data: { lastLoginAt: new Date() } });
+          } catch {}
           return true
         }
 
-        console.log("✅ Google user found in database:", existingUser)
+        if (DEBUG_AUTH) console.log("✅ Google user found in database:", existingUser)
+        // Update activity on sign-in
+        try {
+          await prisma.user.update({ where: { id: existingUser.id }, data: { lastLoginAt: new Date() } });
+        } catch {}
+        try {
+          await DeveloperStatusService.setDeveloperAvailable(existingUser.id);
+        } catch {}
+        // On successful Google sign in, mark active for developers later in jwt
         return true
       } catch (error) {
         console.error("Error handling Google user:", error)
@@ -260,31 +279,45 @@ export default {
       }
     }
 
-    // Cho phép các provider khác (credentials, whatsapp)
+    // Credentials sign-in: set availability and lastLoginAt
+    if (account?.provider === "credentials" && user?.id) {
+      try {
+        await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+      } catch {}
+      try {
+        await DeveloperStatusService.setDeveloperAvailable(user.id);
+      } catch {}
+    }
+
+    // Cho phép các provider khác (whatsapp)
     return true
   },
   
   // Avoid login redirect loops
   redirect({ url, baseUrl }) {
+    const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === "true"
     try {
       const returnUrl = new URL(url, baseUrl);
       if (returnUrl.origin === baseUrl) {
-        console.log("🔍 Valid redirect URL:", returnUrl.toString());
+        if (DEBUG_AUTH) console.log("🔍 Valid redirect URL:", returnUrl.toString());
         return returnUrl.toString();
       }
-      console.log("🔍 Invalid redirect URL, using baseUrl:", baseUrl);
+      if (DEBUG_AUTH) console.log("🔍 Invalid redirect URL, using baseUrl:", baseUrl);
       return baseUrl;
     } catch (err) {
-      console.log("🔍 Error parsing redirect URL, using baseUrl:", baseUrl);
+      if (DEBUG_AUTH) console.log("🔍 Error parsing redirect URL, using baseUrl:", baseUrl);
       return baseUrl;
     }
   },
     session: async ({ session, token }: any) => {
-      console.log("🔍 Session callback - token:", token)
-      console.log("🔍 Session callback - session:", session)
+      const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === "true"
+      if (DEBUG_AUTH) {
+        console.log("🔍 Session callback - token:", token)
+        console.log("🔍 Session callback - session:", session)
+      }
 
       if (session?.user) {
-        console.log(session.user)
+        if (DEBUG_AUTH) console.log(session.user)
         const user = session.user as typeof session.user & {
           id: string
           phoneE164?: string
@@ -307,82 +340,65 @@ export default {
         if (token.adminApprovalStatus) {
           user.adminApprovalStatus = token.adminApprovalStatus
         }
-        console.log("🔍 Final session user:", user)
+        if (DEBUG_AUTH) console.log("🔍 Final session user:", user)
       }
 
-      console.log("🔍 Returning session:", session)
-      console.log("🔍 Session user role:", session?.user?.role)
+      if (DEBUG_AUTH) {
+        console.log("🔍 Returning session:", session)
+        console.log("🔍 Session user role:", session?.user?.role)
+      }
       return session
     },
     jwt: async ({ user, token, trigger }: any) => {
-      console.log("🔍 JWT callback - user:", user)
-      console.log("🔍 JWT callback - token:", token)
-      console.log("🔍 JWT callback - trigger:", trigger)
+      const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === "true"
+      if (DEBUG_AUTH) {
+        console.log("🔍 JWT callback - user:", user)
+        console.log("🔍 JWT callback - token:", token)
+        console.log("🔍 JWT callback - trigger:", trigger)
+      }
 
       // If no token.sub, return early to prevent session loss
       if (!token.sub) {
-        console.log("❌ No token.sub, returning early");
+        if (DEBUG_AUTH) console.log("❌ No token.sub, returning early");
         return token;
       }
 
-      // Always fetch fresh user data to ensure token has latest info
-      try {
-        console.log("🔄 JWT callback: Fetching fresh user data from database")
-
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phoneE164: true,
-            role: true,
-            isProfileCompleted: true,
-            developerProfile: {
-              select: {
-                adminApprovalStatus: true,
-              },
+      // Throttle DB refresh to reduce load; refresh on first login, manual updates, or interval
+      const REFRESH_INTERVAL_MS = 5 * 60 * 1000
+      const shouldRefreshByTime = !token.lastRefreshedAt || (Date.now() - (token.lastRefreshedAt as number)) > REFRESH_INTERVAL_MS
+      const shouldRefresh = shouldRefreshByTime || trigger === 'update' || !!user
+      if (shouldRefresh) {
+        try {
+          if (DEBUG_AUTH) console.log("🔄 JWT: refreshing user snapshot from DB")
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phoneE164: true,
+              role: true,
+              isProfileCompleted: true,
+              developerProfile: { select: { adminApprovalStatus: true } },
             },
-          },
-        })
-
-        if (dbUser) {
-          console.log("🔄 JWT callback: Fresh user data:", {
-            id: dbUser.id,
-            email: dbUser.email,
-            role: dbUser.role,
-            isProfileCompleted: dbUser.isProfileCompleted,
-            adminApprovalStatus: dbUser.developerProfile?.adminApprovalStatus
           })
-
-          // Always update with fresh data from database
-          token.name = dbUser.name
-          token.email = dbUser.email
-          token.phoneE164 = dbUser.phoneE164
-          token.role = dbUser.role
-          token.isProfileCompleted = dbUser.isProfileCompleted
-          token.adminApprovalStatus = dbUser.developerProfile?.adminApprovalStatus
-
-          // Update developer status to available when JWT is refreshed (user is active)
-          if (dbUser.role === "DEVELOPER" && dbUser.developerProfile) {
-            try {
-              console.log("🔄 JWT callback: Updating developer status to available");
-              await DeveloperStatusService.setDeveloperAvailable(dbUser.id);
-            } catch (statusError) {
-              console.error("❌ JWT callback: Failed to update developer status:", statusError);
-              // Don't throw error to avoid breaking the session
-            }
+          if (dbUser) {
+            token.name = dbUser.name
+            token.email = dbUser.email
+            token.phoneE164 = dbUser.phoneE164
+            token.role = dbUser.role
+            token.isProfileCompleted = dbUser.isProfileCompleted
+            token.adminApprovalStatus = dbUser.developerProfile?.adminApprovalStatus
           }
-        } else {
-          console.log("❌ JWT callback: User not found in database");
+          token.lastRefreshedAt = Date.now()
+        } catch (error) {
+          console.error("❌ JWT: refresh error", error)
         }
-      } catch (error) {
-        console.error("❌ JWT callback: Error fetching user data:", error)
       }
 
       // Also handle user object if it's available (on first login)
       if (user) {
-        console.log("🔍 JWT callback: Processing user object from login")
+        if (DEBUG_AUTH) console.log("🔍 JWT callback: Processing user object from login")
         // Store user ID in token.sub (NextAuth standard)
         // For database adapters, token.sub is automatically set
         if ("phoneE164" in user) {
@@ -396,15 +412,32 @@ export default {
         }
       }
 
-      console.log("🔍 JWT callback: Final token:", {
-        sub: token.sub,
-        email: token.email,
-        role: token.role,
-        isProfileCompleted: token.isProfileCompleted,
-        adminApprovalStatus: token.adminApprovalStatus
-      })
+      if (DEBUG_AUTH) {
+        console.log("🔍 JWT callback: Final token:", {
+          sub: token.sub,
+          email: token.email,
+          role: token.role,
+          isProfileCompleted: token.isProfileCompleted,
+          adminApprovalStatus: token.adminApprovalStatus
+        })
+      }
       
       return token
+    },
+  },
+  events: {
+    async signOut({ token }: any) {
+      try {
+        if (token?.sub) {
+          await DeveloperStatusService.setDeveloperBusy(token.sub);
+          await prisma.user.update({
+            where: { id: token.sub },
+            data: { lastLoginAt: new Date() },
+          });
+        }
+      } catch (e) {
+        console.error("Error in events.signOut while recording activity:", e);
+      }
     },
   },
   session: {

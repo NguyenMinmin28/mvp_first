@@ -51,6 +51,7 @@ export default function ProfileSummary({ profile, hideControls = false, develope
   const [isFollowingLocal, setIsFollowingLocal] = useState<boolean>(Boolean((profile as any)?.isFollowing));
   const [followersCountLocal, setFollowersCountLocal] = useState<number>(Number((profile as any)?.followersCount || 0));
   const [showReviewsOverlay, setShowReviewsOverlay] = useState(false);
+  const [showResumeViewer, setShowResumeViewer] = useState(false);
 
   // Function to render star rating
   const renderStars = (rating: number) => {
@@ -414,7 +415,23 @@ export default function ProfileSummary({ profile, hideControls = false, develope
               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] items-center gap-1.5">
                 <div className="text-gray-500 text-xs sm:text-sm">Attachment: </div>
                 <div className="font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-                  {Array.isArray((profile as any)?.portfolioLinks) && (profile as any).portfolioLinks.length > 0 ? (
+                  {profile?.resumeUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowResumeViewer(true)}
+                      className="underline text-blue-600 break-all"
+                    >
+                      {(() => {
+                        try {
+                          const url = String(profile.resumeUrl);
+                          const name = decodeURIComponent(url.split("/").pop() || "file");
+                          return name.split("?")[0];
+                        } catch {
+                          return "View";
+                        }
+                      })()}
+                    </button>
+                  ) : Array.isArray((profile as any)?.portfolioLinks) && (profile as any).portfolioLinks.length > 0 ? (
                     <a href={(profile as any).portfolioLinks[0]} target="_blank" rel="noreferrer" className="underline text-blue-600 break-all">
                       {(profile as any).portfolioLinks[0]}
                     </a>
@@ -435,6 +452,52 @@ export default function ProfileSummary({ profile, hideControls = false, develope
           developerId={developerId}
           developerName={name || profile?.name || "Developer"}
         />
+      )}
+      {/* Resume viewer modal */}
+      {showResumeViewer && profile?.resumeUrl && (
+        <Dialog open={showResumeViewer} onOpenChange={setShowResumeViewer}>
+          <DialogContent className="max-w-4xl w-[95vw] h-[85vh] p-0 overflow-hidden">
+            <DialogHeader className="px-4 pt-4 pb-2">
+              <DialogTitle>Attachment Preview</DialogTitle>
+            </DialogHeader>
+            <div className="px-4 pb-4 h-[calc(85vh-56px)]">
+              {(() => {
+                const url = String(profile.resumeUrl);
+                const lower = url.toLowerCase();
+                const isPdf = lower.endsWith(".pdf") || lower.includes("/pdf");
+                const viewer = isPdf
+                  ? `${url}#toolbar=1&zoom=page-width`
+                  : `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
+                return (
+                  <iframe
+                    src={viewer}
+                    className="w-full h-full border-0"
+                    referrerPolicy="no-referrer"
+                  />
+                );
+              })()}
+            </div>
+            <DialogFooter className="px-4 pb-4">
+              {(() => {
+                try {
+                  const url = String(profile.resumeUrl);
+                  return (
+                    <a
+                      href={url}
+                      className="text-sm underline text-blue-600"
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open in new tab
+                    </a>
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </Card>
     <Dialog open={openEdit} onOpenChange={setOpenEdit}>

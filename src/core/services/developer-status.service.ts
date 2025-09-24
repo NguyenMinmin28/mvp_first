@@ -40,6 +40,16 @@ export class DeveloperStatusService {
         }
       });
 
+      // Record activity timestamp on the owning user
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lastLoginAt: new Date() },
+        });
+      } catch (e) {
+        console.warn("⚠️ Could not update user.lastLoginAt while recording status activity", e);
+      }
+
       console.log(`✅ Developer status updated successfully`);
 
       // Only notify followers if status changed TO "available"

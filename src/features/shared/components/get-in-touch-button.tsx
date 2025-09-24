@@ -74,21 +74,29 @@ export function GetInTouchButton({
     setShowMessageForm(false);
     setShowFindingOverlay(true);
 
+    let loadingToastId: string | number | undefined;
     try {
+      loadingToastId = toast.loading("Sending message...");
       // Send all the data including message, budget, and description
       const result = await sendInvite(developerId, data);
       
       if (result.success) {
+        toast.dismiss(loadingToastId);
         toast.success("Message sent successfully! The developer will be notified.");
         // Keep the overlay open for a moment to show success
         setTimeout(() => {
           setShowFindingOverlay(false);
-        }, 2000);
+          setShowContactOptions(false);
+          setShowMessageForm(false);
+          setShowWhatsAppContact(false);
+        }, 1200);
       } else {
+        toast.dismiss(loadingToastId);
         toast.error(result.message || "Failed to send message");
         setShowFindingOverlay(false);
       }
     } catch (error) {
+      if (loadingToastId) toast.dismiss(loadingToastId);
       console.error("Error sending manual invite:", error);
       toast.error("Something went wrong. Please try again.");
       setShowFindingOverlay(false);

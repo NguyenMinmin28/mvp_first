@@ -175,12 +175,34 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, skillsRequired, budget, currency, paymentMethod, startDate, endDate } = body;
+    const { title, description, skillsRequired, budget, budgetMin, budgetMax, currency, paymentMethod, startDate, endDate } = body;
 
-    // Validation
+    // Basic presence validation
     if (!title?.trim() || !description?.trim() || !Array.isArray(skillsRequired) || skillsRequired.length === 0) {
       return NextResponse.json(
         { error: "Title, description, and at least one skill are required" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize and enforce length limits to reduce injection payloads
+    const sanitizedTitle = String(title).trim().replace(/[\u0000-\u001F\u007F]/g, "");
+    const sanitizedDescription = String(description).trim().replace(/[\u0000-\u001F\u007F]/g, "");
+    if (sanitizedTitle.length === 0 || sanitizedTitle.length > 200) {
+      return NextResponse.json(
+        { error: "Title must be between 1 and 200 characters" },
+        { status: 400 }
+      );
+    }
+    if (sanitizedDescription.length > 5000) {
+      return NextResponse.json(
+        { error: "Description is too long (max 5000 characters)" },
+        { status: 400 }
+      );
+    }
+    if (skillsRequired.length > 20) {
+      return NextResponse.json(
+        { error: "Too many skills selected (max 20)" },
         { status: 400 }
       );
     }
@@ -189,6 +211,50 @@ export async function POST(request: NextRequest) {
     if (paymentMethod && !["hourly", "fixed"].includes(paymentMethod)) {
       return NextResponse.json(
         { error: "Payment method must be either 'hourly' or 'fixed'" },
+        { status: 400 }
+      );
+    }
+
+    // Validate currency if provided (whitelist)
+    const allowedCurrencies = new Set(["USD", "VND"]);
+    let finalCurrency: string | undefined = undefined;
+    if (currency) {
+      const c = String(currency).toUpperCase();
+      if (!allowedCurrencies.has(c)) {
+        return NextResponse.json(
+          { error: "Unsupported currency" },
+          { status: 400 }
+        );
+      }
+      finalCurrency = c;
+    }
+
+    // Validate budget range if provided
+    let finalBudgetMin: number | undefined = undefined;
+    let finalBudgetMax: number | undefined = undefined;
+    if (budgetMin !== undefined && budgetMin !== null && `${budgetMin}`.trim() !== "") {
+      const n = Number(budgetMin);
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json(
+          { error: "budgetMin must be a non-negative number" },
+          { status: 400 }
+        );
+      }
+      finalBudgetMin = Math.round(n * 100) / 100;
+    }
+    if (budgetMax !== undefined && budgetMax !== null && `${budgetMax}`.trim() !== "") {
+      const n = Number(budgetMax);
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json(
+          { error: "budgetMax must be a non-negative number" },
+          { status: 400 }
+        );
+      }
+      finalBudgetMax = Math.round(n * 100) / 100;
+    }
+    if (finalBudgetMin !== undefined && finalBudgetMax !== undefined && finalBudgetMin > finalBudgetMax) {
+      return NextResponse.json(
+        { error: "budgetMin cannot be greater than budgetMax" },
         { status: 400 }
       );
     }
@@ -247,13 +313,14 @@ export async function POST(request: NextRequest) {
     // Create project
     const data: any = {
       clientId: clientProfile.id,
-      title: title.trim(),
-      description: description.trim(),
+      title: sanitizedTitle,
+      description: sanitizedDescription,
       skillsRequired: skillsRequired,
       status: "submitted",
     };
-    if (budget) data.budgetMin = Number(budget);
-    if (currency) data.currency = String(currency).toUpperCase();
+    if (finalBudgetMin !== undefined) data.budgetMin = finalBudgetMin;
+    if (finalBudgetMax !== undefined) data.budgetMax = finalBudgetMax;
+    if (finalCurrency) data.currency = finalCurrency;
     if (paymentMethod) data.paymentMethod = String(paymentMethod);
     if (startDate) data.expectedStartAt = new Date(startDate);
     if (endDate) data.expectedEndAt = new Date(endDate);
@@ -270,32 +337,25 @@ export async function POST(request: NextRequest) {
       // Don't fail the project creation if usage tracking fails
     }
 
-    // Generate initial batch using rotation service
-    try {
-      const batchResult = await RotationService.generateBatch(project.id);
-      
-      return NextResponse.json({
-        id: project.id,
-        title: project.title,
-        description: project.description,
-        skillsRequired: project.skillsRequired,
-        status: project.status,
-        batchId: batchResult.batchId,
-        candidatesCount: batchResult.candidates.length,
-      });
-    } catch (batchError) {
-      console.error("Failed to generate batch:", batchError);
-      
-      // If batch generation fails, still return project but with a warning
-      return NextResponse.json({
-        id: project.id,
-        title: project.title,
-        description: project.description,
-        skillsRequired: project.skillsRequired,
-        status: project.status,
-        warning: "Project created but no eligible developers found. Please try refreshing later.",
-      });
-    }
+    // Kick off initial batch generation in the background (don't block redirect)
+    (async () => {
+      try {
+        await RotationService.generateBatch(project.id);
+        console.log(`✅ Background batch generation started for project ${project.id}`);
+      } catch (batchError) {
+        console.error("Failed to generate batch in background:", batchError);
+      }
+    })();
+
+    // Return immediately so client can route to project detail page
+    return NextResponse.json({
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      skillsRequired: project.skillsRequired,
+      status: project.status,
+      batchStarted: true,
+    });
 
   } catch (error) {
     console.error("Error creating project:", error);

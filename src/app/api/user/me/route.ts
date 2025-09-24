@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
       role: user.role,
       isProfileCompleted: user.isProfileCompleted,
       phoneE164: user.phoneE164,
+      lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       // Include profile-specific fields
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
         experienceYears: user.developerProfile.experienceYears,
         level: user.developerProfile.level,
         linkedinUrl: user.developerProfile.linkedinUrl,
+        resumeUrl: (user.developerProfile as any).resumeUrl,
         portfolioLinks: user.developerProfile.portfolioLinks,
         location: user.developerProfile.location,
         // Optional fields may be missing if schema/migration not applied yet

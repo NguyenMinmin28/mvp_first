@@ -560,6 +560,8 @@ model DeveloperProfile {
   location        String?
   age             Int?
   hourlyRateUsd   Int? // USD per hour
+  // Single-file resume/CV URL (PDF/DOC, <=5MB from UI)
+  resumeUrl       String?
 
   adminApprovalStatus AdminApprovalStatus @default(draft)
   approvedAt          DateTime?
@@ -786,7 +788,10 @@ model AssignmentCandidate {
   clientMessage  String?   // Message from client for manual invites
   metadata       Json?     // Additional data like budget, description, etc.
 
-  @@unique([batchId, developerId], map: "uq_assignment_candidates_batch_developer") // 👈 Tránh case race condition lấy lại chính dev đó
+  // Removed unique constraint on (batchId, developerId) because Mongo treats null as a value
+  // which caused duplicate key errors for legacy rows with batchId = null.
+  // Enforce uniqueness at application level when inserting candidates into a batch.
+  // @@unique([batchId, developerId], map: "uq_assignment_candidates_batch_developer")
   @@index([batchId], map: "idx_assignment_candidates_batchId")
   @@index([projectId], map: "idx_assignment_candidates_projectId")
   @@index([clientId], map: "idx_assignment_candidates_clientId")

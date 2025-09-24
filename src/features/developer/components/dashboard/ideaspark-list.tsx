@@ -42,7 +42,19 @@ export default function IdeaSparkList({ profile }: IdeaSparkListProps = {}) {
   const [logs, setLogs] = useState<PresenceLogItem[]>([]);
 
   useEffect(() => {
-    setLogs(loadPresenceLogs());
+    // Start with local logs
+    const local = loadPresenceLogs();
+    const merged = [...local];
+    // Prepend a server-side activity hint if available
+    try {
+      if (profile?.currentStatus && profile?.lastLoginAt) {
+        const lastAt = new Date(profile.lastLoginAt).toISOString();
+        if (!merged.some((x) => x.at === lastAt)) {
+          merged.unshift({ status: (profile.currentStatus === "available" ? "available" : "busy") as PresenceStatus, at: lastAt });
+        }
+      }
+    } catch {}
+    setLogs(merged);
     const onStorage = (e: StorageEvent) => {
       if (e.key === "presenceLogs") setLogs(loadPresenceLogs());
     };
@@ -53,7 +65,7 @@ export default function IdeaSparkList({ profile }: IdeaSparkListProps = {}) {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("presence-log-updated", onCustom as EventListener);
     };
-  }, []);
+  }, [profile?.currentStatus, profile?.lastLoginAt]);
 
   return (
     <Card className="h-full">

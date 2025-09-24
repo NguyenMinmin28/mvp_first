@@ -33,6 +33,232 @@ export class RotationService {
   private static readonly ACCEPTANCE_DEADLINE_MINUTES = 15;
   // Allow developers to appear in multiple active batches concurrently up to this limit
   private static readonly MAX_PENDING_ACTIVE_INVITES_PER_DEV = 3;
+  
+  /**
+   * Get dynamic pending limit based on batch count - more lenient as project progresses
+   */
+  private static getDynamicPendingLimit(existingBatchesCount: number): number {
+    return Math.max(5 - existingBatchesCount, 1);
+  }
+
+  /**
+   * Adaptive quota system - adjust level quotas when pool is limited
+   */
+  private static adaptiveQuota(
+    target: BatchSelectionCriteria, 
+    found: Record<DevLevel, number>
+  ): BatchSelectionCriteria {
+    const totalNeed = target.fresherCount + target.midCount + target.expertCount;
+    const totalFound = found.FRESHER + found.MID + found.EXPERT;
+
+    if (totalFound < totalNeed) {
+      console.log(`Adaptive quota: Found ${totalFound} candidates, need ${totalNeed}. Adjusting quotas...`);
+      
+      // Allow filling expert slots with mid-level developers
+      if (found.EXPERT < target.expertCount && found.MID > 0) {
+        const expertShortfall = target.expertCount - found.EXPERT;
+        const midAvailable = found.MID;
+        const canPromote = Math.min(expertShortfall, midAvailable);
+        
+        if (canPromote > 0) {
+          console.log(`Promoting ${canPromote} MID developers to EXPERT slots`);
+          found.EXPERT += canPromote;
+          found.MID -= canPromote;
+        }
+      }
+      
+      // Allow filling mid slots with fresher developers
+      if (found.MID < target.midCount && found.FRESHER > 0) {
+        const midShortfall = target.midCount - found.MID;
+        const fresherAvailable = found.FRESHER;
+        const canPromote = Math.min(midShortfall, fresherAvailable);
+        
+        if (canPromote > 0) {
+          console.log(`Promoting ${canPromote} FRESHER developers to MID slots`);
+          found.MID += canPromote;
+          found.FRESHER -= canPromote;
+        }
+      }
+    }
+
+    return {
+      fresherCount: Math.min(target.fresherCount, found.FRESHER),
+      midCount: Math.min(target.midCount, found.MID),
+      expertCount: Math.min(target.expertCount, found.EXPERT)
+    };
+  }
+  
+  // Simple in-memory cache for rotation results (5 second TTL)
+  private static rotationCache = new Map<string, { result: DeveloperCandidate[], timestamp: number }>();
+  private static readonly CACHE_TTL_MS = 5000;
+  
+  /**
+   * Clear rotation cache for a specific project or all cache
+   */
+  private static clearRotationCache(projectId?: string) {
+    if (projectId) {
+      // Clear cache entries for specific project
+      for (const [key] of this.rotationCache) {
+        if (key.startsWith(`${projectId}-`)) {
+          this.rotationCache.delete(key);
+        }
+      }
+    } else {
+      // Clear all cache
+      this.rotationCache.clear();
+    }
+  }
+
+  /**
+   * Get skills that have available developers
+   */
+  private static async getAvailableSkills(
+    tx: any,
+    skillsRequired: string[]
+  ): Promise<string[]> {
+    const availableSkills: string[] = [];
+    
+    for (const skillId of skillsRequired) {
+      const count = await tx.developerProfile.count({
+        where: {
+          adminApprovalStatus: "approved",
+          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          whatsappVerified: true,
+          skills: {
+            some: { skillId }
+          }
+        }
+      });
+      
+      if (count > 0) {
+        availableSkills.push(skillId);
+        console.log(`Skill ${skillId}: ${count} developers available`);
+      } else {
+        console.log(`Skill ${skillId}: 0 developers available`);
+      }
+    }
+    
+    return availableSkills;
+  }
+
+  /**
+   * Get skills that have available developers (without WhatsApp requirement)
+   */
+  private static async getAvailableSkillsNoWhatsApp(
+    tx: any,
+    skillsRequired: string[]
+  ): Promise<string[]> {
+    const availableSkills: string[] = [];
+    
+    for (const skillId of skillsRequired) {
+      const count = await tx.developerProfile.count({
+        where: {
+          adminApprovalStatus: "approved",
+          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          // No whatsappVerified requirement
+          skills: {
+            some: { skillId }
+          }
+        }
+      });
+      
+      if (count > 0) {
+        availableSkills.push(skillId);
+        console.log(`Skill ${skillId} (no WhatsApp): ${count} developers available`);
+      } else {
+        console.log(`Skill ${skillId} (no WhatsApp): 0 developers available`);
+      }
+    }
+    
+    return availableSkills;
+  }
+
+  /**
+   * Get developers currently blocked (pending/accepted in this project)
+   */
+  private static async getCurrentlyBlockedDevelopers(
+    tx: any,
+    projectId: string,
+    clientUserId: string,
+    existingBatchesCount: number = 0
+  ): Promise<string[]> {
+    const dynamicLimit = this.getDynamicPendingLimit(existingBatchesCount);
+    
+    const [blockedRows, overLimitRows] = await Promise.all([
+      // Exclude developers who are currently pending/accepted in this project
+      tx.assignmentCandidate.findMany({
+        where: { 
+          projectId, 
+          responseStatus: { in: ["pending", "accepted"] }
+        },
+        select: { developerId: true },
+      }),
+      // Use dynamic limit for over-limit check
+      tx.assignmentCandidate.groupBy({
+        by: ["developerId"],
+        where: { 
+          responseStatus: "pending", 
+          batch: { status: "active" }, 
+          source: "AUTO_ROTATION"
+        },
+        _count: { developerId: true },
+        having: { developerId: { _count: { gte: dynamicLimit } } },
+      }),
+    ]);
+    
+    const blockedIds = blockedRows.map((r: any) => r.developerId);
+    const overLimitIds = overLimitRows.map((r: any) => r.developerId);
+    
+    console.log(`Blocked developers: ${blockedIds.length} (current), ${overLimitIds.length} (over-limit, limit=${dynamicLimit})`);
+    
+    return Array.from(new Set([...blockedIds, ...overLimitIds]));
+  }
+
+  /**
+   * Check if project can generate new batch (hasn't exhausted developer pool)
+   */
+  static async canGenerateNewBatch(projectId: string): Promise<boolean> {
+    try {
+      // Count existing batches
+      const existingBatchesCount = await prisma.assignmentBatch.count({
+        where: { projectId }
+      });
+
+      // If more than 8 batches, likely exhausted
+      if (existingBatchesCount >= 8) {
+        return false;
+      }
+
+      // Check if last batch was empty (no candidates found)
+      const lastBatch = await prisma.assignmentBatch.findFirst({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          candidates: true
+        }
+      });
+
+      // If last batch was empty, check if we've tried too many times
+      if (lastBatch && lastBatch.candidates.length === 0) {
+        const emptyBatchesCount = await prisma.assignmentBatch.count({
+          where: { 
+            projectId,
+            candidates: {
+              none: {}
+            }
+          }
+        });
+        
+        // If more than 3 empty batches, likely exhausted
+        return emptyBatchesCount < 3;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error checking if can generate new batch:", error);
+      return true; // Default to allowing generation
+    }
+  }
 
   /**
    * Main entry point for generating assignment batch
@@ -63,11 +289,14 @@ export class RotationService {
 
         // Send WhatsApp notifications for new batch
         try {
-          await NotificationService.sendBatchNotifications(result.batch.id);
+          await NotificationService.sendBatchNotifications(result.batchId);
         } catch (error) {
           console.error("Failed to send batch notifications:", error);
           // Non-critical; don't fail the batch creation
         }
+
+        // Clear cache for this project since we created a new batch
+        this.clearRotationCache(projectId);
 
         return result;
       } catch (err: any) {
@@ -108,18 +337,146 @@ export class RotationService {
         throw new Error(`Cannot generate batch for project with status: ${project.status}`);
       }
 
-      // 2. Generate candidates using rotation algorithm
+      // Count existing batches to determine exclusion strategy
+      const existingBatchesCount = await tx.assignmentBatch.count({
+        where: { projectId }
+      });
+
+      // Progressive exclusion strategy - less aggressive
+      let excludeDeveloperIds: string[] = [];
+      
+      if (existingBatchesCount >= 5) {
+        // Only after 5+ batches, exclude developers who were assigned in the last 2 batches
+        console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from recent batches`);
+        const recentBatches = await tx.assignmentBatch.findMany({
+          where: { projectId },
+          orderBy: { createdAt: 'desc' },
+          take: 2,
+          select: { id: true }
+        });
+        
+        if (recentBatches.length > 0) {
+          const recentBatchIds = recentBatches.map(b => b.id);
+          const recentlyAssigned = await tx.assignmentCandidate.findMany({
+            where: { 
+              projectId,
+              batchId: { in: recentBatchIds }
+            },
+            select: { developerId: true },
+            distinct: ['developerId']
+          });
+          excludeDeveloperIds = recentlyAssigned.map(ac => ac.developerId);
+          console.log(`Excluding ${excludeDeveloperIds.length} developers from recent batches`);
+        }
+      } else if (existingBatchesCount >= 3) {
+        // After 3+ batches, only exclude developers from the most recent batch
+        console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from last batch`);
+        const lastBatch = await tx.assignmentBatch.findFirst({
+          where: { projectId },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true }
+        });
+        
+        if (lastBatch) {
+          const lastBatchAssigned = await tx.assignmentCandidate.findMany({
+            where: { 
+              projectId,
+              batchId: lastBatch.id
+            },
+            select: { developerId: true },
+            distinct: ['developerId']
+          });
+          excludeDeveloperIds = lastBatchAssigned.map(ac => ac.developerId);
+          console.log(`Excluding ${excludeDeveloperIds.length} developers from last batch`);
+        }
+      }
+
+      // 2. Check available skills first
+      const availableSkills = await this.getAvailableSkills(tx, project.skillsRequired);
+      console.log(`Available skills: ${availableSkills.length}/${project.skillsRequired.length}`);
+      
+      if (availableSkills.length === 0) {
+        console.log("No WhatsApp verified developers available, trying without WhatsApp requirement...");
+        
+        // Try without WhatsApp verification
+        const availableSkillsNoWhatsApp = await this.getAvailableSkillsNoWhatsApp(tx, project.skillsRequired);
+        console.log(`Available skills (no WhatsApp): ${availableSkillsNoWhatsApp.length}/${project.skillsRequired.length}`);
+        
+        if (availableSkillsNoWhatsApp.length === 0) {
+          console.log("No developers available for any required skills (even without WhatsApp)");
+          // Create an empty, completed batch
+          const emptyBatch = await tx.assignmentBatch.create({
+            data: {
+              projectId,
+              batchNumber: await this.getNextBatchNumber(tx, projectId),
+              status: "completed",
+              selection: selection as any,
+              createdAt: new Date(),
+            },
+          });
+
+          await tx.project.update({
+            where: { id: projectId },
+            data: { 
+              currentBatchId: emptyBatch.id,
+              status: "submitted"
+            },
+          });
+
+          return {
+            batchId: emptyBatch.id,
+            candidates: [],
+            selection,
+          };
+        }
+        
+        // Use skills without WhatsApp requirement
+        availableSkills.push(...availableSkillsNoWhatsApp);
+      }
+
+      // 3. Generate candidates using rotation algorithm with available skills
       const candidates = await this.selectCandidates(
         tx,
-        project.skillsRequired,
+        availableSkills, // Use only available skills
         project.client.userId,
         projectId,
-        selection
+        selection,
+        excludeDeveloperIds,
+        existingBatchesCount
       );
 
-      // Handle case where no candidates found
+      // Handle case where no candidates found: create an empty batch to stop infinite searching on UI
       if (candidates.length === 0) {
-        throw new Error("No eligible candidates found for this project");
+        // Only mark as exhausted if we've tried many times with many exclusions
+        const isExhausted = existingBatchesCount >= 6 && excludeDeveloperIds.length > 20;
+        
+        console.log(`No candidates found for project ${projectId} (${existingBatchesCount} batches, ${excludeDeveloperIds.length} excluded). Creating ${isExhausted ? 'exhausted' : 'empty'} batch.`);
+        
+        // Create an empty, completed batch and mark it as current for the project
+        const emptyBatch = await tx.assignmentBatch.create({
+          data: {
+            projectId,
+            batchNumber: await this.getNextBatchNumber(tx, projectId),
+            status: "completed",
+            selection: selection as any,
+            createdAt: new Date(),
+          },
+        });
+
+        await tx.project.update({
+          where: { id: projectId },
+          data: { 
+            currentBatchId: emptyBatch.id,
+            // Keep project status as submitted so client can manually assign
+            status: "submitted"
+          },
+        });
+
+        return {
+          batchId: emptyBatch.id,
+          candidates: [],
+          selection,
+        };
       }
 
       // 3. Create AssignmentBatch
@@ -188,8 +545,22 @@ export class RotationService {
     clientUserId: string,
     projectId: string,
     selection: BatchSelectionCriteria,
-    excludeDeveloperIds: string[] = []
+    excludeDeveloperIds: string[] = [],
+    existingBatchesCount: number = 0
   ): Promise<DeveloperCandidate[]> {
+    console.time("selectCandidates");
+    
+    // Check cache first
+    const cacheKey = `${projectId}-${skillsRequired.sort().join(',')}-${JSON.stringify(selection)}`;
+    const cached = this.rotationCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL_MS) {
+      console.log("Cache hit for rotation candidates");
+      console.timeEnd("selectCandidates");
+      return cached.result;
+    }
+    
+    // Use legacy method directly since aggregation pipeline has issues
+    console.log("Using legacy method with skills:", skillsRequired, "excludeIds:", excludeDeveloperIds.length);
     const allCandidates: DeveloperCandidate[] = [];
     const levels: Array<{ level: DevLevel; count: number }> = [
       { level: "EXPERT", count: selection.expertCount },
@@ -200,6 +571,7 @@ export class RotationService {
     // B1) Get pool by (skill, level)
     for (const skill of skillsRequired) {
       for (const { level, count } of levels) {
+        console.log(`Getting candidates for skill: ${skill}, level: ${level}, count: ${count}`);
         const candidates = await this.getCandidatesForSkillLevel(
           tx,
           skill,
@@ -209,15 +581,347 @@ export class RotationService {
           count,
           excludeDeveloperIds
         );
+        console.log(`Found ${candidates.length} candidates for ${skill}-${level}`);
         allCandidates.push(...candidates);
       }
     }
 
+    console.log(`Total candidates from legacy method: ${allCandidates.length}`);
+
     // B2) Deduplicate candidates
     const deduped = this.deduplicateCandidates(allCandidates, skillsRequired);
+    console.log(`After deduplication: ${deduped.length} candidates`);
     
     // B3) Rebalance and trim to exact quotas with fallback
-    return this.rebalanceAndTrim(deduped, selection);
+    const finalCandidates = this.rebalanceAndTrim(deduped, selection);
+    console.log(`Final legacy candidates: ${finalCandidates.length}`);
+    return finalCandidates;
+
+    /* Aggregation pipeline disabled due to type mismatch issues
+    try {
+      // Single optimized aggregation pipeline to replace all nested queries
+      const aggregationPipeline = [
+        // Stage 1: Match base eligible developers (relaxed WhatsApp requirement)
+        {
+          $match: {
+            adminApprovalStatus: "approved",
+            currentStatus: { $in: ["available", "checking", "busy", "away"] },
+            userId: { $ne: clientUserId },
+            whatsappVerified: { $in: [true, false] }, // Relaxed WhatsApp requirement
+            ...(excludeDeveloperIds.length > 0 && { _id: { $nin: excludeDeveloperIds } })
+          }
+        },
+        
+        // Stage 2: Join with skills to filter by required skills
+        {
+          $lookup: {
+            from: "DeveloperSkill",
+            let: { devId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$developerProfileId", "$$devId"]
+                  }
+                }
+              }
+            ],
+            as: "skills"
+          }
+        },
+        
+        // Stage 3: Filter developers who have at least one required skill (relaxed)
+        {
+          $match: {
+            "skills.skillId": { $in: skillsRequired }
+          }
+        },
+        
+        // Stage 4: Join with assignment candidates to exclude currently pending/accepted in this project
+        {
+          $lookup: {
+            from: "AssignmentCandidate",
+            let: { devId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$developerId", "$$devId"] },
+                      { $eq: ["$projectId", projectId] },
+                      { $in: ["$responseStatus", ["pending", "accepted"]] }
+                    ]
+                  }
+                }
+              },
+              { $limit: 1 }
+            ],
+            as: "inProject"
+          }
+        },
+        
+        // Stage 5: Exclude developers currently in this project
+        {
+          $match: {
+            inProject: { $size: 0 }
+          }
+        },
+        
+        // Stage 6: Check pending count to avoid over-limit developers (with dynamic limit)
+        {
+          $lookup: {
+            from: "AssignmentCandidate",
+            let: { devId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$developerId", "$$devId"] },
+                      { $eq: ["$responseStatus", "pending"] },
+                      { $eq: ["$source", "AUTO_ROTATION"] }
+                    ]
+                  }
+                }
+              },
+              {
+                $lookup: {
+                  from: "AssignmentBatch",
+                  localField: "batchId",
+                  foreignField: "_id",
+                  as: "batch"
+                }
+              },
+              {
+                $match: {
+                  "batch.status": "active"
+                }
+              },
+              {
+                $group: {
+                  _id: "$developerId",
+                  count: { $sum: 1 }
+                }
+              },
+              {
+                $match: {
+                  count: { $gte: this.getDynamicPendingLimit(existingBatchesCount) }
+                }
+              }
+            ],
+            as: "pendingCounts"
+          }
+        },
+        
+        // Stage 7: Exclude over-limit developers
+        {
+          $match: {
+            pendingCounts: { $size: 0 }
+          }
+        },
+        
+        // Stage 8: Calculate response time from recent assignments
+        {
+          $lookup: {
+            from: "AssignmentCandidate",
+            let: { devId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$developerId", "$$devId"] },
+                      { $in: ["$responseStatus", ["accepted", "rejected"]] },
+                      { $ne: ["$respondedAt", null] },
+                      { $ne: ["$assignedAt", null] }
+                    ]
+                  }
+                }
+              },
+              {
+                $addFields: {
+                  responseTimeMs: {
+                    $subtract: ["$respondedAt", "$assignedAt"]
+                  }
+                }
+              },
+              { $sort: { respondedAt: -1 } },
+              { $limit: 5 }
+            ],
+            as: "recentResponses"
+          }
+        },
+        
+        // Stage 9: Calculate average response time
+        {
+          $addFields: {
+            avgResponseTimeMs: {
+              $cond: {
+                if: { $gt: [{ $size: "$recentResponses" }, 0] },
+                then: {
+                  $avg: "$recentResponses.responseTimeMs"
+                },
+                else: 60000
+              }
+            }
+          }
+        },
+        
+        // Stage 10: Unwind skills to get one row per developer-skill combination
+        {
+          $unwind: "$skills"
+        },
+        
+        // Stage 11: Filter to only required skills
+        {
+          $match: {
+            "skills.skillId": { $in: skillsRequired }
+          }
+        },
+        
+        // Stage 12: Project final fields
+        {
+          $project: {
+            developerId: "$_id",
+            level: 1,
+            skillId: "$skills.skillId",
+            avgResponseTimeMs: 1,
+            _id: 0
+          }
+        },
+        
+        // Stage 13: Sort for consistent ordering
+        {
+          $sort: {
+            level: 1,
+            avgResponseTimeMs: 1,
+            developerId: 1
+          }
+        },
+        
+        // Stage 14: Limit to reasonable number
+        {
+          $limit: 200
+        }
+      ];
+
+      console.log("Starting aggregation with pipeline:", JSON.stringify(aggregationPipeline, null, 2));
+      console.log("Skills required:", skillsRequired);
+      console.log("Exclude developer IDs:", excludeDeveloperIds.length);
+      
+      console.time("aggregation");
+      const result = await (prisma as any).$runCommandRaw({
+        aggregate: "DeveloperProfile",
+        pipeline: aggregationPipeline,
+        cursor: { batchSize: 100 },
+        allowDiskUse: true,
+        maxTimeMS: 3000
+      });
+      console.timeEnd("aggregation");
+      console.log("Aggregation result:", JSON.stringify(result, null, 2));
+
+      let candidates = result.cursor.firstBatch || [];
+      console.log(`After aggregation: ${candidates.length} candidates found`);
+      
+      // No need for WhatsApp fallback since we already relaxed the requirement
+
+      // If still no candidates after fallback, try with fewer exclusions
+      if (candidates.length === 0 && excludeDeveloperIds.length > 0) {
+        console.log(`No candidates found after excluding ${excludeDeveloperIds.length} developers. Trying with reduced exclusions...`);
+        
+        // Try again with only excluding developers currently pending/accepted in this project
+        const reducedExcludeIds = await this.getCurrentlyBlockedDevelopers(tx, projectId, clientUserId, existingBatchesCount);
+        console.log(`Retrying with reduced exclusions: ${reducedExcludeIds.length} developers`);
+        
+        const reducedPipeline = JSON.parse(JSON.stringify(aggregationPipeline));
+        if (reducedExcludeIds.length > 0) {
+          reducedPipeline[0].$match._id = { $nin: reducedExcludeIds };
+        } else {
+          delete reducedPipeline[0].$match._id;
+        }
+        
+        console.log("Trying reduced exclusions pipeline:", JSON.stringify(reducedPipeline, null, 2));
+        const reducedResult = await (prisma as any).$runCommandRaw({
+          aggregate: "DeveloperProfile",
+          pipeline: reducedPipeline,
+          cursor: { batchSize: 100 },
+          allowDiskUse: true,
+          maxTimeMS: 3000
+        });
+        console.log("Reduced exclusions result:", JSON.stringify(reducedResult, null, 2));
+        
+        candidates = reducedResult.cursor.firstBatch || [];
+        console.log(`Found ${candidates.length} candidates with reduced exclusions`);
+      }
+
+      console.log(`Found ${candidates.length} candidates from aggregation`);
+
+      // Transform to DeveloperCandidate format
+      const transformedCandidates: DeveloperCandidate[] = candidates.map((doc: any) => ({
+        developerId: String(doc.developerId),
+        level: doc.level,
+        skillIds: [String(doc.skillId)],
+        usualResponseTimeMs: Math.round(doc.avgResponseTimeMs || 60000)
+      }));
+
+      // Deduplicate and rebalance
+      const deduped = this.deduplicateCandidates(transformedCandidates, skillsRequired);
+      const finalCandidates = this.rebalanceAndTrim(deduped, selection);
+      
+      // Cache the result
+      this.rotationCache.set(cacheKey, {
+        result: finalCandidates,
+        timestamp: Date.now()
+      });
+      
+      console.timeEnd("selectCandidates");
+      console.log(`Final candidates: ${finalCandidates.length}`);
+      
+      return finalCandidates;
+      
+    } catch (error) {
+      console.error("Aggregation failed, falling back to legacy method:", error);
+      console.timeEnd("selectCandidates");
+      
+      // Fallback to original method
+      console.log("Using legacy method with skills:", skillsRequired, "excludeIds:", excludeDeveloperIds.length);
+      const allCandidates: DeveloperCandidate[] = [];
+      const levels: Array<{ level: DevLevel; count: number }> = [
+        { level: "EXPERT", count: selection.expertCount },
+        { level: "MID", count: selection.midCount },
+        { level: "FRESHER", count: selection.fresherCount },
+      ];
+
+      // B1) Get pool by (skill, level)
+      for (const skill of skillsRequired) {
+        for (const { level, count } of levels) {
+          console.log(`Getting candidates for skill: ${skill}, level: ${level}, count: ${count}`);
+          const candidates = await this.getCandidatesForSkillLevel(
+            tx,
+            skill,
+            level,
+            clientUserId,
+            projectId,
+            count,
+            excludeDeveloperIds
+          );
+          console.log(`Found ${candidates.length} candidates for ${skill}-${level}`);
+          allCandidates.push(...candidates);
+        }
+      }
+
+      console.log(`Total candidates from legacy method: ${allCandidates.length}`);
+
+      // B2) Deduplicate candidates
+      const deduped = this.deduplicateCandidates(allCandidates, skillsRequired);
+      console.log(`After deduplication: ${deduped.length} candidates`);
+      
+      // B3) Rebalance and trim to exact quotas with fallback
+      const finalCandidates = this.rebalanceAndTrim(deduped, selection);
+      console.log(`Final legacy candidates: ${finalCandidates.length}`);
+      return finalCandidates;
+    }
+    */
   }
 
   /**
@@ -230,38 +934,40 @@ export class RotationService {
     clientUserId: string,
     projectId: string,
     maxCount: number,
-    additionalExcludeIds: string[] = []
+    additionalExcludeIds: string[] = [],
+    precomputedOverLimitIds?: string[]
   ): Promise<DeveloperCandidate[]> {
+    console.log(`getCandidatesForSkillLevel: skill=${skillId}, level=${level}, maxCount=${maxCount}, excludeIds=${additionalExcludeIds.length}`);
+    
     // First try to get rotation cursor
     const cursor = await this.getRotationCursor(tx, skillId, level);
+    console.log(`Rotation cursor for ${skillId}-${level}:`, cursor);
 
-    // Precompute developers who are pending in active batches and count per developer
-    // Optimize: Use aggregation query instead of fetching all records
-    // Exclude manual invites from the pending limit
-    const pendingCounts = await tx.assignmentCandidate.groupBy({
-      by: ['developerId'],
-      where: {
-        responseStatus: "pending",
-        batch: { status: "active" },
-        source: "AUTO_ROTATION", // Only count auto-rotation candidates for limit
-      },
-      _count: {
-        developerId: true,
-      },
-      having: {
-        developerId: {
-          _count: {
-            gte: RotationService.MAX_PENDING_ACTIVE_INVITES_PER_DEV,
-          },
+    // Use precomputed over-limit list to avoid N+1 groupBy calls
+    let overLimitDeveloperIds: string[] = Array.isArray(precomputedOverLimitIds)
+      ? precomputedOverLimitIds
+      : [];
+    if (overLimitDeveloperIds.length === 0 && !precomputedOverLimitIds) {
+      const pendingCounts = await tx.assignmentCandidate.groupBy({
+        by: ['developerId'],
+        where: {
+          responseStatus: "pending",
+          batch: { status: "active" },
+          source: "AUTO_ROTATION",
         },
-      },
-    });
-    
-    const overLimitDeveloperIds = pendingCounts.map(p => p.developerId as string);
+        _count: { developerId: true },
+        having: {
+          developerId: { _count: { gte: RotationService.MAX_PENDING_ACTIVE_INVITES_PER_DEV } },
+        },
+      });
+      overLimitDeveloperIds = pendingCounts.map((p: any) => p.developerId as string);
+    }
     const allExcludeIds = [...overLimitDeveloperIds, ...additionalExcludeIds];
+    console.log(`All exclude IDs for ${skillId}-${level}: ${allExcludeIds.length} (overLimit: ${overLimitDeveloperIds.length}, additional: ${additionalExcludeIds.length})`);
 
     // Build base query for eligible developers - optimized for performance
-    const eligibleDevs = await tx.developerProfile.findMany({
+    console.log(`Querying eligible developers for ${skillId}-${level}...`);
+    let eligibleDevs = await tx.developerProfile.findMany({
       where: {
         adminApprovalStatus: "approved",
         currentStatus: { in: ["available", "checking", "busy", "away"] },
@@ -301,16 +1007,64 @@ export class RotationService {
       orderBy: [{ id: "asc" }], // Stable ordering for rotation
       take: Math.min(maxCount * 2, 50), // Limit to reasonable number for performance
     });
+    console.log(`Found ${eligibleDevs.length} eligible developers for ${skillId}-${level} (WhatsApp verified)`);
+
+    // Fallback: if no WhatsApp-verified candidates found, relax whatsappVerified constraint
+    if (eligibleDevs.length === 0) {
+      console.log(`No WhatsApp verified candidates for ${skillId}-${level}, trying fallback...`);
+      eligibleDevs = await tx.developerProfile.findMany({
+        where: {
+          adminApprovalStatus: "approved",
+          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          level,
+          userId: { not: clientUserId },
+          // whatsappVerified removed in fallback
+          skills: {
+            some: { skillId },
+          },
+          id: { notIn: allExcludeIds },
+          NOT: {
+            assignmentCandidates: {
+              some: {
+                projectId: projectId,
+                responseStatus: { in: ["pending", "accepted"] },
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          level: true,
+          skills: { 
+            where: { skillId },
+            select: { skillId: true }
+          },
+          assignmentCandidates: {
+            where: { responseStatus: { in: ["accepted", "rejected"] } },
+            select: { respondedAt: true },
+            orderBy: { respondedAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: [{ id: "asc" }],
+        take: Math.min(maxCount * 2, 50),
+      });
+      console.log(`Found ${eligibleDevs.length} eligible developers for ${skillId}-${level} (fallback, no WhatsApp requirement)`);
+    }
 
     // Apply fair ordering
     const orderedDevs = await this.applyFairOrdering(eligibleDevs, cursor);
+    console.log(`After fair ordering: ${orderedDevs.length} developers for ${skillId}-${level}`);
 
-    return orderedDevs.slice(0, maxCount).map((dev: any) => ({
+    const result = orderedDevs.slice(0, maxCount).map((dev: any) => ({
       developerId: dev.id,
       level: dev.level,
       skillIds: [skillId],
       usualResponseTimeMs: this.calculateResponseTime(dev.assignmentCandidates),
     }));
+    
+    console.log(`Final result for ${skillId}-${level}: ${result.length} candidates`);
+    return result;
   }
 
   /**
@@ -396,14 +1150,26 @@ export class RotationService {
       byLevel[candidate.level].push(candidate);
     }
 
-    // Trim excess from each level
-    byLevel.EXPERT = byLevel.EXPERT.slice(0, selection.expertCount);
-    byLevel.MID = byLevel.MID.slice(0, selection.midCount);
-    byLevel.FRESHER = byLevel.FRESHER.slice(0, selection.fresherCount);
+    // Count available candidates by level
+    const found = {
+      FRESHER: byLevel.FRESHER.length,
+      MID: byLevel.MID.length,
+      EXPERT: byLevel.EXPERT.length
+    };
+
+    // Use adaptive quota to adjust selection based on available candidates
+    const adaptiveSelection = this.adaptiveQuota(selection, found);
+    
+    console.log(`Adaptive selection: FRESHER=${adaptiveSelection.fresherCount}, MID=${adaptiveSelection.midCount}, EXPERT=${adaptiveSelection.expertCount}`);
+
+    // Trim excess from each level using adaptive selection
+    byLevel.EXPERT = byLevel.EXPERT.slice(0, adaptiveSelection.expertCount);
+    byLevel.MID = byLevel.MID.slice(0, adaptiveSelection.midCount);
+    byLevel.FRESHER = byLevel.FRESHER.slice(0, adaptiveSelection.fresherCount);
 
     // Calculate needs for fallback
-    const needExpert = selection.expertCount - byLevel.EXPERT.length;
-    const needMid = selection.midCount - byLevel.MID.length;
+    const needExpert = adaptiveSelection.expertCount - byLevel.EXPERT.length;
+    const needMid = adaptiveSelection.midCount - byLevel.MID.length;
 
     // Fallback: Expert <- Mid <- Fresher
     if (needExpert > 0) {
@@ -418,13 +1184,16 @@ export class RotationService {
     }
 
     // Fallback: Mid <- Fresher
-    const finalNeedMid = (selection.midCount - byLevel.MID.length);
+    const finalNeedMid = (adaptiveSelection.midCount - byLevel.MID.length);
     if (finalNeedMid > 0) {
       const fromFresher = byLevel.FRESHER.splice(0, Math.min(finalNeedMid, byLevel.FRESHER.length));
       byLevel.MID.push(...fromFresher);
     }
 
-    return [...byLevel.FRESHER, ...byLevel.MID, ...byLevel.EXPERT];
+    const result = [...byLevel.FRESHER, ...byLevel.MID, ...byLevel.EXPERT];
+    console.log(`Final rebalanced candidates: ${result.length} (FRESHER=${byLevel.FRESHER.length}, MID=${byLevel.MID.length}, EXPERT=${byLevel.EXPERT.length})`);
+    
+    return result;
   }
 
   /**
@@ -831,6 +1600,62 @@ export class RotationService {
             // Get accepted developer IDs to exclude them
             const acceptedIds = acceptedCandidates.map(c => c.developerId);
             
+            // Count existing batches to determine exclusion strategy
+            const existingBatchesCount = await tx.assignmentBatch.count({
+              where: { projectId }
+            });
+
+            // Progressive exclusion strategy - less aggressive
+            let excludeDeveloperIds: string[] = [...acceptedIds];
+            
+            if (existingBatchesCount >= 5) {
+              // Only after 5+ batches, exclude developers from recent batches
+              console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from recent batches`);
+              const recentBatches = await tx.assignmentBatch.findMany({
+                where: { projectId },
+                orderBy: { createdAt: 'desc' },
+                take: 2,
+                select: { id: true }
+              });
+              
+              if (recentBatches.length > 0) {
+                const recentBatchIds = recentBatches.map(b => b.id);
+                const recentlyAssigned = await tx.assignmentCandidate.findMany({
+                  where: { 
+                    projectId,
+                    batchId: { in: recentBatchIds }
+                  },
+                  select: { developerId: true },
+                  distinct: ['developerId']
+                });
+                const recentIds = recentlyAssigned.map(ac => ac.developerId);
+                excludeDeveloperIds = Array.from(new Set([...acceptedIds, ...recentIds]));
+                console.log(`Excluding ${excludeDeveloperIds.length} developers (including ${acceptedIds.length} accepted + ${recentIds.length} from recent batches)`);
+              }
+            } else if (existingBatchesCount >= 3) {
+              // After 3+ batches, only exclude developers from the most recent batch
+              console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from last batch`);
+              const lastBatch = await tx.assignmentBatch.findFirst({
+                where: { projectId },
+                orderBy: { createdAt: 'desc' },
+                select: { id: true }
+              });
+              
+              if (lastBatch) {
+                const lastBatchAssigned = await tx.assignmentCandidate.findMany({
+                  where: { 
+                    projectId,
+                    batchId: lastBatch.id
+                  },
+                  select: { developerId: true },
+                  distinct: ['developerId']
+                });
+                const lastBatchIds = lastBatchAssigned.map(ac => ac.developerId);
+                excludeDeveloperIds = Array.from(new Set([...acceptedIds, ...lastBatchIds]));
+                console.log(`Excluding ${excludeDeveloperIds.length} developers (including ${acceptedIds.length} accepted + ${lastBatchIds.length} from last batch)`);
+              }
+            }
+            
             // Generate new candidates using the same algorithm as generateBatch
             const newCandidates = await this.selectCandidates(
               tx,
@@ -838,7 +1663,8 @@ export class RotationService {
               projectDetails.client.userId,
               projectId,
               selection,
-              acceptedIds // Exclude already accepted developers
+              excludeDeveloperIds, // Exclude already accepted developers and potentially all previously assigned
+              existingBatchesCount
             );
 
             // Take only the number we need

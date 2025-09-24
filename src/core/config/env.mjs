@@ -25,10 +25,18 @@ export const env = createEnv({
     PAYPAL_CLIENT_SECRET: z.string().min(1),
     PAYPAL_WEBHOOK_ID: z.string().min(1),
     PAYPAL_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
+
+    // Cloudinary (server-side for signed uploads)
+    CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+    CLOUDINARY_API_KEY: z.string().min(1).optional(),
+    CLOUDINARY_API_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().min(1),
     NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.string().min(1),
+    // Cloudinary (optional but recommended for avatar uploads)
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: z.string().min(1).optional(),
   },
   runtimeEnv: {
     // Server
@@ -47,8 +55,15 @@ export const env = createEnv({
     PAYPAL_WEBHOOK_ID: process.env.PAYPAL_WEBHOOK_ID,
     PAYPAL_MODE: process.env.PAYPAL_MODE,
 
+    // Cloudinary
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+
     // Client
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_PAYPAL_CLIENT_ID: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
   },
 });

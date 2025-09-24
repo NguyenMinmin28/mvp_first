@@ -8,6 +8,7 @@ import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/components/select";
 import { toast } from "sonner";
+import { MessageCircle, Phone } from "lucide-react";
 
 interface GetInTouchModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface GetInTouchModalProps {
   serviceId: string;
   serviceTitle: string;
   developerName?: string;
+  developerImage?: string | null;
 }
 
 export function GetInTouchModal({
@@ -23,8 +25,9 @@ export function GetInTouchModal({
   serviceId,
   serviceTitle,
   developerName,
+  developerImage,
 }: GetInTouchModalProps) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<number | "choice">("choice");
   const [message, setMessage] = useState("");
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
@@ -51,7 +54,6 @@ export function GetInTouchModal({
     
     if (isSubmitting) return;
 
-    // If not confirmed yet, show confirmation first
     if (!showConfirm) {
       await fetchQuota();
       setShowConfirm(true);
@@ -81,7 +83,7 @@ export function GetInTouchModal({
         setMessage("");
         setBudget("");
         setDescription("");
-        setCurrentStep(1);
+        setCurrentStep("choice");
         setShowConfirm(false);
         onClose();
       } else {
@@ -100,53 +102,123 @@ export function GetInTouchModal({
       setMessage("");
       setBudget("");
       setDescription("");
-      setCurrentStep(1);
+      setCurrentStep("choice");
       setShowConfirm(false);
       onClose();
     }
   };
 
   const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep !== "choice" && currentStep < 3) {
+      setCurrentStep((currentStep as number) + 1);
     }
   };
 
   const handleBack = () => {
+    if (currentStep === "choice") return;
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep((currentStep as number) - 1);
     }
   };
+
+  // Choice screen (Message vs WhatsApp)
+  if (isOpen && currentStep === "choice") {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="fixed left-[50%] top-[50%] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg sm:max-w-md z-[70] [&>div]:z-[70]">
+          <DialogHeader>
+            <DialogTitle>{`Contact ${developerName || "Developer"}`}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="flex items-center space-x-4">
+              <span className="relative flex shrink-0 overflow-hidden rounded-full h-16 w-16">
+                {developerImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={developerImage} alt={developerName || "Developer"} className="h-16 w-16 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center rounded-full bg-muted">
+                    {(developerName || "D").charAt(0)}
+                  </span>
+                )}
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold">{developerName || "Developer"}</h3>
+                <p className="text-sm text-gray-600">Choose how you'd like to contact</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                className="whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-input bg-background hover:text-accent-foreground px-4 py-2 h-20 flex flex-col items-center justify-center space-y-2 border-2 hover:border-blue-500 hover:bg-blue-50"
+                onClick={() => {
+                  setContactVia("IN_APP");
+                  setCurrentStep(1);
+                }}
+              >
+                <MessageCircle className="h-6 w-6 text-blue-600" />
+                <span className="text-sm font-medium">Message</span>
+                <span className="text-xs text-gray-500">Send a message</span>
+              </button>
+
+              <button
+                className="whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-input bg-background hover:text-accent-foreground px-4 py-2 h-20 flex flex-col items-center justify-center space-y-2 border-2 hover:border-green-500 hover:bg-green-50"
+                onClick={() => {
+                  setContactVia("WHATSAPP");
+                  setCurrentStep(3);
+                }}
+              >
+                <Phone className="h-6 w-6 text-green-600" />
+                <span className="text-sm font-medium">WhatsApp</span>
+                <span className="text-xs text-gray-500">Check availability</span>
+              </button>
+            </div>
+
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">💡 Message: Send a project invitation through our platform.<br/>WhatsApp: Check if the developer has shared their contact number.</p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const headerTitle = currentStep === 1 ? "Send Message to Developer" : "Get in Touch";
+  const isNextDisabled = currentStep === 1 && message.trim().length === 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md z-[70] [&>div]:z-[70]">
         <DialogHeader>
-          <DialogTitle>Get in Touch</DialogTitle>
+          <DialogTitle>{headerTitle}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Service Info - Always visible */}
           <div>
-            <Label htmlFor="service-title" className="text-sm font-medium text-gray-700">
-              Service
-            </Label>
-            <div className="mt-1 text-sm text-gray-900 font-medium">
-              {serviceTitle}
-            </div>
-            {developerName && (
-              <div className="text-xs text-gray-500 mt-1">
-                by {developerName}
-              </div>
+            {currentStep === 1 ? (
+              <>
+                <Label htmlFor="developer-name" className="text-sm font-medium text-gray-700">Developer</Label>
+                <div className="mt-1 text-sm text-gray-900 font-medium">{developerName || "Developer"}</div>
+              </>
+            ) : (
+              <>
+                <Label htmlFor="service-title" className="text-sm font-medium text-gray-700">Service</Label>
+                <div className="mt-1 text-sm text-gray-900 font-medium">{serviceTitle}</div>
+                {developerName && (
+                  <div className="text-xs text-gray-500 mt-1">by {developerName}</div>
+                )}
+              </>
             )}
           </div>
 
-          {/* Step 1: Message only */}
+          {/* Step 1: Message required */}
           {currentStep === 1 && (
             <div>
-              <Label htmlFor="message" className="text-sm font-medium text-gray-700">
-                Message (Optional)
-              </Label>
+              <Label htmlFor="message" className="text-sm font-medium text-gray-700">Message *</Label>
               <Textarea
                 id="message"
                 value={message}
@@ -155,10 +227,9 @@ export function GetInTouchModal({
                 className="mt-1"
                 rows={4}
                 maxLength={300}
+                required
               />
-              <div className="text-xs text-gray-500 mt-1">
-                {message.length}/300 characters
-              </div>
+              <div className="text-xs text-gray-500 mt-1">{message.length}/300 characters</div>
             </div>
           )}
 
@@ -166,35 +237,14 @@ export function GetInTouchModal({
           {currentStep === 2 && (
             <>
               <div>
-                <Label htmlFor="budget" className="text-sm font-medium text-gray-700">
-                  Budget (Optional)
-                </Label>
-                <Input
-                  id="budget"
-                  type="text"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  placeholder="e.g., $500-1000, $50/hour, Fixed $2000"
-                  className="mt-1"
-                />
+                <Label htmlFor="budget" className="text-sm font-medium text-gray-700">Budget (Optional)</Label>
+                <Input id="budget" type="text" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g., $500-1000, $50/hour, Fixed $2000" className="mt-1" />
               </div>
 
               <div>
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-                  Project Description (Optional)
-                </Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your project in more detail..."
-                  className="mt-1"
-                  rows={3}
-                  maxLength={500}
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  {description.length}/500 characters
-                </div>
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700">Project Description (Optional)</Label>
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your project in more detail..." className="mt-1" rows={3} maxLength={500} />
+                <div className="text-xs text-gray-500 mt-1">{description.length}/500 characters</div>
               </div>
             </>
           )}
@@ -202,13 +252,9 @@ export function GetInTouchModal({
           {/* Step 3: Contact Method */}
           {currentStep === 3 && (
             <div>
-              <Label htmlFor="contact-via" className="text-sm font-medium text-gray-700">
-                Preferred Contact Method
-              </Label>
+              <Label htmlFor="contact-via" className="text-sm font-medium text-gray-700">Preferred Contact Method</Label>
               <Select value={contactVia} onValueChange={setContactVia}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="IN_APP">In-app messaging</SelectItem>
                   <SelectItem value="EMAIL">Email</SelectItem>
@@ -217,22 +263,13 @@ export function GetInTouchModal({
               </Select>
               
               <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                <div className="text-xs text-blue-700 font-medium mb-1">
-                  📊 Activity Log Sharing
-                </div>
-                <div className="text-xs text-blue-600">
-                  By contacting this developer, you agree to share your activity logs including project history, 
-                  communication patterns, and collaboration preferences to help them understand your needs better.
-                </div>
+                <div className="text-xs text-blue-700 font-medium mb-1">📊 Activity Log Sharing</div>
+                <div className="text-xs text-blue-600">By contacting this developer, you agree to share your activity logs including project history, communication patterns, and collaboration preferences to help them understand your needs better.</div>
               </div>
               
               <div className="mt-2 p-3 bg-green-50 rounded-md">
-                <div className="text-xs text-green-700 font-medium mb-1">
-                  ✅ Ready to Send
-                </div>
-                <div className="text-xs text-green-600">
-                  Your message and project details will be sent to the developer. They will be able to see your activity logs to better understand your needs.
-                </div>
+                <div className="text-xs text-green-700 font-medium mb-1">✅ Ready to Send</div>
+                <div className="text-xs text-green-600">Your message and project details will be sent to the developer. They will be able to see your activity logs to better understand your needs.</div>
               </div>
             </div>
           )}
@@ -240,22 +277,10 @@ export function GetInTouchModal({
           {/* Confirmation Notice for Connect Quota */}
           {showConfirm && (
             <div className="p-3 rounded-md border bg-amber-50 border-amber-200">
-              <div className="text-sm font-semibold text-amber-800">
-                This action will cost 1 connect quota to contact this developer.
-              </div>
-              <div className="text-xs text-amber-700 mt-1">
-                Free: 3 projects/month, 0 connects. Plus: 10 projects, 5 connects. Pro: Unlimited projects, 10 connects.
-              </div>
-              {quotaInfo && (
-                <div className="text-xs text-amber-800 mt-2">
-                  Remaining connects this month: <span className="font-semibold">{quotaInfo.remaining}</span> of {quotaInfo.connectsPerMonth}
-                </div>
-              )}
-              {quotaInfo && quotaInfo.remaining <= 0 && (
-                <div className="text-xs text-red-600 mt-2">
-                  You have no connects left. Upgrade your plan to continue contacting developers.
-                </div>
-              )}
+              <div className="text-sm font-semibold text-amber-800">This action will cost 1 connect quota to contact this developer.</div>
+              <div className="text-xs text-amber-700 mt-1">Free: 3 projects/month, 0 connects. Plus: 10 projects, 5 connects. Pro: Unlimited projects, 10 connects.</div>
+              {quotaInfo && (<div className="text-xs text-amber-800 mt-2">Remaining connects this month: <span className="font-semibold">{quotaInfo.remaining}</span> of {quotaInfo.connectsPerMonth}</div>)}
+              {quotaInfo && quotaInfo.remaining <= 0 && (<div className="text-xs text-red-600 mt-2">You have no connects left. Upgrade your plan to continue contacting developers.</div>)}
             </div>
           )}
 
@@ -263,51 +288,18 @@ export function GetInTouchModal({
           <div className="flex justify-between space-x-3 pt-4">
             <div>
               {currentStep > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={isSubmitting}
-                >
-                  Back
-                </Button>
+                <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>Back</Button>
               )}
             </div>
             
             <div className="flex space-x-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
               {currentStep < 3 && !showConfirm ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  className="bg-black text-white hover:bg-black/90"
-                >
-                  Next
-                </Button>
+                <Button type="button" onClick={handleNext} className="bg-black text-white hover:bg-black/90" disabled={isNextDisabled}>Next</Button>
               ) : showConfirm ? (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || (!!quotaInfo && quotaInfo.remaining <= 0)}
-                  className="bg-black text-white hover:bg-black/90"
-                >
-                  {!!quotaInfo && quotaInfo.remaining <= 0 ? "No connects left" : (isSubmitting ? "Sending..." : "Accept & Send")}
-                </Button>
+                <Button type="submit" disabled={isSubmitting || (!!quotaInfo && quotaInfo.remaining <= 0)} className="bg-black text-white hover:bg-black/90">{!!quotaInfo && quotaInfo.remaining <= 0 ? "No connects left" : (isSubmitting ? "Sending..." : "Send Lead")}</Button>
               ) : (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-black text-white hover:bg-black/90"
-                >
-                  {isSubmitting ? "Sending..." : "Send Lead"}
-                </Button>
+                <Button type="submit" disabled={isSubmitting} className="bg-black text-white hover:bg-black/90">{isSubmitting ? "Sending..." : "Send Lead"}</Button>
               )}
             </div>
           </div>

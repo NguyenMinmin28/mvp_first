@@ -6,6 +6,8 @@ import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
 import { Textarea } from "@/ui/components/textarea";
 import AvatarUpload from "../avatar-upload";
+import { Button } from "@/ui/components/button";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -13,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/ui/components/select";
+import { FileText } from "lucide-react";
 
 interface DeveloperProfileTabProps {
   profileData: any;
@@ -25,6 +28,47 @@ export default function DeveloperProfileTab({
   isEditing,
   onInputChange,
 }: DeveloperProfileTabProps) {
+  const [isUploadingCv, setIsUploadingCv] = useState(false);
+  const [cvName, setCvName] = useState<string | null>(null);
+
+  const handleUploadCv = async (file: File) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File must be ≤ 5MB");
+      return;
+    }
+    try {
+      setIsUploadingCv(true);
+      const basename = file.name.replace(/\.[^/.]+$/, "");
+      const signRes = await fetch("/api/uploads/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: "resumes", resourceType: "raw", useFilename: true, uniqueFilename: false, publicId: basename }),
+      });
+      if (!signRes.ok) throw new Error("Cannot sign upload");
+      const { cloudName, apiKey, timestamp, folder, signature, publicId, useFilename, uniqueFilename } = await signRes.json();
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("api_key", apiKey);
+      fd.append("timestamp", String(timestamp));
+      fd.append("folder", folder || "resumes");
+      if (publicId) fd.append("public_id", publicId);
+      if (useFilename !== undefined) fd.append("use_filename", String(useFilename));
+      if (uniqueFilename !== undefined) fd.append("unique_filename", String(uniqueFilename));
+      fd.append("signature", signature);
+      const up = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, { method: "POST", body: fd });
+      const json = await up.json();
+      if (!up.ok) throw new Error(json?.error?.message || "Upload failed");
+      const url = json.secure_url as string;
+      setCvName(file.name);
+      onInputChange("resumeUrl", url);
+      toast.success("Uploaded CV");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to upload CV");
+    } finally {
+      setIsUploadingCv(false);
+    }
+  };
   // Load skills list
   const [allSkills, setAllSkills] = useState<Array<{ id: string; name: string; category?: string }>>([]);
   const [skillsLoading, setSkillsLoading] = useState<boolean>(false);
@@ -206,6 +250,55 @@ export default function DeveloperProfileTab({
                 )}
               </div>
             </>
+          )}
+        </div>
+
+        {/* CV / Resume Upload */}
+        <div className="space-y-2">
+          <Label>CV / Resume (PDF, DOC, ≤ 5MB)</Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.rtf,.txt"
+              disabled={!isEditing || isUploadingCv}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleUploadCv(file);
+                e.currentTarget.value = "";
+              }}
+            />
+            {isUploadingCv && <span className="text-xs text-gray-500">Uploading...</span>}
+          </div>
+          {profileData?.resumeUrl && (
+            <div className="text-sm">
+              <div className="flex items-center gap-2 rounded border bg-gray-50 px-3 py-2">
+                <FileText className="h-4 w-4 text-gray-600" />
+                <span className="font-medium">
+                  {(() => {
+                    try {
+                      const url = String(profileData.resumeUrl);
+                      const name = decodeURIComponent(url.split("/").pop() || "file");
+                      return name.split("?")[0];
+                    } catch {
+                      return "file";
+                    }
+                  })()}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {(() => {
+                    try {
+                      const url = String(profileData.resumeUrl);
+                      const name = (url.split("/").pop() || "").split("?")[0];
+                      const ext = name.includes(".") ? name.split(".").pop() : "";
+                      return ext ? `- ${ext.toUpperCase()}` : "";
+                    } catch {
+                      return "";
+                    }
+                  })()}
+                </span>
+                <a className="ml-2 text-blue-600 underline" href={profileData.resumeUrl} target="_blank" rel="noreferrer">View</a>
+              </div>
+            </div>
           )}
         </div>
       </CardContent>

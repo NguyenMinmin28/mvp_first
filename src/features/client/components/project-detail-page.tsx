@@ -88,6 +88,19 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [isLocked, setIsLocked] = useState(false);
   const freelancersRef = useRef<Freelancer[]>([]);
   const fetchAbortRef = useRef<AbortController | null>(null);
+  const isSearchingRef = useRef(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingAttemptsRef = useRef<number>(0);
+
+  const formatAmount = (amount: number, currency: string) => {
+    try {
+      const locale = currency === "VND" ? "vi-VN" : "en-US";
+      return new Intl.NumberFormat(locale, { style: "currency", currency }).format(Number(amount));
+    } catch {
+      return `${currency} ${Number(amount).toLocaleString()}`;
+    }
+  };
 
   // Header sub-section: Project title and price under main header
   const ProjectHeaderBar = () => {
@@ -96,8 +109,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
       const max = projectData?.budgetMax ?? project?.budgetMax;
       const currency = projectData?.currency || project?.currency || "USD";
-      if (min && max) return `$${min} - $${max} ${currency}`;
-      if (min) return `$${min} ${currency}`;
+      if (min && max) return `${formatAmount(min, currency)} - ${formatAmount(max, currency)}`;
+      if (min) return `${formatAmount(min, currency)}`;
       return undefined;
     })();
     return (
@@ -126,6 +139,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     fetchFreelancers();
     return () => {
       fetchAbortRef.current?.abort();
+      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
     };
   }, [project.id]);
 
@@ -245,6 +259,30 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           setProjectSkills(data.skills.map((s: any) => s.name).filter(Boolean));
         }
 
+        // If backend indicates searching or no batch yet and no candidates, start polling
+        const noBatchYet = !data.project?.currentBatchId;
+        const stillSearching = !!data.searching || noBatchYet;
+        const hasNoCandidates = candidatesWithFavorites.length === 0;
+        if (hasNoCandidates && stillSearching) {
+          isSearchingRef.current = true;
+          setIsSearching(true);
+          if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+          if (pollingAttemptsRef.current < 30) {
+            pollingTimeoutRef.current = setTimeout(() => {
+              pollingAttemptsRef.current += 1;
+              fetchFreelancers();
+            }, 2000);
+          }
+        } else {
+          isSearchingRef.current = false;
+          setIsSearching(false);
+          pollingAttemptsRef.current = 0;
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+        }
+
         // Show notification nếu có người mới accept
         if (acceptedCandidates.length > 0 && !hadAccepted) {
           acceptedCandidates.forEach((candidate: Freelancer) => {
@@ -327,6 +365,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         console.error("🔄 Refresh batch API error:", errorData);
         if (errorData.error?.includes("No eligible candidates")) {
           setError("All candidates have been assigned to this project");
+        } else if (errorData.error?.includes("exhausted available developers")) {
+          setError("This project has exhausted all available developers. Please try manual assignment or contact support.");
         } else {
           setError(errorData.error || "Failed to refresh batch");
         }
@@ -685,9 +725,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
                 const max = projectData?.budgetMax ?? project?.budgetMax;
                 const currency = projectData?.currency || project?.currency || "USD";
-                if (min && max) return `$${min} - $${max}`;
-                if (min) return `$${min}`;
-                return "$1000 - $2000";
+                if (min && max) return `${formatAmount(min, currency)} - ${formatAmount(max, currency)}`;
+                if (min) return `${formatAmount(min, currency)}`;
+                return `${formatAmount(1000, currency)} - ${formatAmount(2000, currency)}`;
               })()}
             </div>
           </div>
@@ -706,6 +746,24 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             </div>
           </div>
 
+          {/* Project Skills */}
+          <div className="mb-6">
+            <div className="px-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Skills required</div>
+              <div className="flex flex-wrap gap-2">
+                {projectSkills && projectSkills.length > 0 ? (
+                  projectSkills.map((name) => (
+                    <Badge key={name} variant="secondary" className="bg-gray-100 text-gray-700 border border-gray-200">
+                      {name}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">{getSkillsText()}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               {hasAcceptedCandidates() && (
@@ -718,7 +776,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           </div>
 
           {/* Freelancer Cards */}
-          {isLoading ? (
+          {isLoading || (isSearching && freelancers.length === 0) ? (
             <LoadingMessage 
               title="Finding the Perfect Developers"
               message="We're searching through our network of skilled developers. Please be patient..."

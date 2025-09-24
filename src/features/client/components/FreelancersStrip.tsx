@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import GetInTouchModal from "./GetInTouchModal";
+import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 
 interface Freelancer {
   id: string;
@@ -32,8 +32,7 @@ export function FreelancersStrip() {
   const { data: session } = useSession();
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedFreelancer, setSelectedFreelancer] = useState<Freelancer | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Using shared GetInTouchButton flow; no local modal state needed
 
   useEffect(() => {
     let mounted = true;
@@ -57,10 +56,7 @@ export function FreelancersStrip() {
     };
   }, []);
 
-  const handleGetInTouch = (freelancer: Freelancer) => {
-    setSelectedFreelancer(freelancer);
-    setIsModalOpen(true);
-  };
+  // Contact handled by GetInTouchButton
 
   const handleCardClick = (freelancer: Freelancer) => {
     router.push(`/developer/${freelancer.id}`);
@@ -206,33 +202,32 @@ export function FreelancersStrip() {
                 </div>
 
                 {/* Get in Touch Button */}
-                <Button 
-                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm" 
-                  variant="outline"
+                <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleGetInTouch(freelancer);
+                    e.preventDefault();
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
                   }}
                 >
-                  Get in Touch
-                </Button>
+                  <GetInTouchButton
+                    developerId={freelancer.id}
+                    developerName={freelancer.name || undefined}
+                    className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
+                    variant="outline"
+                    size="default"
+                  />
+                </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {selectedFreelancer && (
-        <GetInTouchModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedFreelancer(null);
-          }}
-          serviceId={selectedFreelancer.id}
-          serviceTitle={selectedFreelancer.name || "Freelancer"}
-          developerName={selectedFreelancer.name || undefined}
-        />
-      )}
+      {/* Contact modals handled internally by GetInTouchButton */}
     </div>
   );
 }

@@ -51,6 +51,7 @@ export default async function DashboardUserPage() {
       phoneE164: user.phoneE164,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
       followersCount,
       // Include profile-specific fields
       ...(user.clientProfile && {

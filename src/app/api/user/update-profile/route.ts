@@ -55,6 +55,8 @@ export async function PUT(request: NextRequest) {
       if (body.level !== undefined) developerUpdateData.level = body.level;
       if (body.linkedinUrl !== undefined)
         developerUpdateData.linkedinUrl = body.linkedinUrl;
+      if (body.resumeUrl !== undefined)
+        developerUpdateData.resumeUrl = body.resumeUrl;
       if (body.whatsappNumber !== undefined)
         developerUpdateData.whatsappNumber = body.whatsappNumber;
       if (body.usualResponseTimeMs !== undefined)
@@ -91,6 +93,10 @@ export async function PUT(request: NextRequest) {
                                      developerUpdateData.currentStatus !== existing.currentStatus;
 
           await db.developerProfile.update({ where: { userId }, data: developerUpdateData });
+          // Record activity time on user whenever availability/status changes or profile updates
+          try {
+            await db.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+          } catch {}
 
           // Send follow notifications
           if (portfolioUpdated) {

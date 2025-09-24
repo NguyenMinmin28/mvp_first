@@ -1,96 +1,89 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
+
+function shuffleInPlace<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "5"), 10);
+    const limitRaw = searchParams.get("limit");
+    const parsed = parseInt(limitRaw || "4", 10);
+    const limit = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 24) : 4;
 
-    // Sample random developer ids first (MongoDB $sample)
-    const sampled: Array<{ _id: { $oid: string } }> = await prisma.developerProfile.aggregateRaw({
-      pipeline: [
-        { $match: { adminApprovalStatus: "approved", whatsappVerified: true } },
-        { $sample: { size: limit } },
-        { $project: { _id: 1 } },
-      ],
-    }) as any;
+    // Build where (match services page: approved only)
+    const where: any = {
+      adminApprovalStatus: "approved",
+    };
 
-    const sampledIds = sampled.map((d) => d._id?.$oid).filter(Boolean);
-
-    const developers = await prisma.developerProfile.findMany({
-      where: { id: { in: sampledIds } },
+    // Fetch a pool (more than limit) to allow randomization/services-first sorting
+    let pool = await prisma.developerProfile.findMany({
+      where,
+      take: Math.max(limit * 4, 40),
       include: {
-        user: { select: { id: true, name: true, image: true } },
+        user: {
+          select: { id: true, name: true, image: true },
+        },
         skills: {
-          take: 5,
-          include: { skill: { select: { name: true, category: true } } },
+          include: { skill: { select: { id: true, name: true } } },
         },
         reviewsSummary: true,
-        _count: { select: { assignmentCandidates: true } },
+        _count: {
+          select: {
+            services: {
+              where: { status: "PUBLISHED", visibility: "PUBLIC" },
+            } as any,
+          },
+        },
       },
     });
 
-    // Preserve random order
-    const orderMap = new Map(sampledIds.map((id, idx) => [id, idx]));
-    developers.sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+    // Services-first sorting, then newest (similar to services page)
+    pool = pool.sort((a: any, b: any) => {
+      const aHasServices = (a._count?.services || 0) > 0;
+      const bHasServices = (b._count?.services || 0) > 0;
+      if (aHasServices && !bHasServices) return -1;
+      if (!aHasServices && bHasServices) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
-    // Backfill reviews aggregate if missing
-    const withReviewStats = await Promise.all(
-      developers.map(async (dev) => {
-        if (dev.reviewsSummary) {
-          return {
-            ...dev,
-            reviewsAggregate: {
-              averageRating: dev.reviewsSummary.averageRating || 0,
-              totalReviews: dev.reviewsSummary.totalReviews || 0,
-            },
-          };
-        }
+    // Randomize a bit within the sorted pool to avoid static lists
+    shuffleInPlace(pool);
 
-        const agg = await prisma.review.aggregate({
-          where: { toUserId: dev.userId },
-          _avg: { rating: true },
-          _count: { rating: true },
-        });
+    const selected = pool.slice(0, limit);
 
-        return {
-          ...dev,
-          reviewsAggregate: {
-            averageRating: agg._avg.rating || 0,
-            totalReviews: agg._count.rating || 0,
-          },
-        };
-      })
-    );
-
-    const data = withReviewStats.map((dev: any) => ({
+    const data = selected.map((dev: any) => ({
       id: dev.id,
       userId: dev.userId,
-      name: dev.user?.name,
+      name: dev.user?.name ?? null,
       image: dev.user?.image || dev.photoUrl || null,
       location: dev.location || null,
       hourlyRateUsd: dev.hourlyRateUsd || null,
       level: dev.level,
-      experienceYears: dev.experienceYears,
+      experienceYears: dev.experienceYears ?? 0,
       currentStatus: dev.currentStatus,
-      usualResponseTimeMs: dev.usualResponseTimeMs,
+      usualResponseTimeMs: dev.usualResponseTimeMs ?? 0,
       jobsCount: dev._count?.assignmentCandidates || 0,
-      reviews: dev.reviewsAggregate,
-      skills: (dev.skills || []).map((s: any) => s.skill?.name).filter(Boolean).slice(0, 5),
+      reviews: {
+        averageRating: dev.reviewsSummary?.averageRating || 0,
+        totalReviews: dev.reviewsSummary?.totalReviews || 0,
+      },
+      skills: (dev.skills || [])
+        .map((s: any) => s?.skill?.name)
+        .filter((n: any) => typeof n === "string" && n.length > 0)
+        .slice(0, 5),
     }));
 
     return NextResponse.json({ success: true, data });
-  } catch (error) {
-    console.error("Error fetching top freelancers:", error);
+  } catch (error: any) {
+    console.error("[developer/top] Unexpected error:", error?.message || error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

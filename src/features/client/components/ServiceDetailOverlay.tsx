@@ -86,6 +86,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pendingLikeUrl, setPendingLikeUrl] = useState<string | null>(null);
+  const [pendingLikePayload, setPendingLikePayload] = useState<string | null>(null);
   const [timelineStart, setTimelineStart] = useState("");
   const [timelineEnd, setTimelineEnd] = useState("");
   const [recentServices, setRecentServices] = useState<any[]>([]);
@@ -123,7 +124,10 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
       
       // Best-effort delivery if user closes quickly/navigates away while like in-flight
       if (pendingLikeUrl && isLiking && typeof navigator !== "undefined" && 'sendBeacon' in navigator) {
-        try { (navigator as any).sendBeacon(pendingLikeUrl); } catch (_) { /* ignore */ }
+        try {
+          const blob = new Blob([pendingLikePayload || '{}'], { type: 'application/json' });
+          (navigator as any).sendBeacon(pendingLikeUrl, blob);
+        } catch (_) { /* ignore */ }
       }
     };
   }, [isOpen, pendingLikeUrl, isLiking]);
@@ -216,12 +220,16 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
         setIsLiking(true);
         const url = `/api/services/${service.id}/like`;
         setPendingLikeUrl(url);
+        const payload = JSON.stringify({});
+        setPendingLikePayload(payload);
         
         const res = await fetch(url, { 
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
           },
+          body: payload,
+          keepalive: true,
         });
         
         if (res.ok) {
@@ -276,6 +284,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
       } finally {
         setIsLiking(false);
         setPendingLikeUrl(null);
+        setPendingLikePayload(null);
       }
     };
 
@@ -296,6 +305,8 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
       window.setTimeout(() => setCopied(false), 1400);
     }
   };
+
+  const isInitialLoading = !service || (service && (!service.skills?.length && !service.categories?.length) && !service.galleryImages?.length && !service.showcaseImages?.length);
 
   return (
     <div
@@ -400,6 +411,13 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
               </button>
             </div>
           </div>
+
+          {/* Loading bar/spinner overlay at top while details hydrate */}
+          {isInitialLoading && (
+            <div className="absolute top-0 left-0 right-0 h-1">
+              <div className="h-1 w-full bg-gradient-to-r from-transparent via-black/60 to-transparent animate-[shimmer_1.2s_infinite]" />
+            </div>
+          )}
 
           {/* Decorative separator with heart */}
           <div className="relative mt-2 z-20 h-16">
