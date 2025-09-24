@@ -41,14 +41,39 @@ export default async function ProjectDetail({ params }: ProjectDetailPageProps) 
       id: params.id,
       clientId: clientProfile.id
     },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      skillsRequired: true,
+      status: true,
+      contactRevealEnabled: true,
+      currentBatchId: true,
+      budget: true as any,
+      budgetMin: true as any,
+      budgetMax: true as any,
+      currency: true as any,
+      expectedStartAt: true as any,
+      expectedEndAt: true as any,
+      createdAt: true,
+      updatedAt: true,
       currentBatch: {
-        include: {
+        select: {
+          id: true,
+          batchNumber: true,
+          status: true,
           candidates: {
-            include: {
+            select: {
+              id: true,
+              developerId: true,
+              responseStatus: true,
+              assignedAt: true,
               developer: {
-                include: {
-                  user: true
+                select: {
+                  id: true,
+                  user: {
+                    select: { id: true, name: true, email: true, image: true }
+                  }
                 }
               }
             }

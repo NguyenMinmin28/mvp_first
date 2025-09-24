@@ -95,48 +95,71 @@ export async function GET(
     
     if (targetBatchId) {
       const fetchCandidatesForBatch = async (batchId: string) => {
-        return prisma.assignmentCandidate.findMany({
-          where: {
-            batchId,
-            responseStatus: { in: ["pending", "accepted"] }
+        // Use raw query to avoid Prisma BSON decoding of null updatedAt in legacy docs
+        const raw = await (prisma as any).assignmentCandidate.findRaw({
+          filter: {
+            batchId: { $oid: batchId },
+            responseStatus: { $in: ["pending", "accepted"] }
           },
+          options: {
+            projection: {
+              _id: 1,
+              batchId: 1,
+              developerId: 1,
+              level: 1,
+              responseStatus: 1,
+              acceptanceDeadline: 1,
+              assignedAt: 1,
+              respondedAt: 1,
+              usualResponseTimeMsSnapshot: 1,
+              statusTextForClient: 1,
+            }
+          }
+        });
+
+        // Map ObjectIds to strings and shape like Prisma result
+        const toHexId = (v: any): string => {
+          if (!v) return "";
+          if (typeof v === "string") return v;
+          if (typeof v === "object" && typeof v.$oid === "string") return v.$oid;
+          if (typeof v.toString === "function") return v.toString();
+          try { return JSON.parse(JSON.stringify(v)).$oid ?? String(v); } catch { return String(v); }
+        };
+
+        const candidates = (raw as any[]).map((doc: any) => ({
+          id: toHexId(doc._id),
+          batchId: toHexId(doc.batchId),
+          developerId: toHexId(doc.developerId),
+          level: doc.level,
+          responseStatus: doc.responseStatus,
+          acceptanceDeadline: doc.acceptanceDeadline ? new Date(doc.acceptanceDeadline) : null,
+          assignedAt: doc.assignedAt ? new Date(doc.assignedAt) : null,
+          respondedAt: doc.respondedAt ? new Date(doc.respondedAt) : null,
+          usualResponseTimeMsSnapshot: doc.usualResponseTimeMsSnapshot,
+          statusTextForClient: doc.statusTextForClient,
+        }));
+
+        // Batch fetch developer profiles and users
+        const developerIds = [...new Set(candidates.map(c => c.developerId))];
+        const developers = await prisma.developerProfile.findMany({
+          where: { id: { in: developerIds } },
           select: {
             id: true,
-            batchId: true,
-            developerId: true,
             level: true,
-            responseStatus: true,
-            acceptanceDeadline: true,
-            assignedAt: true,
-            respondedAt: true,
-            usualResponseTimeMsSnapshot: true,
-            statusTextForClient: true,
-            developer: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true,
-                  }
-                },
-                skills: {
-                  include: {
-                    skill: {
-                      select: { name: true }
-                    }
-                  }
-                },
-                _count: false
-              }
-            }
-          },
-          orderBy: [
-            { level: "desc" },
-            { assignedAt: "asc" }
-          ]
+            photoUrl: true as any,
+            location: true as any,
+            hourlyRateUsd: true as any,
+            experienceYears: true as any,
+            whatsappNumber: true as any,
+            user: { select: { id: true, name: true, email: true, image: true } },
+            skills: { include: { skill: { select: { name: true } } } },
+          }
         });
+        const devById = new Map(developers.map(d => [d.id, d]));
+        return candidates.map(c => ({
+          ...c,
+          developer: devById.get(c.developerId) as any,
+        }));
       };
 
       // First try targetBatchId
@@ -168,35 +191,64 @@ export async function GET(
         });
         if (latestBatch) {
           targetBatchId = latestBatch.id;
-          candidates = await prisma.assignmentCandidate.findMany({
-            where: {
-              batchId: targetBatchId,
-              responseStatus: { in: ["pending", "accepted", "expired"] }
+          // Raw + join developers manually (include expired)
+          const raw = await (prisma as any).assignmentCandidate.findRaw({
+            filter: {
+              batchId: { $oid: targetBatchId },
+              responseStatus: { $in: ["pending", "accepted", "expired"] }
             },
+            options: {
+              projection: {
+                _id: 1,
+                batchId: 1,
+                developerId: 1,
+                level: 1,
+                responseStatus: 1,
+                acceptanceDeadline: 1,
+                assignedAt: 1,
+                respondedAt: 1,
+                usualResponseTimeMsSnapshot: 1,
+                statusTextForClient: 1,
+              }
+            }
+          });
+          const toHexId = (v: any): string => {
+            if (!v) return "";
+            if (typeof v === "string") return v;
+            if (typeof v === "object" && typeof v.$oid === "string") return v.$oid;
+            if (typeof v.toString === "function") return v.toString();
+            try { return JSON.parse(JSON.stringify(v)).$oid ?? String(v); } catch { return String(v); }
+          };
+
+          const mapped = (raw as any[]).map((doc: any) => ({
+            id: toHexId(doc._id),
+            batchId: toHexId(doc.batchId),
+            developerId: toHexId(doc.developerId),
+            level: doc.level,
+            responseStatus: doc.responseStatus,
+            acceptanceDeadline: doc.acceptanceDeadline ? new Date(doc.acceptanceDeadline) : null,
+            assignedAt: doc.assignedAt ? new Date(doc.assignedAt) : null,
+            respondedAt: doc.respondedAt ? new Date(doc.respondedAt) : null,
+            usualResponseTimeMsSnapshot: doc.usualResponseTimeMsSnapshot,
+            statusTextForClient: doc.statusTextForClient,
+          }));
+          const devIds = [...new Set(mapped.map(c => c.developerId))];
+          const devs = await prisma.developerProfile.findMany({
+            where: { id: { in: devIds } },
             select: {
               id: true,
-              batchId: true,
-              developerId: true,
               level: true,
-              responseStatus: true,
-              acceptanceDeadline: true,
-              assignedAt: true,
-              respondedAt: true,
-              usualResponseTimeMsSnapshot: true,
-              statusTextForClient: true,
-              developer: {
-                include: {
-                  user: { select: { id: true, name: true, email: true, image: true } },
-                  skills: { include: { skill: { select: { name: true } } } },
-                  _count: false
-                }
-              }
-            },
-            orderBy: [
-              { level: 'desc' },
-              { assignedAt: 'asc' }
-            ]
+              photoUrl: true as any,
+              location: true as any,
+              hourlyRateUsd: true as any,
+              experienceYears: true as any,
+              whatsappNumber: true as any,
+              user: { select: { id: true, name: true, email: true, image: true } },
+              skills: { include: { skill: { select: { name: true } } } },
+            }
           });
+          const mapDev = new Map(devs.map(d => [d.id, d]));
+          candidates = mapped.map(c => ({ ...c, developer: mapDev.get(c.developerId) as any }));
           console.log('Fallback including expired - candidates count:', candidates.length);
         }
       }
