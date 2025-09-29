@@ -1,0 +1,38 @@
+name: Deploy Next.js with git pull + PM2
+
+on:
+  push:
+    branches: ["production"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /srv/clervs/mvp_first
+
+            git fetch origin production
+            git reset --hard origin/production
+
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm use 20
+
+            npm install --legacy-peer-deps
+            npm run prisma:generate
+            npm run build
+
+            if pm2 list | grep -q "clervs"; then
+              pm2 restart clervs
+            else
+              pm2 start "npm run start -p 3030" --name clervs
+            fi
+
+            pm2 save
