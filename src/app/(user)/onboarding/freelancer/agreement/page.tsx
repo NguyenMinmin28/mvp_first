@@ -1,6 +1,9 @@
 export const revalidate = 0;
 
-import { getServerSessionUser } from "@/features/auth/auth-server";
+import {
+  getServerSessionUser,
+  ServerSessionUser,
+} from "@/features/auth/auth-server";
 import { OnboardingLayout } from "@/features/onboarding/freelancer/onboarding-layout";
 import { StepSidebar } from "@/features/onboarding/freelancer/components/step-sidebar";
 import AgreementAndSubmitStep from "@/features/onboarding/freelancer/steps/agreement-and-submit";
@@ -17,7 +20,7 @@ export default async function FreelancerAgreementPage() {
   ];
 
   return (
-    <OnboardingLayout user={user}>
+    <OnboardingLayout>
       <div className="grid grid-cols-1 md:grid-cols-[320px,1fr] gap-8">
         <StepSidebar steps={steps} activeStepId="agreement" />
         <AgreementAndSubmitStep />
@@ -25,5 +28,3 @@ export default async function FreelancerAgreementPage() {
     </OnboardingLayout>
   );
 }
-
-

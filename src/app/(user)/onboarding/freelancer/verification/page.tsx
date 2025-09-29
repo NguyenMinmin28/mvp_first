@@ -17,7 +17,7 @@ export default async function FreelancerVerificationPage() {
   ];
 
   return (
-    <OnboardingLayout user={user}>
+    <OnboardingLayout>
       <div className="grid grid-cols-1 md:grid-cols-[320px,1fr] gap-8">
         <StepSidebar steps={steps} activeStepId="verification" />
         <VerificationStep />
@@ -25,5 +25,3 @@ export default async function FreelancerVerificationPage() {
     </OnboardingLayout>
   );
 }
-
-
