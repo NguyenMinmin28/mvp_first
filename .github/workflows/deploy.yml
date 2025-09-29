@@ -32,7 +32,7 @@ jobs:
             if pm2 list | grep -q "clervs"; then
               pm2 restart clervs
             else
-              pm2 start "npm run start -p 3030" --name clervs
+              pm2 start npm --name clervs -- run start -- -p 3030
             fi
 
             pm2 save
