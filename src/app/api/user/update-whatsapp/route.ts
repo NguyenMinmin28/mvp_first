@@ -22,6 +22,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Validate phone number format (should include country code)
+    if (!whatsappNumber.startsWith('+')) {
+      return NextResponse.json(
+        { error: "WhatsApp number must include country code (e.g., +84...)" },
+        { status: 400 }
+      );
+    }
+
     // Check if developer profile exists, create if not
     const existingProfile = await prisma.developerProfile.findUnique({
       where: { userId },

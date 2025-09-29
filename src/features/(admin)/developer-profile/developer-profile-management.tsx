@@ -96,16 +96,65 @@ export function DeveloperProfileManagement() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pagination.itemsPerPage.toString(),
-        ...filters,
-        search,
+        // Map current filters to the developers endpoint expectations
+        // It supports 'filter' for approval/whatsapp states; keep simple: use approvalStatus when not 'all'
+        filter:
+          filters.approvalStatus !== "all"
+            ? filters.approvalStatus
+            : "all",
       });
 
-      const response = await fetch(`/api/admin/developer-profiles?${params}`);
+      const response = await fetch(`/api/admin/developers?${params}`);
       if (!response.ok) throw new Error("Failed to fetch profiles");
 
-      const data = await response.json();
-      setProfiles(data.data);
-      setPagination(data.pagination);
+      const json = await response.json();
+      const items = (json.developers || []).map((dev: any) => {
+        const skills = (dev.skills || [])
+          .map((s: any) => s.skill?.name)
+          .filter(Boolean)
+          .join(", ");
+        return {
+          id: dev.id,
+          userId: dev.userId,
+          name: dev.user?.name || "",
+          email: dev.user?.email || "",
+          phone: dev.user?.phoneE164 || "",
+          isPhoneVerified: !!dev.user?.isPhoneVerified,
+          isProfileCompleted: !!dev.user?.isProfileCompleted,
+          photoUrl: dev.photoUrl || "",
+          bio: dev.bio || "",
+          experienceYears: dev.experienceYears ?? 0,
+          level: dev.level,
+          linkedinUrl: dev.linkedinUrl || "",
+          portfolioLinks: dev.portfolioLinks || [],
+          adminApprovalStatus: dev.adminApprovalStatus,
+          approvedAt: dev.approvedAt || null,
+          rejectedAt: dev.rejectedAt || null,
+          rejectedReason: dev.rejectedReason || null,
+          whatsappNumber: dev.whatsappNumber || "",
+          whatsappVerifiedAt: null,
+          usualResponseTimeMs: dev.usualResponseTimeMs ?? 0,
+          currentStatus: dev.currentStatus,
+          averageRating: dev.reviewsAggregate?.averageRating || 0,
+          totalReviews: dev.reviewsAggregate?.totalReviews || 0,
+          skills,
+          userCreatedAt: dev.userCreatedAt || dev.createdAt,
+          lastLoginAt: dev.user?.lastLoginAt || null,
+          createdAt: dev.createdAt,
+          updatedAt: dev.updatedAt || dev.createdAt,
+        } as DeveloperProfile;
+      });
+
+      setProfiles(items);
+      setPagination({
+        currentPage: json.pagination?.page || page,
+        totalPages: json.pagination?.totalPages || 1,
+        totalItems: json.pagination?.totalCount || items.length,
+        itemsPerPage: json.pagination?.limit || pagination.itemsPerPage,
+        hasNextPage:
+          (json.pagination?.page || page) < (json.pagination?.totalPages || 1),
+        hasPrevPage: (json.pagination?.page || page) > 1,
+      });
     } catch (error) {
       console.error("Error fetching profiles:", error);
       toast.error("Failed to fetch developer profiles");

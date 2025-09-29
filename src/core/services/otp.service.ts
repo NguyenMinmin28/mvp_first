@@ -17,7 +17,7 @@ export interface OtpGenerationResult {
 export class OtpService {
   private static readonly MAX_ATTEMPTS = 3;
   private static readonly EXPIRY_MINUTES = 5;
-  private static readonly RATE_LIMIT_MINUTES = 1; // Minimum time between OTP requests
+  private static readonly RATE_LIMIT_MINUTES = 5; // Minimum time between OTP requests (4-5 minutes cooldown)
 
   /**
    * Generate and store OTP code for phone number
@@ -41,9 +41,10 @@ export class OtpService {
       });
 
       if (recentOtp) {
+        const timeRemaining = Math.ceil((recentOtp.createdAt.getTime() + this.RATE_LIMIT_MINUTES * 60 * 1000 - Date.now()) / 1000 / 60);
         return {
           success: false,
-          message: `Please wait ${this.RATE_LIMIT_MINUTES} minute(s) before requesting a new code`,
+          message: `Please wait ${timeRemaining} minute(s) before requesting a new code`,
         };
       }
 

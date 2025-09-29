@@ -1,23 +1,45 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
-  user?: any;
 }
 
-export function OnboardingLayout({ children, user }: OnboardingLayoutProps) {
+export function OnboardingLayout({ children }: OnboardingLayoutProps) {
   const [mounted, setMounted] = useState(false);
+  const { data: session } = useSession();
   useEffect(() => setMounted(true), []);
   const router = useRouter();
 
+
+  // Always render the full layout, but show loading state if not mounted
   if (!mounted) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <header className="sticky top-0 z-50 w-full bg-black">
+          <div className="container flex h-14 items-center justify-between px-4">
+            <a href="/" className="flex items-center gap-2">
+              <img src="/images/home/clervelogo.png" alt="Clevrs" className="h-6 w-auto" />
+            </a>
+            <div className="flex items-center gap-3">
+              <div className="text-sm px-3 py-1 rounded-full border border-white/30 text-white">
+                Loading...
+              </div>
+            </div>
+          </div>
+        </header>
         <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
+        <footer className="bg-black text-white">
+          <div className="container mx-auto px-4 sm:px-6 py-12">
+            <div className="mb-10">
+              <img src="/images/home/clervelogo.png" alt="Clevrs" className="h-8 w-auto mb-2" />
+              <a href="/help" className="mt-2 inline-block underline text-sm text-gray-300">Visit Help Center</a>
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -37,8 +59,8 @@ export function OnboardingLayout({ children, user }: OnboardingLayoutProps) {
             >
               Back
             </button>
-            {user?.email && (
-              <span className="text-sm text-white/90 hidden sm:block">{user.email}</span>
+            {session?.user?.email && (
+              <span className="text-sm text-white/90 hidden sm:block">{session.user.email}</span>
             )}
             <button
               onClick={() => signOut({ callbackUrl: "/" })}

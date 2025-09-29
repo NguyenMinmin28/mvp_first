@@ -19,7 +19,7 @@ export interface EmailVerificationGenerationResult {
 export class EmailVerificationService {
   private static readonly MAX_ATTEMPTS = 3;
   private static readonly EXPIRY_MINUTES = 10; // Email OTP lasts longer than SMS
-  private static readonly RATE_LIMIT_MINUTES = 1; // Minimum time between OTP requests
+  private static readonly RATE_LIMIT_MINUTES = 5; // Minimum time between OTP requests (4-5 minutes cooldown)
 
   /**
    * Generate and store OTP code for email verification
@@ -45,9 +45,10 @@ export class EmailVerificationService {
       });
 
       if (recentOtp) {
+        const timeRemaining = Math.ceil((recentOtp.createdAt.getTime() + this.RATE_LIMIT_MINUTES * 60 * 1000 - Date.now()) / 1000 / 60);
         return {
           success: false,
-          message: `Please wait ${this.RATE_LIMIT_MINUTES} minute(s) before requesting a new code`,
+          message: `Please wait ${timeRemaining} minute(s) before requesting a new code`,
         };
       }
 
@@ -169,6 +170,11 @@ export class EmailVerificationService {
     code: string
   ): Promise<boolean> {
     try {
+      // In non-production, skip actual email sending for easier local testing
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[DEV] Skipping email send. Verification code:", code, "for:", email);
+        return true;
+      }
       const html = renderVerificationEmail(code);
       const result = await sendEmailViaResend({
         from: process.env.RESEND_FROM,

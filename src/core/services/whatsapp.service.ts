@@ -67,6 +67,12 @@ export class WhatsAppService {
     phoneNumber: string,
     code: string
   ): Promise<WhatsAppResponse> {
+    console.log("📱 Sending WhatsApp verification code:", {
+      phoneNumber,
+      code,
+      templateName: process.env.WHATSAPP_TEMPLATE_NAME || "otp_verification",
+    });
+
     const message: WhatsAppMessage = {
       messaging_product: "whatsapp",
       to: WhatsAppService.formatPhoneForWhatsApp(phoneNumber),
@@ -91,6 +97,7 @@ export class WhatsAppService {
       },
     };
 
+    console.log("📱 WhatsApp message payload:", JSON.stringify(message, null, 2));
     return this.sendMessage(message);
   }
 
@@ -170,17 +177,12 @@ export class WhatsAppService {
   ): Promise<WhatsAppResponse> {
     try {
       const url = `${this.baseUrl}/${this.phoneNumberId}/messages`;
-      console.log("Sending message to WhatsApp:", url);
-      console.log("Message:", message);
-      console.log("AccessToken:", this.accessToken);
-      console.log("PhoneNumberId:", this.phoneNumberId);
-      console.log("BaseUrl:", this.baseUrl);
-      console.log("ApiVersion:", this.apiVersion);
-      console.log("Headers:", {
-        Authorization: `Bearer ${this.accessToken}`,
-        "Content-Type": "application/json",
-      });
-      console.log("Timeout:", 10000);
+      console.log("🚀 Sending message to WhatsApp API:");
+      console.log("📡 URL:", url);
+      console.log("📱 Message payload:", JSON.stringify(message, null, 2));
+      console.log("🔑 Access Token (first 20 chars):", this.accessToken.substring(0, 20) + "...");
+      console.log("📞 Phone Number ID:", this.phoneNumberId);
+      
       const response = await axios.post(url, message, {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
@@ -189,26 +191,40 @@ export class WhatsAppService {
         timeout: 10000, // 10 seconds timeout
       });
 
+      console.log("✅ WhatsApp API Response:", {
+        status: response.status,
+        data: response.data
+      });
+
       return response.data;
     } catch (error) {
+      console.error("❌ WhatsApp API Error Details:");
+      
       if (error instanceof AxiosError) {
         const whatsappError = error.response?.data as WhatsAppError;
-
-        console.error("WhatsApp API Error:", {
+        
+        console.error("📊 Error Response:", {
           status: error.response?.status,
+          statusText: error.response?.statusText,
+          headers: error.response?.headers,
+          data: error.response?.data,
+        });
+
+        console.error("🔍 WhatsApp Error Details:", {
           message: whatsappError?.error?.message,
           type: whatsappError?.error?.type,
           code: whatsappError?.error?.code,
           details: whatsappError?.error?.error_data?.details,
+          subcode: whatsappError?.error?.error_subcode,
         });
 
         throw new Error(
           whatsappError?.error?.message ||
-            `WhatsApp API Error: ${error.response?.status}`
+            `WhatsApp API Error: ${error.response?.status} - ${error.response?.statusText}`
         );
       }
 
-      console.error("Unexpected error:", error);
+      console.error("💥 Unexpected error:", error);
       throw new Error("Failed to send WhatsApp message");
     }
   }
@@ -278,15 +294,24 @@ export class WhatsAppService {
 let whatsappServiceInstance: WhatsAppService | null = null;
 
 export function getWhatsAppService(): WhatsAppService {
+  console.log("🔧 Initializing WhatsApp service...");
+  
   if (!whatsappServiceInstance) {
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+    console.log("🔑 WhatsApp credentials check:", {
+      hasAccessToken: !!accessToken,
+      hasPhoneNumberId: !!phoneNumberId,
+      accessTokenLength: accessToken?.length || 0,
+      phoneNumberId: phoneNumberId,
+    });
 
     if (!accessToken || !phoneNumberId) {
       // In development mode, we can work without WhatsApp credentials
       if (process.env.NODE_ENV === "development") {
         console.warn(
-          "WhatsApp API credentials not configured - running in demo mode"
+          "⚠️ WhatsApp API credentials not configured - running in demo mode"
         );
         // Return a mock service for development
         whatsappServiceInstance = new WhatsAppService(
@@ -297,9 +322,11 @@ export function getWhatsAppService(): WhatsAppService {
         throw new Error("WhatsApp API credentials not configured");
       }
     } else {
+      console.log("✅ Creating WhatsApp service with real credentials");
       whatsappServiceInstance = new WhatsAppService(accessToken, phoneNumberId);
     }
   }
 
+  console.log("✅ WhatsApp service ready");
   return whatsappServiceInstance;
 }

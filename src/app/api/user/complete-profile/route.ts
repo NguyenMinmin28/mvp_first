@@ -20,6 +20,7 @@ const developerProfileSchema = z.object({
   linkedinUrl: z.string().url().optional().or(z.literal("")),
   portfolioLinks: z.array(z.string().url()).optional(),
   whatsappNumber: z.string().optional(),
+  whatsappVerified: z.boolean().optional(),
   skillsInput: z
     .array(
       z.object({
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
             linkedinUrl: data.linkedinUrl || null,
             portfolioLinks: data.portfolioLinks || [],
             whatsappNumber: data.whatsappNumber || null,
+            whatsappVerified: data.whatsappVerified || false,
           },
           update: {
             bio: data.bio,
@@ -104,6 +106,7 @@ export async function POST(request: NextRequest) {
             linkedinUrl: data.linkedinUrl || null,
             portfolioLinks: data.portfolioLinks || [],
             whatsappNumber: data.whatsappNumber || null,
+            whatsappVerified: data.whatsappVerified || false,
           },
         });
 

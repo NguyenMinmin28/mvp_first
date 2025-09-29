@@ -34,30 +34,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update developer profile with onboarding data
-    const updatedProfile = await prisma.developerProfile.update({
-      where: { userId },
-      data: {
-        // Basic information
-        bio: body.bio || existingProfile.bio,
-        experienceYears: body.experienceYears || existingProfile.experienceYears,
-        level: body.level || existingProfile.level,
-        linkedinUrl: body.linkedinUrl || existingProfile.linkedinUrl,
-        portfolioLinks: body.portfolioLinks || existingProfile.portfolioLinks,
-        whatsappNumber: body.whatsappNumber || existingProfile.whatsappNumber,
-        whatsappVerified: body.whatsappVerified || existingProfile.whatsappVerified,
-        
-        // Keep existing approval status unless explicitly changing
-        adminApprovalStatus: body.adminApprovalStatus || existingProfile.adminApprovalStatus,
-        
-        updatedAt: new Date(),
-      },
+    // Helper to slugify skill names for Skill.slug
+    const slugify = (input: string) =>
+      input
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+    // Update within a transaction so user name + profile + skills stay consistent
+    const result = await prisma.$transaction(async (tx) => {
+      // Optionally update user full name
+      if (typeof body.fullName === "string" && body.fullName.trim().length > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { name: body.fullName.trim() },
+        });
+      }
+
+      // Update developer profile scalars (use nullish coalescing so 0/false aren't lost)
+      const updatedProfile = await tx.developerProfile.update({
+        where: { userId },
+        data: {
+          bio: body.bio ?? existingProfile.bio,
+          experienceYears: body.experienceYears ?? existingProfile.experienceYears,
+          level: body.level ?? existingProfile.level,
+          linkedinUrl: body.linkedinUrl ?? existingProfile.linkedinUrl,
+          portfolioLinks: body.portfolioLinks ?? existingProfile.portfolioLinks,
+          whatsappNumber: body.whatsappNumber ?? existingProfile.whatsappNumber,
+          whatsappVerified: body.whatsappVerified ?? existingProfile.whatsappVerified,
+          adminApprovalStatus: body.adminApprovalStatus ?? existingProfile.adminApprovalStatus,
+          updatedAt: new Date(),
+        },
+      });
+
+      // If skills provided as an array of strings, upsert them and link to developer
+      if (Array.isArray(body.skills) && body.skills.length > 0) {
+        // Clear existing skills (lightweight reset)
+        await tx.developerSkill.deleteMany({ where: { developerProfileId: updatedProfile.id } });
+
+        for (const raw of body.skills) {
+          const name = typeof raw === "string" ? raw.trim() : "";
+          if (!name) continue;
+          const slug = slugify(name);
+          const skill = await tx.skill.upsert({
+            where: { name },
+            create: {
+              name,
+              slug,
+              category: "General",
+              keywords: [name.toLowerCase()],
+            },
+            update: {},
+          });
+          await tx.developerSkill.create({
+            data: {
+              developerProfileId: updatedProfile.id,
+              skillId: skill.id,
+              years: 0,
+              rating: 3,
+            },
+          });
+        }
+      }
+
+      return updatedProfile;
     });
 
     return NextResponse.json({
       success: true,
       message: "Onboarding data saved successfully",
-      data: updatedProfile,
+      data: result,
     });
   } catch (error) {
     console.error("Error saving onboarding data:", error);

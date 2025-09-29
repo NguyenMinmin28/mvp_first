@@ -17,7 +17,7 @@ export default function VerifyOTP({
   onVerified,
   onBack,
 }: VerifyOTPProps) {
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(process.env.NODE_ENV !== "production" ? "000000" : "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);

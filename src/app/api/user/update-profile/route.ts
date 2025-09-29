@@ -59,6 +59,8 @@ export async function PUT(request: NextRequest) {
         developerUpdateData.resumeUrl = body.resumeUrl;
       if (body.whatsappNumber !== undefined)
         developerUpdateData.whatsappNumber = body.whatsappNumber;
+      if (body.whatsappVerified !== undefined)
+        developerUpdateData.whatsappVerified = body.whatsappVerified;
       if (body.usualResponseTimeMs !== undefined)
         developerUpdateData.usualResponseTimeMs = body.usualResponseTimeMs;
       if (body.currentStatus !== undefined)

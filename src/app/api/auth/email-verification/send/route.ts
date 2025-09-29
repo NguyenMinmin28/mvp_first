@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: otpResult.message }, { status: 400 });
     }
 
-    // Send email
+    // Send email (skip in non-production)
     const emailSent = await EmailVerificationService.sendVerificationEmail(
       email,
       otpResult.code!

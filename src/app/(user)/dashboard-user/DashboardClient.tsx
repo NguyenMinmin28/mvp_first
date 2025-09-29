@@ -233,9 +233,16 @@ export default function DashboardClient({
 
   if (!session?.user) return <ClevrsLoader />;
 
+  const isApprovalPending = profile?.adminApprovalStatus && profile.adminApprovalStatus !== "approved";
+
   return (
     <UserLayout user={session.user}>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+        {isApprovalPending && (
+          <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-900 px-3 py-2 text-sm">
+            Your account is pending admin verification. You can still browse and use the dashboard. We'll notify you once approved.
+          </div>
+        )}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
           <div className="xl:col-span-2"><ProfileSummary profile={profile} /></div>
           <div className="xl:col-span-1"><IdeaSparkList profile={profile} /></div>

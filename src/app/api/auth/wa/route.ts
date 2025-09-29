@@ -8,19 +8,28 @@ import {
 import { OtpService } from "@/core/services/otp.service";
 
 export async function POST(request: NextRequest) {
+  console.log("🚀 API: WhatsApp OTP endpoint called");
+  console.log("📡 Request method:", request.method);
+  console.log("📡 Request URL:", request.url);
+  console.log("📡 Request headers:", Object.fromEntries(request.headers.entries()));
+  
   try {
     let phoneNumber: string;
 
     // Handle both JSON and form data
     const contentType = request.headers.get("content-type");
+    console.log("📦 Content type:", contentType);
 
     if (contentType?.includes("application/json")) {
       const jsonData = await request.json();
       phoneNumber = jsonData.phoneNumber;
+      console.log("📦 JSON data received:", jsonData);
     } else if (contentType?.includes("application/x-www-form-urlencoded")) {
       const formData = await request.formData();
       phoneNumber = formData.get("phoneNumber") as string;
+      console.log("📦 Form data received:", { phoneNumber });
     } else {
+      console.log("❌ Unsupported content type:", contentType);
       return NextResponse.json(
         { error: "Unsupported content type. Use JSON or form data." },
         { status: 400 }
@@ -95,13 +104,23 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      console.log("🚀 Starting WhatsApp sending process...");
+      
       // Send verification code via WhatsApp Business API
       const whatsappService = getWhatsAppService();
+      console.log("✅ WhatsApp service initialized");
 
       // Check if we have valid credentials (not demo mode)
       const hasCredentials =
         process.env.WHATSAPP_ACCESS_TOKEN &&
         process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+      console.log("🔍 WhatsApp credentials check:", {
+        hasAccessToken: !!process.env.WHATSAPP_ACCESS_TOKEN,
+        hasPhoneNumberId: !!process.env.WHATSAPP_PHONE_NUMBER_ID,
+        hasCredentials,
+        disableSending: process.env.WHATSAPP_DISABLE_SENDING,
+      });
 
       if (!hasCredentials) {
         // Demo mode - simulate sending
@@ -120,20 +139,29 @@ export async function POST(request: NextRequest) {
 
       // Try sending template message first (preferred)
       try {
-        console.log("Formatting phone number:", phoneNumber);
-        console.log("Phone number:", phoneE164);
-        console.log("OTP code:", otpResult.code);
+        console.log("🚀 Attempting to send WhatsApp verification code...");
+        console.log("📱 Phone number:", phoneE164);
+        console.log("🔐 OTP code:", otpResult.code);
 
-        await whatsappService.sendVerificationCode(phoneE164, otpResult.code!);
+        const result = await whatsappService.sendVerificationCode(phoneE164, otpResult.code!);
+        console.log("✅ WhatsApp template message sent successfully:", result);
       } catch (templateError) {
+        console.error("❌ Template message failed:", templateError);
         console.warn(
           "Template message failed, falling back to text message:",
           templateError
         );
 
-        // Fallback to text message
-        const message = `Your verification code is: ${otpResult.code}. This code will expire in 5 minutes.`;
-        await whatsappService.sendTextMessage(phoneE164, message);
+        try {
+          // Fallback to text message
+          const message = `Your verification code is: ${otpResult.code}. This code will expire in 5 minutes.`;
+          console.log("📱 Sending fallback text message:", message);
+          const textResult = await whatsappService.sendTextMessage(phoneE164, message);
+          console.log("✅ WhatsApp text message sent successfully:", textResult);
+        } catch (textError) {
+          console.error("❌ Text message also failed:", textError);
+          throw textError;
+        }
       }
 
       return NextResponse.json({
@@ -143,20 +171,28 @@ export async function POST(request: NextRequest) {
         expiresAt: otpResult.expiresAt,
       });
     } catch (whatsappError) {
-      console.error("WhatsApp sending failed:", whatsappError);
+      console.error("❌ WhatsApp sending failed:", whatsappError);
+      console.error("❌ Error details:", {
+        message: whatsappError instanceof Error ? whatsappError.message : "Unknown error",
+        stack: whatsappError instanceof Error ? whatsappError.stack : undefined,
+        name: whatsappError instanceof Error ? whatsappError.name : undefined,
+      });
 
-      // If WhatsApp fails, we could fallback to SMS or email
-      // For now, return the error
+      // Return failure but include the generated code so client can auto-fill
       return NextResponse.json(
         {
+          success: false,
           error:
             "Failed to send verification code via WhatsApp. Please try again later.",
           details:
             whatsappError instanceof Error
               ? whatsappError.message
               : "Unknown error",
+          // Provide the generated OTP for client-side autofill
+          demoCode: otpResult.code,
+          expiresAt: otpResult.expiresAt,
         },
-        { status: 503 } // Service Unavailable
+        { status: 503 }
       );
     }
   } catch (error) {
