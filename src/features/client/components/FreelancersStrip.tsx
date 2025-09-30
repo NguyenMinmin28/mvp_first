@@ -127,7 +127,7 @@ export function FreelancersStrip() {
             <CardContent className="p-5 h-full flex flex-col">
                 {/* Freelancer Info */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                  <div className="relative inline-block w-12 h-12 rounded-full overflow-hidden bg-gray-100">
                     {freelancer.image ? (
                       <Image 
                         src={freelancer.image} 
@@ -139,6 +139,13 @@ export function FreelancersStrip() {
                     ) : (
                       <div className="w-12 h-12 bg-gray-200" />
                     )}
+                    <span
+                      className={`absolute right-0 top-0 inline-block w-4 h-4 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                        freelancer.currentStatus === 'available' ? 'bg-green-500' : 'bg-gray-400'
+                      }`}
+                      aria-label={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
+                      title={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
+                    />
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 leading-tight">

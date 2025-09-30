@@ -68,6 +68,7 @@ export interface Developer {
   likesCount?: number;
   userLiked?: boolean;
   level?: "FRESHER" | "MID" | "EXPERT";
+  currentStatus?: string;
   skills: Array<{
     skill: {
       id: string;
@@ -125,6 +126,7 @@ interface PeopleGridProps {
   locked?: boolean; // Lock UI actions
   projectId?: string; // Project ID for contact system
   hideHeaderControls?: boolean; // Hide internal filter toolbar & level tabs
+  isDeveloper?: boolean; // Hide Get in Touch buttons for developers
 }
 
 export function PeopleGrid({ 
@@ -139,7 +141,8 @@ export function PeopleGrid({
   onGenerateNewBatch, 
   locked = false, 
   projectId,
-  hideHeaderControls = false
+  hideHeaderControls = false,
+  isDeveloper = false
 }: PeopleGridProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -237,14 +240,14 @@ export function PeopleGrid({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Create fetch function
-  const fetchDevelopers = useCallback(async (page: number, limit: number) => {
+  // Create fetch function với optimized API
+  const fetchDevelopers = useCallback(async (page: number, limit: number, cursor?: string) => {
     const params = new URLSearchParams({
-      page: page.toString(),
       limit: limit.toString(),
       sort: sortBy,
     });
@@ -253,11 +256,22 @@ export function PeopleGrid({
       params.append("search", searchQuery.trim());
     }
 
-    console.log('Fetching developers:', `/api/developers?${params.toString()}`);
-    const res = await fetch(`/api/developers?${params.toString()}` as RequestInfo, { cache: "no-store" } as RequestInit);
+    // Add cursor for keyset pagination
+    if (cursor) {
+      params.append("cursor", cursor);
+    }
+
+    console.log('🚀 Fetching optimized developers:', `/api/developers/optimized?${params.toString()}`);
+    const res = await fetch(`/api/developers/optimized?${params.toString()}` as RequestInfo, { 
+      cache: "no-store",
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    } as RequestInit);
     const json = await res.json();
     
-    console.log('Developers API response:', { status: res.status, json });
+    console.log('✅ Optimized Developers API response:', { status: res.status, dataCount: json.data?.length });
     
     if (!res.ok || !json?.success) {
       throw new Error(json?.message || 'Failed to fetch developers');
@@ -266,12 +280,9 @@ export function PeopleGrid({
     return {
       data: json.data || [],
       pagination: json.pagination || {
-        page,
-        limit,
-        totalCount: 0,
-        totalPages: 0,
         hasNextPage: false,
-        hasPrevPage: false,
+        nextCursor: null,
+        limit
       }
     };
   }, [searchQuery, sortBy]);
@@ -294,6 +305,7 @@ export function PeopleGrid({
           setTotalCount(result.pagination.totalCount);
           setHasNextPage(result.pagination.hasNextPage);
           setCurrentPage(1);
+          setNextCursor((result as any)?.pagination?.nextCursor || null);
         }
       } catch (err) {
         if (mounted) {
@@ -343,17 +355,18 @@ export function PeopleGrid({
     
     try {
       setLoadingMore(true);
-      const result = await fetchDevelopers(currentPage + 1, 12);
+      const result = await fetchDevelopers(currentPage + 1, 12, nextCursor || undefined);
       setDevelopers(prev => [...prev, ...result.data]);
       setHasNextPage(result.pagination.hasNextPage);
       setCurrentPage(prev => prev + 1);
+      setNextCursor((result as any)?.pagination?.nextCursor || null);
     } catch (err) {
       console.error('Error loading more developers:', err);
       setError('Failed to load more developers');
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasNextPage, currentPage, fetchDevelopers, isOverride]);
+  }, [loadingMore, hasNextPage, currentPage, fetchDevelopers, isOverride, nextCursor]);
 
   // Set up scroll-based loading (only when not using overrideDevelopers)
   useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);
@@ -889,21 +902,30 @@ export function PeopleGrid({
                   <div className="flex items-start space-x-3 sm:space-x-2 flex-1">
                     <div className="flex flex-col w-full">
                       <div className="flex items-start space-x-3">
-                        <Avatar 
-                          className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0"
-                          onClick={() => handleDeveloperClick(developer)}
-                        >
-                          <AvatarImage 
-                            src={developer.user.image || ''} 
-                            alt={developer.user.name}
-                            className="object-cover w-full h-full"
-                            loading={devIndex < 4 ? "eager" : "lazy"}
-                            decoding="async"
+                        <div className="relative inline-block">
+                          <Avatar 
+                            className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0"
+                            onClick={() => handleDeveloperClick(developer)}
+                          >
+                            <AvatarImage 
+                              src={developer.user.image || ''} 
+                              alt={developer.user.name}
+                              className="object-cover w-full h-full"
+                              loading={devIndex < 4 ? "eager" : "lazy"}
+                              decoding="async"
+                            />
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg">
+                              {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span
+                            className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                              ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500' : 'bg-gray-400'
+                            }`}
+                            aria-label={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
+                            title={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
                           />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg">
-                            {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
-                          </AvatarFallback>
-                        </Avatar>
+                        </div>
                         
                         <div className="flex-1 min-w-0">
                           {/* Name */}
@@ -1080,15 +1102,17 @@ export function PeopleGrid({
                         Follow
                       </Button>
                     )}
-                    <GetInTouchButton
-                      developerId={developer.id}
-                      developerName={developer.user.name || undefined}
-                      projectId={projectId}
-                      className="w-full sm:w-28 bg-black text-white hover:bg-gray-800 text-sm"
-                      variant="default"
-                      size="default"
-                      responseStatus={projectId ? freelancerResponseStatuses?.[developer.id] : undefined}
-                    />
+                    {!isDeveloper && (
+                      <GetInTouchButton
+                        developerId={developer.id}
+                        developerName={developer.user.name || undefined}
+                        projectId={projectId}
+                        className="w-full sm:w-28 bg-black text-white hover:bg-gray-800 text-sm"
+                        variant="default"
+                        size="default"
+                        responseStatus={projectId ? freelancerResponseStatuses?.[developer.id] : undefined}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -1231,6 +1255,7 @@ function areEqual(prev: PeopleGridProps, next: PeopleGridProps) {
   if (prev.searchQuery !== next.searchQuery) return false;
   if (prev.sortBy !== next.sortBy) return false;
   if (prev.projectId !== next.projectId) return false; // Add projectId comparison
+  if (prev.isDeveloper !== next.isDeveloper) return false; // Add isDeveloper comparison
   const prevFilters = prev.filters || [];
   const nextFilters = next.filters || [];
   if (prevFilters.length !== nextFilters.length) return false;

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/ui/components/button";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 interface FollowStatsProps {
   developerId: string;
@@ -19,18 +20,19 @@ export function FollowStats({
   showFollowButton = true,
   className = "" 
 }: FollowStatsProps) {
+  const { data: session } = useSession();
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
 
   useEffect(() => {
-    if (isClient) {
+    if (isClient || session?.user?.role === "DEVELOPER") {
       fetchFollowStatus();
     } else {
       fetchFollowersCount();
     }
-  }, [developerId, isClient]);
+  }, [developerId, isClient, session?.user?.role]);
 
   const fetchFollowStatus = async () => {
     try {
@@ -112,8 +114,8 @@ export function FollowStats({
         <span>{followersCount === 1 ? "follower" : "followers"}</span>
       </div>
 
-      {/* Follow Button (only for clients) */}
-      {showFollowButton && isClient && (
+      {/* Follow Button (for clients and developers) */}
+      {showFollowButton && (isClient || session?.user?.role === "DEVELOPER") && (
         <Button
           variant={isFollowing ? "outline" : "default"}
           size="sm"

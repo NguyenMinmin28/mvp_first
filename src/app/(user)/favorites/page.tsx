@@ -110,13 +110,15 @@ export default function FavoritesPage() {
   }, []);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "available": return "bg-green-100 text-green-800";
-      case "busy": return "bg-red-100 text-red-800";
-      case "away": return "bg-yellow-100 text-yellow-800";
-      case "offline": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
+    // Only two visual states: Available (green) or Not Available (red)
+    return status === "available" 
+      ? "bg-green-100 text-green-800" 
+      : "bg-red-100 text-red-800";
+  };
+
+  const getDisplayStatus = (status: string) => {
+    // Only show two labels to users
+    return status === "available" ? "Available" : "Not Available";
   };
 
   const getLevelColor = (level: string) => {
@@ -188,12 +190,21 @@ export default function FavoritesPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={developer.photoUrl || developer.image} />
-                      <AvatarFallback>
-                        {developer.name?.slice(0, 2).toUpperCase() || "DEV"}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative inline-block">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={developer.photoUrl || developer.image} />
+                        <AvatarFallback>
+                          {developer.name?.slice(0, 2).toUpperCase() || "DEV"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span
+                        className={`absolute -right-0 -top-0 inline-block w-5 h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                          developer.currentStatus === "available" ? "bg-green-500" : "bg-gray-400"
+                        }`}
+                        aria-label={developer.currentStatus === "available" ? "Available" : "Not Available"}
+                        title={developer.currentStatus === "available" ? "Available" : "Not Available"}
+                      />
+                    </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{developer.name}</h3>
                       <p className="text-sm text-gray-600">{developer.email}</p>
@@ -217,7 +228,7 @@ export default function FavoritesPage() {
                 {/* Status and Level */}
                 <div className="flex gap-2">
                   <Badge className={getStatusColor(developer.currentStatus)}>
-                    {developer.currentStatus}
+                    {getDisplayStatus(developer.currentStatus)}
                   </Badge>
                   <Badge className={getLevelColor(developer.level)}>
                     {developer.level}

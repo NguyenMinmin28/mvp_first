@@ -13,7 +13,12 @@ function appendParams(url: string, params: Record<string, string | number>) {
   return url + (hasQuery ? "&" : "?") + query.toString();
 }
 
-function buildUnsplashSrcSet(url: string, targetSquare?: boolean) {
+function buildUnsplashSrcSet(url: string | undefined | null, targetSquare?: boolean) {
+  // Handle null/undefined/empty values
+  if (!url || typeof url !== 'string') {
+    return { src: '', srcSet: undefined as string | undefined, sizes: undefined as string | undefined };
+  }
+  
   if (!url.includes("images.unsplash.com")) {
     return { src: url, srcSet: undefined as string | undefined, sizes: undefined as string | undefined };
   }
@@ -368,15 +373,17 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-              {/* Hide Follow and Get in Touch buttons for developers */}
+              {/* Follow button - available for all users */}
+              <button
+                onClick={onFollow}
+                className="px-3 sm:px-4 h-9 sm:h-10 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-36 sm:w-40"
+              >
+                Follow
+              </button>
+              
+              {/* Get in Touch button - only for clients */}
               {session?.user?.role !== "DEVELOPER" && (
                 <>
-                  <button
-                    onClick={onFollow}
-                    className="px-3 sm:px-4 h-9 sm:h-10 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-36 sm:w-40"
-                  >
-                    Follow
-                  </button>
                   <GetInTouchButton
                     developerId={service?.developer?.id || ""}
                     developerName={service?.developer?.user?.name || undefined}
@@ -577,30 +584,36 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
               <div className="px-1 sm:px-2 mb-12">
                 <div className="mx-auto w-full max-w-[96%]">
                   <div className="grid grid-cols-3 grid-rows-3 gap-3 sm:gap-4">
-                    {service?.galleryImages?.slice(0, 9).map((src, idx) => (
-                      <div key={idx} className="relative w-full">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {(() => {
-                          const u = buildUnsplashSrcSet(src, true);
-                          return (
-                            <img
-                              src={u.src}
-                              srcSet={u.srcSet}
-                              sizes={u.sizes}
-                              alt={`Gallery ${idx + 1}`}
-                              className="absolute inset-0 w-full h-full object-cover rounded-md"
-                              loading="lazy"
-                              onError={(e) => {
-                                // Fallback to original URL if Unsplash optimization fails
-                                e.currentTarget.src = src;
-                                e.currentTarget.srcset = '';
-                              }}
-                            />
-                          );
-                        })()}
-                        <div className="pt-[100%]" />
-                      </div>
-                    ))}
+                    {service?.galleryImages?.slice(0, 9).map((src, idx) => {
+                      // Handle both string and object formats
+                      const imageUrl = typeof src === 'string' ? src : (src as any)?.url || (src as any)?.urlSmall;
+                      if (!imageUrl) return null;
+                      
+                      return (
+                        <div key={idx} className="relative w-full">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          {(() => {
+                            const u = buildUnsplashSrcSet(imageUrl, true);
+                            return (
+                              <img
+                                src={u.src}
+                                srcSet={u.srcSet}
+                                sizes={u.sizes}
+                                alt={`Gallery ${idx + 1}`}
+                                className="absolute inset-0 w-full h-full object-cover rounded-md"
+                                loading="lazy"
+                                onError={(e) => {
+                                  // Fallback to original URL if Unsplash optimization fails
+                                  e.currentTarget.src = imageUrl;
+                                  e.currentTarget.srcset = '';
+                                }}
+                              />
+                            );
+                          })()}
+                          <div className="pt-[100%]" />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

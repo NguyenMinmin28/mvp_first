@@ -141,7 +141,7 @@ export default function PortfolioStep() {
             <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Enter URL" />
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 flex gap-3">
             <Button className="min-w-28" onClick={async () => {
               try { localStorage.setItem("onboarding.portfolio", JSON.stringify({ images, title, description, url })); } catch {}
               try {
@@ -153,6 +153,12 @@ export default function PortfolioStep() {
               } catch {}
               router.push("/onboarding/freelancer/verification");
             }}>Next</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push("/onboarding/freelancer/verification")}
+            >
+              Skip
+            </Button>
           </div>
         </CardContent>
       </Card>

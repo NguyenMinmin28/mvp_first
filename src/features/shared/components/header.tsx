@@ -194,6 +194,23 @@ export function Header({ user }: HeaderProps) {
     router.push(`/auth/signin?portal=${pendingPortal}`);
   };
 
+  const handleLogoClick = () => {
+    if (!isAuthenticated) {
+      router.push("/");
+      return;
+    }
+
+    // Redirect based on user role
+    if (userRole === "CLIENT") {
+      router.push("/client-dashboard");
+    } else if (userRole === "DEVELOPER") {
+      router.push("/dashboard-user");
+    } else {
+      // Fallback to home page for other roles or unauthenticated users
+      router.push("/");
+    }
+  };
+
   const handlePortalSwitch = (targetPortal: "client" | "freelancer") => {
     if (!isAuthenticated) {
       showLoginModalForPortal(targetPortal);
@@ -268,13 +285,13 @@ export function Header({ user }: HeaderProps) {
         <div className="container flex h-16 items-center justify-between px-4">
           {/* Logo */}
           <div className="flex items-center gap-6">
-            <Link href="/">
+            <button onClick={handleLogoClick} className="cursor-pointer">
               <img 
                 src={!isAuthenticated ? "/images/home/clervelogo.png" : "/images/home/clervelogoblack.png"}
                 alt="Clevrs" 
                 className="h-8 w-auto"
               />
-            </Link>
+            </button>
             
             {/* Portal Switch */}
             <div className="hidden md:flex items-center gap-2 text-sm">

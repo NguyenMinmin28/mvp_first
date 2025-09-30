@@ -50,6 +50,7 @@ interface Idea {
 
 interface IdeaSparkGridProps {
   initialIdeas?: Idea[];
+  initialCursor?: string;
 }
 
 const categories = [
@@ -64,20 +65,20 @@ const categories = [
   { id: "business", label: "Business", icon: Briefcase, color: "bg-gray-500" },
 ];
 
-export function IdeaSparkGrid({ initialIdeas = [] }: IdeaSparkGridProps) {
+export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGridProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("trending");
   const [userInteractions, setUserInteractions] = useState<Record<string, { liked: boolean; bookmarked: boolean }>>({});
-  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
+  const [nextCursor, setNextCursor] = useState<string | undefined>(initialCursor);
 
   useEffect(() => {
     if (initialIdeas.length === 0) {
       fetchIdeas();
     }
-  }, []);
+  }, [initialIdeas.length]);
 
   const fetchIdeas = async (opts?: { append?: boolean; cursor?: string; categoryId?: string }) => {
     setLoading(true);

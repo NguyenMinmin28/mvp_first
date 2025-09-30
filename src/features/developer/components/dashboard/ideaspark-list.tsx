@@ -104,7 +104,7 @@ export default function IdeaSparkList({ profile }: IdeaSparkListProps = {}) {
                       <span className={`font-semibold ${
                         item.status === "available" ? "text-green-600" : "text-orange-600"
                       }`}>
-                        {item.status}
+                        {item.status === "available" ? "Available" : "Not Available"}
                       </span>
                     </div>
                     

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's follow relationships
-    if (sessionUser.role === "CLIENT") {
+    if (sessionUser.role === "CLIENT" || sessionUser.role === "DEVELOPER") {
       // Get developers this client follows
       const following = await prisma.follow.findMany({
         where: { followerId: sessionUser.id },
@@ -146,8 +146,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const sessionUser = await getServerSessionUser();
-    if (!sessionUser || sessionUser.role !== "CLIENT") {
-      return NextResponse.json({ error: "Unauthorized - Only clients can follow developers" }, { status: 401 });
+    if (!sessionUser || (sessionUser.role !== "CLIENT" && sessionUser.role !== "DEVELOPER")) {
+      return NextResponse.json({ error: "Unauthorized - Only clients and developers can follow" }, { status: 401 });
     }
 
     const body = await request.json();
