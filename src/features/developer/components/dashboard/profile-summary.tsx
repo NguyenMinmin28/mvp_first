@@ -53,6 +53,31 @@ export default function ProfileSummary({ profile, hideControls = false, develope
   const [showReviewsOverlay, setShowReviewsOverlay] = useState(false);
   const [showResumeViewer, setShowResumeViewer] = useState(false);
 
+  // Map internal statuses to display labels
+  const getDisplayStatus = (value: string) => {
+    try {
+      if (!value) return "";
+      if (value === "available") return "Available";
+      if (value === "busy") return "Not Available";
+      return value;
+    } catch {
+      return value;
+    }
+  };
+
+  // Resolve current presence for dot indicator
+  const resolvedPresence: "available" | "busy" = (() => {
+    const raw = (developerId ? (profile?.currentStatus as string) : status) || "busy";
+    return raw === "available" ? "available" : "busy";
+  })();
+
+  // Sync local state with profile prop changes
+  useEffect(() => {
+    setIsFollowingLocal(Boolean(profile?.isFollowing));
+    setIsFavoritedLocal(Boolean(profile?.isFavorited));
+    setFollowersCountLocal(Number(profile?.followersCount || 0));
+  }, [profile?.isFollowing, profile?.isFavorited, profile?.followersCount]);
+
   // Function to render star rating
   const renderStars = (rating: number) => {
     const stars = [];
@@ -236,13 +261,13 @@ export default function ProfileSummary({ profile, hideControls = false, develope
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="bg-black text-white h-10 md:h-12 px-4 rounded-md flex items-center gap-2">
-                    {status || "available"}
+                    {getDisplayStatus(status || "available")}
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => submitStatus("available")}>Available</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => submitStatus("busy")}>busy</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => submitStatus("busy")}>Not Available</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
@@ -259,9 +284,12 @@ export default function ProfileSummary({ profile, hideControls = false, develope
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Badge className="text-xs capitalize bg-gray-100 text-gray-800">
-                {status || profile?.currentStatus || "available"}
-              </Badge>
+              {/* Hide status pill on public developer page (when developerId is present) */}
+              {!developerId && (
+                <Badge className="text-xs bg-gray-100 text-gray-800">
+                  {getDisplayStatus(status || profile?.currentStatus || "available")}
+                </Badge>
+              )}
               {profile?.adminApprovalStatus && (
                 <Badge className="text-xs capitalize">
                   {String(profile.adminApprovalStatus).toLowerCase()}
@@ -328,10 +356,19 @@ export default function ProfileSummary({ profile, hideControls = false, develope
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Left: Large square avatar filling card height visually */}
           <div className="lg:w-[280px] w-full lg:max-w-[300px] mt-2 sm:-mt-6 lg:-mt-10">
-            <Avatar className="w-full h-48 sm:h-64 lg:h-72 xl:h-80 rounded-md">
-              <AvatarImage src={(photoUrl || profile?.photoUrl || profile?.image) || undefined} />
-              <AvatarFallback>{(name || profile?.name || "").slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <div className="relative inline-block">
+              <Avatar className="w-full h-48 sm:h-64 lg:h-72 xl:h-80 rounded-md">
+                <AvatarImage src={(photoUrl || profile?.photoUrl || profile?.image) || undefined} />
+                <AvatarFallback>{(name || profile?.name || "").slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <span
+                className={`absolute right-0 top-0 inline-block w-6 h-6 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                  resolvedPresence === "available" ? "bg-green-500" : "bg-gray-400"
+                }`}
+                aria-label={resolvedPresence === "available" ? "Available" : "Not Available"}
+                title={resolvedPresence === "available" ? "Available" : "Not Available"}
+              />
+            </div>
           </div>
 
           {/* Right: Personal info */}

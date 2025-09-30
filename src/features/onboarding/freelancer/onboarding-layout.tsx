@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
+  user?: any; // accepted for compatibility with server pages that pass user
 }
 
 export function OnboardingLayout({ children }: OnboardingLayoutProps) {

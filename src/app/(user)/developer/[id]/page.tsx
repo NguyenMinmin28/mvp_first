@@ -25,7 +25,7 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     redirect("/auth/signin");
   }
 
-  if (session.user.role !== "CLIENT") {
+  if (session.user.role !== "CLIENT" && session.user.role !== "DEVELOPER") {
     redirect("/");
   }
 
@@ -46,59 +46,69 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
     return <div className="container mx-auto px-4 py-12">Developer not found</div>;
   }
 
-  // Check if client is connected to this developer
+  // Check if client is connected to this developer (only for clients)
   const clientId = session.user.id;
   const developerId = params.id;
+  const isClient = session.user.role === "CLIENT";
 
-  // Check contact reveal events
-  const contactReveal = await prisma.contactRevealEvent.findFirst({
-    where: {
-      clientId,
-      developerId,
-    },
-    orderBy: {
-      revealedAt: "desc",
-    },
-  });
+  let isConnected = false;
+  let isFavorited = false;
 
-  // Check if client has any projects with this developer
-  const projectConnection = await prisma.project.findFirst({
-    where: {
-      clientId,
-      contactRevealedDeveloperId: developerId,
-      contactRevealEnabled: true,
-    },
-  });
+  if (isClient) {
+    // Check contact reveal events
+    const contactReveal = await prisma.contactRevealEvent.findFirst({
+      where: {
+        clientId,
+        developerId,
+      },
+      orderBy: {
+        revealedAt: "desc",
+      },
+    });
 
-  const isConnected = !!(contactReveal || projectConnection);
-  const favorite = await prisma.favoriteDeveloper.findFirst({
-    where: {
-      client: { userId: clientId },
-      developerId: developerId,
-    },
-    select: { id: true }
-  });
-  const isFavorited = !!favorite;
+    // Check if client has any projects with this developer
+    const projectConnection = await prisma.project.findFirst({
+      where: {
+        clientId,
+        contactRevealedDeveloperId: developerId,
+        contactRevealEnabled: true,
+      },
+    });
+
+    isConnected = !!(contactReveal || projectConnection);
+    
+    const favorite = await prisma.favoriteDeveloper.findFirst({
+      where: {
+        client: { userId: clientId },
+        developerId: developerId,
+      },
+      select: { id: true }
+    });
+    isFavorited = !!favorite;
+  }
 
   // Get follower count for this developer
   const followersCount = await (prisma as any).follow.count({
     where: { followingId: developer.userId }
   });
 
-  // Check if current client is following this developer
-  const followStatus = await (prisma as any).follow.findUnique({
-    where: {
-      followerId_followingId: {
-        followerId: clientId,
-        followingId: developer.userId,
+  // Check if current user is following this developer (for both clients and developers)
+  let isFollowing = false;
+  if (isClient || session.user.role === "DEVELOPER") {
+    const followStatus = await (prisma as any).follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: clientId,
+          followingId: developer.userId,
+        },
       },
-    },
-  });
-  const isFollowing = !!followStatus;
+    });
+    isFollowing = !!followStatus;
+  }
 
   const profile = {
     name: developer.user.name,
-    email: (isConnected || isFavorited) ? developer.user.email : null,
+    email: (isClient && (isConnected || isFavorited)) ? developer.user.email : null,
     image: developer.user.image,
     photoUrl: developer.photoUrl,
     location: developer.location,

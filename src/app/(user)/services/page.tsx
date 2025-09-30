@@ -66,7 +66,7 @@ export default function ServicesPage() {
                   className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Post Project
+                  Post Service
                 </Button>
               </Link>
             )}
@@ -100,6 +100,7 @@ export default function ServicesPage() {
             sortBy="popular"
             filters={selectedFilters}
             hideHeaderControls
+            isDeveloper={isDeveloper}
           />
         )}
       </div>

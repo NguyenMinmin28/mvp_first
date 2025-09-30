@@ -72,11 +72,11 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  // Create fetch function
-  const fetchServices = useCallback(async (page: number, limit: number) => {
+  // Create fetch function với optimized API
+  const fetchServices = useCallback(async (page: number, limit: number, cursor?: string) => {
     const params = new URLSearchParams({
-      page: page.toString(),
       limit: limit.toString(),
       sort: sortBy,
     });
@@ -90,11 +90,57 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
       params.append("myServices", "true");
     }
     
-    console.log('Fetching services:', `/api/services?${params.toString()}`);
-    const res = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
-    const json = await res.json();
+    // Add cursor for keyset pagination
+    if (cursor) {
+      params.append("cursor", cursor);
+    }
     
-    console.log('Services API response:', { status: res.status, json });
+    console.log('🚀 Fetching optimized services:', `/api/services/optimized?${params.toString()}`);
+    
+    try {
+      const res = await fetch(`/api/services/optimized?${params.toString()}`, { 
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      const json = await res.json();
+      
+      console.log('✅ Optimized Services API response:', { status: res.status, dataCount: json.data?.length });
+      
+      if (res.ok && json?.success) {
+        return {
+          data: json.data || [],
+          pagination: json.pagination || {
+            hasNextPage: false,
+            nextCursor: null,
+            limit
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('⚠️ Optimized API failed, falling back to original API:', error);
+    }
+    
+    // Fallback to original API
+    console.log('🔄 Falling back to original API:', `/api/services?${params.toString()}`);
+    const fallbackParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sort: sortBy,
+    });
+    
+    if (searchQuery.trim()) {
+      fallbackParams.append("search", searchQuery.trim());
+    }
+    
+    if (isDeveloper && filters.includes("My Services")) {
+      fallbackParams.append("myServices", "true");
+    }
+    
+    const res = await fetch(`/api/services?${fallbackParams.toString()}`, { cache: "no-store" });
+    const json = await res.json();
     
     if (!res.ok || !json?.success) {
       throw new Error(json?.message || 'Failed to fetch services');
@@ -103,17 +149,14 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     return {
       data: json.data || [],
       pagination: json.pagination || {
-        page,
-        limit,
-        totalCount: 0,
-        totalPages: 0,
         hasNextPage: false,
-        hasPrevPage: false,
+        nextCursor: null,
+        limit
       }
     };
   }, [searchQuery, sortBy, isDeveloper, filters]);
 
-  // Load initial data
+  // Load initial data với optimized API
   useEffect(() => {
     let mounted = true;
     const loadInitialData = async () => {
@@ -122,14 +165,19 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         setError(null);
         const result = await fetchServices(1, 12);
         if (mounted) {
-          setServices(result.data);
-          setTotalCount(result.pagination.totalCount);
+          // Deduplicate initial data as well
+          const uniqueServices = result.data.filter((service: Service, index: number, self: Service[]) => 
+            index === self.findIndex((s: Service) => s.id === service.id)
+          );
+          setServices(uniqueServices);
           setHasNextPage(result.pagination.hasNextPage);
+          setNextCursor(result.pagination.nextCursor);
           setCurrentPage(1);
+          console.log('✅ Initial services loaded:', uniqueServices.length, 'nextCursor:', result.pagination.nextCursor);
         }
       } catch (err) {
         if (mounted) {
-          console.error('Error loading services:', err);
+          console.error('❌ Error loading services:', err);
           setError('Failed to load services');
         }
       } finally {
@@ -206,17 +254,25 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     
     try {
       setLoadingMore(true);
-      const result = await fetchServices(currentPage + 1, 12);
-      setServices(prev => [...prev, ...result.data]);
+      console.log('🔄 Loading more services with cursor:', nextCursor);
+      const result = await fetchServices(currentPage + 1, 12, nextCursor || undefined);
+      setServices(prev => {
+        // Deduplicate by service ID
+        const existingIds = new Set(prev.map(s => s.id));
+        const newServices = result.data.filter((service: Service) => !existingIds.has(service.id));
+        return [...prev, ...newServices];
+      });
       setHasNextPage(result.pagination.hasNextPage);
+      setNextCursor(result.pagination.nextCursor);
       setCurrentPage(prev => prev + 1);
+      console.log('✅ More services loaded:', result.data.length, 'nextCursor:', result.pagination.nextCursor);
     } catch (err) {
       console.error('Error loading more services:', err);
       setError('Failed to load more services');
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasNextPage, currentPage, fetchServices]);
+  }, [loadingMore, hasNextPage, nextCursor, currentPage, fetchServices]);
 
   // Set up scroll-based loading
   useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);

@@ -143,11 +143,11 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
             <div className="flex items-center gap-2 text-blue-700">
               <LogIn className="w-4 h-4" />
               <span className="text-sm font-medium">
-                Bạn cần đăng nhập để submit idea
+                You need to login to submit idea
               </span>
             </div>
             <p className="text-xs text-blue-600 mt-1">
-              Hãy đăng nhập hoặc tạo tài khoản mới để chia sẻ ý tưởng của bạn
+              Please login or create a new account to share your idea
             </p>
           </div>
         )}
@@ -337,10 +337,10 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
                 <LogIn className="w-6 h-6 text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Đăng nhập để tiếp tục
+                Login to continue
               </h3>
               <p className="text-gray-600">
-                Bạn cần đăng nhập để có thể submit idea. Hãy đăng nhập hoặc tạo tài khoản mới.
+                You need to login to submit idea. Please login or create a new account.
               </p>
             </div>
             
