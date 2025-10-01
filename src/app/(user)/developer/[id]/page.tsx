@@ -38,7 +38,14 @@ export default async function DeveloperPublicProfilePage({ params }: { params: {
         select: { id: true, name: true, email: true, image: true },
       },
       skills: { include: { skill: true } },
-      reviewsSummary: true,
+      reviewsSummary: {
+        select: {
+          id: true,
+          averageRating: true,
+          totalReviews: true,
+          // Skip updatedAt to avoid null value issues
+        }
+      },
     },
   });
 

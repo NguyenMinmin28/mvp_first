@@ -216,13 +216,22 @@ export function FollowNotifications({ className = "" }: FollowNotificationsProps
                         detail: { developerId: notification.metadata.developerProfileId, serviceId: notification.metadata.serviceId }
                       }));
                     }, 100);
+                  } else if (notification.developer?.id) {
+                    // Navigate to developer profile for other notifications
+                    console.log('🔔 Follow: Navigating to developer profile:', notification.developer.id);
+                    router.push(`/developer/${notification.developer.id}`);
                   }
                 }}
             >
               {/* Avatar */}
               <Avatar className="w-10 h-10 flex-shrink-0">
                 <AvatarImage 
-                  src={notification.developer.photoUrl || notification.developer.image} 
+                  src={notification.developer.photoUrl || notification.developer.image || ''} 
+                  alt={notification.developer.name || 'Developer'}
+                  onError={(e) => {
+                    console.log('Avatar image failed to load for', notification.developer.name, 'photoUrl:', notification.developer.photoUrl, 'image:', notification.developer.image);
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
                 <AvatarFallback className="text-sm font-medium bg-blue-100 text-blue-700">
                   {notification.developer.name?.charAt(0) || "D"}

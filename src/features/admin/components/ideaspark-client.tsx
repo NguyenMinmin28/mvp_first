@@ -17,6 +17,7 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
+import { IdeaDetailModal } from "./idea-detail-modal";
 import { AdminLayout } from "@/features/shared/components";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 
@@ -56,6 +57,8 @@ export default function IdeaSparkClientPage({ user }: { user: any }) {
   const [approvedIdeas, setApprovedIdeas] = useState<Idea[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -130,6 +133,16 @@ export default function IdeaSparkClientPage({ user }: { user: any }) {
     } catch (error) {
       console.error("Error rejecting idea:", error);
     }
+  };
+
+  const handleViewDetails = (ideaId: string) => {
+    setSelectedIdeaId(ideaId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedIdeaId(null);
   };
 
   const handleResolveReport = async (reportId: string, action: string) => {
@@ -354,7 +367,11 @@ export default function IdeaSparkClientPage({ user }: { user: any }) {
                             <XCircle className="w-4 h-4 mr-1" />
                             Reject
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleViewDetails(idea.id)}
+                          >
                             <Eye className="w-4 h-4 mr-1" />
                             View Details
                           </Button>
@@ -414,7 +431,11 @@ export default function IdeaSparkClientPage({ user }: { user: any }) {
                             <Edit className="w-4 h-4 mr-1" />
                             Edit Tags
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleViewDetails(idea.id)}
+                          >
                             <Eye className="w-4 h-4 mr-1" />
                             View Details
                           </Button>
@@ -557,6 +578,13 @@ export default function IdeaSparkClientPage({ user }: { user: any }) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Idea Detail Modal */}
+      <IdeaDetailModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        ideaId={selectedIdeaId}
+      />
     </AdminLayout>
   );
 }

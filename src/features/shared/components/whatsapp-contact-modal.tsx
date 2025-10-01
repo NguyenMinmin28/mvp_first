@@ -27,7 +27,6 @@ export function WhatsAppContactModal({
   developer,
   projectId 
 }: WhatsAppContactModalProps) {
-  console.log("WhatsAppContactModal render:", { isOpen, developer });
   const handleClose = () => {
     onClose();
   };

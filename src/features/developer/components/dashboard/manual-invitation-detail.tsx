@@ -105,7 +105,17 @@ export default function ManualInvitationDetail({
           </h3>
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={invitation.client?.image || undefined} />
+              <AvatarImage 
+                src={invitation.client?.image || undefined} 
+                alt={invitation.client?.name || 'Client'}
+                onError={(e) => {
+                  console.log('Client avatar failed to load for', invitation.client?.name, 'image:', invitation.client?.image);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                onLoad={() => {
+                  console.log('Client avatar loaded successfully for', invitation.client?.name, 'image:', invitation.client?.image);
+                }}
+              />
               <AvatarFallback>
                 {(invitation.client?.name || 'C').charAt(0).toUpperCase()}
               </AvatarFallback>

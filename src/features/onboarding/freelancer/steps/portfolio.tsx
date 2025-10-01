@@ -6,6 +6,8 @@ import { Label } from "@/ui/components/label";
 import { Button } from "@/ui/components/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useImageUpload } from "@/core/hooks/use-upload";
+import { toast } from "sonner";
 
 export default function PortfolioStep() {
   const router = useRouter();
@@ -13,9 +15,16 @@ export default function PortfolioStep() {
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
 
-  // Cloudinary image uploads (up to 5)
+  // Portfolio image uploads (up to 5)
   const [images, setImages] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const { uploadImage, isUploading } = useImageUpload({
+    onSuccess: (result) => {
+      setImages((prev) => [...prev, result.url].slice(0, 5));
+    },
+    onError: (error) => {
+      console.error('Portfolio upload error:', error);
+    }
+  });
 
   // Load draft
   useEffect(() => {
@@ -42,50 +51,24 @@ export default function PortfolioStep() {
     if (!files || files.length === 0) return;
     const remainingSlots = Math.max(0, 5 - images.length);
     const toUpload = Array.from(files).slice(0, remainingSlots);
-    if (toUpload.length === 0) return;
+    if (toUpload.length === 0) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
 
-    setUploading(true);
-    try {
-      const uploaded: string[] = [];
-      for (const file of toUpload) {
-        if (file.size > 10 * 1024 * 1024) continue;
-        const basename = file.name.replace(/\.[^/.]+$/, "");
-        const signRes = await fetch("/api/uploads/cloudinary-sign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folder: "portfolio", resourceType: "image", useFilename: true, uniqueFilename: true, publicId: basename })
-        });
-        if (!signRes.ok) {
-          const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME as string | undefined;
-          const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string | undefined;
-          if (!cloudName || !uploadPreset) continue;
-          const fdUnsigned = new FormData();
-          fdUnsigned.append("file", file);
-          fdUnsigned.append("upload_preset", uploadPreset);
-          const up = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fdUnsigned });
-          const js = await up.json();
-          if (up.ok && js?.secure_url) uploaded.push(js.secure_url as string);
-          continue;
-        }
-        const { cloudName, apiKey, timestamp, folder, signature, publicId, useFilename, uniqueFilename } = await signRes.json();
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("api_key", apiKey);
-        fd.append("timestamp", String(timestamp));
-        fd.append("folder", folder || "portfolio");
-        if (publicId) fd.append("public_id", publicId);
-        if (useFilename !== undefined) fd.append("use_filename", String(useFilename));
-        if (uniqueFilename !== undefined) fd.append("unique_filename", String(uniqueFilename));
-        fd.append("signature", signature);
-        const up = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd });
-        const json = await up.json();
-        if (up.ok && json?.secure_url) {
-          uploaded.push(json.secure_url as string);
-        }
+    // Upload each file using centralized service
+    for (const file of toUpload) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File ${file.name} is too large (max 10MB)`);
+        continue;
       }
-      if (uploaded.length) setImages((prev) => [...prev, ...uploaded].slice(0, 5));
-    } finally {
-      setUploading(false);
+      
+      try {
+        await uploadImage(file, "portfolio", 10); // 10MB max for portfolio
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
     }
   };
 
@@ -107,9 +90,9 @@ export default function PortfolioStep() {
                 multiple
                 accept="image/*"
                 onChange={(e) => handleUploadImages(e.target.files)}
-                disabled={uploading || images.length >= 5}
+                disabled={isUploading || images.length >= 5}
               />
-              <div className="text-xs text-gray-500">{uploading ? "Uploading..." : `${images.length}/5 uploaded`}</div>
+              <div className="text-xs text-gray-500">{isUploading ? "Uploading..." : `${images.length}/5 uploaded`}</div>
               {images.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {images.map((src, idx) => (

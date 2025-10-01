@@ -40,6 +40,7 @@ type UnifiedNotif = {
   payload?: any;
   projectId?: string;
   origin: "general" | "follow";
+  actor?: { id?: string | null; name?: string | null; image?: string | null; photoUrl?: string | null } | null;
 };
 
 export function Header({ user }: HeaderProps) {
@@ -117,15 +118,12 @@ export function Header({ user }: HeaderProps) {
       let total = 0;
       if (generalRes.ok) {
         const data = await generalRes.json();
-        console.log('🔔 General notifications unread count:', data.unreadCount);
         total += Number(data.unreadCount || 0);
       }
       if (followRes.ok) {
         const data = await followRes.json();
-        console.log('🔔 Follow notifications unread count:', data.unreadCount);
         total += Number(data.unreadCount || 0);
       }
-      console.log('🔔 Total unread notifications:', total);
       setUnread(total);
     } catch (error) {
       console.error('🔔 Failed to refresh notification count:', error);
@@ -293,7 +291,8 @@ export function Header({ user }: HeaderProps) {
               />
             </button>
             
-            {/* Portal Switch */}
+            {/* Portal Switch (hidden when authenticated) */}
+            {!isAuthenticated && (
             <div className="hidden md:flex items-center gap-2 text-sm">
               <button
                 className={`px-3 py-1 rounded-full border ${activePortal === "client" ? "bg-black text-white" : !isAuthenticated ? "text-white border-white/40" : "text-black"}`}
@@ -308,6 +307,7 @@ export function Header({ user }: HeaderProps) {
                 Freelancer {user?.id && userRole === "DEVELOPER" && "✓"}
               </button>
             </div>
+            )}
             
             {/* Navigation Links - Show based on user role */}
             {isAuthenticated && mounted && userRole === "CLIENT" && (
@@ -530,11 +530,11 @@ export function Header({ user }: HeaderProps) {
                           if (genRes.ok) {
                             const d = await genRes.json();
                             setCursor(d.nextCursor || null);
-                            for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" });
+                            for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general", actor: it.actor || null });
                           }
                           if (folRes.ok) {
                             const d = await folRes.json();
-                            for (const it of (d.items || [])) unified.push({ id: it.id, type: `follow.${it.type}`, createdAt: it.createdAt, read: !!it.isRead, payload: { ...it.metadata, title: it.title, message: it.message }, origin: "follow" });
+                            for (const it of (d.items || [])) unified.push({ id: it.id, type: `follow.${it.type}`, createdAt: it.createdAt, read: !!it.isRead, payload: { ...it.metadata, title: it.title, message: it.message }, origin: "follow", actor: { id: it.developer?.id ?? null, name: it.developer?.name ?? null, image: it.developer?.image ?? null, photoUrl: it.developer?.developerProfile?.photoUrl ?? it.developer?.photoUrl ?? null } });
                           }
                           unified.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
                           setItems(unified);
@@ -600,12 +600,16 @@ export function Header({ user }: HeaderProps) {
                               }
                               // Routing
                               if (n.origin === "general") {
-                              if (n.type === "quota.project_limit_reached") {
-                                router.push("/pricing");
-                              } else if (n.type === "assignment.manual_invite") {
-                                router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
-                              } else if (n.projectId) {
-                                router.push(`/projects/${n.projectId}`);
+                                if (n.type === "quota.project_limit_reached") {
+                                  router.push("/pricing");
+                                } else if (n.type === "assignment.manual_invite") {
+                                  router.push("/dashboard-user?filter=MANUAL_INVITATIONS");
+                                } else if (n.projectId) {
+                                  router.push(`/projects/${n.projectId}`);
+                                } else if (n.actor && n.actor.id) {
+                                  // Navigate to developer profile if actor is a developer
+                                  console.log('🔔 Header: Navigating to developer profile:', n.actor.id);
+                                  router.push(`/developer/${n.actor.id}`);
                                 }
                               } else if (n.origin === "follow") {
                                 if (n.type === "follow.service_posted" && n.payload?.developerProfileId) {
@@ -622,16 +626,31 @@ export function Header({ user }: HeaderProps) {
                                       detail: { developerId: n.payload.developerProfileId, serviceId: n.payload.serviceId } 
                                     }));
                                   }, 100);
+                                } else if (n.actor && n.actor.id) {
+                                  // Navigate to developer profile for follow notifications
+                                  console.log('🔔 Header: Navigating to developer profile (follow):', n.actor.id);
+                                  router.push(`/developer/${n.actor.id}`);
                                 }
                               }
                             }}
                           >
-                            {/* Avatar placeholder */}
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-medium text-blue-700">
-                                {n.origin === "general" ? "S" : "F"}
-                              </span>
-                            </div>
+                            {/* Avatar */}
+                            {n.actor ? (
+                              <div className="flex-shrink-0">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={n.actor.photoUrl || n.actor.image || undefined} />
+                                  <AvatarFallback className="text-xs font-medium">
+                                    {(n.actor.name || "").slice(0, 2).toUpperCase() || "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-medium text-blue-700">
+                                  {n.origin === "general" ? "S" : "F"}
+                                </span>
+                              </div>
+                            )}
                             
                             {/* Content */}
                             <div className="flex-1 min-w-0">
@@ -650,7 +669,14 @@ export function Header({ user }: HeaderProps) {
                                       : n.type === "MANUAL_INVITE_REJECTED"
                                       ? (n.payload?.title || "Invitation Declined")
                                       : n.type)
-                                  : (n.type === "follow.service_posted" ? "New Service Posted" : n.type.replace("follow.", ""))}
+                                  : (n.payload?.title 
+                                    || (n.type === "follow.service_posted" 
+                                      ? "New Service Posted" 
+                                      : (n.type === "follow.availability_change" 
+                                        ? "Developer Availability Update" 
+                                        : n.type.replace("follow.", ""))
+                                    )
+                                  )}
                                 </h4>
                                 <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
                                   {formatDateStable(n.createdAt)}
@@ -828,8 +854,9 @@ export function Header({ user }: HeaderProps) {
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-200">
             <div className="container px-4 py-4 space-y-4">
-              {/* Portal Switch Mobile */}
-              <div className="flex items-center gap-2 text-sm">
+            {/* Portal Switch Mobile (hidden when authenticated) */}
+            {!isAuthenticated && (
+            <div className="flex items-center gap-2 text-sm">
                 <button
                   className={`px-3 py-2 rounded-full border ${activePortal === "client" ? "bg-black text-white" : "text-black border-gray-300"}`}
                   onClick={() => handlePortalSwitch("client")}
@@ -842,7 +869,8 @@ export function Header({ user }: HeaderProps) {
                 >
                   Freelancer {user?.id && userRole === "DEVELOPER" && "✓"}
                 </button>
-              </div>
+            </div>
+            )}
 
               {/* Navigation Links Mobile */}
               {isAuthenticated && userRole === "CLIENT" && (
@@ -864,7 +892,7 @@ export function Header({ user }: HeaderProps) {
                             if (genRes.ok) {
                               const d = await genRes.json();
                               setCursor(d.nextCursor || null);
-                              for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" });
+                              for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general", actor: it.actor || null });
                             }
                             if (folRes.ok) {
                               const d = await folRes.json();
@@ -970,7 +998,7 @@ export function Header({ user }: HeaderProps) {
                                           )}
                                         </div>
                                       ) : n.payload?.message ? (
-                                        <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
+                                      <div className="text-xs text-gray-600 mt-1">{n.payload.message}</div>
                                       ) : null}
                                       <div className="text-[11px] text-gray-400 mt-1">{formatDateStable(n.createdAt)}</div>
                                     </div>
@@ -1036,7 +1064,7 @@ export function Header({ user }: HeaderProps) {
                             if (genRes.ok) {
                               const d = await genRes.json();
                               setCursor(d.nextCursor || null);
-                              for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general" });
+                              for (const it of (d.items || [])) unified.push({ id: it.id, type: it.type, createdAt: it.createdAt, read: !!it.read, payload: it.payload, projectId: it.projectId, origin: "general", actor: it.actor || null });
                             }
                             if (folRes.ok) {
                               const d = await folRes.json();

@@ -147,7 +147,7 @@ export function useInfiniteScroll<T>({
   };
 }
 
-// Hook for scroll-based infinite loading
+// Hook for intersection observer-based infinite loading (better performance)
 export function useScrollInfiniteLoad(
   loadMore: () => void,
   hasNextPage: boolean,
@@ -155,52 +155,78 @@ export function useScrollInfiniteLoad(
   threshold = 200
 ) {
   const [isNearBottom, setIsNearBottom] = useState(false);
-  const lastScrollTimeRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isLoadingMoreRef = useRef(false);
+  const lastLoadMoreTimeRef = useRef(0);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const now = Date.now();
-      lastScrollTimeRef.current = now;
+    // Create sentinel element for intersection observer
+    const sentinel = document.createElement('div');
+    sentinel.style.height = '1px';
+    sentinel.style.width = '100%';
+    sentinel.style.position = 'absolute';
+    sentinel.style.bottom = `${threshold}px`;
+    sentinel.style.pointerEvents = 'none';
+    sentinel.style.visibility = 'hidden';
+    sentinelRef.current = sentinel;
+    
+    // Add sentinel to document
+    document.body.appendChild(sentinel);
 
-      // Debounce scroll events to prevent excessive calculations
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
+    // Create intersection observer
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        const isIntersecting = entry.isIntersecting;
+        setIsNearBottom(isIntersecting);
 
-      debounceTimeoutRef.current = setTimeout(() => {
-        // Only process if this is still the latest scroll event
-        if (lastScrollTimeRef.current !== now) return;
+        if (isIntersecting && hasNextPage && !loadingMore && !isLoadingMoreRef.current) {
+          const now = Date.now();
+          const timeSinceLastLoad = now - lastLoadMoreTimeRef.current;
+          const minLoadInterval = 1000; // Minimum 1 second between loads
 
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-
-        // Add safety check for valid document height
-        if (documentHeight <= windowHeight) return;
-
-        const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
-        const nearBottom = distanceFromBottom < threshold;
-
-        setIsNearBottom(nearBottom);
-
-        if (nearBottom && hasNextPage && !loadingMore) {
-          loadMore();
+          if (timeSinceLastLoad > minLoadInterval) {
+            isLoadingMoreRef.current = true;
+            lastLoadMoreTimeRef.current = now;
+            
+            // Disable scroll events temporarily during loading
+            document.body.style.overflow = 'hidden';
+            
+            // Use requestAnimationFrame to ensure DOM is stable
+            requestAnimationFrame(() => {
+              try {
+                loadMore();
+              } finally {
+                // Re-enable scroll after loading
+                setTimeout(() => {
+                  document.body.style.overflow = '';
+                  isLoadingMoreRef.current = false;
+                }, 100);
+              }
+            });
+          }
         }
-      }, 100); // 100ms debounce
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Also listen for resize events that might affect layout
-    window.addEventListener('resize', handleScroll, { passive: true });
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+      },
+      {
+        root: null,
+        rootMargin: `${threshold}px`,
+        threshold: 0
       }
+    );
+
+    // Start observing
+    observerRef.current.observe(sentinel);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+      if (sentinelRef.current && sentinelRef.current.parentNode) {
+        sentinelRef.current.parentNode.removeChild(sentinelRef.current);
+      }
+      document.body.style.overflow = '';
+      isLoadingMoreRef.current = false;
     };
   }, [loadMore, hasNextPage, loadingMore, threshold]);
 

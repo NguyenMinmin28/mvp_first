@@ -60,6 +60,29 @@ export async function GET(request: NextRequest) {
     })));
   }
 
+  // Load actor avatars in one query for performance
+  const actorIds = Array.from(new Set(rows.map((r: any) => r.notification?.actorUserId).filter(Boolean)));
+  let actorsById: Record<string, { id?: string | null; name?: string | null; image?: string | null; photoUrl?: string | null }> = {};
+  if (actorIds.length > 0) {
+    const actors = await (prisma as any).user.findMany({
+      where: { id: { in: actorIds } },
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        developerProfile: { select: { id: true, photoUrl: true } }
+      }
+    });
+    actorsById = Object.fromEntries(
+      actors.map((u: any) => [u.id, { 
+        id: u.developerProfile?.id ?? null, // Use DeveloperProfile.id for navigation
+        name: u.name, 
+        image: u.image, 
+        photoUrl: u.developerProfile?.photoUrl ?? null 
+      }])
+    );
+  }
+
   const items = rows.slice(0, limit).map((r: any) => ({
     id: r.id,
     read: !!r.readAt,
@@ -67,6 +90,7 @@ export async function GET(request: NextRequest) {
     type: r.notification.type,
     projectId: r.notification.projectId,
     payload: r.notification.payload,
+    actor: actorsById[r.notification?.actorUserId || ""] || null,
   }));
   const nextCursor = rows.length > limit ? rows[rows.length - 1].id : null;
   // Compute unread count robustly (Mongo documents may omit null fields)

@@ -144,6 +144,18 @@ export async function GET(request: NextRequest) {
         const isManual = invitation.source === 'MANUAL_INVITE';
         const project = invitation.project || null;
         const client = project?.client || invitation.client || null;
+        
+        // Debug logging
+        console.log('🔍 Invitation client data:', {
+          invitationId: invitation.id,
+          isManual,
+          hasProject: !!project,
+          hasClient: !!client,
+          clientName: client?.user?.name,
+          clientImage: client?.user?.image,
+          clientEmail: client?.user?.email
+        });
+        
         return {
           id: invitation.id,
           project: project

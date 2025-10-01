@@ -69,6 +69,10 @@ export interface Developer {
   userLiked?: boolean;
   level?: "FRESHER" | "MID" | "EXPERT";
   currentStatus?: string;
+  photoUrl?: string;
+  followersCount?: number;
+  hiredCount?: number;
+  earnedAmount?: number;
   skills: Array<{
     skill: {
       id: string;
@@ -117,6 +121,7 @@ interface PeopleGridProps {
   searchQuery?: string;
   sortBy?: string;
   filters?: string[];
+  skills?: string[]; // Selected skill IDs for filtering
   overrideDevelopers?: Developer[]; // when provided, render these instead of fetching
   autoRefreshEnabled?: boolean;
   onAutoRefreshToggle?: (enabled: boolean) => void;
@@ -133,6 +138,7 @@ export function PeopleGrid({
   searchQuery = "", 
   sortBy = "popular", 
   filters, 
+  skills,
   overrideDevelopers, 
   autoRefreshEnabled: externalAutoRefresh, 
   onAutoRefreshToggle, 
@@ -162,7 +168,7 @@ export function PeopleGrid({
   const prevProjectIdRef = useRef(projectId);
   useEffect(() => {
     if (projectId !== prevProjectIdRef.current) {
-      console.log('ProjectId changed, resetting PeopleGrid state');
+     
       prevProjectIdRef.current = projectId;
     }
   }, [projectId]);
@@ -179,7 +185,6 @@ export function PeopleGrid({
   
   // Current state - sử dụng internal state để có immediate feedback
   const currentAutoRefresh = internalAutoRefresh;
-  console.log('PeopleGrid render - currentAutoRefresh:', currentAutoRefresh, 'externalAutoRefresh:', externalAutoRefresh, 'internalAutoRefresh:', internalAutoRefresh);
   const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const abortControllersRef = useRef<Record<string, AbortController>>({});
   const [levelFilter, setLevelFilter] = useState<"all" | "beginner" | "professional" | "expert" | "ready">("all");
@@ -188,6 +193,21 @@ export function PeopleGrid({
   const [likedDeveloperIds, setLikedDeveloperIds] = useState<Set<string>>(new Set());
   const [pendingFollowIds, setPendingFollowIds] = useState<Set<string>>(new Set());
   const [followedUserIds, setFollowedUserIds] = useState<Set<string>>(new Set());
+
+  // Compute local statuses: if countdown hits 0, treat as expired for UI
+  const computedStatuses = useMemo(() => {
+    const base = freelancerResponseStatuses || {};
+    const result: Record<string, string> = { ...base };
+    const deadlines = freelancerDeadlines || {};
+    Object.keys(deadlines).forEach((developerId) => {
+      const remainingMs = timeRemaining[developerId] ?? Number.POSITIVE_INFINITY;
+      const current = base[developerId];
+      if ((current === undefined || current === "pending") && remainingMs <= 0) {
+        result[developerId] = "expired";
+      }
+    });
+    return result;
+  }, [freelancerResponseStatuses, freelancerDeadlines, timeRemaining]);
   
   // Fire-and-forget favorite request that survives navigation
   const backgroundFavorite = (developerId: string) => {
@@ -245,7 +265,7 @@ export function PeopleGrid({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Create fetch function với optimized API
+  // Create fetch function với optimized API - stable dependencies
   const fetchDevelopers = useCallback(async (page: number, limit: number, cursor?: string) => {
     const params = new URLSearchParams({
       limit: limit.toString(),
@@ -254,6 +274,17 @@ export function PeopleGrid({
 
     if (searchQuery.trim()) {
       params.append("search", searchQuery.trim());
+    }
+
+    // Add filters
+    if (filters && filters.length > 0) {
+      params.append("filters", filters.join(","));
+    }
+
+    // Add skills
+    if (skills && skills.length > 0) {
+      params.append("skills", skills.join(","));
+      console.log('🔍 Adding skills to API call:', skills);
     }
 
     // Add cursor for keyset pagination
@@ -273,6 +304,17 @@ export function PeopleGrid({
     
     console.log('✅ Optimized Developers API response:', { status: res.status, dataCount: json.data?.length });
     
+    // Debug: Check skills data structure from API
+    if (json.data && json.data.length > 0) {
+      console.log('🔍 API skills data sample:', json.data.slice(0, 2).map((dev: any) => ({
+        id: dev.id,
+        name: dev.user.name,
+        skills: dev.skills || [],
+        skillsType: typeof dev.skills,
+        skillsLength: dev.skills?.length || 0
+      })));
+    }
+    
     if (!res.ok || !json?.success) {
       throw new Error(json?.message || 'Failed to fetch developers');
     }
@@ -285,7 +327,7 @@ export function PeopleGrid({
         limit
       }
     };
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, filters, skills]);
 
   // Load initial data (only when not using overrideDevelopers)
   useEffect(() => {
@@ -323,6 +365,41 @@ export function PeopleGrid({
     return () => { mounted = false; };
   }, [fetchDevelopers, isOverride]);
 
+  // Re-fetch when skills change (for Others filter)
+  useEffect(() => {
+    if (isOverride) return; // Skip when using override data
+    
+    if (skills && skills.length > 0) {
+      console.log('🔍 PeopleGrid - skills changed, re-fetching data:', skills);
+      let mounted = true;
+      const loadData = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const result = await fetchDevelopers(1, 12);
+          if (mounted) {
+            console.log('🔍 PeopleGrid - fetched developers with skills:', result.data.length);
+            setDevelopers(result.data);
+            setTotalCount(result.pagination.totalCount);
+            setHasNextPage(result.pagination.hasNextPage);
+            setNextCursor((result as any)?.pagination?.nextCursor || null);
+            setCurrentPage(1);
+          }
+        } catch (err) {
+          if (mounted) {
+            console.error('Error loading developers:', err);
+            setError('Failed to load developers');
+          }
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      };
+
+      loadData();
+      return () => { mounted = false; };
+    }
+  }, [skills, fetchDevelopers, isOverride]);
+
   // After list loaded, check follow status in bulk (by userId) for both modes
   useEffect(() => {
     const list = (isOverride && Array.isArray(overrideDevelopers)) ? overrideDevelopers : developers;
@@ -349,13 +426,15 @@ export function PeopleGrid({
     })();
   }, [developers, overrideDevelopers, isOverride]);
 
-  // Load more function
+  // Load more function - simplified without scroll position manipulation
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasNextPage || isOverride) return;
     
     try {
       setLoadingMore(true);
       const result = await fetchDevelopers(currentPage + 1, 12, nextCursor || undefined);
+      
+      // Update state directly - scroll is disabled during loading
       setDevelopers(prev => [...prev, ...result.data]);
       setHasNextPage(result.pagination.hasNextPage);
       setCurrentPage(prev => prev + 1);
@@ -366,7 +445,7 @@ export function PeopleGrid({
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasNextPage, currentPage, fetchDevelopers, isOverride, nextCursor]);
+  }, [loadingMore, hasNextPage, isOverride, fetchDevelopers, currentPage, nextCursor]);
 
   // Set up scroll-based loading (only when not using overrideDevelopers)
   useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);
@@ -374,12 +453,10 @@ export function PeopleGrid({
 
   // Decide which developer list to render
   const devList: Developer[] = (isOverride && Array.isArray(overrideDevelopers)) ? overrideDevelopers : developers;
-  if (isOverride && Array.isArray(overrideDevelopers)) {
-    console.log('PeopleGrid using overrideDevelopers, count:', overrideDevelopers.length);
-  }
   
-  // Filter developers based on level filter and remove duplicates
+  // Filter developers based on level filter and external filters, remove duplicates
   const filteredDevList = useMemo(() => {
+    
     // First, remove duplicates by ID
     const uniqueDevList = devList.filter((dev, index, self) => 
       index === self.findIndex(d => d.id === dev.id)
@@ -390,49 +467,94 @@ export function PeopleGrid({
       console.log(`Removed ${devList.length - uniqueDevList.length} duplicate developers`);
     }
     
-    if (levelFilter === "all") return uniqueDevList;
+    let filteredList = uniqueDevList;
     
-    return uniqueDevList.filter(dev => {
-      switch (levelFilter) {
-        case "beginner":
-          // Beginner: FRESHER level
-          return dev.level === "FRESHER";
-        case "professional":
-          // Professional: MID level
-          return dev.level === "MID";
-        case "expert":
-          // Expert: EXPERT level
-          return dev.level === "EXPERT";
-        case "ready":
-          // Ready to Work: has accepted the project (responseStatus === "accepted")
-          const isAccepted = freelancerResponseStatuses?.[dev.id] === "accepted";
-          console.log(`Developer ${dev.user.name} (${dev.id}) ready filter:`, {
-            responseStatus: freelancerResponseStatuses?.[dev.id],
-            isAccepted,
-            allStatuses: freelancerResponseStatuses
-          });
-          return isAccepted;
-        default:
-          return true;
-      }
-    });
-  }, [devList, levelFilter, freelancerResponseStatuses]);
+    // Apply external filters first (from SearchAndFilter component)
+    if (filters && filters.length > 0) {
+      filteredList = filteredList.filter(dev => {
+        // All selected filters must be satisfied (AND logic)
+        return filters.every(filter => {
+          switch (filter) {
+            case "Starter":
+              return dev.level === "FRESHER";
+            case "Professional":
+              return dev.level === "MID" || dev.level === "EXPERT";
+            case "Ready to Work":
+              // Ready to Work: developer has currentStatus = "available"
+              return dev.currentStatus === "available";
+            case "Others":
+              // Others: when skills are selected, API already filters the data
+              // So we don't need client-side filtering for Others
+              if (skills && skills.length > 0) {
+                console.log(`🔍 Others filter - API already filtered, showing all returned developers`);
+                return true; // Show all developers returned by API (already filtered)
+              }
+              
+              // If no skills selected, don't filter (show all developers)
+              console.log(`🔍 Others filter - no skills selected, showing all developers`);
+              return true;
+            default:
+              return true;
+          }
+        });
+      });
+    }
+    
+    // Apply internal level filter if no external filters
+    if (!filters || filters.length === 0) {
+      if (levelFilter === "all") return filteredList;
+      
+      filteredList = filteredList.filter(dev => {
+        switch (levelFilter) {
+          case "beginner":
+            // Beginner: FRESHER level
+            return dev.level === "FRESHER";
+          case "professional":
+            // Professional: MID level
+            return dev.level === "MID";
+          case "expert":
+            // Expert: EXPERT level
+            return dev.level === "EXPERT";
+          case "ready":
+            // Ready to Work: has accepted the project (responseStatus === "accepted")
+            const isAccepted = computedStatuses?.[dev.id] === "accepted";
+            console.log(`Developer ${dev.user.name} (${dev.id}) ready filter:`, {
+              responseStatus: computedStatuses?.[dev.id],
+              isAccepted,
+              allStatuses: computedStatuses
+            });
+            return isAccepted;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return filteredList;
+  }, [devList, levelFilter, filters, skills, freelancerResponseStatuses]);
   const devIdsKey = filteredDevList.map(d => d.id).join(',');
 
   // Countdown timer effect
   useEffect(() => {
-    if (!freelancerDeadlines) return;
+    if (!freelancerDeadlines) {
+      return;
+    }
 
     const updateCountdowns = () => {
       const now = new Date().getTime();
       const newTimeRemaining: Record<string, number> = {};
 
       Object.entries(freelancerDeadlines).forEach(([developerId, deadline]) => {
+        if (!deadline) return;
         const deadlineTime = new Date(deadline).getTime();
-        const remaining = Math.max(0, deadlineTime - now);
-        newTimeRemaining[developerId] = remaining;
+        if (Number.isFinite(deadlineTime)) {
+          const remaining = Math.max(0, deadlineTime - now);
+          newTimeRemaining[developerId] = remaining;
+          console.log(`⏱️ Timer for developer ${developerId}: ${remaining}ms (${Math.floor(remaining/60000)}m ${Math.floor((remaining%60000)/1000)}s)`);
+        }
       });
 
+      console.log('🎯 Updated timeRemaining:', newTimeRemaining);
       setTimeRemaining(newTimeRemaining);
     };
 
@@ -540,8 +662,6 @@ export function PeopleGrid({
     // Use the level field from API data
     const level = developer.level;
     
-    // Debug log to check level data
-    console.log(`Developer ${developer.user.name} level:`, level);
     
     switch (level) {
       case "EXPERT":
@@ -908,11 +1028,18 @@ export function PeopleGrid({
                             onClick={() => handleDeveloperClick(developer)}
                           >
                             <AvatarImage 
-                              src={developer.user.image || ''} 
+                              src={developer.photoUrl || developer.user.image || ''} 
                               alt={developer.user.name}
                               className="object-cover w-full h-full"
                               loading={devIndex < 4 ? "eager" : "lazy"}
                               decoding="async"
+                              onLoad={() => {
+                              }}
+                              onError={(e) => {
+                                console.log('Avatar image failed to load for', developer.user.name, 'photoUrl:', developer.photoUrl, 'user.image:', developer.user.image);
+                                // Hide the image element on error to show fallback
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
                             />
                             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg">
                               {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
@@ -953,34 +1080,41 @@ export function PeopleGrid({
                             {/* Second row: Status and Countdown - show on mobile only; desktop shows at right column */}
                             <div className="flex items-center justify-between sm:justify-start sm:gap-2 sm:hidden">
                               {/* Freelancer Response Status Badge */}
-                              {freelancerResponseStatuses?.[developer.id] && (
+                              {computedStatuses?.[developer.id] && (
                                 <Badge 
                                   className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                    freelancerResponseStatuses[developer.id] === 'accepted' 
+                                    computedStatuses[developer.id] === 'accepted' 
                                       ? 'bg-green-500 text-white' 
-                                      : freelancerResponseStatuses[developer.id] === 'rejected'
+                                      : computedStatuses[developer.id] === 'rejected'
                                       ? 'bg-red-500 text-white'
-                                      : freelancerResponseStatuses[developer.id] === 'expired'
+                                      : computedStatuses[developer.id] === 'expired'
                                       ? 'bg-gray-500 text-white'
                                       : 'bg-yellow-500 text-white'
                                   }`}
                                 >
-                                  {freelancerResponseStatuses[developer.id] === 'accepted' && '✅ Approved'}
-                                  {freelancerResponseStatuses[developer.id] === 'rejected' && '❌ Rejected'}
-                                  {freelancerResponseStatuses[developer.id] === 'expired' && '⏰ Expired'}
-                                  {freelancerResponseStatuses[developer.id] === 'pending' && '⏳ Pending'}
+                                  {computedStatuses[developer.id] === 'accepted' && '✅ Approved'}
+                                  {computedStatuses[developer.id] === 'rejected' && '❌ Rejected'}
+                                  {computedStatuses[developer.id] === 'expired' && '⏰ Expired'}
+                                  {computedStatuses[developer.id] === 'pending' && '⏳ Pending'}
                                 </Badge>
                               )}
                               
                               {/* Countdown Timer - compact design */}
-                              {freelancerDeadlines?.[developer.id] && (
-                                <div className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                                  <Clock className="w-3 h-3 text-orange-500" />
-                                  <span className="text-xs font-semibold text-orange-700">
-                                    {formatTimeRemaining(timeRemaining[developer.id] || 0)}
-                                  </span>
-                                </div>
-                              )}
+                              {(() => {
+                                const hasDeadline = freelancerDeadlines?.[developer.id] !== undefined;
+                                const hasTimeRemaining = timeRemaining[developer.id] !== undefined;
+                                const shouldShowTimer = hasDeadline || hasTimeRemaining;
+                                
+                                
+                                return shouldShowTimer ? (
+                                  <div className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                                    <Clock className="w-3 h-3 text-orange-500" />
+                                    <span className="text-xs font-semibold text-orange-700">
+                                      {formatTimeRemaining(timeRemaining[developer.id] || 0)}
+                                    </span>
+                                  </div>
+                                ) : null;
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -990,22 +1124,30 @@ export function PeopleGrid({
                       <div className="flex flex-col sm:flex-row sm:items-start mt-3 gap-3">
                         <div className="flex items-start space-x-4 sm:space-x-6 text-xs sm:text-sm">
                           <div className="flex flex-col">
-                            <span className="font-bold text-gray-900">$100K+</span>
+                            <span className="font-bold text-gray-900">
+                              {developer.earnedAmount ? `$${Math.round(developer.earnedAmount / 1000)}K+` : '$0'}
+                            </span>
                             <span style={{ color: '#999999' }}>Earned</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-gray-900">10x</span>
+                            <span className="font-bold text-gray-900">
+                              {developer.hiredCount || 0}x
+                            </span>
                             <span style={{ color: '#999999' }}>Hired</span>
                           </div>
                           <div className="flex flex-col">
                             <div className="flex items-center">
                               <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-black text-black mr-1" />
-                              <span className="font-bold text-gray-900">5.0</span>
+                              <span className="font-bold text-gray-900">
+                                {developer.ratingAvg ? developer.ratingAvg.toFixed(1) : '0.0'}
+                              </span>
                             </div>
                             <span style={{ color: '#999999' }}>Rating</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-gray-900">523</span>
+                            <span className="font-bold text-gray-900">
+                              {developer.followersCount || 0}
+                            </span>
                             <span style={{ color: '#999999' }}>Followers</span>
                           </div>
                         </div>
@@ -1036,32 +1178,39 @@ export function PeopleGrid({
                 <div className="flex flex-col sm:flex-col items-stretch sm:items-end space-y-2 sm:space-y-3 w-full sm:w-auto">
                   {/* Desktop/laptop: Pending badge and countdown placed neatly at top right */}
                   <div className="hidden sm:flex items-center gap-2">
-                    {freelancerResponseStatuses?.[developer.id] && (
+                    {computedStatuses?.[developer.id] && (
                       <Badge 
                         className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          freelancerResponseStatuses[developer.id] === 'accepted' 
+                          computedStatuses[developer.id] === 'accepted' 
                             ? 'bg-green-500 text-white' 
-                            : freelancerResponseStatuses[developer.id] === 'rejected'
+                            : computedStatuses[developer.id] === 'rejected'
                             ? 'bg-red-500 text-white'
-                            : freelancerResponseStatuses[developer.id] === 'expired'
+                            : computedStatuses[developer.id] === 'expired'
                             ? 'bg-gray-500 text-white'
                             : 'bg-yellow-500 text-white'
                         }`}
                       >
-                        {freelancerResponseStatuses[developer.id] === 'accepted' && '✅ Approved'}
-                        {freelancerResponseStatuses[developer.id] === 'rejected' && '❌ Rejected'}
-                        {freelancerResponseStatuses[developer.id] === 'expired' && '⏰ Expired'}
-                        {freelancerResponseStatuses[developer.id] === 'pending' && '⏳ Pending'}
+                        {computedStatuses[developer.id] === 'accepted' && '✅ Approved'}
+                        {computedStatuses[developer.id] === 'rejected' && '❌ Rejected'}
+                        {computedStatuses[developer.id] === 'expired' && '⏰ Expired'}
+                        {computedStatuses[developer.id] === 'pending' && '⏳ Pending'}
                       </Badge>
                     )}
-                    {freelancerDeadlines?.[developer.id] && (
-                      <div className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                        <Clock className="w-3 h-3 text-orange-500" />
-                        <span className="text-xs font-semibold text-orange-700">
-                          {formatTimeRemaining(timeRemaining[developer.id] || 0)}
-                        </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const hasDeadline = freelancerDeadlines?.[developer.id] !== undefined;
+                      const hasTimeRemaining = timeRemaining[developer.id] !== undefined;
+                      const shouldShowTimer = hasDeadline || hasTimeRemaining;
+                      
+                      
+                      return shouldShowTimer ? (
+                        <div className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                          <Clock className="w-3 h-3 text-orange-500" />
+                          <span className="text-xs font-semibold text-orange-700">
+                            {formatTimeRemaining(timeRemaining[developer.id] || 0)}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
@@ -1110,7 +1259,7 @@ export function PeopleGrid({
                         className="w-full sm:w-28 bg-black text-white hover:bg-gray-800 text-sm"
                         variant="default"
                         size="default"
-                        responseStatus={projectId ? freelancerResponseStatuses?.[developer.id] : undefined}
+                        responseStatus={projectId ? computedStatuses?.[developer.id] : undefined}
                       />
                     )}
                   </div>
@@ -1175,13 +1324,31 @@ export function PeopleGrid({
         )))}
       </div>
 
-      {/* Loading more indicator */}
+      {/* Loading more indicator with skeleton */}
       {!isOverride && loadingMore && (
-        <div className="flex justify-center py-8">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-            <span className="text-sm text-gray-600">Loading more developers...</span>
-          </div>
+        <div className="space-y-4 sm:space-y-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`loading-${i}`} className="bg-white rounded-2xl border p-4 sm:p-6 animate-pulse">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                <div className="flex items-start space-x-3 sm:space-x-4">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-full flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="h-5 sm:h-6 bg-gray-200 rounded w-1/3 mb-2" />
+                    <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/4 mb-2" />
+                    <div className="flex space-x-2 sm:space-x-4">
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded w-16" />
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded w-12" />
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded w-14" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                  <div className="h-8 bg-gray-200 rounded w-full sm:w-28" />
+                  <div className="h-8 bg-gray-200 rounded w-full sm:w-28" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -1256,14 +1423,44 @@ function areEqual(prev: PeopleGridProps, next: PeopleGridProps) {
   if (prev.sortBy !== next.sortBy) return false;
   if (prev.projectId !== next.projectId) return false; // Add projectId comparison
   if (prev.isDeveloper !== next.isDeveloper) return false; // Add isDeveloper comparison
+  
+  // Compare filters
   const prevFilters = prev.filters || [];
   const nextFilters = next.filters || [];
   if (prevFilters.length !== nextFilters.length) return false;
   for (let i = 0; i < prevFilters.length; i++) if (prevFilters[i] !== nextFilters[i]) return false;
+  
+  // Compare skills
+  const prevSkills = prev.skills || [];
+  const nextSkills = next.skills || [];
+  if (prevSkills.length !== nextSkills.length) return false;
+  for (let i = 0; i < prevSkills.length; i++) if (prevSkills[i] !== nextSkills[i]) return false;
   const prevDevs = prev.overrideDevelopers || [];
   const nextDevs = next.overrideDevelopers || [];
   if (prevDevs.length !== nextDevs.length) return false;
   for (let i = 0; i < prevDevs.length; i++) if (prevDevs[i].id !== nextDevs[i].id) return false;
+
+  // NEW: Re-render when response statuses or deadlines change
+  const prevStatuses = prev.freelancerResponseStatuses || {};
+  const nextStatuses = next.freelancerResponseStatuses || {};
+  const prevStatusKeys = Object.keys(prevStatuses);
+  const nextStatusKeys = Object.keys(nextStatuses);
+  if (prevStatusKeys.length !== nextStatusKeys.length) return false;
+  for (let i = 0; i < prevStatusKeys.length; i++) {
+    const k = prevStatusKeys[i];
+    if (prevStatuses[k] !== nextStatuses[k]) return false;
+  }
+
+  const prevDeadlines = prev.freelancerDeadlines || {};
+  const nextDeadlines = next.freelancerDeadlines || {};
+  const prevDeadlineKeys = Object.keys(prevDeadlines);
+  const nextDeadlineKeys = Object.keys(nextDeadlines);
+  if (prevDeadlineKeys.length !== nextDeadlineKeys.length) return false;
+  for (let i = 0; i < prevDeadlineKeys.length; i++) {
+    const k = prevDeadlineKeys[i];
+    if (prevDeadlines[k] !== nextDeadlines[k]) return false;
+  }
+
   return true;
 }
 

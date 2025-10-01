@@ -2,6 +2,7 @@
 import { prisma } from "@/core/database/db";
 import type { Prisma } from "@prisma/client";
 import { NotificationService } from "./notification.service";
+import { RotationCore } from "./rotation-core";
 type DevLevel = Prisma.$Enums.DevLevel;
 
 export interface BatchSelectionCriteria {
@@ -275,25 +276,22 @@ export class RotationService {
         }, {
           timeout: 30000, // 30 seconds timeout
         });
-        // Post-commit cursor updates to avoid transaction aborts
-        try {
-          const skillsRequired = Array.from(
-            new Set(result.candidates.flatMap((c: any) => c.skillIds))
-          );
-          if (skillsRequired.length > 0) {
-            await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
+        // Post-commit tasks: run in background to return earlier
+        (async () => {
+          try {
+            const skillsRequired = Array.from(
+              new Set(result.candidates.flatMap((c: any) => c.skillIds))
+            );
+            if (skillsRequired.length > 0) {
+              await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
+            }
+          } catch (_) {}
+          try {
+            await NotificationService.sendBatchNotifications(result.batchId);
+          } catch (error) {
+            console.error("Failed to send batch notifications:", error);
           }
-        } catch (_) {
-          // Non-critical; ignore cursor update failures
-        }
-
-        // Send WhatsApp notifications for new batch
-        try {
-          await NotificationService.sendBatchNotifications(result.batchId);
-        } catch (error) {
-          console.error("Failed to send batch notifications:", error);
-          // Non-critical; don't fail the batch creation
-        }
+        })();
 
         // Clear cache for this project since we created a new batch
         this.clearRotationCache(projectId);
@@ -494,22 +492,26 @@ export class RotationService {
       const acceptanceDeadline = new Date(
         Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000
       );
+      const assignedAt = new Date();
 
-      await tx.assignmentCandidate.createMany({
-        data: candidates.map((candidate: any) => ({
-          batchId: batch.id,
-          projectId,
-          developerId: candidate.developerId,
-          level: candidate.level,
-          assignedAt: new Date(),
-          acceptanceDeadline,
-          responseStatus: "pending" as const,
-          usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
-          statusTextForClient: "developer is checking",
-          isFirstAccepted: false,
-          source: "AUTO_ROTATION", // 👈 thêm
-        })),
-      });
+      // Use individual creates instead of createMany to ensure Date fields are saved correctly with MongoDB
+      for (const candidate of candidates) {
+        await tx.assignmentCandidate.create({
+          data: {
+            batchId: batch.id,
+            projectId,
+            developerId: candidate.developerId,
+            level: candidate.level,
+            assignedAt,
+            acceptanceDeadline,
+            responseStatus: "pending",
+            usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
+            statusTextForClient: "developer is checking",
+            isFirstAccepted: false,
+            source: "AUTO_ROTATION",
+          },
+        });
+      }
 
       // 5. Update project currentBatchId and status
       // Only update status to "assigning" if project is still in "submitted" status
@@ -597,331 +599,7 @@ export class RotationService {
     console.log(`Final legacy candidates: ${finalCandidates.length}`);
     return finalCandidates;
 
-    /* Aggregation pipeline disabled due to type mismatch issues
-    try {
-      // Single optimized aggregation pipeline to replace all nested queries
-      const aggregationPipeline = [
-        // Stage 1: Match base eligible developers (relaxed WhatsApp requirement)
-        {
-          $match: {
-            adminApprovalStatus: "approved",
-            currentStatus: { $in: ["available", "checking", "busy", "away"] },
-            userId: { $ne: clientUserId },
-            whatsappVerified: { $in: [true, false] }, // Relaxed WhatsApp requirement
-            ...(excludeDeveloperIds.length > 0 && { _id: { $nin: excludeDeveloperIds } })
-          }
-        },
-        
-        // Stage 2: Join with skills to filter by required skills
-        {
-          $lookup: {
-            from: "DeveloperSkill",
-            let: { devId: "$_id" },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $eq: ["$developerProfileId", "$$devId"]
-                  }
-                }
-              }
-            ],
-            as: "skills"
-          }
-        },
-        
-        // Stage 3: Filter developers who have at least one required skill (relaxed)
-        {
-          $match: {
-            "skills.skillId": { $in: skillsRequired }
-          }
-        },
-        
-        // Stage 4: Join with assignment candidates to exclude currently pending/accepted in this project
-        {
-          $lookup: {
-            from: "AssignmentCandidate",
-            let: { devId: "$_id" },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ["$developerId", "$$devId"] },
-                      { $eq: ["$projectId", projectId] },
-                      { $in: ["$responseStatus", ["pending", "accepted"]] }
-                    ]
-                  }
-                }
-              },
-              { $limit: 1 }
-            ],
-            as: "inProject"
-          }
-        },
-        
-        // Stage 5: Exclude developers currently in this project
-        {
-          $match: {
-            inProject: { $size: 0 }
-          }
-        },
-        
-        // Stage 6: Check pending count to avoid over-limit developers (with dynamic limit)
-        {
-          $lookup: {
-            from: "AssignmentCandidate",
-            let: { devId: "$_id" },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ["$developerId", "$$devId"] },
-                      { $eq: ["$responseStatus", "pending"] },
-                      { $eq: ["$source", "AUTO_ROTATION"] }
-                    ]
-                  }
-                }
-              },
-              {
-                $lookup: {
-                  from: "AssignmentBatch",
-                  localField: "batchId",
-                  foreignField: "_id",
-                  as: "batch"
-                }
-              },
-              {
-                $match: {
-                  "batch.status": "active"
-                }
-              },
-              {
-                $group: {
-                  _id: "$developerId",
-                  count: { $sum: 1 }
-                }
-              },
-              {
-                $match: {
-                  count: { $gte: this.getDynamicPendingLimit(existingBatchesCount) }
-                }
-              }
-            ],
-            as: "pendingCounts"
-          }
-        },
-        
-        // Stage 7: Exclude over-limit developers
-        {
-          $match: {
-            pendingCounts: { $size: 0 }
-          }
-        },
-        
-        // Stage 8: Calculate response time from recent assignments
-        {
-          $lookup: {
-            from: "AssignmentCandidate",
-            let: { devId: "$_id" },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ["$developerId", "$$devId"] },
-                      { $in: ["$responseStatus", ["accepted", "rejected"]] },
-                      { $ne: ["$respondedAt", null] },
-                      { $ne: ["$assignedAt", null] }
-                    ]
-                  }
-                }
-              },
-              {
-                $addFields: {
-                  responseTimeMs: {
-                    $subtract: ["$respondedAt", "$assignedAt"]
-                  }
-                }
-              },
-              { $sort: { respondedAt: -1 } },
-              { $limit: 5 }
-            ],
-            as: "recentResponses"
-          }
-        },
-        
-        // Stage 9: Calculate average response time
-        {
-          $addFields: {
-            avgResponseTimeMs: {
-              $cond: {
-                if: { $gt: [{ $size: "$recentResponses" }, 0] },
-                then: {
-                  $avg: "$recentResponses.responseTimeMs"
-                },
-                else: 60000
-              }
-            }
-          }
-        },
-        
-        // Stage 10: Unwind skills to get one row per developer-skill combination
-        {
-          $unwind: "$skills"
-        },
-        
-        // Stage 11: Filter to only required skills
-        {
-          $match: {
-            "skills.skillId": { $in: skillsRequired }
-          }
-        },
-        
-        // Stage 12: Project final fields
-        {
-          $project: {
-            developerId: "$_id",
-            level: 1,
-            skillId: "$skills.skillId",
-            avgResponseTimeMs: 1,
-            _id: 0
-          }
-        },
-        
-        // Stage 13: Sort for consistent ordering
-        {
-          $sort: {
-            level: 1,
-            avgResponseTimeMs: 1,
-            developerId: 1
-          }
-        },
-        
-        // Stage 14: Limit to reasonable number
-        {
-          $limit: 200
-        }
-      ];
-
-      console.log("Starting aggregation with pipeline:", JSON.stringify(aggregationPipeline, null, 2));
-      console.log("Skills required:", skillsRequired);
-      console.log("Exclude developer IDs:", excludeDeveloperIds.length);
-      
-      console.time("aggregation");
-      const result = await (prisma as any).$runCommandRaw({
-        aggregate: "DeveloperProfile",
-        pipeline: aggregationPipeline,
-        cursor: { batchSize: 100 },
-        allowDiskUse: true,
-        maxTimeMS: 3000
-      });
-      console.timeEnd("aggregation");
-      console.log("Aggregation result:", JSON.stringify(result, null, 2));
-
-      let candidates = result.cursor.firstBatch || [];
-      console.log(`After aggregation: ${candidates.length} candidates found`);
-      
-      // No need for WhatsApp fallback since we already relaxed the requirement
-
-      // If still no candidates after fallback, try with fewer exclusions
-      if (candidates.length === 0 && excludeDeveloperIds.length > 0) {
-        console.log(`No candidates found after excluding ${excludeDeveloperIds.length} developers. Trying with reduced exclusions...`);
-        
-        // Try again with only excluding developers currently pending/accepted in this project
-        const reducedExcludeIds = await this.getCurrentlyBlockedDevelopers(tx, projectId, clientUserId, existingBatchesCount);
-        console.log(`Retrying with reduced exclusions: ${reducedExcludeIds.length} developers`);
-        
-        const reducedPipeline = JSON.parse(JSON.stringify(aggregationPipeline));
-        if (reducedExcludeIds.length > 0) {
-          reducedPipeline[0].$match._id = { $nin: reducedExcludeIds };
-        } else {
-          delete reducedPipeline[0].$match._id;
-        }
-        
-        console.log("Trying reduced exclusions pipeline:", JSON.stringify(reducedPipeline, null, 2));
-        const reducedResult = await (prisma as any).$runCommandRaw({
-          aggregate: "DeveloperProfile",
-          pipeline: reducedPipeline,
-          cursor: { batchSize: 100 },
-          allowDiskUse: true,
-          maxTimeMS: 3000
-        });
-        console.log("Reduced exclusions result:", JSON.stringify(reducedResult, null, 2));
-        
-        candidates = reducedResult.cursor.firstBatch || [];
-        console.log(`Found ${candidates.length} candidates with reduced exclusions`);
-      }
-
-      console.log(`Found ${candidates.length} candidates from aggregation`);
-
-      // Transform to DeveloperCandidate format
-      const transformedCandidates: DeveloperCandidate[] = candidates.map((doc: any) => ({
-        developerId: String(doc.developerId),
-        level: doc.level,
-        skillIds: [String(doc.skillId)],
-        usualResponseTimeMs: Math.round(doc.avgResponseTimeMs || 60000)
-      }));
-
-      // Deduplicate and rebalance
-      const deduped = this.deduplicateCandidates(transformedCandidates, skillsRequired);
-      const finalCandidates = this.rebalanceAndTrim(deduped, selection);
-      
-      // Cache the result
-      this.rotationCache.set(cacheKey, {
-        result: finalCandidates,
-        timestamp: Date.now()
-      });
-      
-      console.timeEnd("selectCandidates");
-      console.log(`Final candidates: ${finalCandidates.length}`);
-      
-      return finalCandidates;
-      
-    } catch (error) {
-      console.error("Aggregation failed, falling back to legacy method:", error);
-      console.timeEnd("selectCandidates");
-      
-      // Fallback to original method
-      console.log("Using legacy method with skills:", skillsRequired, "excludeIds:", excludeDeveloperIds.length);
-      const allCandidates: DeveloperCandidate[] = [];
-      const levels: Array<{ level: DevLevel; count: number }> = [
-        { level: "EXPERT", count: selection.expertCount },
-        { level: "MID", count: selection.midCount },
-        { level: "FRESHER", count: selection.fresherCount },
-      ];
-
-      // B1) Get pool by (skill, level)
-      for (const skill of skillsRequired) {
-        for (const { level, count } of levels) {
-          console.log(`Getting candidates for skill: ${skill}, level: ${level}, count: ${count}`);
-          const candidates = await this.getCandidatesForSkillLevel(
-            tx,
-            skill,
-            level,
-            clientUserId,
-            projectId,
-            count,
-            excludeDeveloperIds
-          );
-          console.log(`Found ${candidates.length} candidates for ${skill}-${level}`);
-          allCandidates.push(...candidates);
-        }
-      }
-
-      console.log(`Total candidates from legacy method: ${allCandidates.length}`);
-
-      // B2) Deduplicate candidates
-      const deduped = this.deduplicateCandidates(allCandidates, skillsRequired);
-      console.log(`After deduplication: ${deduped.length} candidates`);
-      
-      // B3) Rebalance and trim to exact quotas with fallback
-      const finalCandidates = this.rebalanceAndTrim(deduped, selection);
-      console.log(`Final legacy candidates: ${finalCandidates.length}`);
-      return finalCandidates;
-    }
-    */
+   
   }
 
   /**
@@ -1579,103 +1257,71 @@ export class RotationService {
         
         console.log(`🔄 Invalidated ${invalidateResult.count} non-accepted candidates in batch ${project.currentBatchId}`);
 
-        // If we need new candidates, generate them using the same logic as generateBatch
+        // If we need new candidates, generate them with relaxed partial-match selection
         const replacementCandidates: DeveloperCandidate[] = [];
-        
         if (neededNewCandidates > 0) {
-          console.log(`🔄 Generating ${neededNewCandidates} new candidates to reach target batch size`);
-          
-          // Get project details for candidate selection
           const projectDetails = await tx.project.findUnique({
             where: { id: projectId },
-            include: {
-              client: { include: { user: true } },
-            },
+            include: { client: { include: { user: true } } },
           });
-
           if (projectDetails) {
-            // Use the same selection logic as generateBatch
             const selection = { ...this.DEFAULT_SELECTION, ...customSelection };
-            
-            // Get accepted developer IDs to exclude them
-            const acceptedIds = acceptedCandidates.map(c => c.developerId);
-            
-            // Count existing batches to determine exclusion strategy
-            const existingBatchesCount = await tx.assignmentBatch.count({
-              where: { projectId }
-            });
+            const totalNeed = selection.expertCount + selection.midCount + selection.fresherCount;
+            const excludeDeveloperIds = acceptedCandidates.map(c => c.developerId);
+            const existingBatchesCount = await tx.assignmentBatch.count({ where: { projectId } });
 
-            // Progressive exclusion strategy - less aggressive
-            let excludeDeveloperIds: string[] = [...acceptedIds];
-            
-            if (existingBatchesCount >= 5) {
-              // Only after 5+ batches, exclude developers from recent batches
-              console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from recent batches`);
-              const recentBatches = await tx.assignmentBatch.findMany({
-                where: { projectId },
-                orderBy: { createdAt: 'desc' },
-                take: 2,
-                select: { id: true }
-              });
-              
-              if (recentBatches.length > 0) {
-                const recentBatchIds = recentBatches.map(b => b.id);
-                const recentlyAssigned = await tx.assignmentCandidate.findMany({
-                  where: { 
+            // Primary selection (WhatsApp required)
+            let newCandidates = await RotationCore.selectCandidates(
+              tx,
+              projectDetails.skillsRequired,
+              projectDetails.client.userId,
                     projectId,
-                    batchId: { in: recentBatchIds }
-                  },
-                  select: { developerId: true },
-                  distinct: ['developerId']
-                });
-                const recentIds = recentlyAssigned.map(ac => ac.developerId);
-                excludeDeveloperIds = Array.from(new Set([...acceptedIds, ...recentIds]));
-                console.log(`Excluding ${excludeDeveloperIds.length} developers (including ${acceptedIds.length} accepted + ${recentIds.length} from recent batches)`);
+              selection,
+              excludeDeveloperIds,
+              existingBatchesCount,
+              {
+                requireWhatsApp: true,
+                minSkillOverlap: 1,
+                preferFullMatch: true,
+                maxPendingInvitesPerDev: 3,
+                useRotationCursor: true,
+                avoidRepeatBatches: 2,
+                minNewPerBatch: Math.max(1, Math.ceil(totalNeed * 0.3)),
               }
-            } else if (existingBatchesCount >= 3) {
-              // After 3+ batches, only exclude developers from the most recent batch
-              console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from last batch`);
-              const lastBatch = await tx.assignmentBatch.findFirst({
-                where: { projectId },
-                orderBy: { createdAt: 'desc' },
-                select: { id: true }
-              });
-              
-              if (lastBatch) {
-                const lastBatchAssigned = await tx.assignmentCandidate.findMany({
-                  where: { 
-                    projectId,
-                    batchId: lastBatch.id
-                  },
-                  select: { developerId: true },
-                  distinct: ['developerId']
-                });
-                const lastBatchIds = lastBatchAssigned.map(ac => ac.developerId);
-                excludeDeveloperIds = Array.from(new Set([...acceptedIds, ...lastBatchIds]));
-                console.log(`Excluding ${excludeDeveloperIds.length} developers (including ${acceptedIds.length} accepted + ${lastBatchIds.length} from last batch)`);
-              }
-            }
-            
-            // Generate new candidates using the same algorithm as generateBatch
-            const newCandidates = await this.selectCandidates(
+            );
+
+            // Fallback (WhatsApp relaxed)
+            if (newCandidates.length < neededNewCandidates) {
+              const remainingSelection = {
+                fresherCount: Math.max(0, selection.fresherCount - newCandidates.filter(c => c.level === 'FRESHER').length),
+                midCount: Math.max(0, selection.midCount - newCandidates.filter(c => c.level === 'MID').length),
+                expertCount: Math.max(0, selection.expertCount - newCandidates.filter(c => c.level === 'EXPERT').length),
+              } as any;
+              const more = await RotationCore.selectCandidates(
               tx,
               projectDetails.skillsRequired,
               projectDetails.client.userId,
               projectId,
-              selection,
-              excludeDeveloperIds, // Exclude already accepted developers and potentially all previously assigned
-              existingBatchesCount
-            );
-
-            // Take only the number we need
-            const candidatesToAdd = newCandidates.slice(0, neededNewCandidates);
-            
-            console.log(`🔄 Generated ${candidatesToAdd.length} new candidates`);
+                remainingSelection,
+                [...excludeDeveloperIds, ...newCandidates.map(c => c.developerId)],
+                existingBatchesCount,
+                {
+                  requireWhatsApp: false,
+                  minSkillOverlap: 1,
+                  preferFullMatch: true,
+                  maxPendingInvitesPerDev: 3,
+                  useRotationCursor: true,
+                  avoidRepeatBatches: 2,
+                  minNewPerBatch: 0,
+                }
+              );
+              const seen = new Set(newCandidates.map(c => c.developerId));
+              for (const m of more) if (!seen.has(m.developerId)) newCandidates.push(m);
+            }
 
             // Create new candidates in the same batch
             const acceptanceDeadline = new Date(Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000);
-            
-            for (const candidate of candidatesToAdd) {
+            for (const candidate of newCandidates.slice(0, neededNewCandidates)) {
               try {
                 await tx.assignmentCandidate.create({
                   data: {
@@ -1692,9 +1338,7 @@ export class RotationService {
                     source: "AUTO_ROTATION",
                   },
                 });
-
                 replacementCandidates.push(candidate);
-                console.log(`✅ Added new candidate ${candidate.developerId} to batch`);
               } catch (error) {
                 console.error(`Error creating new candidate ${candidate.developerId}:`, error);
               }
@@ -1737,15 +1381,15 @@ export class RotationService {
       timeout: 30000, // 30 seconds timeout
     });
 
-    // Post-commit cursor updates
-    try {
-      const skillsRequired = Array.from(new Set(result.candidates.flatMap((c: any) => c.skillIds)));
-      if (skillsRequired.length > 0) {
-        await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
-      }
-    } catch (_) {
-      // Non-critical
-    }
+    // Post-commit cursor updates (non-blocking)
+    (async () => {
+      try {
+        const skillsRequired = Array.from(new Set(result.candidates.flatMap((c: any) => c.skillIds)));
+        if (skillsRequired.length > 0) {
+          await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
+        }
+      } catch (_) {}
+    })();
 
     return result;
   }

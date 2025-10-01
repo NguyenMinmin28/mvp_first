@@ -95,7 +95,6 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
       params.append("cursor", cursor);
     }
     
-    console.log('🚀 Fetching optimized services:', `/api/services/optimized?${params.toString()}`);
     
     try {
       const res = await fetch(`/api/services/optimized?${params.toString()}`, { 
@@ -107,7 +106,6 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
       });
       const json = await res.json();
       
-      console.log('✅ Optimized Services API response:', { status: res.status, dataCount: json.data?.length });
       
       if (res.ok && json?.success) {
         return {
@@ -248,7 +246,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     return () => window.removeEventListener("open-developer-service", handler as any);
   }, []);
 
-  // Load more function
+  // Load more function - simplified without scroll position manipulation
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasNextPage) return;
     
@@ -256,6 +254,8 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
       setLoadingMore(true);
       console.log('🔄 Loading more services with cursor:', nextCursor);
       const result = await fetchServices(currentPage + 1, 12, nextCursor || undefined);
+      
+      // Update state directly - scroll is disabled during loading
       setServices(prev => {
         // Deduplicate by service ID
         const existingIds = new Set(prev.map(s => s.id));
@@ -505,13 +505,22 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         ))}
       </div>
 
-      {/* Loading more indicator */}
+      {/* Loading more indicator with skeleton */}
       {loadingMore && (
-        <div className="flex justify-center py-8">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-            <span className="text-sm text-gray-600">Loading more services...</span>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`loading-${i}`} className="bg-white rounded-2xl border p-6 animate-pulse">
+              <div className="space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded w-full" />
+                <div className="h-4 bg-gray-200 rounded w-2/3" />
+                <div className="flex items-center justify-between">
+                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+                  <div className="h-8 bg-gray-200 rounded w-20" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

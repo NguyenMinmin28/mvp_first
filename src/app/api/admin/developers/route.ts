@@ -22,10 +22,13 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const filter = searchParams.get('filter') || 'all';
+    const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    // Build where clause based on filter
+    // Build where clause based on filter and search
     let whereClause: any = {};
+    
+    // Apply filter conditions
     if (filter !== 'all') {
       if (filter === 'whatsapp-verified') {
         whereClause.whatsappVerified = true;
@@ -33,6 +36,61 @@ export async function GET(request: NextRequest) {
         whereClause.whatsappVerified = false;
       } else {
         whereClause.adminApprovalStatus = filter;
+      }
+    }
+
+    // Add search functionality
+    if (search.trim()) {
+      const searchTerm = search.trim().toLowerCase();
+      
+      if (searchTerm.length >= 2) {
+        whereClause.OR = [
+          // Search in user name
+          {
+            user: {
+              name: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+          // Search in user email
+          {
+            user: {
+              email: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+          // Search in bio
+          {
+            bio: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+          // Search in location
+          {
+            location: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+          // Search in skills
+          {
+            skills: {
+              some: {
+                skill: {
+                  name: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+          },
+        ];
       }
     }
 
