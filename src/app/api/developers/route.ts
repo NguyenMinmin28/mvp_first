@@ -14,12 +14,53 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "12");
     const sort = searchParams.get("sort") || "popular";
     const search = searchParams.get("search") || "";
+    const filters = searchParams.get("filters") ? searchParams.get("filters")!.split(",") : [];
     const offset = (page - 1) * limit;
 
     // Build where clause
     const where: any = {
       adminApprovalStatus: "approved", // Only show approved developers
     };
+
+    // Add filter functionality
+    if (filters.length > 0) {
+      const filterConditions: any[] = [];
+      
+      filters.forEach(filter => {
+        switch (filter) {
+          case "Starter":
+            filterConditions.push({ level: "FRESHER" });
+            break;
+          case "Professional":
+            filterConditions.push({ 
+              OR: [
+                { level: "MID" },
+                { level: "EXPERT" }
+              ]
+            });
+            break;
+          case "Ready to Work":
+            filterConditions.push({ currentStatus: "available" });
+            break;
+          case "Others":
+            filterConditions.push({
+              AND: [
+                { level: { not: "FRESHER" } },
+                { level: { not: "MID" } },
+                { level: { not: "EXPERT" } },
+                { currentStatus: { not: "available" } }
+              ]
+            });
+            break;
+        }
+      });
+      
+      if (filterConditions.length > 0) {
+        // Use AND logic to combine all filter conditions
+        where.AND = where.AND || [];
+        where.AND.push(...filterConditions);
+      }
+    }
 
     // Add search functionality
     if (search.trim()) {
@@ -91,7 +132,15 @@ export async function GET(request: NextRequest) {
       where,
       skip: offset,
       take: limit,
-      include: {
+      select: {
+        id: true,
+        bio: true,
+        location: true,
+        hourlyRateUsd: true,
+        level: true,
+        currentStatus: true,
+        photoUrl: true,
+        createdAt: true,
         user: {
           select: {
             id: true,
@@ -101,7 +150,7 @@ export async function GET(request: NextRequest) {
           },
         },
         skills: {
-          include: {
+          select: {
             skill: {
               select: {
                 id: true,
@@ -118,7 +167,12 @@ export async function GET(request: NextRequest) {
                 visibility: "PUBLIC",
               },
             },
-          } as any,
+            assignmentCandidates: {
+              where: {
+                responseStatus: 'accepted'
+              }
+            }
+          },
         },
       },
     });
@@ -144,11 +198,108 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Get additional stats for each developer
+    const developerIds = sortedDevelopers.map(d => d.id);
+    const userIds = sortedDevelopers.map(d => d.user.id);
+    
+    // Get followers count for each developer
+    const followersData = await prisma.follow.groupBy({
+      by: ['followingId'],
+      where: {
+        followingId: { in: userIds }
+      },
+      _count: {
+        followingId: true
+      }
+    });
+    
+    const followersMap = new Map(
+      followersData.map(f => [f.followingId, f._count.followingId])
+    );
+    
+    // Get earned amount from completed projects
+    const earnedCandidates = await prisma.assignmentCandidate.findMany({
+      where: {
+        developerId: { in: developerIds },
+        responseStatus: 'accepted',
+        project: {
+          status: 'completed'
+        }
+      },
+      select: {
+        developerId: true,
+        project: {
+          select: {
+            budget: true,
+            budgetMin: true,
+            budgetMax: true,
+            title: true
+          }
+        }
+      }
+    });
+    
+    console.log(`💰 Found ${earnedCandidates.length} completed projects for earnings calculation`);
+    earnedCandidates.forEach(candidate => {
+      const project = candidate.project;
+      const budget = project?.budget || 0;
+      const budgetMin = project?.budgetMin || 0;
+      const budgetMax = project?.budgetMax || 0;
+      const finalBudget = budget || (budgetMin + budgetMax) / 2 || 0;
+      console.log(`💰 Developer ${candidate.developerId}: Project "${project?.title}" - Budget: ${budget}, Min: ${budgetMin}, Max: ${budgetMax}, Final: ${finalBudget}`);
+    });
+    
+    const earnedMap = new Map<string, number>();
+    earnedCandidates.forEach(candidate => {
+      const current = earnedMap.get(candidate.developerId) || 0;
+      const project = candidate.project;
+      const budget = project?.budget || 0;
+      const budgetMin = project?.budgetMin || 0;
+      const budgetMax = project?.budgetMax || 0;
+      const finalBudget = budget || (budgetMin + budgetMax) / 2 || 0;
+      earnedMap.set(candidate.developerId, current + finalBudget);
+    });
+    
+    console.log('💰 Final earned amounts:', Object.fromEntries(earnedMap));
+    
+    // Get ratings for each developer
+    const ratingPromises = sortedDevelopers.map(async (developer) => {
+      const reviewsAggregate = await prisma.review.aggregate({
+        where: {
+          toUserId: developer.user.id, // Use toUserId instead of developerId
+          moderationStatus: "published"
+        },
+        _avg: {
+          rating: true,
+        },
+        _count: {
+          rating: true,
+        },
+      });
+      
+      return {
+        developerId: developer.id,
+        averageRating: reviewsAggregate._avg.rating || 0,
+        totalReviews: reviewsAggregate._count.rating || 0,
+      };
+    });
+    
+    const ratingResults = await Promise.all(ratingPromises);
+    const ratingMap = new Map(
+      ratingResults.map(r => [r.developerId, { averageRating: r.averageRating, totalReviews: r.totalReviews }])
+    );
+
     // For now, just return developers without services data
     // TODO: Add services data once Prisma client is regenerated
     const orderedDevelopers = sortedDevelopers.map(developer => ({
       ...developer,
       services: [], // Empty services array for now
+      // Add real stats
+      followersCount: followersMap.get(developer.user.id) || 0,
+      ratingAvg: ratingMap.get(developer.id)?.averageRating || 0,
+      ratingCount: ratingMap.get(developer.id)?.totalReviews || 0,
+      hiredCount: developer._count.assignmentCandidates,
+      earnedAmount: earnedMap.get(developer.id) || 0
     }));
 
     // Calculate pagination info

@@ -41,22 +41,11 @@ export function GetInTouchButton({
   const { contactInfo, loading: contactLoading } = useCanViewContact(developerId, projectId);
   const { sendInvite, loading: inviteLoading } = useManualInvite(projectId);
 
-  // Debug logging
-  console.log("GetInTouchButton - developerId:", developerId, "responseStatus:", responseStatus, "projectId:", projectId);
 
   const handleGetInTouch = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent event bubbling to parent card
     e.preventDefault(); // Prevent default behavior
     e.nativeEvent.stopImmediatePropagation(); // Stop all event propagation
-    
-    console.log("GetInTouchButton clicked:", { 
-      contactLoading, 
-      contactInfo, 
-      projectId, 
-      developerId,
-      canView: contactInfo?.canView,
-      hasDeveloper: !!contactInfo?.developer
-    });
     
     if (contactLoading) return;
 

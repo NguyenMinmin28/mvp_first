@@ -126,18 +126,39 @@ export async function GET(
           try { return JSON.parse(JSON.stringify(v)).$oid ?? String(v); } catch { return String(v); }
         };
 
-        const candidates = (raw as any[]).map((doc: any) => ({
-          id: toHexId(doc._id),
-          batchId: toHexId(doc.batchId),
-          developerId: toHexId(doc.developerId),
-          level: doc.level,
-          responseStatus: doc.responseStatus,
-          acceptanceDeadline: doc.acceptanceDeadline ? new Date(doc.acceptanceDeadline) : null,
-          assignedAt: doc.assignedAt ? new Date(doc.assignedAt) : null,
-          respondedAt: doc.respondedAt ? new Date(doc.respondedAt) : null,
-          usualResponseTimeMsSnapshot: doc.usualResponseTimeMsSnapshot,
-          statusTextForClient: doc.statusTextForClient,
-        }));
+        const candidates = (raw as any[]).map((doc: any) => {
+          // Derive created time from Mongo ObjectId when date fields are missing
+          const oid = doc._id;
+          let objectIdTime: Date | null = null;
+          try {
+            // Mongo ObjectId timestamp is first 4 bytes (seconds since epoch)
+            const hex = (typeof oid === 'object' && oid?.$oid) ? String(oid.$oid) : String(oid);
+            if (hex && hex.length >= 8) {
+              const seconds = parseInt(hex.substring(0, 8), 16);
+              if (!Number.isNaN(seconds)) objectIdTime = new Date(seconds * 1000);
+            }
+          } catch {}
+
+          const assignedAt = doc.assignedAt ? new Date(doc.assignedAt) : (objectIdTime ?? null);
+          let acceptanceDeadline = doc.acceptanceDeadline ? new Date(doc.acceptanceDeadline) : null;
+          if (!acceptanceDeadline && assignedAt && doc.responseStatus === 'pending') {
+            // Fallback: 15 minutes from assignedAt/ObjectId time
+            acceptanceDeadline = new Date(assignedAt.getTime() + 15 * 60 * 1000);
+          }
+
+          return {
+            id: toHexId(doc._id),
+            batchId: toHexId(doc.batchId),
+            developerId: toHexId(doc.developerId),
+            level: doc.level,
+            responseStatus: doc.responseStatus,
+            acceptanceDeadline,
+            assignedAt,
+            respondedAt: doc.respondedAt ? new Date(doc.respondedAt) : null,
+            usualResponseTimeMsSnapshot: doc.usualResponseTimeMsSnapshot,
+            statusTextForClient: doc.statusTextForClient,
+          };
+        });
 
         // Batch fetch developer profiles and users
         const developerIds = [...new Set(candidates.map(c => c.developerId))];

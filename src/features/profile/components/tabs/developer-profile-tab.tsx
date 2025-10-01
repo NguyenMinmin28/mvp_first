@@ -8,6 +8,7 @@ import { Textarea } from "@/ui/components/textarea";
 import AvatarUpload from "../avatar-upload";
 import { Button } from "@/ui/components/button";
 import { toast } from "sonner";
+import { useFileUpload } from "@/core/hooks/use-upload";
 import {
   Select,
   SelectContent,
@@ -28,8 +29,16 @@ export default function DeveloperProfileTab({
   isEditing,
   onInputChange,
 }: DeveloperProfileTabProps) {
-  const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [cvName, setCvName] = useState<string | null>(null);
+  const { uploadDocument, isUploading: isUploadingCv } = useFileUpload({
+    onSuccess: (result) => {
+      setCvName(result.originalFilename || "CV");
+      onInputChange("resumeUrl", result.url);
+    },
+    onError: (error) => {
+      console.error('CV upload error:', error);
+    }
+  });
 
   const handleUploadCv = async (file: File) => {
     if (!file) return;
@@ -37,36 +46,12 @@ export default function DeveloperProfileTab({
       toast.error("File must be ≤ 5MB");
       return;
     }
+    
     try {
-      setIsUploadingCv(true);
-      const basename = file.name.replace(/\.[^/.]+$/, "");
-      const signRes = await fetch("/api/uploads/cloudinary-sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folder: "resumes", resourceType: "raw", useFilename: true, uniqueFilename: false, publicId: basename }),
-      });
-      if (!signRes.ok) throw new Error("Cannot sign upload");
-      const { cloudName, apiKey, timestamp, folder, signature, publicId, useFilename, uniqueFilename } = await signRes.json();
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("api_key", apiKey);
-      fd.append("timestamp", String(timestamp));
-      fd.append("folder", folder || "resumes");
-      if (publicId) fd.append("public_id", publicId);
-      if (useFilename !== undefined) fd.append("use_filename", String(useFilename));
-      if (uniqueFilename !== undefined) fd.append("unique_filename", String(uniqueFilename));
-      fd.append("signature", signature);
-      const up = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, { method: "POST", body: fd });
-      const json = await up.json();
-      if (!up.ok) throw new Error(json?.error?.message || "Upload failed");
-      const url = json.secure_url as string;
-      setCvName(file.name);
-      onInputChange("resumeUrl", url);
-      toast.success("Uploaded CV");
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to upload CV");
-    } finally {
-      setIsUploadingCv(false);
+      await uploadDocument(file, "resumes", 5); // 5MB max for CV
+    } catch (error) {
+      console.error('CV upload error:', error);
+      toast.error("Failed to upload CV");
     }
   };
   // Load skills list

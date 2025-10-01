@@ -145,54 +145,9 @@ export class RotationBatch {
       where: { projectId }
     });
 
-    // Progressive exclusion strategy - less aggressive
+    // Exclusion strategy: only exclude developers who are currently pending/accepted in this project.
+    // Do NOT exclude developers from recent batches so resets can re-invite them.
     let excludeDeveloperIds: string[] = [];
-    
-    if (existingBatchesCount >= 5) {
-      // Only after 5+ batches, exclude developers who were assigned in the last 2 batches
-      console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from recent batches`);
-      const recentBatches = await tx.assignmentBatch.findMany({
-        where: { projectId },
-        orderBy: { createdAt: 'desc' },
-        take: 2,
-        select: { id: true }
-      });
-      
-      if (recentBatches.length > 0) {
-        const recentBatchIds = recentBatches.map(b => b.id);
-        const recentlyAssigned = await tx.assignmentCandidate.findMany({
-          where: { 
-            projectId,
-            batchId: { in: recentBatchIds }
-          },
-          select: { developerId: true },
-          distinct: ['developerId']
-        });
-        excludeDeveloperIds = recentlyAssigned.map(ac => ac.developerId);
-        console.log(`Excluding ${excludeDeveloperIds.length} developers from recent batches`);
-      }
-    } else if (existingBatchesCount >= 3) {
-      // After 3+ batches, only exclude developers from the most recent batch
-      console.log(`Project ${projectId} has ${existingBatchesCount} batches, excluding developers from last batch`);
-      const lastBatch = await tx.assignmentBatch.findFirst({
-        where: { projectId },
-        orderBy: { createdAt: 'desc' },
-        select: { id: true }
-      });
-      
-      if (lastBatch) {
-        const lastBatchAssigned = await tx.assignmentCandidate.findMany({
-          where: { 
-            projectId,
-            batchId: lastBatch.id
-          },
-          select: { developerId: true },
-          distinct: ['developerId']
-        });
-        excludeDeveloperIds = lastBatchAssigned.map(ac => ac.developerId);
-        console.log(`Excluding ${excludeDeveloperIds.length} developers from last batch`);
-      }
-    }
 
     // 2. Check available skills first
     const availableSkills = await RotationCore.getAvailableSkills(tx, project.skillsRequired);
@@ -237,16 +192,55 @@ export class RotationBatch {
       availableSkills.push(...availableSkillsNoWhatsApp);
     }
 
-    // 3. Generate candidates using rotation algorithm with available skills
-    const candidates = await RotationCore.selectCandidates(
+    // 3. Generate candidates using rotation algorithm with partial skill match support
+    const totalNeed = selection.expertCount + selection.midCount + selection.fresherCount;
+    let candidates = await RotationCore.selectCandidates(
       tx,
-      availableSkills, // Use only available skills
+      project.skillsRequired,
       project.client.userId,
       projectId,
       selection,
       excludeDeveloperIds,
-      existingBatchesCount
+      existingBatchesCount,
+      {
+        requireWhatsApp: true,
+        minSkillOverlap: 1,
+        preferFullMatch: true,
+        maxPendingInvitesPerDev: 3,
+        useRotationCursor: true,
+        avoidRepeatBatches: 2,
+        minNewPerBatch: Math.max(1, Math.ceil(totalNeed * 0.3)),
+      }
     );
+
+    // Fallback: relax WhatsApp requirement if not enough candidates to fill quotas
+    if (candidates.length < totalNeed) {
+      const remainingSelection = {
+        fresherCount: Math.max(0, selection.fresherCount - candidates.filter(c => c.level === 'FRESHER').length),
+        midCount: Math.max(0, selection.midCount - candidates.filter(c => c.level === 'MID').length),
+        expertCount: Math.max(0, selection.expertCount - candidates.filter(c => c.level === 'EXPERT').length),
+      } as any;
+      const seen = new Set(candidates.map(c => c.developerId));
+      const more = await RotationCore.selectCandidates(
+        tx,
+        project.skillsRequired,
+        project.client.userId,
+        projectId,
+        remainingSelection,
+        [...excludeDeveloperIds, ...candidates.map(c => c.developerId)],
+        existingBatchesCount,
+        {
+          requireWhatsApp: false,
+          minSkillOverlap: 1,
+          preferFullMatch: true,
+          maxPendingInvitesPerDev: 3,
+          useRotationCursor: true,
+          avoidRepeatBatches: 2,
+          minNewPerBatch: 0,
+        }
+      );
+      for (const m of more) if (!seen.has(m.developerId)) candidates.push(m);
+    }
 
     // Handle case where no candidates found: create an empty batch to stop infinite searching on UI
     if (candidates.length === 0) {
@@ -297,22 +291,26 @@ export class RotationBatch {
     const acceptanceDeadline = new Date(
       Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000
     );
+    const assignedAt = new Date();
 
-    await tx.assignmentCandidate.createMany({
-      data: candidates.map((candidate: any) => ({
-        batchId: batch.id,
-        projectId,
-        developerId: candidate.developerId,
-        level: candidate.level,
-        assignedAt: new Date(),
-        acceptanceDeadline,
-        responseStatus: "pending" as const,
-        usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
-        statusTextForClient: "developer is checking",
-        isFirstAccepted: false,
-        source: "AUTO_ROTATION", // 👈 thêm
-      })),
-    });
+    // Use individual creates instead of createMany to ensure Date fields are saved correctly with MongoDB
+    for (const candidate of candidates) {
+      await tx.assignmentCandidate.create({
+        data: {
+          batchId: batch.id,
+          projectId,
+          developerId: candidate.developerId,
+          level: candidate.level,
+          assignedAt,
+          acceptanceDeadline,
+          responseStatus: "pending",
+          usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
+          statusTextForClient: "developer is checking",
+          isFirstAccepted: false,
+          source: "AUTO_ROTATION",
+        },
+      });
+    }
 
     // 5. Update project currentBatchId and status
     // Only update status to "assigning" if project is still in "submitted" status

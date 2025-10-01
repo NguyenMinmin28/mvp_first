@@ -299,9 +299,10 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     fetchDevelopersData(page);
   };
 
-  const fetchDevelopersData = async (page: number = currentDevPage) => {
+  const fetchDevelopersData = async (page: number = currentDevPage, search: string = searchTerm) => {
     try {
-      const developersRes = await fetch(`/api/admin/developers?page=${page}&limit=${developersPerPage}`);
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const developersRes = await fetch(`/api/admin/developers?page=${page}&limit=${developersPerPage}${searchParam}`);
       
       if (developersRes.ok) {
         const developersData = await developersRes.json();
@@ -328,6 +329,13 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     if (currentDevPage < totalDevPages) {
       handleDevPageChange(currentDevPage + 1);
     }
+  };
+
+  // Search handler for developers
+  const handleDeveloperSearch = (searchValue: string) => {
+    setSearchTerm(searchValue);
+    setCurrentDevPage(1); // Reset to first page when searching
+    fetchDevelopersData(1, searchValue);
   };
 
   const handleAssignmentComplete = () => {
@@ -409,11 +417,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         .includes(searchTerm.toLowerCase())
   );
 
-  const filteredDevelopers = developers.filter(
-    (developer) =>
-      developer.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      developer.user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Remove client-side filtering since we now use server-side search
+  // const filteredDevelopers = developers.filter(...)
 
   // Stats are now fetched from API and stored in state
 
@@ -912,7 +917,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               <Input
                 placeholder="Search developers..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleDeveloperSearch(e.target.value)}
                 className="w-64 pl-8"
               />
             </div>
@@ -950,7 +955,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                 </tr>
               </thead>
               <tbody>
-                {filteredDevelopers.map((developer) => (
+                {developers.map((developer) => (
                   <tr key={developer.id} className="border-b">
                     <td className="p-3 border-r">
                       <div className="flex items-start gap-3 min-w-0">

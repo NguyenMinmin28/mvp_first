@@ -5,10 +5,47 @@ import { Button } from "@/ui/components/button";
 import { Zap, TrendingUp, Users, Lightbulb, LogIn } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+
+interface IdeasStats {
+  totalIdeas: number;
+  approvedIdeas: number;
+  pendingIdeas: number;
+  totalLikes: number;
+  totalComments: number;
+  totalBookmarks: number;
+  totalConnects: number;
+  recentIdeas: number;
+  engagementRate: number;
+  topCategories: Array<{
+    category: string;
+    count: number;
+  }>;
+}
 
 export function IdeaSparkHero() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [stats, setStats] = useState<IdeasStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/ideas/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching ideas stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePostIdea = () => {
     if (!session?.user) {
@@ -69,40 +106,60 @@ export function IdeaSparkHero() {
               <div className="absolute -bottom-2 sm:-bottom-4 -left-2 sm:-left-6 z-30">
                 <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 shadow-lg border border-gray-100 max-w-[200px] sm:max-w-xs">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900">Earnings Received</h3>
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900">Ideas Stats</h3>
                     <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                   </div>
-                  <div className="text-lg sm:text-xl font-bold text-gray-900 mb-2">$45,000</div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Pie Chart */}
-                    <div className="relative">
-                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-gray-200 relative">
-                        {/* Purple segment (73%) */}
-                        <div className="absolute inset-0 rounded-full border-2 sm:border-4 border-purple-500" style={{ clipPath: 'polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%)' }}></div>
-                        {/* Yellow segment (15%) */}
-                        <div className="absolute inset-0 rounded-full border-2 sm:border-4 border-yellow-400" style={{ clipPath: 'polygon(50% 50%, 50% 0%, 0% 0%, 0% 50%)' }}></div>
-                        {/* Blue segment (12%) */}
-                        <div className="absolute inset-0 rounded-full border-2 sm:border-4 border-blue-500" style={{ clipPath: 'polygon(50% 50%, 0% 50%, 0% 100%, 50% 100%)' }}></div>
-                        {/* Center percentage */}
-                        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">73%</div>
+                  {loading ? (
+                    <div className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Loading...</div>
+                  ) : stats ? (
+                    <>
+                      <div className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
+                        {stats.totalIdeas.toLocaleString()} Ideas
                       </div>
-                    </div>
-                    {/* Horizontal Bar Charts */}
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full"></div>
-                        <span className="text-xs text-gray-600">73% Funded</span>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        {/* Pie Chart */}
+                        <div className="relative">
+                          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-gray-200 relative">
+                            {/* Approved segment */}
+                            <div 
+                              className="absolute inset-0 rounded-full border-2 sm:border-4 border-green-500" 
+                              style={{ 
+                                clipPath: stats.totalIdeas > 0 ? `polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%)` : 'none'
+                              }}
+                            ></div>
+                            {/* Pending segment */}
+                            <div 
+                              className="absolute inset-0 rounded-full border-2 sm:border-4 border-yellow-400" 
+                              style={{ 
+                                clipPath: stats.totalIdeas > 0 ? `polygon(50% 50%, 50% 0%, 0% 0%, 0% 50%)` : 'none'
+                              }}
+                            ></div>
+                            {/* Center percentage */}
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
+                              {stats.totalIdeas > 0 ? Math.round((stats.approvedIdeas / stats.totalIdeas) * 100) : 0}%
+                            </div>
+                          </div>
+                        </div>
+                        {/* Stats */}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">{stats.approvedIdeas} Approved</span>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-400 rounded-full"></div>
+                            <span className="text-xs text-gray-600">{stats.pendingIdeas} Pending</span>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">{stats.engagementRate}% Engagement</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-400 rounded-full"></div>
-                        <span className="text-xs text-gray-600">15% Pending</span>
-                      </div>
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-xs text-gray-600">12% Other</span>
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  ) : (
+                    <div className="text-lg sm:text-xl font-bold text-gray-900 mb-2">No data</div>
+                  )}
                 </div>
               </div>
             </div>

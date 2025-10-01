@@ -6,6 +6,7 @@ import { Button } from "@/ui/components/button";
 import { Label } from "@/ui/components/label";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useImageUpload, useUpload } from "@/core/hooks/use-upload";
 
 interface AvatarUploadProps {
   value?: string;
@@ -26,7 +27,24 @@ export default function AvatarUpload({
 }: AvatarUploadProps) {
   const [previewUrl, setPreviewUrl] = useState(value);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const { uploadImage, isUploading } = useImageUpload({
+    onSuccess: (result) => {
+      setPreviewUrl(result.url);
+      onChange(result.url);
+    },
+    onError: (error) => {
+      console.error('Avatar upload error:', error);
+    }
+  });
+  const { deleteFile } = useUpload({
+    onSuccess: () => {
+      console.log('Old avatar deleted successfully');
+    },
+    onError: (error) => {
+      console.warn('Failed to delete old avatar:', error);
+    },
+    showToast: false // Don't show toast for delete operations
+  });
 
   const handleUrlChange = (url: string) => {
     setPreviewUrl(url);
@@ -98,59 +116,21 @@ export default function AvatarUpload({
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
+            
             try {
-              setIsUploading(true);
               // Try to delete previous image if it belongs to Cloudinary
               const oldPublicId = extractPublicId(previewUrl);
               if (oldPublicId) {
-                fetch("/api/uploads/cloudinary-delete", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ publicId: oldPublicId }),
-                }).catch(() => {});
+                await deleteFile(oldPublicId);
               }
 
-              // Prefer signed upload if server keys are configured
-              const signRes = await fetch("/api/uploads/cloudinary-sign", { method: "POST", body: JSON.stringify({ folder: "avatars" }) as any, headers: { "Content-Type": "application/json" } });
-              if (signRes.ok) {
-                const { cloudName, apiKey, timestamp, folder, signature } = await signRes.json();
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("api_key", apiKey);
-                formData.append("timestamp", String(timestamp));
-                formData.append("folder", folder || "avatars");
-                formData.append("signature", signature);
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formData });
-                const json = await res.json();
-                if (!res.ok) throw new Error(json?.error?.message || "Upload failed");
-                const url = json.secure_url as string;
-                setPreviewUrl(url);
-                onChange(url);
-                toast.success("Uploaded avatar");
-              } else {
-                // Fallback to unsigned if signature API not available
-                const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME as string | undefined;
-                const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string | undefined;
-                if (!cloudName || !uploadPreset) {
-                  toast.error("Cloudinary not configured");
-                  return;
-                }
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("upload_preset", uploadPreset);
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formData });
-                const json = await res.json();
-                if (!res.ok) throw new Error(json?.error?.message || "Upload failed");
-                const url = json.secure_url as string;
-                setPreviewUrl(url);
-                onChange(url);
-                toast.success("Uploaded avatar");
-              }
+              // Upload new image using centralized service
+              await uploadImage(file, "avatars", 5); // 5MB max for avatars
             } catch (err: any) {
-              toast.error(err?.message || "Failed to upload");
+              console.error("Upload error:", err);
+              toast.error(err?.message || "Failed to upload avatar");
             } finally {
               if (fileInputRef.current) fileInputRef.current.value = "";
-              setIsUploading(false);
             }
           }}
         />

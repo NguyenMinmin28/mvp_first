@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
             image: true,
             developerProfile: {
               select: {
+                id: true,
                 photoUrl: true,
               },
             },
@@ -50,21 +51,37 @@ export async function GET(request: NextRequest) {
       where: { followerId: sessionUser.id, isRead: false },
     });
 
-    const formattedNotifications = items.map((notification) => ({
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      metadata: notification.metadata,
-      isRead: notification.isRead,
-      createdAt: notification.createdAt,
-      developer: {
-        id: notification.developer.id,
+    const formattedNotifications = items.map((notification) => {
+      const developer = {
+        id: notification.developer.developerProfile?.id || notification.developer.id, // Use DeveloperProfile.id if available
         name: notification.developer.name,
         image: notification.developer.image,
-        photoUrl: notification.developer.developerProfile?.photoUrl,
-      },
-    }));
+        photoUrl: notification.developer.developerProfile?.photoUrl || null,
+      };
+      
+      // Debug logging
+      console.log('🔔 Notification developer data:', {
+        notificationId: notification.id,
+        userId: notification.developer.id,
+        developerProfileId: notification.developer.developerProfile?.id,
+        finalId: developer.id,
+        name: developer.name,
+        image: developer.image,
+        photoUrl: developer.photoUrl,
+        hasDeveloperProfile: !!notification.developer.developerProfile
+      });
+      
+      return {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        metadata: notification.metadata,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+        developer,
+      };
+    });
 
     return NextResponse.json({ 
       items: formattedNotifications, 

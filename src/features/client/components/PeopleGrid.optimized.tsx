@@ -134,7 +134,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
   const prevProjectIdRef = useRef(projectId);
   useEffect(() => {
     if (projectId !== prevProjectIdRef.current) {
-      console.log('ProjectId changed, resetting PeopleGrid state');
+     
       prevProjectIdRef.current = projectId;
       // Clear cache when project changes
       developerServicesCache.clear();
@@ -145,7 +145,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
   const prevExternalRef = useRef(externalAutoRefresh);
   useEffect(() => {
     if (externalAutoRefresh !== undefined && externalAutoRefresh !== prevExternalRef.current) {
-      console.log('Syncing external state:', externalAutoRefresh);
+     
       setInternalAutoRefresh(externalAutoRefresh);
       prevExternalRef.current = externalAutoRefresh;
     }
@@ -199,7 +199,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
     // Check cache first
     const cached = developerServicesCache.get(developerId);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log(`Cache hit for developer ${developerId}`);
+     
       setDeveloperServices(prev => ({
         ...prev,
         [developerId]: cached.data
@@ -230,7 +230,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
         }));
         
         console.timeEnd(`fetch-services-${developerId}`);
-        console.log(`Fetched ${services.length} services for developer ${developerId}`);
+       
         return services;
       }
     } catch (e) {
@@ -269,7 +269,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
     const developers = overrideDevelopers.filter(dev => !developerServices[dev.id]);
     if (developers.length === 0) return;
 
-    console.log(`Batch fetching services for ${developers.length} developers`);
+   
     batchFetchServices(developers);
   }, [isOverride, overrideDevelopers, developerServices, batchFetchServices]);
 

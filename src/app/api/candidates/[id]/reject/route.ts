@@ -77,6 +77,7 @@ export async function POST(
           await notify({
             type: 'MANUAL_INVITE_REJECTED',
             recipients: [recipientUserId],
+            actorUserId: candidate.developer?.userId, // Add actor for avatar
             payload: {
               candidateId,
               projectId: (candidate as any)?.projectId || null,

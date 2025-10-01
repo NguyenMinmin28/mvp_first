@@ -297,24 +297,27 @@ export class RotationServiceNativeMongo {
         },
       });
 
-      // Bulk create candidates
+      // Create candidates (use individual creates for MongoDB Date compatibility)
       const acceptanceDeadline = new Date(Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000);
+      const assignedAt = new Date();
       
-      await tx.assignmentCandidate.createMany({
-        data: candidates.map((candidate) => ({
-          batchId: batch.id,
-          projectId,
-          developerId: candidate.developerId,
-          level: candidate.level,
-          assignedAt: new Date(),
-          acceptanceDeadline,
-          responseStatus: "pending" as const,
-          usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
-          statusTextForClient: "developer is checking",
-          isFirstAccepted: false,
-          source: "AUTO_ROTATION",
-        }))
-      });
+      for (const candidate of candidates) {
+        await tx.assignmentCandidate.create({
+          data: {
+            batchId: batch.id,
+            projectId,
+            developerId: candidate.developerId,
+            level: candidate.level,
+            assignedAt,
+            acceptanceDeadline,
+            responseStatus: "pending",
+            usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
+            statusTextForClient: "developer is checking",
+            isFirstAccepted: false,
+            source: "AUTO_ROTATION",
+          },
+        });
+      }
 
       // Update project
       await tx.project.update({

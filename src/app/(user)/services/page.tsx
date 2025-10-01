@@ -21,6 +21,12 @@ export default function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"people" | "service">("service");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+
+  // Debug logs
+  useEffect(() => {
+    console.log('🔍 Services page - selectedFilters:', selectedFilters, 'selectedSkills:', selectedSkills);
+  }, [selectedFilters, selectedSkills]);
 
   // Set initial tab based on URL parameter
   useEffect(() => {
@@ -80,6 +86,7 @@ export default function ServicesPage() {
           onSearchChange={setSearchQuery}
           onTabChange={handleTabChange}
           onFiltersChange={setSelectedFilters}
+          onSkillsChange={setSelectedSkills}
           activeTab={activeTab}
           isDeveloper={isDeveloper}
         />
@@ -99,6 +106,7 @@ export default function ServicesPage() {
             searchQuery={searchQuery}
             sortBy="popular"
             filters={selectedFilters}
+            skills={selectedSkills}
             hideHeaderControls
             isDeveloper={isDeveloper}
           />

@@ -490,6 +490,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         likesCount: dev.likesCount,
         userLiked: dev.userLiked || (f as any).isFavorited === true,
         level: dev.level,
+        currentStatus: dev.currentStatus,
         skills: (dev.skills || []).map((s: any) => ({
           skill: {
             id: (s.skill.id ?? s.skill.name ?? '').toString(),
@@ -685,6 +686,18 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   // Compute freelancerResponseStatuses outside conditional rendering
   const freelancerResponseStatuses = useMemo(() => {
+    console.log('📊 FREELANCERS DATA:', {
+      count: freelancers.length,
+      freelancers: freelancers.map(f => ({
+        id: f.id,
+        developerId: f.developerId,
+        developerIdFromNested: f.developer.id,
+        responseStatus: f.responseStatus,
+        developerName: f.developer.user.name,
+        acceptanceDeadline: f.acceptanceDeadline,
+        assignedAt: f.assignedAt
+      }))
+    });
     console.log('Computing freelancerResponseStatuses from freelancers:', freelancers.map(f => ({
       id: f.id,
       developerId: f.developerId,
@@ -702,13 +715,79 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   // Compute freelancerDeadlines outside conditional rendering
   const freelancerDeadlines = useMemo(() => {
+    const FALLBACK_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+    const deriveDateFromObjectId = (id?: string): Date | null => {
+      try {
+        if (!id) return null;
+        const hex = String(id);
+        if (hex.length < 8) return null;
+        const seconds = parseInt(hex.substring(0, 8), 16);
+        if (Number.isNaN(seconds)) return null;
+        return new Date(seconds * 1000);
+      } catch {
+        return null;
+      }
+    };
+
+    console.log('🕐 Computing deadlines for freelancers:', freelancers.map(f => ({
+      name: f.developer.user.name,
+      developerId: f.developer.id,
+      candidateId: f.id,
+      responseStatus: f.responseStatus,
+      acceptanceDeadline: f.acceptanceDeadline,
+      assignedAt: f.assignedAt
+    })));
+    
     const deadlines = freelancers.reduce((acc, freelancer) => {
-      acc[freelancer.developer.id] = freelancer.acceptanceDeadline;
+      try {
+        if (freelancer.responseStatus !== "pending") {
+          return acc;
+        }
+
+        // 1) acceptanceDeadline from API
+        const explicitDeadline = freelancer.acceptanceDeadline ? new Date(freelancer.acceptanceDeadline as any) : null;
+        if (explicitDeadline && Number.isFinite(explicitDeadline.getTime())) {
+          acc[freelancer.developer.id] = explicitDeadline.toISOString();
+          return acc;
+        }
+
+        // 2) assignedAt + 15m from API
+        const assignedAtFromApi = freelancer.assignedAt ? new Date(freelancer.assignedAt as any) : null;
+        if (assignedAtFromApi && Number.isFinite(assignedAtFromApi.getTime())) {
+          acc[freelancer.developer.id] = new Date(assignedAtFromApi.getTime() + FALLBACK_WINDOW_MS).toISOString();
+          return acc;
+        }
+
+        // 3) Fallback: derive assignedAt from Mongo ObjectId of candidate.id, then +15m
+        const derivedAssigned = deriveDateFromObjectId(freelancer.id);
+        if (derivedAssigned) {
+          acc[freelancer.developer.id] = new Date(derivedAssigned.getTime() + FALLBACK_WINDOW_MS).toISOString();
+          return acc;
+        }
+
+        // If all failed, skip this developer
+      } catch (error) {
+        console.error(`❌ Error computing deadline for developer ${freelancer.developer.user.name}:`, error);
+      }
       return acc;
     }, {} as Record<string, string>);
-    console.log('Computed freelancerDeadlines:', deadlines);
+    console.log('🎯 Final computed freelancerDeadlines:', deadlines);
     return deadlines;
   }, [freelancers]);
+
+  console.log('🚀 PROJECT DETAIL PAGE RENDER - freelancers:', {
+    count: freelancers.length,
+    freelancerDeadlines,
+    freelancerResponseStatuses,
+    rawFreelancersData: freelancers.map(f => ({
+      name: f.developer.user.name,
+      developerId: f.developer.id,
+      responseStatus: f.responseStatus,
+      acceptanceDeadline: f.acceptanceDeadline,
+      assignedAt: f.assignedAt
+    }))
+  });
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-white">
@@ -764,22 +843,17 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              {hasAcceptedCandidates() && (
-                <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                  <span>🔒</span>
-                  <span>Project locked - someone has accepted</span>
-                </div>
-              )}
-            </div>
-          </div>
+       
 
           {/* Freelancer Cards */}
           {isLoading || (isSearching && freelancers.length === 0) ? (
             <LoadingMessage 
               title="Finding the Perfect Developers"
-              message="We're searching through our network of skilled developers. Please be patient..."
+              message={
+                freelancers.length > 0
+                  ? `${freelancers.length} freelancer${freelancers.length > 1 ? 's' : ''} found so far...`
+                  : "We're searching through our network of skilled developers. Please be patient..."
+              }
               size="lg"
             />
           ) : error ? (

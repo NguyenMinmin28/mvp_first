@@ -10,6 +10,7 @@ import { X, Plus, Loader2, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { ImageUpload } from "./image-upload";
 
 interface Skill {
   id: string;
@@ -28,9 +29,13 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedSkillsData, setSelectedSkillsData] = useState<Skill[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredSkills, setFilteredSkills] = useState<Skill[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -43,24 +48,41 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
     fetchSkills();
   }, []);
 
+  // Search skills with pagination
   useEffect(() => {
-    if (searchTerm) {
-      const filtered = skills.filter(skill =>
-        skill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        skill.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredSkills(filtered);
-    } else {
-      setFilteredSkills([]);
-    }
-  }, [searchTerm, skills]);
+    const searchSkills = async () => {
+      if (searchTerm.trim()) {
+        setIsSearching(true);
+        try {
+          const response = await fetch(`/api/skills/all?search=${encodeURIComponent(searchTerm)}&limit=20&page=${currentPage}`);
+          if (response.ok) {
+            const data = await response.json();
+            setFilteredSkills(data.skills);
+            setTotalPages(Math.ceil(data.total / 20));
+          }
+        } catch (error) {
+          console.error('Error searching skills:', error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setFilteredSkills([]);
+        setTotalPages(1);
+      }
+    };
+
+    const timeoutId = setTimeout(searchSkills, 300); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, currentPage]);
+
 
   const fetchSkills = async () => {
     try {
-      const response = await fetch('/api/skills');
+      const response = await fetch('/api/skills/all');
       if (response.ok) {
         const data = await response.json();
         setSkills(data.skills);
+        console.log('Fetched skills:', data.skills.length);
       }
     } catch (error) {
       console.error('Error fetching skills:', error);
@@ -101,6 +123,7 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
         // Stay on page. Reset form for a clear UX.
         setFormData({ title: "", summary: "", body: "", coverUrl: "" });
         setSelectedSkills([]);
+        setSelectedSkillsData([]);
         if (onSuccess) onSuccess();
       } else {
         const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -116,17 +139,24 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
 
   const handleSkillSelect = (skillId: string) => {
     if (!selectedSkills.includes(skillId)) {
-      setSelectedSkills([...selectedSkills, skillId]);
+      // Find the skill data from either filteredSkills or skills
+      const skillData = filteredSkills.find(s => s.id === skillId) || skills.find(s => s.id === skillId);
+      
+      if (skillData) {
+        setSelectedSkills([...selectedSkills, skillId]);
+        setSelectedSkillsData([...selectedSkillsData, skillData]);
+      }
     }
     setSearchTerm("");
   };
 
   const handleSkillRemove = (skillId: string) => {
     setSelectedSkills(selectedSkills.filter(id => id !== skillId));
+    setSelectedSkillsData(selectedSkillsData.filter(skill => skill.id !== skillId));
   };
 
   const getSelectedSkillNames = () => {
-    return selectedSkills.map(id => skills.find(s => s.id === id)?.name).filter(Boolean);
+    return selectedSkillsData.map(skill => skill.name);
   };
 
   return (
@@ -187,33 +217,16 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
           </p>
         </div>
 
-        {/* Cover Image URL */}
-        <div>
-          <Label htmlFor="coverUrl">Cover Image URL (Optional)</Label>
-          <Input
-            id="coverUrl"
-            type="url"
-            value={formData.coverUrl}
-            onChange={(e) => setFormData({ ...formData, coverUrl: e.target.value })}
-            placeholder="https://example.com/your-image.jpg"
-          />
-          <p className="text-sm text-gray-500 mt-1">
-            Paste a direct link to an image that represents your idea
-          </p>
-          {formData.coverUrl && (
-            <div className="mt-2">
-              <img
-                src={formData.coverUrl}
-                alt="Preview"
-                className="w-full max-w-xs h-32 object-cover rounded-lg border"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-        </div>
+        {/* Cover Image Upload */}
+        <ImageUpload
+          value={formData.coverUrl}
+          onChange={(url) => setFormData({ ...formData, coverUrl: url })}
+          disabled={loading}
+          label="Cover Image (Optional)"
+          placeholder="Upload an image or paste a URL to represent your idea"
+          maxSize={10}
+          folder="ideas"
+        />
 
         {/* Skills */}
         <div>
@@ -237,33 +250,71 @@ export function SubmitIdeaForm({ onSuccess, onCancel }: SubmitIdeaFormProps) {
               </div>
             )}
 
-            {/* Skill Search */}
-            <div className="relative">
-              <Input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search for skills or categories..."
-                className="pr-10"
-              />
-              <Plus className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-
-            {/* Skill Suggestions */}
-            {filteredSkills.length > 0 && (
-              <div className="border rounded-lg max-h-40 overflow-y-auto">
-                {filteredSkills.map((skill) => (
-                  <button
-                    key={skill.id}
-                    type="button"
-                    onClick={() => handleSkillSelect(skill.id)}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0"
-                  >
-                    <div className="font-medium">{skill.name}</div>
-                    <div className="text-sm text-gray-500">{skill.category}</div>
-                  </button>
-                ))}
+            {/* Skills Search */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Type to search skills..."
+                  className="pr-10"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Search Results */}
+              {filteredSkills.length > 0 && (
+                <div className="border rounded-lg max-h-60 overflow-y-auto">
+                  {filteredSkills.map((skill) => (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => handleSkillSelect(skill.id)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0"
+                    >
+                      <div className="font-medium">{skill.name}</div>
+                      <div className="text-sm text-gray-500">{skill.category}</div>
+                    </button>
+                  ))}
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-2 py-1 text-sm bg-white border rounded disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-2 py-1 text-sm bg-white border rounded disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* No Results */}
+              {searchTerm && filteredSkills.length === 0 && !isSearching && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No skills found for "{searchTerm}"
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

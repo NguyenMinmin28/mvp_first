@@ -31,13 +31,11 @@ export function useCanViewContact(
 
   const fetchContactInfo = async () => {
     try {
-      console.log("useCanViewContact: Starting fetch", { developerId, projectId });
       setLoading(true);
       setError(null);
 
       // If no projectId, we can't check contact permissions, so default to canView: false
       if (!projectId) {
-        console.log("useCanViewContact: No projectId, setting canView: false");
         setContactInfo({ canView: false });
         setLoading(false);
         return;
@@ -49,10 +47,8 @@ export function useCanViewContact(
       
       params.append("projectId", projectId);
 
-      console.log("useCanViewContact: Making API call to", `/api/contacts/can-view?${params}`);
       const response = await fetch(`/api/contacts/can-view?${params}`);
       
-      console.log("useCanViewContact: API response", { status: response.status, ok: response.ok });
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -61,7 +57,6 @@ export function useCanViewContact(
       }
 
       const data = await response.json();
-      console.log("useCanViewContact: API success", data);
       setContactInfo(data);
     } catch (err) {
       console.error("useCanViewContact: Error", err);

@@ -28,7 +28,6 @@ export function ContactOptionsModal({
   developer,
   projectId 
 }: ContactOptionsModalProps) {
-  console.log("ContactOptionsModal render:", { isOpen, developer, projectId });
   
   const handleClose = () => {
     console.log("ContactOptionsModal handleClose called");

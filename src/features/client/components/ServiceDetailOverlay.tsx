@@ -80,9 +80,6 @@ interface ServiceDetailOverlayProps {
 export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetInTouch, onPrev, onNext, onFollow, onServiceUpdate, projectId }: ServiceDetailOverlayProps) {
   const { data: session } = useSession();
   
-  // Debug logging
-  console.log("ServiceDetailOverlay - service responseStatus:", service?.responseStatus);
-  console.log("ServiceDetailOverlay - button should be disabled:", service?.responseStatus !== "accepted");
   const [today, setToday] = useState("");
   const [likeCount, setLikeCount] = useState<number>(service?.likesCount ?? Math.max(1, Math.round((service?.views || 0) / 40)));
   const [isLiking, setIsLiking] = useState(false);
@@ -176,11 +173,6 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
   // Sync heart state when service changes
   useEffect(() => {
     if (service) {
-      console.log('ServiceDetailOverlay - service changed:', { 
-        serviceId: service.id, 
-        userLiked: (service as any).userLiked,
-        likesCount: service.likesCount 
-      });
       setIsLiked((service as any).userLiked ?? false);
       setLikeCount(service.likesCount ?? Math.max(1, Math.round((service.views || 0) / 40)));
       setIsDetailsOpen(false);
@@ -573,12 +565,6 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
 
             {/* Galleries (grid images) */}
             {(() => {
-              console.log('Gallery check:', { 
-                hasService: !!service, 
-                hasGalleryImages: !!service?.galleryImages, 
-                galleryLength: service?.galleryImages?.length,
-                galleryImages: service?.galleryImages 
-              });
               return service?.galleryImages && service.galleryImages.length > 0;
             })() && (
               <div className="px-1 sm:px-2 mb-12">
@@ -621,12 +607,6 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
 
             {/* Two additional large showcase images */}
             {(() => {
-              console.log('Showcase check:', { 
-                hasService: !!service, 
-                hasShowcaseImages: !!service?.showcaseImages, 
-                showcaseLength: service?.showcaseImages?.length,
-                showcaseImages: service?.showcaseImages 
-              });
               return service?.showcaseImages && service.showcaseImages.length > 0;
             })() && (
               <div className="space-y-8 mb-8">
