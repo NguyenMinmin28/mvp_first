@@ -12,7 +12,11 @@ interface Idea {
   title: string;
   summary: string;
   body?: string;
-  coverUrl?: string;
+  cover?: {
+    id?: string;
+    storageKey: string;
+  } | null;
+  coverUrl?: string | null;
   status: string;
   adminTags: string[];
   createdAt: string;
