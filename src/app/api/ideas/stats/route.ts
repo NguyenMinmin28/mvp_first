@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         }
       },
       take: 5
-    });
+    }) as Array<{ category: string; _count: { category: number } }>;
 
     return NextResponse.json({
       success: true,
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         totalConnects,
         recentIdeas,
         engagementRate,
-        topCategories: topCategories.map(cat => ({
+        topCategories: topCategories.map((cat) => ({
           category: cat.category,
           count: cat._count.category
         }))
