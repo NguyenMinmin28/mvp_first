@@ -9,11 +9,11 @@ const ideaSparkService = new IdeaSparkService();
 
 export default async function DashboardUserPage() {
   const session = await getServerSession(authOptions);
-  
+
   if (!session?.user?.id) {
     redirect("/auth/signin?callbackUrl=/dashboard-user");
   }
-  
+
   if (session.user.role !== "DEVELOPER") {
     redirect("/");
   }
@@ -31,15 +31,17 @@ export default async function DashboardUserPage() {
             },
           },
         },
-        },
-      });
+      },
+    });
 
     if (!user) {
       redirect("/auth/signin?callbackUrl=/dashboard-user");
     }
 
     // Fetch follower count for this developer
-    const followersCount = await db.follow.count({ where: { followingId: session.user.id } });
+    const followersCount = await db.follow.count({
+      where: { followingId: session.user.id },
+    });
 
     // Combine user data with profile data (same logic as API)
     const userData = {
@@ -59,45 +61,50 @@ export default async function DashboardUserPage() {
         location: user.clientProfile.location,
         photoUrl: (user.clientProfile as any).photoUrl,
       }),
-      ...(user.developerProfile && ({
-        photoUrl: user.developerProfile.photoUrl,
-        bio: user.developerProfile.bio,
-        experienceYears: user.developerProfile.experienceYears,
-        level: user.developerProfile.level,
-        linkedinUrl: user.developerProfile.linkedinUrl,
-        portfolioLinks: user.developerProfile.portfolioLinks,
-        location: user.developerProfile.location,
-        age: (user.developerProfile as any).age,
-        hourlyRate: user.developerProfile.hourlyRateUsd,
-        whatsappNumber: user.developerProfile.whatsappNumber,
-        usualResponseTimeMs: user.developerProfile.usualResponseTimeMs,
-        currentStatus: user.developerProfile.currentStatus,
-        adminApprovalStatus: user.developerProfile.adminApprovalStatus,
-        whatsappVerified: user.developerProfile.whatsappVerified,
-        skills: Array.isArray(user.developerProfile.skills)
-          ? user.developerProfile.skills.map((ds) => ({
-              skillId: ds.skillId,
-              skillName: (ds as any).skill?.name,
-            }))
-          : [],
-      }) as any),
+      ...(user.developerProfile &&
+        ({
+          photoUrl: user.developerProfile.photoUrl,
+          bio: user.developerProfile.bio,
+          experienceYears: user.developerProfile.experienceYears,
+          level: user.developerProfile.level,
+          linkedinUrl: user.developerProfile.linkedinUrl,
+          portfolioLinks: user.developerProfile.portfolioLinks,
+          location: user.developerProfile.location,
+          age: (user.developerProfile as any).age,
+          hourlyRate: user.developerProfile.hourlyRateUsd,
+          whatsappNumber: user.developerProfile.whatsappNumber,
+          usualResponseTimeMs: user.developerProfile.usualResponseTimeMs,
+          currentStatus: user.developerProfile.currentStatus,
+          adminApprovalStatus: user.developerProfile.adminApprovalStatus,
+          whatsappVerified: user.developerProfile.whatsappVerified,
+          resumeUrl: user.developerProfile.resumeUrl,
+          skills: Array.isArray(user.developerProfile.skills)
+            ? user.developerProfile.skills.map((ds) => ({
+                skillId: ds.skillId,
+                skillName: (ds as any).skill?.name,
+              }))
+            : [],
+        } as any)),
     };
 
     // Fetch ideas and projects in parallel
     const [ideas, projects] = await Promise.all([
-      ideaSparkService.getUserIdeas(session.user.id).then(ideas => ({ 
-        ideas: ideas.slice(0, 6).map(idea => ({
-          id: idea.id,
-          title: idea.title,
-          summary: idea.summary,
-          createdAt: idea.createdAt.toISOString(),
-          _count: {
-            likes: 0, // TODO: Add actual counts from database
-            comments: 0,
-            bookmarks: 0,
-          }
+      ideaSparkService
+        .getUserIdeas(session.user.id)
+        .then((ideas) => ({
+          ideas: ideas.slice(0, 6).map((idea) => ({
+            id: idea.id,
+            title: idea.title,
+            summary: idea.summary,
+            createdAt: idea.createdAt.toISOString(),
+            _count: {
+              likes: 0, // TODO: Add actual counts from database
+              comments: 0,
+              bookmarks: 0,
+            },
+          })),
         }))
-      })).catch(() => ({ ideas: [] })),
+        .catch(() => ({ ideas: [] })),
       fetchProjectsForDeveloper(session.user.id),
     ]);
 
@@ -109,8 +116,8 @@ export default async function DashboardUserPage() {
         initialProjects={projects}
       />
     );
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
+  } catch (error) {
+    console.error("Error loading dashboard data:", error);
     // Fallback to client-side loading
     return (
       <DashboardClient
@@ -128,7 +135,7 @@ async function fetchProjectsForDeveloper(userId: string) {
   try {
     // Get developer profile
     const developerProfile = await db.developerProfile.findUnique({
-      where: { userId }
+      where: { userId },
     });
 
     if (!developerProfile) {
@@ -150,22 +157,43 @@ async function fetchProjectsForDeveloper(userId: string) {
       .filter((assignment: any) => assignment.source !== "MANUAL_INVITE")
       .map((assignment: any) => ({
         id: assignment.projectId,
-        name: assignment.project?.name || assignment.project?.title || "Unknown Project",
+        name:
+          assignment.project?.name ||
+          assignment.project?.title ||
+          "Unknown Project",
         description: assignment.project?.description || "",
-        status: assignment.responseStatus === "accepted" ? "approved" as const : 
-                assignment.responseStatus === "rejected" ? "rejected" as const :
-                assignment.responseStatus === "expired" ? "rejected" as const :
-                "recent" as const,
-        date: (assignment.assignedAt instanceof Date ? assignment.assignedAt : new Date(assignment.assignedAt)).toISOString(),
+        status:
+          assignment.responseStatus === "accepted"
+            ? ("approved" as const)
+            : assignment.responseStatus === "rejected"
+              ? ("rejected" as const)
+              : assignment.responseStatus === "expired"
+                ? ("rejected" as const)
+                : ("recent" as const),
+        date: (assignment.assignedAt instanceof Date
+          ? assignment.assignedAt
+          : new Date(assignment.assignedAt)
+        ).toISOString(),
         budget: assignment.project?.budget,
         currency: assignment.project?.currency,
-        skills: assignment.project?.skillsRequired || assignment.project?.requiredSkills || [],
+        skills:
+          assignment.project?.skillsRequired ||
+          assignment.project?.requiredSkills ||
+          [],
         assignmentStatus: assignment.responseStatus,
         assignment: {
           id: assignment.id,
-          acceptanceDeadline: assignment.acceptanceDeadline ? (assignment.acceptanceDeadline instanceof Date ? assignment.acceptanceDeadline : new Date(assignment.acceptanceDeadline)).toISOString() : new Date().toISOString(),
+          acceptanceDeadline: assignment.acceptanceDeadline
+            ? (assignment.acceptanceDeadline instanceof Date
+                ? assignment.acceptanceDeadline
+                : new Date(assignment.acceptanceDeadline)
+              ).toISOString()
+            : new Date().toISOString(),
           responseStatus: assignment.responseStatus,
-          assignedAt: (assignment.assignedAt instanceof Date ? assignment.assignedAt : new Date(assignment.assignedAt)).toISOString(),
+          assignedAt: (assignment.assignedAt instanceof Date
+            ? assignment.assignedAt
+            : new Date(assignment.assignedAt)
+          ).toISOString(),
           batchId: assignment.batchId,
           source: assignment.source,
           clientMessage: assignment.clientMessage,
@@ -177,14 +205,17 @@ async function fetchProjectsForDeveloper(userId: string) {
     const latestByProject = new Map<string, any>();
     for (const p of mapped) {
       const existing = latestByProject.get(p.id);
-      if (!existing || new Date(p.date).getTime() > new Date(existing.date).getTime()) {
+      if (
+        !existing ||
+        new Date(p.date).getTime() > new Date(existing.date).getTime()
+      ) {
         latestByProject.set(p.id, p);
       }
     }
     const projects = Array.from(latestByProject.values());
 
     return { projects };
-    } catch (error) {
+  } catch (error) {
     console.error("Error fetching projects:", error);
     return { projects: [] };
   }

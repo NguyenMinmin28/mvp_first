@@ -118,7 +118,6 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-8">
-
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
 
@@ -195,14 +194,12 @@ export default function ClientDashboard() {
         {/* Content Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
           {/* Left Section - Project Post Form */}
-          <div className="w-full">
-            <ProjectPostForm
-              title=""
-              description="Post your project and find the perfect freelancer"
-              showLoginLink={true}
-              onSuccess={(projectId) => router.push(`/projects/${projectId}`)}
-            />
-          </div>
+          <ProjectPostForm
+            title=""
+            description="Post your project and find the perfect freelancer"
+            showLoginLink={true}
+            onSuccess={(projectId) => router.push(`/projects/${projectId}`)}
+          />
 
           {/* Right Section - Connects Cards */}
           <div className="w-full">
