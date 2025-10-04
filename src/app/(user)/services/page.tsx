@@ -55,23 +55,28 @@ export default function ServicesPage() {
 
   return (
     <UserLayout user={session?.user}>
-      {/* Header Section */}
-      <div className="border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6">
+      {/* Header Section with enhanced animations */}
+      <div className="border-b border-gray-200 relative overflow-hidden">
+        {/* Animated background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-purple-50/30 to-pink-50/30 animate-pulse"></div>
+        
+        <div className="container mx-auto px-4 py-6 relative">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+            <div className="group">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 transition-all duration-500 group-hover:scale-105 group-hover:text-blue-600">
                 Browse Talent, Contact Direct
               </h1>
+              {/* Animated underline */}
+              <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500 w-0 group-hover:w-full transition-all duration-700 ease-out mt-2"></div>
             </div>
             
             {isDeveloper && (
               <Link href="/services/create">
                 <Button 
                   variant="outline" 
-                  className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:rotate-90" />
                   Post Service
                 </Button>
               </Link>

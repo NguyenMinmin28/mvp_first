@@ -174,44 +174,51 @@ export function useScrollInfiniteLoad(
     // Add sentinel to document
     document.body.appendChild(sentinel);
 
-    // Create intersection observer
+    // Create intersection observer with simplified logic
     observerRef.current = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
         const isIntersecting = entry.isIntersecting;
         setIsNearBottom(isIntersecting);
 
+        console.log('🔍 Intersection observer triggered:', {
+          isIntersecting,
+          hasNextPage,
+          loadingMore,
+          isLoadingMore: isLoadingMoreRef.current
+        });
+
         if (isIntersecting && hasNextPage && !loadingMore && !isLoadingMoreRef.current) {
           const now = Date.now();
           const timeSinceLastLoad = now - lastLoadMoreTimeRef.current;
-          const minLoadInterval = 1000; // Minimum 1 second between loads
+          const minLoadInterval = 1000; // 1 second minimum between loads
+
+          console.log('⏰ Time check:', { timeSinceLastLoad, minLoadInterval });
 
           if (timeSinceLastLoad > minLoadInterval) {
+            console.log('🚀 Triggering loadMore...');
             isLoadingMoreRef.current = true;
             lastLoadMoreTimeRef.current = now;
             
-            // Disable scroll events temporarily during loading
-            document.body.style.overflow = 'hidden';
-            
-            // Use requestAnimationFrame to ensure DOM is stable
-            requestAnimationFrame(() => {
-              try {
-                loadMore();
-              } finally {
-                // Re-enable scroll after loading
-                setTimeout(() => {
-                  document.body.style.overflow = '';
-                  isLoadingMoreRef.current = false;
-                }, 100);
-              }
-            });
+            // Execute loadMore immediately
+            loadMore();
+            isLoadingMoreRef.current = false;
+          } else {
+            console.log('⏳ Too soon to load more:', { timeSinceLastLoad, minLoadInterval });
           }
+        } else {
+          console.log('❌ Conditions not met for loadMore:', {
+            isIntersecting,
+            hasNextPage,
+            loadingMore,
+            isLoadingMore: isLoadingMoreRef.current
+          });
         }
       },
       {
         root: null,
         rootMargin: `${threshold}px`,
-        threshold: 0
+        threshold: 0.1
       }
     );
 
@@ -225,7 +232,6 @@ export function useScrollInfiniteLoad(
       if (sentinelRef.current && sentinelRef.current.parentNode) {
         sentinelRef.current.parentNode.removeChild(sentinelRef.current);
       }
-      document.body.style.overflow = '';
       isLoadingMoreRef.current = false;
     };
   }, [loadMore, hasNextPage, loadingMore, threshold]);

@@ -352,11 +352,11 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
     const deadline = freelancerDeadlines?.[developer.id];
     
     return (
-      <div key={developer.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      <div key={developer.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-all duration-200 ease-out hover:-translate-y-1 hover:border-blue-300 group overflow-hidden will-change-transform">
         <div className="flex items-center space-x-4 mb-4">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={developer.photoUrl || developer.user.image} />
-            <AvatarFallback>{developer.user.name.charAt(0)}</AvatarFallback>
+          <Avatar className="h-12 w-12 transition-transform duration-200 ease-out will-change-transform group-hover:scale-105">
+            <AvatarImage src={developer.photoUrl || developer.user.image} className="transition-transform duration-200 ease-out will-change-transform group-hover:scale-105" />
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold transition-colors duration-200 ease-out">{developer.user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900">{developer.user.name}</h3>
@@ -390,14 +390,14 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
               {services.slice(0, 2).map((service) => (
                 <div
                   key={service.id}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors duration-200 ease-out hover:border hover:border-blue-200"
                   onClick={() => handleServiceClick(service, developer)}
                 >
                   {service.coverUrl && (
                     <img
                       src={service.coverUrl}
                       alt={service.title}
-                      className="h-10 w-10 rounded object-cover"
+                      className="h-10 w-10 rounded object-cover transition-transform duration-200 ease-out will-change-transform hover:scale-105"
                     />
                   )}
                   <div className="flex-1 min-w-0">

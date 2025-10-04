@@ -29,6 +29,7 @@ interface ProfileSummaryProps {
   hideControls?: boolean;
   developerId?: string;
   onReviewSubmitted?: () => void;
+  currentUserRole?: string;
 }
 
 interface ReviewStats {

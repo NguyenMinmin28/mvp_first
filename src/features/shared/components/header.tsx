@@ -94,6 +94,31 @@ export function Header({ user }: HeaderProps) {
     setMounted(true);
   }, []);
 
+  // Handle click outside notification dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openNotif && notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setOpenNotif(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && openNotif) {
+        setOpenNotif(false);
+      }
+    };
+
+    if (openNotif) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [openNotif]);
+
   // Fetch user data with photoUrl
   useEffect(() => {
     const fetchUserData = async () => {
@@ -454,6 +479,20 @@ export function Header({ user }: HeaderProps) {
 
             {isAuthenticated && mounted && userRole === "DEVELOPER" && (
               <nav className="hidden md:flex items-center gap-4">
+                <Link href="/dashboard-user">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 rounded-lg px-3 py-2 ${
+                      (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard-user'))
+                        ? 'bg-black text-white hover:bg-black hover:text-white shadow-lg'
+                        : (!isAuthenticated ? 'text-white hover:bg-white/20 hover:text-white' : 'text-black hover:bg-gray-100 hover:text-black')
+                    }`}
+                  >
+                    <Briefcase className="h-4 w-4" />
+                    Workspace
+                  </Button>
+                </Link>
                 <Link href="/services">
                   <Button
                     variant="ghost"
@@ -561,13 +600,13 @@ export function Header({ user }: HeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              className={`md:hidden ${!isAuthenticated ? "text-white" : "text-black"}`}
+              className={`md:hidden transition-all duration-300 ease-in-out transform hover:scale-110 active:scale-95 p-2 rounded-lg hover:bg-gray-100 ${!isAuthenticated ? "text-white hover:bg-white/20" : "text-black hover:bg-gray-100"}`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 transition-transform duration-300 rotate-180" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5 transition-transform duration-300" />
               )}
             </Button>
 
@@ -670,7 +709,7 @@ export function Header({ user }: HeaderProps) {
                       }
                     }}
                   >
-                    <Bell className="w-5 h-5" />
+                    <Bell className={`w-5 h-5 transition-all duration-300 ease-in-out transform hover:scale-110 hover:rotate-12 ${unread > 0 ? 'animate-bounce text-black' : ''}`} />
                     {unread > 0 && (
                       <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] leading-4 text-center">
                         {unread}
@@ -1089,25 +1128,53 @@ export function Header({ user }: HeaderProps) {
                           : user.email?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
+                    
+                    {/* Status indicator - positioned on top */}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full shadow-lg animate-pulse z-20"></div>
+                    
+                    {/* Hover glow effect */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+                    
+                    {/* Click ripple effect */}
+                    <div className="absolute inset-0 rounded-full bg-blue-500/30 scale-0 group-active:scale-100 transition-transform duration-200 ease-out"></div>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <div className="flex items-center justify-start gap-2 p-2">
+                <DropdownMenuContent className="w-64 bg-white/95 backdrop-blur-xl border border-gray-200/50 shadow-2xl rounded-xl p-2 animate-in slide-in-from-top-2 duration-300" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg mb-2">
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 ring-2 ring-blue-500/20 transition-all duration-300 hover:ring-4 hover:ring-blue-500/30">
+                        <AvatarImage 
+                          src={userData?.photoUrl || user.image || undefined} 
+                          alt={user.name || user.email || "User"} 
+                          className="transition-all duration-300 hover:scale-110 hover:brightness-110"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold transition-all duration-300 hover:from-blue-600 hover:to-purple-700 hover:scale-110">
+                          {user.name ? getUserInitials(user.name) : user.email?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Status indicator in dropdown */}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full shadow-md z-20"></div>
+                    </div>
                     <div className="flex flex-col space-y-1 leading-none">
-                      {user.name && <p className="font-medium">{user.name}</p>}
-                      <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      {user.name && <p className="font-semibold text-gray-900">{user.name}</p>}
+                      <p className="w-[200px] truncate text-sm text-gray-600">
                         {user.email}
                       </p>
                     </div>
                   </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                  <DropdownMenuSeparator className="bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+                  <DropdownMenuItem 
+                    onClick={() => router.push("/profile")}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 ease-in-out hover:bg-blue-50 hover:text-blue-700 hover:translate-x-1 cursor-pointer group"
+                  >
+                    <User className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="font-medium">Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                  <DropdownMenuItem 
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 ease-in-out hover:bg-gray-50 hover:text-gray-700 hover:translate-x-1 cursor-pointer group"
+                  >
+                    <Settings className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="font-medium">Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -1143,7 +1210,7 @@ export function Header({ user }: HeaderProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-200">
+          <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200/50 shadow-lg animate-in slide-in-from-top-2 duration-300">
             <div className="container px-4 py-4 space-y-4">
               {/* Portal Switch Mobile (hidden when authenticated) */}
               {!isAuthenticated && (
@@ -1426,7 +1493,13 @@ export function Header({ user }: HeaderProps) {
                     className="block py-2 text-gray-700 hover:text-black"
                   >
                     <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4" />
+                      <Briefcase className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                      Workspace
+                    </div>
+                  </Link>
+                  <Link href="/my-projects" className="block py-2 text-gray-700 hover:text-black transition-all duration-300 ease-in-out transform hover:translate-x-2 hover:scale-105 rounded-lg px-2">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
                       My Projects
                     </div>
                   </Link>
@@ -1751,6 +1824,12 @@ export function Header({ user }: HeaderProps) {
                   >
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
+                      Workspace
+                    </div>
+                  </Link>
+                  <Link href="/services" className="block py-2 text-gray-700 hover:text-black">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4" />
                       Services
                     </div>
                   </Link>

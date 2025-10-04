@@ -92,9 +92,9 @@ export default async function DeveloperPublicProfilePage({
     where: { followingId: developer.userId },
   });
 
-  // Check if current user is following this developer (for both clients and developers)
+  // Check if current user is following this developer (only for clients)
   let isFollowing = false;
-  if (isClient || session.user.role === "DEVELOPER") {
+  if (isClient) {
     const followStatus = await (prisma as any).follow.findUnique({
       where: {
         followerId_followingId: {

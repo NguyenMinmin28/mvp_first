@@ -292,41 +292,82 @@ export function PeopleGrid({
       params.append("cursor", cursor);
     }
 
-    console.log('🚀 Fetching optimized developers:', `/api/developers/optimized?${params.toString()}`);
-    const res = await fetch(`/api/developers/optimized?${params.toString()}` as RequestInfo, { 
-      cache: "no-store",
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+    try {
+      console.log('🚀 Fetching optimized developers:', `/api/developers/optimized?${params.toString()}`);
+      const res = await fetch(`/api/developers/optimized?${params.toString()}` as RequestInfo, { 
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      } as RequestInit);
+      const json = await res.json();
+      
+      console.log('✅ Optimized Developers API response:', { 
+        status: res.status, 
+        dataCount: json.data?.length,
+        pagination: json.pagination,
+        hasNextPage: json.pagination?.hasNextPage,
+        nextCursor: json.pagination?.nextCursor
+      });
+      
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || 'Optimized API failed');
       }
-    } as RequestInit);
-    const json = await res.json();
-    
-    console.log('✅ Optimized Developers API response:', { status: res.status, dataCount: json.data?.length });
-    
-    // Debug: Check skills data structure from API
-    if (json.data && json.data.length > 0) {
-      console.log('🔍 API skills data sample:', json.data.slice(0, 2).map((dev: any) => ({
-        id: dev.id,
-        name: dev.user.name,
-        skills: dev.skills || [],
-        skillsType: typeof dev.skills,
-        skillsLength: dev.skills?.length || 0
-      })));
-    }
-    
-    if (!res.ok || !json?.success) {
-      throw new Error(json?.message || 'Failed to fetch developers');
-    }
-    
-    return {
-      data: json.data || [],
-      pagination: json.pagination || {
-        hasNextPage: false,
-        nextCursor: null,
-        limit
+      
+      return {
+        data: json.data || [],
+        pagination: json.pagination || {
+          hasNextPage: false,
+          nextCursor: null,
+          limit
+        }
+      };
+    } catch (error) {
+      console.warn('⚠️ Optimized API failed, trying fallback API:', error);
+      
+      // Fallback to regular API
+      const fallbackParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sort: sortBy,
+      });
+
+      if (searchQuery.trim()) {
+        fallbackParams.append("search", searchQuery.trim());
       }
-    };
+
+      if (filters && filters.length > 0) {
+        fallbackParams.append("filters", filters.join(","));
+      }
+
+      if (skills && skills.length > 0) {
+        fallbackParams.append("skills", skills.join(","));
+      }
+
+      console.log('🔄 Fallback API call:', `/api/developers?${fallbackParams.toString()}`);
+      const fallbackRes = await fetch(`/api/developers?${fallbackParams.toString()}`, { cache: "no-store" });
+      const fallbackJson = await fallbackRes.json();
+      
+      console.log('✅ Fallback API response:', { 
+        status: fallbackRes.status, 
+        dataCount: fallbackJson.data?.length,
+        pagination: fallbackJson.pagination
+      });
+      
+      if (!fallbackRes.ok || !fallbackJson?.success) {
+        throw new Error(fallbackJson?.message || 'Failed to fetch developers');
+      }
+      
+      return {
+        data: fallbackJson.data || [],
+        pagination: fallbackJson.pagination || {
+          hasNextPage: false,
+          nextCursor: null,
+          limit
+        }
+      };
+    }
   }, [searchQuery, sortBy, filters, skills]);
 
   // Load initial data (only when not using overrideDevelopers)
@@ -428,17 +469,31 @@ export function PeopleGrid({
 
   // Load more function - simplified without scroll position manipulation
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasNextPage || isOverride) return;
+    console.log('🔄 PeopleGrid loadMore called:', { loadingMore, hasNextPage, isOverride, currentPage });
+    if (loadingMore || !hasNextPage || isOverride) {
+      console.log('❌ PeopleGrid loadMore blocked:', { loadingMore, hasNextPage, isOverride });
+      return;
+    }
     
     try {
       setLoadingMore(true);
+      console.log('🔄 Loading more developers with cursor:', nextCursor);
       const result = await fetchDevelopers(currentPage + 1, 12, nextCursor || undefined);
       
       // Update state directly - scroll is disabled during loading
-      setDevelopers(prev => [...prev, ...result.data]);
+      setDevelopers(prev => {
+        const newDevs = [...prev, ...result.data];
+        console.log('📊 Developers update:', { 
+          prevCount: prev.length, 
+          newCount: result.data.length, 
+          totalAfter: newDevs.length 
+        });
+        return newDevs;
+      });
       setHasNextPage(result.pagination.hasNextPage);
       setCurrentPage(prev => prev + 1);
       setNextCursor((result as any)?.pagination?.nextCursor || null);
+      console.log('✅ More developers loaded:', result.data.length, 'nextCursor:', result.pagination.nextCursor, 'hasNextPage:', result.pagination.hasNextPage);
     } catch (err) {
       console.error('Error loading more developers:', err);
       setError('Failed to load more developers');
@@ -449,6 +504,28 @@ export function PeopleGrid({
 
   // Set up scroll-based loading (only when not using overrideDevelopers)
   useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);
+
+  // Alternative scroll detection as backup for PeopleGrid
+  useEffect(() => {
+    if (isOverride) return; // Skip for override mode
+    
+    const handleScroll = () => {
+      if (loadingMore || !hasNextPage) return;
+      
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      // Trigger when user is 300px from bottom
+      if (scrollTop + windowHeight >= documentHeight - 300) {
+        console.log('🔄 PeopleGrid Scroll-based loadMore triggered');
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadMore, hasNextPage, loadingMore, isOverride]);
 
 
   // Decide which developer list to render
@@ -1008,12 +1085,16 @@ export function PeopleGrid({
           filteredDevList.map((developer, devIndex) => (
           <div
             key={developer.id}
-            className={`bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg group overflow-hidden ${
+            className={`bg-white rounded-2xl border transition-all duration-300 ease-out group overflow-hidden will-change-transform hover:shadow-xl hover:-translate-y-1 ${
               freelancerResponseStatuses?.[developer.id] === 'accepted'
                 ? 'border-green-500 border-2 hover:border-green-600'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-blue-300'
             }`}
             onMouseEnter={() => router.prefetch(`/developer/${developer.id}`)}
+            style={{
+              animationDelay: `${devIndex * 150}ms`,
+              animation: 'fadeInUp 0.8s ease-out forwards'
+            }}
           >
             {/* Freelancer Header Row */}
             <div className="p-4 sm:p-6">
@@ -1022,15 +1103,15 @@ export function PeopleGrid({
                   <div className="flex items-start space-x-3 sm:space-x-2 flex-1">
                     <div className="flex flex-col w-full">
                       <div className="flex items-start space-x-3">
-                        <div className="relative inline-block">
+                        <div className="relative inline-block group/avatar">
                           <Avatar 
-                            className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0"
+                            className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0 transition-transform duration-200 ease-out will-change-transform group-hover/avatar:scale-105"
                             onClick={() => handleDeveloperClick(developer)}
                           >
                             <AvatarImage 
                               src={developer.photoUrl || developer.user.image || ''} 
                               alt={developer.user.name}
-                              className="object-cover w-full h-full"
+                              className="object-cover w-full h-full transition-transform duration-200 ease-out will-change-transform group-hover/avatar:scale-105"
                               loading={devIndex < 4 ? "eager" : "lazy"}
                               decoding="async"
                               onLoad={() => {
@@ -1041,13 +1122,13 @@ export function PeopleGrid({
                                 (e.target as HTMLImageElement).style.display = 'none';
                               }}
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg">
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg transition-colors duration-200 ease-out">
                               {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
                             </AvatarFallback>
                           </Avatar>
                           <span
-                            className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
-                              ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500' : 'bg-gray-400'
+                            className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
+                              ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
                             }`}
                             aria-label={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
                             title={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
@@ -1275,7 +1356,7 @@ export function PeopleGrid({
                     {developerServices[developer.id].slice(0, 4).map((service, serviceIdx) => (
                       <div key={service.id} className="group/service">
                         <div 
-                          className="relative w-full h-32 sm:h-56 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                          className="relative w-full h-32 sm:h-56 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-200 ease-out cursor-pointer group/service will-change-transform"
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
@@ -1284,15 +1365,23 @@ export function PeopleGrid({
                           onMouseEnter={() => prefetchServiceDetail(service.id, developer)}
                         >
                           {service.coverUrl ? (
-                            <img
-                              src={service.coverUrl}
-                              alt={service.title}
-                              className="w-full h-full object-cover group-hover/service:scale-105 transition-transform duration-200"
-                              loading={devIndex < 4 && serviceIdx < 2 ? "eager" : "lazy"}
-                              decoding="async"
-                            />
+                            <>
+                              <img
+                                src={service.coverUrl}
+                                alt={service.title}
+                                className="w-full h-full object-cover group-hover/service:scale-105 transition-transform duration-200 ease-out will-change-transform"
+                                loading={devIndex < 4 && serviceIdx < 2 ? "eager" : "lazy"}
+                                decoding="async"
+                              />
+                              {/* Hover overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/service:opacity-100 transition-opacity duration-200 ease-out"></div>
+                              {/* Hover content */}
+                              <div className="absolute bottom-2 left-2 right-2 text-white opacity-0 group-hover/service:opacity-100 transition-all duration-200 ease-out transform translate-y-1 group-hover/service:translate-y-0">
+                                <div className="text-xs font-medium truncate">{service.title}</div>
+                              </div>
+                            </>
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm sm:text-lg font-semibold">
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm sm:text-lg font-semibold group-hover/service:from-blue-600 group-hover/service:to-purple-700 transition-colors duration-200 ease-out">
                               {service.title.split(' ').map(word => word[0]).join('').substring(0, 2)}
                             </div>
                           )}
@@ -1306,7 +1395,7 @@ export function PeopleGrid({
                     <div className="text-center mt-3 sm:mt-4">
                       <Button 
                         variant="link" 
-                        className="p-0 h-auto text-blue-600 hover:text-blue-700 text-sm sm:text-base"
+                        className="p-0 h-auto text-blue-600 hover:text-blue-700 text-sm sm:text-base transition-colors duration-200 ease-out"
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -1349,6 +1438,19 @@ export function PeopleGrid({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Load More Button - Manual backup for PeopleGrid */}
+      {!isOverride && hasNextPage && !loadingMore && (
+        <div className="text-center py-8">
+          <Button 
+            onClick={loadMore}
+            variant="outline"
+            className="px-8 py-3 text-lg font-medium transition-all duration-200 ease-out will-change-transform hover:scale-105 hover:shadow-lg hover:-translate-y-0.5"
+          >
+            Load More Developers
+          </Button>
         </div>
       )}
 

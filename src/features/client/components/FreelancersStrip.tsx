@@ -140,7 +140,7 @@ export function FreelancersStrip() {
                       <div className="w-12 h-12 bg-gray-200" />
                     )}
                     <span
-                      className={`absolute right-0 top-0 inline-block w-4 h-4 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                      className={`absolute right-0 bottom-0 inline-block w-4 h-4 rounded-full border-2 border-white ${
                         freelancer.currentStatus === 'available' ? 'bg-green-500' : 'bg-gray-400'
                       }`}
                       aria-label={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}

@@ -248,7 +248,11 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
 
   // Load more function - simplified without scroll position manipulation
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasNextPage) return;
+    console.log('🔄 loadMore called:', { loadingMore, hasNextPage, nextCursor, currentPage });
+    if (loadingMore || !hasNextPage) {
+      console.log('❌ loadMore blocked:', { loadingMore, hasNextPage });
+      return;
+    }
     
     try {
       setLoadingMore(true);
@@ -260,12 +264,17 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         // Deduplicate by service ID
         const existingIds = new Set(prev.map(s => s.id));
         const newServices = result.data.filter((service: Service) => !existingIds.has(service.id));
+        console.log('📊 Services update:', { 
+          prevCount: prev.length, 
+          newCount: newServices.length, 
+          totalAfter: prev.length + newServices.length 
+        });
         return [...prev, ...newServices];
       });
       setHasNextPage(result.pagination.hasNextPage);
       setNextCursor(result.pagination.nextCursor);
       setCurrentPage(prev => prev + 1);
-      console.log('✅ More services loaded:', result.data.length, 'nextCursor:', result.pagination.nextCursor);
+      console.log('✅ More services loaded:', result.data.length, 'nextCursor:', result.pagination.nextCursor, 'hasNextPage:', result.pagination.hasNextPage);
     } catch (err) {
       console.error('Error loading more services:', err);
       setError('Failed to load more services');
@@ -274,8 +283,28 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
     }
   }, [loadingMore, hasNextPage, nextCursor, currentPage, fetchServices]);
 
-  // Set up scroll-based loading
+  // Set up scroll-based loading with better debugging
   useScrollInfiniteLoad(loadMore, hasNextPage, loadingMore, 200);
+
+  // Alternative scroll detection as backup
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loadingMore || !hasNextPage) return;
+      
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      // Trigger when user is 300px from bottom
+      if (scrollTop + windowHeight >= documentHeight - 300) {
+        console.log('🔄 Scroll-based loadMore triggered');
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadMore, hasNextPage, loadingMore]);
 
 
   const handleOpenOverlay = (service: Service) => {
@@ -382,69 +411,85 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {services.map((service) => (
-          <Card key={service.id} className="hover:shadow-md transition-shadow border border-gray-200 h-full cursor-pointer" onClick={() => handleOpenOverlay(service)}>
+        {services.map((service, index) => (
+          <Card 
+            key={service.id} 
+            className="hover:shadow-xl transition-all duration-500 border border-gray-200 h-full cursor-pointer transform hover:scale-105 hover:-translate-y-2 group overflow-hidden" 
+            onClick={() => handleOpenOverlay(service)}
+            style={{
+              animationDelay: `${index * 100}ms`,
+              animation: 'fadeInUp 0.6s ease-out forwards'
+            }}
+          >
             <CardContent className="p-0 h-full flex flex-col">
-              {/* Cover Image */}
-              <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+              {/* Cover Image with enhanced effects */}
+              <div className="relative h-48 w-full overflow-hidden rounded-t-lg group/image">
                 {service.coverUrl ? (
-                  <Image 
-                    src={service.coverUrl} 
-                    alt={service.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  />
+                  <>
+                    <Image 
+                      src={service.coverUrl} 
+                      alt={service.title}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover/image:scale-110"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"></div>
+                    {/* Hover content */}
+                    <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover/image:opacity-100 transition-all duration-300 transform translate-y-4 group-hover/image:translate-y-0">
+                      <div className="text-sm font-medium">View Details</div>
+                    </div>
+                  </>
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">No Image</span>
+                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover/image:from-blue-200 group-hover/image:to-purple-300 transition-all duration-500">
+                    <span className="text-gray-400 text-sm group-hover/image:text-gray-600 transition-colors">No Image</span>
                   </div>
                 )}
               </div>
 
               {/* Content */}
               <div className="p-5 flex-1 flex flex-col">
-                {/* Developer Info */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                {/* Developer Info with enhanced animations */}
+                <div className="flex items-center gap-3 mb-4 group/dev">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 ring-2 ring-transparent group-hover/dev:ring-blue-200 transition-all duration-300">
                     {service.developer.user.image ? (
                       <Image 
                         src={service.developer.user.image} 
                         alt={service.developer.user.name || "Developer"} 
                         width={48} 
                         height={48} 
-                        className="object-cover w-12 h-12" 
+                        className="object-cover w-12 h-12 transition-transform duration-300 group-hover/dev:scale-110" 
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gray-200" />
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-purple-300 group-hover/dev:from-blue-300 group-hover/dev:to-purple-400 transition-all duration-300" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="font-semibold text-gray-900 leading-tight">
+                    <div className="font-semibold text-gray-900 leading-tight group-hover/dev:text-blue-600 transition-colors duration-300">
                       {service.developer.user.name || "Unknown"}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 group-hover/dev:text-gray-600 transition-colors duration-300">
                       {service.developer.location || ""}
                     </div>
                   </div>
                 </div>
 
-                {/* Service Title */}
+                {/* Service Title with enhanced animations */}
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-semibold text-gray-900 text-lg line-clamp-2 flex-1">
+                  <h3 className="font-semibold text-gray-900 text-lg line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors duration-300">
                     {service.title}
                   </h3>
                   {service.status && service.status === 'DRAFT' && (
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full flex-shrink-0">
+                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full flex-shrink-0 animate-pulse">
                       Draft
                     </span>
                   )}
                 </div>
 
-                {/* Stats */}
+                {/* Stats with enhanced animations */}
                 <div className="flex items-center justify-between mb-4 text-sm">
-                  <div>
-                    <div className="font-semibold leading-tight">{service.ratingAvg.toFixed(1)}</div>
+                  <div className="group/rating">
+                    <div className="font-semibold leading-tight group-hover/rating:text-blue-600 transition-colors duration-300">{service.ratingAvg.toFixed(1)}</div>
                     <div className="mt-1 flex items-center">
                       {Array.from({ length: 5 }).map((_, i) => {
                         const ratingValue = Math.floor(service.ratingAvg);
@@ -452,7 +497,8 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                         return (
                           <span
                             key={i}
-                            className={`text-[10px] ${filled ? "text-red-500" : "text-gray-300"} mr-0.5`}
+                            className={`text-[10px] transition-all duration-300 ${filled ? "text-red-500 group-hover/rating:text-yellow-500" : "text-gray-300"} mr-0.5`}
+                            style={{ animationDelay: `${i * 100}ms` }}
                           >
                             ★
                           </span>
@@ -460,7 +506,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                       })}
                       <button
                         type="button"
-                        className="ml-2 text-gray-600 text-xs sm:text-sm hover:underline"
+                        className="ml-2 text-gray-600 text-xs sm:text-sm hover:underline hover:text-blue-600 transition-colors duration-300"
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowReviews({ open: true, developerId: service.developer.id, developerName: service.developer.user.name || "Developer" });
@@ -470,18 +516,18 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                       </button>
                     </div>
                   </div>
-                  <div>
-                    <div className="font-semibold">{service.leadsCount}</div>
-                    <div className="text-xs text-gray-500">Leads</div>
+                  <div className="group/leads">
+                    <div className="font-semibold group-hover/leads:text-green-600 transition-colors duration-300">{service.leadsCount}</div>
+                    <div className="text-xs text-gray-500 group-hover/leads:text-gray-600 transition-colors duration-300">Leads</div>
                   </div>
-                  <div>
-                    <div className="font-semibold">
+                  <div className="group/price">
+                    <div className="font-semibold group-hover/price:text-purple-600 transition-colors duration-300">
                       {service.priceType === "FIXED" 
                         ? `$${service.priceMin || 0}`
                         : `$${service.priceMin || 0}/h`
                       }
                     </div>
-                    <div className="text-xs text-gray-500">Price</div>
+                    <div className="text-xs text-gray-500 group-hover/price:text-gray-600 transition-colors duration-300">Price</div>
                   </div>
                 </div>
 
@@ -495,7 +541,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                   <GetInTouchButton
                     developerId={service.developer.id}
                     developerName={service.developer.user.name || undefined}
-                    className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900"
+                    className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900 transition-all duration-300 transform hover:scale-105 hover:shadow-md group/button"
                     variant="outline"
                   />
                 )}
@@ -521,6 +567,19 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Load More Button - Manual backup */}
+      {hasNextPage && !loadingMore && (
+        <div className="text-center py-8">
+          <Button 
+            onClick={loadMore}
+            variant="outline"
+            className="px-8 py-3 text-lg font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+          >
+            Load More Services
+          </Button>
         </div>
       )}
 
