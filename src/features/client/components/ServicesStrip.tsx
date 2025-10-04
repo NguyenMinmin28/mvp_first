@@ -7,7 +7,9 @@ import { Button } from "@/ui/components/button";
 import Image from "next/image";
 import GetInTouchModal from "./GetInTouchModal";
 import ServiceImageGallery from "./ServiceImageGallery";
-import ServiceDetailOverlay, { ServiceDetailData } from "./ServiceDetailOverlay";
+import ServiceDetailOverlay, {
+  ServiceDetailData,
+} from "./ServiceDetailOverlay";
 
 interface Service {
   id: string;
@@ -15,6 +17,7 @@ interface Service {
   title: string;
   shortDesc: string;
   coverUrl?: string | null;
+  images?: string[]; // Add multiple images support
   priceType: string;
   priceMin?: number | null;
   priceMax?: number | null;
@@ -44,17 +47,31 @@ export function ServicesStrip() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOverlayOpen, setIsDetailOverlayOpen] = useState(false);
-  const [selectedServiceForDetail, setSelectedServiceForDetail] = useState<ServiceDetailData | null>(null);
+  const [selectedServiceForDetail, setSelectedServiceForDetail] =
+    useState<ServiceDetailData | null>(null);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/services?limit=4&sort=random", { cache: "no-store" });
+        const res = await fetch("/api/services?limit=4&sort=random", {
+          cache: "no-store",
+        });
         const json = await res.json();
         if (res.ok && json?.success && Array.isArray(json.data) && mounted) {
-          setServices(json.data.slice(0, 4));
+          // Add sample images for demonstration if services don't have images
+          const servicesWithImages = json.data
+            .slice(0, 4)
+            .map((service: any) => ({
+              ...service,
+              images: service.images || [
+                "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=300&fit=crop",
+                "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
+                "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop",
+              ],
+            }));
+          setServices(servicesWithImages);
         }
       } catch (e) {
         // noop
@@ -71,7 +88,9 @@ export function ServicesStrip() {
   if (loading && services.length === 0) {
     return (
       <div className="mt-10">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">Services</h2>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">
+          Services
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
             <Card key={idx} className="border border-gray-200">
@@ -102,6 +121,7 @@ export function ServicesStrip() {
       title: service.title,
       shortDesc: service.shortDesc,
       coverUrl: service.coverUrl,
+      galleryImages: service.images, // Use galleryImages instead of images
       priceType: service.priceType,
       priceMin: service.priceMin,
       priceMax: service.priceMax,
@@ -116,7 +136,7 @@ export function ServicesStrip() {
       categories: service.categories,
       leadsCount: service.leadsCount,
     };
-    
+
     setSelectedServiceForDetail(serviceDetailData);
     setIsDetailOverlayOpen(true);
   };
@@ -137,6 +157,7 @@ export function ServicesStrip() {
         title: selectedServiceForDetail.title,
         shortDesc: selectedServiceForDetail.shortDesc,
         coverUrl: selectedServiceForDetail.coverUrl,
+        images: selectedServiceForDetail.galleryImages, // Use galleryImages
         priceType: selectedServiceForDetail.priceType,
         priceMin: selectedServiceForDetail.priceMin,
         priceMax: selectedServiceForDetail.priceMax,
@@ -158,7 +179,9 @@ export function ServicesStrip() {
   return (
     <div className="mt-24">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">Services</h2>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">
+          Services
+        </h2>
         <Button className="bg-black text-white hover:bg-black/90" asChild>
           <a href="/services">Browse more</a>
         </Button>
@@ -166,29 +189,31 @@ export function ServicesStrip() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {services.slice(0, 4).map((service) => (
-          <Card 
-            key={service.id} 
+          <Card
+            key={service.id}
             className="hover:shadow-md transition-shadow border border-gray-200 h-full cursor-pointer"
             onClick={() => handleServiceClick(service)}
           >
             <CardContent className="p-5 h-full flex flex-col">
               {/* Service Image Gallery */}
-              <ServiceImageGallery 
-                coverUrl={service.coverUrl} 
+              <ServiceImageGallery
+                coverUrl={service.coverUrl}
+                images={service.images}
                 title={service.title}
                 className="mb-4"
+                animationType="slide"
               />
-              
+
               {/* Freelancer Info */}
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100">
                   {service.developer.user.image ? (
-                    <Image 
-                      src={service.developer.user.image} 
-                      alt={service.developer.user.name || "Freelancer"} 
-                      width={24} 
-                      height={24} 
-                      className="object-cover w-6 h-6" 
+                    <Image
+                      src={service.developer.user.image}
+                      alt={service.developer.user.name || "Freelancer"}
+                      width={24}
+                      height={24}
+                      className="object-cover w-6 h-6"
                     />
                   ) : (
                     <div className="w-6 h-6 bg-gray-200" />
@@ -207,7 +232,9 @@ export function ServicesStrip() {
               {/* Stats */}
               <div className="flex items-center justify-between mb-4 text-sm">
                 <div>
-                  <div className="font-semibold leading-tight">{service.ratingAvg.toFixed(1)}</div>
+                  <div className="font-semibold leading-tight">
+                    {service.ratingAvg.toFixed(1)}
+                  </div>
                   <div className="mt-1 flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => {
                       const ratingValue = Math.floor(service.ratingAvg);
@@ -229,10 +256,9 @@ export function ServicesStrip() {
                 </div>
                 <div>
                   <div className="font-semibold">
-                    {service.priceType === "FIXED" 
+                    {service.priceType === "FIXED"
                       ? `$${service.priceMin || 0}`
-                      : `$${service.priceMin || 0}/h`
-                    }
+                      : `$${service.priceMin || 0}/h`}
                   </div>
                   <div className="text-xs text-gray-500">Price</div>
                 </div>
@@ -246,7 +272,7 @@ export function ServicesStrip() {
               {/* Hide Get in Touch button for developers */}
               {session?.user?.role !== "DEVELOPER" && (
                 <Button
-                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm" 
+                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
                   variant="outline"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -282,15 +308,15 @@ export function ServicesStrip() {
         onGetInTouch={handleDetailOverlayGetInTouch}
         onFollow={() => {
           // Handle follow action
-          console.log('Follow clicked');
+          console.log("Follow clicked");
         }}
         onPrev={() => {
           // Handle previous service
-          console.log('Previous service');
+          console.log("Previous service");
         }}
         onNext={() => {
           // Handle next service
-          console.log('Next service');
+          console.log("Next service");
         }}
         onServiceUpdate={(updatedService) => {
           // Update service data if needed

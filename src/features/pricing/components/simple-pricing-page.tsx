@@ -26,47 +26,49 @@ const plans: Plan[] = [
     period: "/monthly",
     features: [
       "Monthly Post 1 project free.",
-      "Contact up to 5 freelancer per project.",
-      "Get notified when freelancers show interest",
+      "Contact up to 10 freelancer per project.",
+      "Get notified when freelancers show interest.",
     ],
     cta: "CHOOSE YOUR PLAN",
     providerPlanId: "P-BASIC-PLAN-ID", // Sẽ được thay thế bằng real plan ID
   },
-      {
-      id: "plus",
-      name: "Plus Plan",
-      price: "$19.95",
-      priceNumber: 19.95,
-      period: "/monthly",
-      features: [
-        "Post up to 10 projects per month.",
-        "Contact up to 10 freelancer per project",
-        "Get notified when freelancers show interest",
-      ],
-      cta: "CHOOSE YOUR PLAN",
-      providerPlanId: "P-2L869865T2585332XNC24EXA",
-    },
-      {
-      id: "pro",
-      name: "Pro Plan",
-      price: "$99.95",
-      priceNumber: 99.95,
-      period: "/monthly",
-      features: [
-        "Unlimited project postings",
-        "Unlimited contacts per project.",
-        "Get notified when freelancers show interest",
-      ],
-      cta: "CHOOSE YOUR PLAN",
-      providerPlanId: "P-6BH23931L7595043MNC24EXQ",
-    },
+  {
+    id: "plus",
+    name: "Plus Plan",
+    price: "$19.95",
+    priceNumber: 19.95,
+    period: "/monthly",
+    features: [
+      "Post up to 10 projects per month.",
+      "Unlimited contacts per project.",
+      "Get notified when freelancers show interest.",
+    ],
+    cta: "CHOOSE YOUR PLAN",
+    providerPlanId: "P-2L869865T2585332XNC24EXA",
+  },
+  {
+    id: "pro",
+    name: "Pro Plan",
+    price: "$99.95",
+    priceNumber: 99.95,
+    period: "/monthly",
+    features: [
+      "Unlimited project postings",
+      "Unlimited contacts per project.",
+      "Get notified when freelancers show interest.",
+    ],
+    cta: "CHOOSE YOUR PLAN",
+    providerPlanId: "P-6BH23931L7595043MNC24EXQ",
+  },
 ];
 
 interface SimplePricingPageProps {
   currentSubscription?: any;
 }
 
-export default function SimplePricingPage({ currentSubscription }: SimplePricingPageProps) {
+export default function SimplePricingPage({
+  currentSubscription,
+}: SimplePricingPageProps) {
   const { data: session } = useSession();
 
   const handlePlanSelection = (plan: Plan) => {
@@ -86,7 +88,10 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
     if (plan.id === "basic" && session) {
       return (
         <div className="h-16 flex flex-col justify-center">
-          <Button disabled className="w-full h-12 text-sm font-semibold bg-green-600 text-white">
+          <Button
+            disabled
+            className="w-full h-12 text-sm font-semibold bg-green-600 text-white"
+          >
             ✓ Included Free
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-1">
@@ -101,7 +106,7 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
       // Kiểm tra xem user có đang subscribe plan này không
       const isCurrentPlan = currentSubscription?.package?.name === plan.name;
       const hasActiveSubscription = !!currentSubscription;
-      
+
       return (
         <div className="h-16 flex items-center">
           <PayPalButtons
@@ -121,10 +126,10 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
       plan.id === "basic"
         ? "Current Plan"
         : plan.id === "plus"
-        ? "Upgrade to Plus"
-        : plan.id === "pro"
-        ? "Upgrade to Pro"
-        : plan.cta;
+          ? "Upgrade to Plus"
+          : plan.id === "pro"
+            ? "Upgrade to Pro"
+            : plan.cta;
 
     return (
       <div className="h-16 flex items-center">
@@ -153,17 +158,17 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
                 <h3 className="font-semibold text-green-900">
-                  {currentSubscription?.package?.name || "Basic Plan"} {currentSubscription ? "Active" : "Included"}
+                  {currentSubscription?.package?.name || "Basic Plan"}{" "}
+                  {currentSubscription ? "Active" : "Included"}
                 </h3>
                 <p className="text-sm text-green-700">
-                  {currentSubscription 
+                  {currentSubscription
                     ? `You're currently subscribed to ${currentSubscription.package.name}. ${
-                        currentSubscription.package.name === "Basic Plan" 
-                          ? "Enjoy your free access!" 
+                        currentSubscription.package.name === "Basic Plan"
+                          ? "Enjoy your free access!"
                           : "Manage your subscription in your profile."
                       }`
-                    : "You already have access to Basic Plan features. Upgrade to unlock more projects and contacts!"
-                  }
+                    : "You already have access to Basic Plan features. Upgrade to unlock more projects and contacts!"}
                 </p>
               </div>
             </div>
@@ -172,9 +177,14 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan) => (
-            <Card key={plan.id} className={`border-2 flex flex-col hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "basic" && session ? "opacity-75" : ""}`}>
+            <Card
+              key={plan.id}
+              className={`border-2 flex flex-col hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "basic" && session ? "opacity-75" : ""}`}
+            >
               <CardHeader>
-                <CardTitle className="text-base font-semibold">{plan.name}</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  {plan.name}
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 <div className="py-4 border-t">
@@ -188,14 +198,18 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
                 {renderPlanButton(plan)}
 
                 <div className="mt-4 rounded-md border bg-gray-50">
-                  <div className="px-4 py-2 text-sm font-medium">Service Include:</div>
+                  <div className="px-4 py-2 text-sm font-medium">
+                    Service Include:
+                  </div>
                   <ul className="px-4 pb-4 space-y-2 text-sm text-gray-700">
                     {plan.features.map((f, i) => (
                       <li key={i} className="flex items-start gap-3">
                         <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#6D6D6D] text-white shrink-0">
                           <Check className="w-2.5 h-2.5" />
                         </span>
-                        <span className="leading-relaxed whitespace-nowrap">{f}</span>
+                        <span className="leading-relaxed whitespace-nowrap">
+                          {f}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -208,5 +222,3 @@ export default function SimplePricingPage({ currentSubscription }: SimplePricing
     </section>
   );
 }
-
-

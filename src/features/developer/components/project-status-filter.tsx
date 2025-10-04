@@ -4,7 +4,13 @@ import React from "react";
 import { Button } from "@/ui/components/button";
 import { cn } from "@/core/utils/utils";
 
-export type ProjectStatus = "NEW" | "IN_PROGRESS" | "COMPLETED" | "APPROVED" | "REJECTED" | "MANUAL_INVITATIONS";
+export type ProjectStatus =
+  | "NEW"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "APPROVED"
+  | "REJECTED"
+  | "MANUAL_INVITATIONS";
 
 export interface ProjectStatusFilterProps {
   value: ProjectStatus;
@@ -27,25 +33,25 @@ export default function ProjectStatusFilter({
   className,
 }: ProjectStatusFilterProps) {
   return (
-    <div className={cn("flex gap-4 flex-wrap", className)}>
-      {statusItems.map((item) => {
-        const isActive = value === item.key;
-        return (
-          <Button
-            key={item.key}
-            variant={isActive ? "default" : "outline"}
-            onClick={() => onChange(item.key)}
-            className={cn(
-              "rounded-xl px-8",
-              isActive ? "bg-black text-white hover:bg-black" : ""
-            )}
-          >
-            {item.label}
-          </Button>
-        );
-      })}
+    <div className={cn("overflow-x-auto", className)}>
+      <div className="flex gap-4 min-w-max px-1">
+        {statusItems.map((item) => {
+          const isActive = value === item.key;
+          return (
+            <Button
+              key={item.key}
+              variant={isActive ? "default" : "outline"}
+              onClick={() => onChange(item.key)}
+              className={cn(
+                "rounded-none px-8 cursor-pointer whitespace-nowrap flex-shrink-0",
+                isActive ? "bg-black text-white hover:bg-black" : ""
+              )}
+            >
+              {item.label}
+            </Button>
+          );
+        })}
+      </div>
     </div>
   );
 }
-
-

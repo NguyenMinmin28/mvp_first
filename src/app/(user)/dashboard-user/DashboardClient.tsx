@@ -1,19 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  startTransition,
+} from "react";
 import dynamic from "next/dynamic";
 import ClevrsLoader from "@/features/shared/components/ClevrsLoader";
 import { toast } from "sonner";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ProfileSummary from "@/features/developer/components/dashboard/profile-summary";
 import IdeaSparkList from "@/features/developer/components/dashboard/ideaspark-list";
-import ProjectStatusFilter, { type ProjectStatus as PS } from "@/features/developer/components/project-status-filter";
+import ProjectStatusFilter, {
+  type ProjectStatus as PS,
+} from "@/features/developer/components/project-status-filter";
 import { Button } from "@/ui/components/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const ProjectsSidebar = dynamic(() => import("@/features/developer/components/dashboard/projects-sidebar"), { ssr: false, loading: () => <ClevrsLoader /> });
-const ProjectDetail = dynamic(() => import("@/features/developer/components/dashboard/project-detail"), { ssr: false, loading: () => <ClevrsLoader /> });
-const ManualInvitationDetail = dynamic(() => import("@/features/developer/components/dashboard/manual-invitation-detail"), { ssr: false, loading: () => <ClevrsLoader /> });
+const ProjectsSidebar = dynamic(
+  () => import("@/features/developer/components/dashboard/projects-sidebar"),
+  { ssr: false, loading: () => <ClevrsLoader /> }
+);
+const ProjectDetail = dynamic(
+  () => import("@/features/developer/components/dashboard/project-detail"),
+  { ssr: false, loading: () => <ClevrsLoader /> }
+);
+const ManualInvitationDetail = dynamic(
+  () =>
+    import(
+      "@/features/developer/components/dashboard/manual-invitation-detail"
+    ),
+  { ssr: false, loading: () => <ClevrsLoader /> }
+);
 
 type UserIdeaSummary = {
   id: string;
@@ -33,11 +54,11 @@ type AssignedProjectItem = {
   currency?: string | null;
   skills?: string[];
   assignmentStatus?: string;
-  assignment?: { 
-    id: string; 
-    acceptanceDeadline: string; 
-    responseStatus: "pending" | "accepted" | "rejected" | "expired"; 
-    assignedAt: string; 
+  assignment?: {
+    id: string;
+    acceptanceDeadline: string;
+    responseStatus: "pending" | "accepted" | "rejected" | "expired";
+    assignedAt: string;
     batchId: string;
     source?: "AUTO_ROTATION" | "MANUAL_INVITE";
     clientMessage?: string;
@@ -60,11 +81,19 @@ export default function DashboardClient({
   const session = initialSession;
 
   const [profile, setProfile] = useState<any>(initialMe?.user ?? null);
-  const [ideas, setIdeas] = useState<UserIdeaSummary[]>(Array.isArray(initialIdeas?.ideas) ? initialIdeas!.ideas : []);
-  const [projects, setProjects] = useState<AssignedProjectItem[]>(Array.isArray(initialProjects?.projects) ? initialProjects!.projects : []);
+  const [ideas, setIdeas] = useState<UserIdeaSummary[]>(
+    Array.isArray(initialIdeas?.ideas) ? initialIdeas!.ideas : []
+  );
+  const [projects, setProjects] = useState<AssignedProjectItem[]>(
+    Array.isArray(initialProjects?.projects) ? initialProjects!.projects : []
+  );
   const [projectStatus, setProjectStatus] = useState<PS>("NEW");
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projects[0]?.id ?? null);
-  const [selectedInvitationId, setSelectedInvitationId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projects[0]?.id ?? null
+  );
+  const [selectedInvitationId, setSelectedInvitationId] = useState<
+    string | null
+  >(null);
   const [selectedInvitation, setSelectedInvitation] = useState<any>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
@@ -72,16 +101,23 @@ export default function DashboardClient({
   const abortRef = useRef<AbortController | null>(null);
 
   const selectedProject = useMemo(
-    () => (selectedProjectId ? projects.find(p => p.id === selectedProjectId) ?? null : null),
+    () =>
+      selectedProjectId
+        ? (projects.find((p) => p.id === selectedProjectId) ?? null)
+        : null,
     [selectedProjectId, projects]
   );
 
   const filteredProjects = useMemo(() => {
     const now = Date.now();
     return projects.filter((p) => {
-      const isPendingActive = p.assignment?.responseStatus === "pending" && p.assignment?.acceptanceDeadline && new Date(p.assignment.acceptanceDeadline).getTime() > now;
-      const isAcceptedAndNotCompleted = p.assignment?.responseStatus === "accepted" && p.status !== "completed";
-      
+      const isPendingActive =
+        p.assignment?.responseStatus === "pending" &&
+        p.assignment?.acceptanceDeadline &&
+        new Date(p.assignment.acceptanceDeadline).getTime() > now;
+      const isAcceptedAndNotCompleted =
+        p.assignment?.responseStatus === "accepted" && p.status !== "completed";
+
       switch (projectStatus) {
         case "NEW":
           return p.status === "recent" && isPendingActive;
@@ -110,13 +146,16 @@ export default function DashboardClient({
     }
   }, [filteredProjects.length]);
 
-  const safeFetch = useCallback(async (input: RequestInfo, init?: RequestInit) => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const res = await fetch(input, { ...init, signal: controller.signal });
-    return res;
-  }, []);
+  const safeFetch = useCallback(
+    async (input: RequestInfo, init?: RequestInit) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const res = await fetch(input, { ...init, signal: controller.signal });
+      return res;
+    },
+    []
+  );
 
   const reload = useCallback(async () => {
     try {
@@ -127,10 +166,10 @@ export default function DashboardClient({
       ]);
       if (meRes.ok) setProfile((await meRes.json()).user);
       if (ideasRes.ok) setIdeas((await ideasRes.json()).ideas ?? []);
-      if (projectsRes.ok) setProjects((await projectsRes.json()).projects ?? []);
+      if (projectsRes.ok)
+        setProjects((await projectsRes.json()).projects ?? []);
     } catch {}
   }, [safeFetch]);
-
 
   const previousProject = () => {
     if (currentIndex > 0) {
@@ -152,7 +191,11 @@ export default function DashboardClient({
     if (!selectedProject) return;
     const handler = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
-      if (projectDetailRef.current && !projectDetailRef.current.contains(t) && !t.closest("[data-project-card]")) {
+      if (
+        projectDetailRef.current &&
+        !projectDetailRef.current.contains(t) &&
+        !t.closest("[data-project-card]")
+      ) {
         setSelectedProjectId(null);
       }
     };
@@ -160,12 +203,23 @@ export default function DashboardClient({
     return () => document.removeEventListener("mousedown", handler);
   }, [selectedProject]);
 
-  const mutateProject = (projectId: string, update: Partial<AssignedProjectItem>) => {
-    setProjects(prev => prev.map(p => (p.id === projectId ? { ...p, ...update } : p)));
+  const mutateProject = (
+    projectId: string,
+    update: Partial<AssignedProjectItem>
+  ) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, ...update } : p))
+    );
   };
 
   const postAction = async (url: string, onOk: () => void) => {
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() } });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+    });
     if (res.ok) {
       onOk();
       return true;
@@ -178,91 +232,144 @@ export default function DashboardClient({
   const handleApprove = async (projectId: string) => {
     const prev = projects;
     mutateProject(projectId, { status: "approved" });
-    const ok = await postAction(`/api/user/projects/${projectId}/approve`, () => {
-      startTransition(() => setProjectStatus("APPROVED"));
-      toast.success("Approved");
-    });
+    const ok = await postAction(
+      `/api/user/projects/${projectId}/approve`,
+      () => {
+        startTransition(() => setProjectStatus("APPROVED"));
+        toast.success("Approved");
+      }
+    );
     if (!ok) setProjects(prev);
   };
 
   const handleReject = async (projectId: string) => {
     const prev = projects;
     mutateProject(projectId, { status: "rejected" });
-    const ok = await postAction(`/api/user/projects/${projectId}/reject`, () => {
-      startTransition(() => setProjectStatus("REJECTED"));
-      toast.success("Rejected");
-    });
+    const ok = await postAction(
+      `/api/user/projects/${projectId}/reject`,
+      () => {
+        startTransition(() => setProjectStatus("REJECTED"));
+        toast.success("Rejected");
+      }
+    );
     if (!ok) setProjects(prev);
   };
 
   const handleExpired = async (projectId: string) => {
     const prev = projects;
     mutateProject(projectId, { status: "rejected" });
-    const ok = await postAction(`/api/user/projects/${projectId}/expire`, () => {
-      startTransition(() => setProjectStatus("REJECTED"));
-      toast.success("Expired");
-    });
+    const ok = await postAction(
+      `/api/user/projects/${projectId}/expire`,
+      () => {
+        startTransition(() => setProjectStatus("REJECTED"));
+        toast.success("Expired");
+      }
+    );
     if (!ok) setProjects(prev);
   };
 
   const handleAcceptAssignment = async (projectId: string) => {
     const prev = projects;
-    const current = projects.find(p => p.id === projectId);
-    mutateProject(projectId, { status: "approved", assignment: current?.assignment ? { ...current.assignment, responseStatus: "accepted" } as any : undefined });
-    const ok = await postAction(`/api/user/projects/${projectId}/accept`, () => {
-      startTransition(() => setProjectStatus("APPROVED"));
-      toast.success("Accepted");
-      // Force refresh projects data to sync with server
-      setTimeout(() => reload(), 1000);
+    const current = projects.find((p) => p.id === projectId);
+    mutateProject(projectId, {
+      status: "approved",
+      assignment: current?.assignment
+        ? ({ ...current.assignment, responseStatus: "accepted" } as any)
+        : undefined,
     });
+    const ok = await postAction(
+      `/api/user/projects/${projectId}/accept`,
+      () => {
+        startTransition(() => setProjectStatus("APPROVED"));
+        toast.success("Accepted");
+        // Force refresh projects data to sync with server
+        setTimeout(() => reload(), 1000);
+      }
+    );
     if (!ok) setProjects(prev);
   };
 
   const handleRejectAssignment = async (projectId: string) => {
     const prev = projects;
-    const current = projects.find(p => p.id === projectId);
-    mutateProject(projectId, { status: "rejected", assignment: current?.assignment ? { ...current.assignment, responseStatus: "rejected" } as any : undefined });
-    const ok = await postAction(`/api/user/projects/${projectId}/reject`, () => {
-      startTransition(() => setProjectStatus("REJECTED"));
-      toast.success("Assignment rejected");
-      // Force refresh projects data to sync with server
-      setTimeout(() => reload(), 1000);
+    const current = projects.find((p) => p.id === projectId);
+    mutateProject(projectId, {
+      status: "rejected",
+      assignment: current?.assignment
+        ? ({ ...current.assignment, responseStatus: "rejected" } as any)
+        : undefined,
     });
+    const ok = await postAction(
+      `/api/user/projects/${projectId}/reject`,
+      () => {
+        startTransition(() => setProjectStatus("REJECTED"));
+        toast.success("Assignment rejected");
+        // Force refresh projects data to sync with server
+        setTimeout(() => reload(), 1000);
+      }
+    );
     if (!ok) setProjects(prev);
   };
 
   if (!session?.user) return <ClevrsLoader />;
 
-  const isApprovalPending = profile?.adminApprovalStatus && profile.adminApprovalStatus !== "approved";
+  const isApprovalPending =
+    profile?.adminApprovalStatus && profile.adminApprovalStatus !== "approved";
 
   return (
     <UserLayout user={session.user}>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
         {isApprovalPending && (
           <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-900 px-3 py-2 text-sm">
-            Your account is pending admin verification. You can still browse and use the dashboard. We'll notify you once approved.
+            Your account is pending admin verification. You can still browse and
+            use the dashboard. We'll notify you once approved.
           </div>
         )}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-          <div className="xl:col-span-2"><ProfileSummary profile={profile} /></div>
-          <div className="xl:col-span-1"><IdeaSparkList profile={profile} /></div>
+          <div className="xl:col-span-2">
+            <ProfileSummary profile={profile} />
+          </div>
+          <div className="xl:col-span-1">
+            <IdeaSparkList profile={profile} />
+          </div>
         </div>
 
         <div className="mt-4 sm:mt-6">
-          <ProjectStatusFilter value={projectStatus} onChange={(v) => startTransition(() => setProjectStatus(v))} />
+          <ProjectStatusFilter
+            value={projectStatus}
+            onChange={(v) => startTransition(() => setProjectStatus(v))}
+          />
         </div>
-
 
         <div className="mt-4 sm:mt-6">
           {filteredProjects.length > 0 && (
             <div className="xl:hidden mb-4">
               <div className="flex items-center justify-between bg-white rounded-lg border p-3">
                 <div className="flex items-center gap-3">
-                  <Button variant="outline" size="sm" onClick={previousProject} disabled={currentIndex === 0} className="h-8 w-8 p-0"><ChevronLeft className="h-4 w-4" /></Button>
-                  <div className="text-sm font-medium">{currentIndex + 1} of {filteredProjects.length}</div>
-                  <Button variant="outline" size="sm" onClick={nextProject} disabled={currentIndex === filteredProjects.length - 1} className="h-8 w-8 p-0"><ChevronRight className="h-4 w-4" /></Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={previousProject}
+                    disabled={currentIndex === 0}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-sm font-medium">
+                    {currentIndex + 1} of {filteredProjects.length}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={nextProject}
+                    disabled={currentIndex === filteredProjects.length - 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="text-sm text-gray-600">{selectedProject?.name ?? "No project selected"}</div>
+                <div className="text-sm text-gray-600">
+                  {selectedProject?.name ?? "No project selected"}
+                </div>
               </div>
             </div>
           )}
@@ -276,7 +383,9 @@ export default function DashboardClient({
                   startTransition(() => {
                     setSelectedProjectId(p?.id ?? null);
                     setSelectedInvitationId(null); // Clear invitation selection
-                    const idx = p ? filteredProjects.findIndex(x => x.id === p.id) : -1;
+                    const idx = p
+                      ? filteredProjects.findIndex((x) => x.id === p.id)
+                      : -1;
                     if (idx >= 0) setCurrentIndex(idx);
                   });
                 }}
@@ -297,13 +406,16 @@ export default function DashboardClient({
                   onAccept={async (invitationId) => {
                     console.log(`🔄 Accepting invitation: ${invitationId}`);
                     try {
-                      const response = await fetch(`/api/candidates/${invitationId}/accept`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        credentials: 'include'
-                      });
+                      const response = await fetch(
+                        `/api/candidates/${invitationId}/accept`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          credentials: "include",
+                        }
+                      );
 
                       if (response.ok) {
                         toast.success("Invitation accepted successfully!");
@@ -311,7 +423,9 @@ export default function DashboardClient({
                         window.location.reload();
                       } else {
                         const errorData = await response.json();
-                        toast.error(errorData.error || "Failed to accept invitation");
+                        toast.error(
+                          errorData.error || "Failed to accept invitation"
+                        );
                       }
                     } catch (error) {
                       console.error("Error accepting invitation:", error);
@@ -321,13 +435,16 @@ export default function DashboardClient({
                   onReject={async (invitationId) => {
                     console.log(`🔄 Rejecting invitation: ${invitationId}`);
                     try {
-                      const response = await fetch(`/api/candidates/${invitationId}/reject`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        credentials: 'include'
-                      });
+                      const response = await fetch(
+                        `/api/candidates/${invitationId}/reject`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          credentials: "include",
+                        }
+                      );
 
                       if (response.ok) {
                         toast.success("Invitation rejected successfully!");
@@ -335,7 +452,9 @@ export default function DashboardClient({
                         window.location.reload();
                       } else {
                         const errorData = await response.json();
-                        toast.error(errorData.error || "Failed to reject invitation");
+                        toast.error(
+                          errorData.error || "Failed to reject invitation"
+                        );
                       }
                     } catch (error) {
                       console.error("Error rejecting invitation:", error);
@@ -360,5 +479,3 @@ export default function DashboardClient({
     </UserLayout>
   );
 }
-
-

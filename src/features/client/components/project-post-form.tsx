@@ -368,276 +368,268 @@ export function ProjectPostForm({
   const isGuest = status === "unauthenticated";
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col pt-0 justify-between h-full project-form-content">
+      {title && (
+        <h1 className="text-5xl font-bold text-gray-900 mb-4">{title}</h1>
+      )}
+      {/* Project Title */}
       <div>
-        <div className="pt-0 space-y-5 project-form-content">
-          {title && (
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">{title}</h1>
-          )}
-          {/* Project Title */}
-          <div>
-            <Input
-              id="project-title"
-              placeholder="Project Title"
-              value={projectTitle}
-              onChange={(e) => {
-                setProjectTitle(e.target.value);
-                clearFieldError("projectTitle");
-              }}
-              className={`h-12 w-full bg-[#F3F3F3] border-0 ${validationErrors.projectTitle ? "border-red-500 focus:ring-red-500" : ""}`}
-              required
-            />
-            {validationErrors.projectTitle && (
-              <p className="text-red-500 text-sm mt-1">
-                Project title is required
-              </p>
-            )}
-          </div>
+        <Input
+          id="project-title"
+          placeholder="Project Title"
+          value={projectTitle}
+          onChange={(e) => {
+            setProjectTitle(e.target.value);
+            clearFieldError("projectTitle");
+          }}
+          className={`h-12 w-full bg-[#F3F3F3] border-0 ${validationErrors.projectTitle ? "border-red-500 focus:ring-red-500" : ""}`}
+          required
+        />
+        {validationErrors.projectTitle && (
+          <p className="text-red-500 text-sm mt-1">Project title is required</p>
+        )}
+      </div>
 
-          {/* Description */}
-          <div>
-            <textarea
-              id="project-description"
-              placeholder="Project Description"
-              value={projectDescription}
-              onChange={(e) => {
-                setProjectDescription(e.target.value);
-                clearFieldError("projectDescription");
-              }}
-              className={`w-full text-sm px-3 py-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none bg-[#F3F3F3] ${
-                validationErrors.projectDescription
-                  ? "border-red-500 focus:ring-red-500"
-                  : "focus:ring-black"
-              }`}
-              rows={5}
-              required
-            />
-            {validationErrors.projectDescription && (
-              <p className="text-red-500 text-sm mt-1">
-                Project description is required
-              </p>
-            )}
-          </div>
+      {/* Description */}
+      <div>
+        <textarea
+          id="project-description"
+          placeholder="Project Description"
+          value={projectDescription}
+          onChange={(e) => {
+            setProjectDescription(e.target.value);
+            clearFieldError("projectDescription");
+          }}
+          className={`w-full text-sm px-3 py-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none bg-[#F3F3F3] ${
+            validationErrors.projectDescription
+              ? "border-red-500 focus:ring-red-500"
+              : "focus:ring-black"
+          }`}
+          rows={5}
+          required
+        />
+        {validationErrors.projectDescription && (
+          <p className="text-red-500 text-sm mt-1">
+            Project description is required
+          </p>
+        )}
+      </div>
 
-          {/* Skills */}
-          <div>
-            {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {selectedSkills.map((s) => (
-                  <Badge
-                    key={s.id}
-                    className="px-3 py-1.5 cursor-pointer bg-gray-800 text-white hover:bg-gray-700 transition-colors rounded-md text-sm font-medium"
-                    onClick={() => removeSkill(s.id)}
-                  >
-                    {s.name} ×
-                  </Badge>
-                ))}
-              </div>
-            )}
-            <div className="relative" ref={skillDropdownRef}>
-              <Button
-                type="button"
-                variant="outline"
-                className={`h-12 w-full justify-between bg-[#F3F3F3] border-0 text-gray-700 hover:bg-gray-200 transition-colors py-3 ${validationErrors.skills ? "border-red-500 text-red-600" : ""}`}
-                onClick={handleToggleDropdown}
+      {/* Skills */}
+      <div>
+        {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {selectedSkills.map((s) => (
+              <Badge
+                key={s.id}
+                className="px-3 py-1.5 cursor-pointer bg-gray-800 text-white hover:bg-gray-700 transition-colors rounded-md text-sm font-medium"
+                onClick={() => removeSkill(s.id)}
               >
-                {Array.isArray(selectedSkills) && selectedSkills.length > 0
-                  ? `${selectedSkills.length}/5 selected`
-                  : "Skills (max 5)"}
-                <span className="ml-2">▾</span>
-              </Button>
-              {skillOpen && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border-0 bg-white shadow-lg">
-                  {skillsLoading ? (
-                    <div className="p-2 text-sm text-gray-500">
-                      Loading skills...
-                    </div>
-                  ) : !Array.isArray(filteredSkills) ||
-                    filteredSkills.length === 0 ? (
-                    <div className="p-2 text-sm text-gray-500">No options</div>
-                  ) : (
-                    filteredSkills.map((s) => (
-                      <label
-                        key={s.id}
-                        className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-sm ${Array.isArray(skills) && skills.length >= 5 && !skills.includes(s.id) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={
-                            Array.isArray(skills) && skills.includes(s.id)
-                          }
-                          disabled={
-                            Array.isArray(skills) &&
-                            skills.length >= 5 &&
-                            !skills.includes(s.id)
-                          }
-                          onChange={(e) =>
-                            e.target.checked
-                              ? addSkill(s.id)
-                              : removeSkill(s.id)
-                          }
-                        />
-                        <span>{s.name}</span>
-                      </label>
-                    ))
-                  )}
+                {s.name} ×
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="relative" ref={skillDropdownRef}>
+          <Button
+            type="button"
+            variant="outline"
+            className={`h-12 w-full justify-between bg-[#F3F3F3] border-0 text-gray-700 hover:bg-gray-200 transition-colors py-3 ${validationErrors.skills ? "border-red-500 text-red-600" : ""}`}
+            onClick={handleToggleDropdown}
+          >
+            {Array.isArray(selectedSkills) && selectedSkills.length > 0
+              ? `${selectedSkills.length}/5 selected`
+              : "Skills (max 5)"}
+            <span className="ml-2">▾</span>
+          </Button>
+          {skillOpen && (
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border-0 bg-white shadow-lg">
+              {skillsLoading ? (
+                <div className="p-2 text-sm text-gray-500">
+                  Loading skills...
                 </div>
+              ) : !Array.isArray(filteredSkills) ||
+                filteredSkills.length === 0 ? (
+                <div className="p-2 text-sm text-gray-500">No options</div>
+              ) : (
+                filteredSkills.map((s) => (
+                  <label
+                    key={s.id}
+                    className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-sm ${Array.isArray(skills) && skills.length >= 5 && !skills.includes(s.id) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={Array.isArray(skills) && skills.includes(s.id)}
+                      disabled={
+                        Array.isArray(skills) &&
+                        skills.length >= 5 &&
+                        !skills.includes(s.id)
+                      }
+                      onChange={(e) =>
+                        e.target.checked ? addSkill(s.id) : removeSkill(s.id)
+                      }
+                    />
+                    <span>{s.name}</span>
+                  </label>
+                ))
               )}
             </div>
-            {validationErrors.skills && (
-              <p className="text-red-500 text-sm mt-1">
-                Please select at least one skill (max 5)
-              </p>
-            )}
-          </div>
-
-          {/* Budget Range */}
-          <div>
-            <div className="flex items-center space-x-3">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={budgetMin}
-                  onChange={(e) => {
-                    setBudgetMin(e.target.value);
-                    clearFieldError("budget");
-                  }}
-                  className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
-                  min="0"
-                  step="0.01"
-                  required
-                  inputMode="decimal"
-                  onKeyDown={(e) => {
-                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
-                  }}
-                  onInput={(e) => {
-                    const el = e.currentTarget;
-                    if (el.value === "") return;
-                    const n = Number(el.value);
-                    if (Number.isNaN(n)) {
-                      el.value = "";
-                      return;
-                    }
-                    if (n < 0) el.value = "0";
-                  }}
-                />
-              </div>
-              <span className="text-gray-600">-</span>
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={budgetMax}
-                  onChange={(e) => {
-                    setBudgetMax(e.target.value);
-                    clearFieldError("budget");
-                  }}
-                  className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
-                  min="0"
-                  step="0.01"
-                  required
-                  inputMode="decimal"
-                  onKeyDown={(e) => {
-                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
-                  }}
-                  onInput={(e) => {
-                    const el = e.currentTarget;
-                    if (el.value === "") return;
-                    const n = Number(el.value);
-                    if (Number.isNaN(n)) {
-                      el.value = "";
-                      return;
-                    }
-                    if (n < 0) el.value = "0";
-                  }}
-                />
-              </div>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-12 w-20 bg-[#F3F3F3] border-0 focus:ring-2 focus:ring-black focus:ring-offset-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="VND">VND</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {validationErrors.budget && (
-              <p className="text-red-500 text-sm mt-1">Enter budget range (min or max)</p>
-            )}
-          </div>
-
-          {/* Project Type - moved below Budget as requested */}
-          <div>
-            <div className="flex items-center space-x-6">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="fixed"
-                  checked={paymentMethod === "fixed"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-4 w-4 text-black focus:ring-black"
-                />
-                <span className="text-sm text-gray-700">Pay fixed price</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="hourly"
-                  checked={paymentMethod === "hourly"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-4 w-4 text-black focus:ring-black"
-                />
-                <span className="text-sm text-gray-700">Pay by the hours</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Post Project Button */}
-          <Button
-            className="h-12 w-full bg-black text-white hover:bg-black/90"
-            onClick={
-              isGuest ? () => router.push("/auth/signup") : handleFindFreelancer
-            }
-            disabled={isSubmitting}
-          >
-            {isGuest ? (
-              "Sign Up to Post Project"
-            ) : isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Finding...
-              </>
-            ) : (
-              "Find"
-            )}
-          </Button>
-
-          {/* Auth prompts when unauthenticated */}
-          {isGuest && (
-            <div className="text-center">
-              <span className="text-sm text-gray-600">
-                Already have an account ?{" "}
-              </span>
-              <a href="/auth/signin" className="text-sm underline">
-                Log in
-              </a>
-            </div>
           )}
+        </div>
+        {validationErrors.skills && (
+          <p className="text-red-500 text-sm mt-1">
+            Please select at least one skill (max 5)
+          </p>
+        )}
+      </div>
 
-          {/* Hide login link when authenticated */}
+      {/* Budget Range */}
+      <div>
+        <div className="flex items-center space-x-3">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+              $
+            </span>
+            <Input
+              type="number"
+              placeholder="Min"
+              value={budgetMin}
+              onChange={(e) => {
+                setBudgetMin(e.target.value);
+                clearFieldError("budget");
+              }}
+              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
+              min="0"
+              step="0.01"
+              required
+              inputMode="decimal"
+              onKeyDown={(e) => {
+                if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+              }}
+              onInput={(e) => {
+                const el = e.currentTarget;
+                if (el.value === "") return;
+                const n = Number(el.value);
+                if (Number.isNaN(n)) {
+                  el.value = "";
+                  return;
+                }
+                if (n < 0) el.value = "0";
+              }}
+            />
+          </div>
+          <span className="text-gray-600">-</span>
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+              $
+            </span>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={budgetMax}
+              onChange={(e) => {
+                setBudgetMax(e.target.value);
+                clearFieldError("budget");
+              }}
+              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
+              min="0"
+              step="0.01"
+              required
+              inputMode="decimal"
+              onKeyDown={(e) => {
+                if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+              }}
+              onInput={(e) => {
+                const el = e.currentTarget;
+                if (el.value === "") return;
+                const n = Number(el.value);
+                if (Number.isNaN(n)) {
+                  el.value = "";
+                  return;
+                }
+                if (n < 0) el.value = "0";
+              }}
+            />
+          </div>
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger className="h-12 w-20 bg-[#F3F3F3] border-0 focus:ring-2 focus:ring-black focus:ring-offset-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USD">USD</SelectItem>
+              <SelectItem value="VND">VND</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {validationErrors.budget && (
+          <p className="text-red-500 text-sm mt-1">
+            Enter budget range (min or max)
+          </p>
+        )}
+      </div>
+
+      {/* Project Type - moved below Budget as requested */}
+      <div>
+        <div className="flex items-center space-x-6">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="fixed"
+              checked={paymentMethod === "fixed"}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="h-4 w-4 text-black focus:ring-black"
+            />
+            <span className="text-sm text-gray-700">Pay fixed price</span>
+          </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="hourly"
+              checked={paymentMethod === "hourly"}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="h-4 w-4 text-black focus:ring-black"
+            />
+            <span className="text-sm text-gray-700">Pay by the hours</span>
+          </label>
         </div>
       </div>
+
+      {/* Post Project Button */}
+      <Button
+        className="h-12 w-full bg-black text-white hover:bg-black/90"
+        onClick={
+          isGuest ? () => router.push("/auth/signup") : handleFindFreelancer
+        }
+        disabled={isSubmitting}
+      >
+        {isGuest ? (
+          "Sign Up to Post Project"
+        ) : isSubmitting ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Finding...
+          </>
+        ) : (
+          "Find"
+        )}
+      </Button>
+
+      {/* Auth prompts when unauthenticated */}
+      {isGuest && (
+        <div className="text-center">
+          <span className="text-sm text-gray-600">
+            Already have an account ?{" "}
+          </span>
+          <a href="/auth/signin" className="text-sm underline">
+            Log in
+          </a>
+        </div>
+      )}
+
+      {/* Hide login link when authenticated */}
     </div>
   );
 }
