@@ -174,67 +174,145 @@ export default function SignUpClient() {
   };
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Top black bar with LOGO and Menu */}
-      <div className="w-full h-14 bg-black flex items-center">
-        <div className="max-w-4xl mx-auto w-full px-4 flex items-center justify-between">
-          <img
-            src="/images/home/clervelogo.png"
-            alt="Clevrs"
-            className="h-6 w-auto"
-          />
-          {/* Navigation Menu */}
-          <nav className="flex items-center space-x-6">
-            <Link
-              href="/"
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              Home
+    <main className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+      {/* Top Navigation */}
+      <nav className="absolute top-0 left-0 right-0 z-10 py-6 px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <img 
+              src="/images/home/clervelogoblack.png" 
+              alt="Clevrs" 
+              className="h-10 w-auto transition-transform duration-300 group-hover:scale-105"
+            />
+          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/help" className="text-sm text-gray-600 hover:text-black transition-colors">
+              Help Center
             </Link>
-            <Link
-              href="/about"
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              About
-            </Link>
-            <Link
-              href="/pricing"
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
+            <Link href="/pricing" className="text-sm text-gray-600 hover:text-black transition-colors">
               Pricing
             </Link>
-            <Link
-              href="/help"
-              className="text-white hover:text-gray-300 transition-colors text-sm font-medium"
-            >
-              Help
+            <Link href="/auth/signin" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+              Sign in
             </Link>
-          </nav>
-        </div>
-      </div>
-
-      {/* Centered form */}
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="flex flex-col max-w-md mx-auto justify-center py-16">
-          <div className="w-full max-w-sm mx-auto">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                {currentStep === "signup"
-                  ? "Create account"
-                  : currentStep === "send-verification"
-                    ? "Verify your email"
-                    : "Enter verification code"}
-              </h1>
-              <p className="text-sm text-gray-600">
-                {currentStep === "signup"
-                  ? "Join the freelancer community today"
-                  : currentStep === "send-verification"
-                    ? "We'll send a verification code to your email"
-                    : "Enter the 6-digit code we sent to your email"}
-              </p>
-            </div>
           </div>
+        </div>
+      </nav>
+
+      {/* Main Content - Two Column Layout */}
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="max-w-7xl w-full mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            
+            {/* Left Column - Branding & Benefits */}
+            <div className="hidden lg:block space-y-8 animate-fade-in-bottom">
+              <div>
+                <h1 className="text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+                  Start your journey with
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                    Clevrs
+                  </span>
+                </h1>
+                <p className="text-xl text-gray-600 leading-relaxed">
+                  Join thousands of freelancers and clients building the future of work together.
+                </p>
+              </div>
+
+              {/* Benefits */}
+              <div className="space-y-6">
+                <div className="flex items-start gap-4 group">
+                  <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Free to Join</h3>
+                    <p className="text-gray-600 text-sm">Create your account in seconds. No credit card required.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+                  <div className="flex-shrink-0 w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Join Global Community</h3>
+                    <p className="text-gray-600 text-sm">Connect with professionals from around the world</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+                  <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Verified & Safe</h3>
+                    <p className="text-gray-600 text-sm">All accounts are verified for your safety and trust</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-6 pt-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">50K+</div>
+                  <div className="text-sm text-gray-600">Active Users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">100K+</div>
+                  <div className="text-sm text-gray-600">Projects</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">4.9★</div>
+                  <div className="text-sm text-gray-600">Rating</div>
+                </div>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <p className="text-sm text-gray-600 mb-4">Trusted by leading companies worldwide</p>
+                <div className="flex items-center gap-6 opacity-60">
+                  <div className="text-2xl font-bold text-gray-800">PAYPAL</div>
+                  <div className="text-2xl font-bold text-gray-800">STRIPE</div>
+                  <div className="text-2xl font-bold text-gray-800">WISE</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Sign Up Form */}
+            <div className="w-full max-w-md mx-auto lg:mx-0">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-gray-100 animate-scale-up">
+                {/* Mobile Logo */}
+                <div className="lg:hidden mb-6 text-center">
+                  <img 
+                    src="/images/home/clervelogoblack.png" 
+                    alt="Clevrs" 
+                    className="h-10 w-auto mx-auto mb-4"
+                  />
+                </div>
+
+                {/* Header */}
+                <div className="mb-8">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                    {currentStep === "signup"
+                      ? "Create your account"
+                      : currentStep === "send-verification"
+                        ? "Verify your email"
+                        : "Enter verification code"}
+                  </h2>
+                  <p className="text-gray-600">
+                    {currentStep === "signup"
+                      ? "Get started for free. No credit card needed."
+                      : currentStep === "send-verification"
+                        ? "We'll send a verification code to your email"
+                        : "Enter the 6-digit code we sent to your email"}
+                  </p>
+                </div>
 
           {/* Server Error Display */}
           {serverError && (
@@ -321,53 +399,71 @@ export default function SignUpClient() {
               {/* Email + Password */}
               <form
                 onSubmit={handleSubmit(handleEmailSignUp)}
-                className="space-y-4"
+                className="space-y-5"
               >
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter email"
-                  {...register("email")}
-                  className={cn("h-12", errors.email ? "border-red-500" : "")}
-                />
-                <FieldError error={errors.email?.message} />
-
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  {...register("password")}
-                  className={cn(
-                    "h-12",
-                    errors.password ? "border-red-500" : ""
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email address
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    {...register("email")}
+                    className={`h-12 ${errors.email ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple-500 focus:ring-purple-500"} transition-all duration-300`}
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
                   )}
-                />
-                <FieldError error={errors.password?.message} />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a strong password (min. 6 characters)"
+                    {...register("password")}
+                    className={`h-12 ${errors.password ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-purple-500 focus:ring-purple-500"} transition-all duration-300`}
+                  />
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  )}
+                </div>
 
                 <Button
                   type="submit"
                   disabled={!isValid || isLoading}
-                  className="w-full bg-black text-white hover:bg-black/90 h-12"
+                  className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  {isLoading ? "Continue" : "Continue"}
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Creating account...
+                    </div>
+                  ) : (
+                    "Create account"
+                  )}
                 </Button>
               </form>
 
               {/* Divider */}
               <div className="flex items-center my-6">
-                <span className="flex-1 h-px bg-gray-300" />
-                <span className="px-4 text-gray-400">or</span>
-                <span className="flex-1 h-px bg-gray-300" />
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+                <span className="mx-4 text-sm text-gray-500 font-medium">OR</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
               </div>
 
-              {/* Google */}
+              {/* Google Sign Up */}
               <Button
                 onClick={handleGoogleSignUp}
                 disabled={isLoading}
                 variant="outline"
-                className="w-full h-12 bg-gray-100 hover:bg-gray-100 text-gray-900 border-0"
+                className="w-full h-12 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 transform hover:scale-105"
               >
-                <span className="mr-2">
+                <span className="mr-3">
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -387,15 +483,28 @@ export default function SignUpClient() {
                     />
                   </svg>
                 </span>
-                Continue with Google
+                <span className="font-semibold text-gray-700">Continue with Google</span>
               </Button>
 
-              {/* Bottom call-to-action */}
-              <Link href="/auth/signin" className="block mt-10">
-                <Button className="w-full bg-black text-white hover:bg-black/90">
-                  Already have an account? Log in here
-                </Button>
-              </Link>
+              {/* Sign In Link */}
+              <div className="mt-8 text-center">
+                <p className="text-gray-600">
+                  Already have an account?{" "}
+                  <Link href="/auth/signin" className="font-semibold text-purple-600 hover:text-purple-700 transition-colors">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+
+              {/* Terms & Privacy */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-xs text-center text-gray-500">
+                  By creating an account, you agree to our{" "}
+                  <a href="#" className="underline hover:text-gray-700">Terms of Service</a>
+                  {" "}and{" "}
+                  <a href="#" className="underline hover:text-gray-700">Privacy Policy</a>
+                </p>
+              </div>
             </>
           )}
 
@@ -414,6 +523,9 @@ export default function SignUpClient() {
               onBack={() => setCurrentStep("send-verification")}
             />
           )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

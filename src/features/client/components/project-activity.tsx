@@ -13,7 +13,8 @@ import {
   LayoutGrid,
   List as ListIcon,
   MoreHorizontal,
-  Share
+  Share,
+  Sparkles
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -34,13 +35,38 @@ export default function ProjectActivity() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState<number>(1);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [visibleProjects, setVisibleProjects] = useState<Set<string>>(new Set());
+  const [hoveredProject, setHoveredProject] = useState<string | null>(null);
   const pageSize = viewMode === "grid" ? 4 : 5;
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const projectId = entry.target.getAttribute('data-project-id');
+            if (projectId) {
+              setVisibleProjects(prev => new Set([...prev, projectId]));
+            }
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    const projectElements = document.querySelectorAll('[data-project-id]');
+    projectElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [projects]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -136,8 +162,37 @@ export default function ProjectActivity() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      <div className="mt-24 md:mt-36 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-10 w-64 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse rounded-lg"></div>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 bg-gray-200 animate-pulse rounded-lg"></div>
+            <div className="h-12 w-12 bg-gray-200 animate-pulse rounded-lg"></div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <Card key={idx} className="rounded-2xl border border-gray-300 shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 bg-gray-200 animate-pulse rounded-lg"></div>
+                    <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                  <div className="h-6 w-6 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+                <div className="h-5 w-20 bg-gray-200 animate-pulse rounded"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 w-3/4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+                <div className="h-10 w-full bg-gray-200 animate-pulse rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -166,14 +221,20 @@ export default function ProjectActivity() {
   }
 
   return (
-    <div className="mt-24 md:mt-36 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-4xl font-extrabold text-gray-900">Project Overview</h2>
+    <div ref={sectionRef} className="mt-24 md:mt-36 space-y-6">
+      <div className="flex items-center justify-between animate-fade-in-up">
+        <div className="flex items-center gap-3">
+          <h2 className="text-4xl font-extrabold text-gray-900 hover:text-blue-600 transition-all duration-300 cursor-pointer title-glow title-underline">
+            Project Overview
+          </h2>
+        </div>
 
         <div className="flex items-center gap-3">
           <button
-            className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-              viewMode === "grid" ? "bg-black text-white" : "border border-black text-black"
+            className={`h-12 w-12 rounded-lg flex items-center justify-center transition-all duration-300 transform hover:scale-105 ${
+              viewMode === "grid" 
+                ? "bg-black text-white shadow-lg" 
+                : "border border-black text-black hover:bg-gray-50"
             }`}
             onClick={() => { setViewMode("grid"); setPage(1); }}
             aria-label="Grid view"
@@ -181,8 +242,10 @@ export default function ProjectActivity() {
             <LayoutGrid className="h-6 w-6" />
           </button>
           <button
-            className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-              viewMode === "list" ? "bg-black text-white" : "border border-black text-black"
+            className={`h-12 w-12 rounded-lg flex items-center justify-center transition-all duration-300 transform hover:scale-105 ${
+              viewMode === "list" 
+                ? "bg-black text-white shadow-lg" 
+                : "border border-black text-black hover:bg-gray-50"
             }`}
             onClick={() => { setViewMode("list"); setPage(1); }}
             aria-label="List view"
@@ -196,13 +259,31 @@ export default function ProjectActivity() {
         {projects.slice((page - 1) * pageSize, page * pageSize).map((project, index) => {
           const isDraft = project.status === "draft" || project.status === "submitted";
           const isLastItem = index === projects.slice((page - 1) * pageSize, page * pageSize).length - 1;
+          const isVisible = visibleProjects.has(project.id);
+          const isHovered = hoveredProject === project.id;
+          
           return (
-            <Card key={project.id} className={`${viewMode === "list" ? "rounded-none border-l-0 border-r-0 border-t-0" : "rounded-2xl border border-gray-300 shadow-sm"} ${viewMode === "list" && !isLastItem ? "border-b border-gray-200" : viewMode === "list" ? "border-b border-gray-300" : ""}`}>
+            <Card 
+              key={project.id} 
+              data-project-id={project.id}
+              className={`
+                ${viewMode === "list" ? "rounded-none border-l-0 border-r-0 border-t-0" : "rounded-2xl border border-gray-300 shadow-sm"} 
+                ${viewMode === "list" && !isLastItem ? "border-b border-gray-200" : viewMode === "list" ? "border-b border-gray-300" : ""}
+                transition-all duration-500 transform
+                ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
+                hover:shadow-xl hover:scale-105 hover:-translate-y-2
+                ${isHovered ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
+                group cursor-pointer
+              `}
+              style={{ transitionDelay: `${index * 100}ms` }}
+              onMouseEnter={() => setHoveredProject(project.id)}
+              onMouseLeave={() => setHoveredProject(null)}
+            >
               <CardContent className={`${viewMode === "list" ? "p-3" : "p-6"} ${viewMode === "list" ? "flex items-center justify-between" : "space-y-4"}`}>
                 {viewMode === "list" ? (
                   <>
                     {/* Icon */}
-                    <div className="flex h-10 w-10 items-center justify-center flex-shrink-0">
+                    <div className="flex h-10 w-10 items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                       <img src="/images/client/projecticon.png" alt="project" className="h-6 w-6 object-contain" />
                     </div>
 
@@ -213,9 +294,22 @@ export default function ProjectActivity() {
 
                     {/* Status */}
                     <div className="flex-shrink-0 w-1/6">
-                      <p className="text-sm font-bold text-gray-900 truncate">
+                      <Badge 
+                        className={`
+                          text-sm font-bold truncate transition-all duration-300
+                          ${isDraft 
+                            ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" 
+                            : project.status === "completed" 
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : project.status === "in_progress"
+                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          }
+                          group-hover:scale-105
+                        `}
+                      >
                         {formatStatus(project.status)}
-                      </p>
+                      </Badge>
                     </div>
 
                     {/* Description */}
@@ -230,15 +324,21 @@ export default function ProjectActivity() {
                     {/* Button */}
                     <div className="flex-1 min-w-0">
                       <Button
-                        className={`${
-                          isDraft
-                            ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
-                            : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
-                        } h-8 w-full text-sm transition-colors`}
+                        className={`
+                          h-8 w-full text-sm transition-all duration-300 transform
+                          ${isDraft
+                            ? "bg-black text-white hover:bg-black/90 active:bg-black/90 hover:scale-105"
+                            : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white hover:scale-105"
+                          }
+                          group-hover:shadow-lg
+                        `}
                         variant={isDraft ? "default" : "outline"}
                         onClick={() => router.push(`/projects/${project.id}`)}
                       >
-                        Fill in Draft
+                        <span className="flex items-center gap-2">
+                          Fill in Draft
+                          {isDraft && <Sparkles className="h-3 w-3 animate-pulse" />}
+                        </span>
                       </Button>
                     </div>
 
@@ -278,10 +378,10 @@ export default function ProjectActivity() {
                     {/* Grid view layout */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center">
+                        <div className="flex h-12 w-12 items-center justify-center group-hover:scale-110 transition-transform duration-300">
                           <img src="/images/client/projecticon.png" alt="project" className="h-8 w-8 object-contain" />
                         </div>
-                        <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                        <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors duration-300">{project.name}</h3>
                       </div>
                       <div className="relative" ref={dropdownRef}>
                         <button
@@ -314,12 +414,27 @@ export default function ProjectActivity() {
                       </div>
                     </div>
 
-                    <div className="text-sm font-semibold text-gray-900">
-                      {formatStatus(project.status)}
+                    <div className="text-sm font-semibold">
+                      <Badge 
+                        className={`
+                          transition-all duration-300
+                          ${isDraft 
+                            ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" 
+                            : project.status === "completed" 
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : project.status === "in_progress"
+                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          }
+                          group-hover:scale-105
+                        `}
+                      >
+                        {formatStatus(project.status)}
+                      </Badge>
                     </div>
 
-                    <div className="min-h-[56px]">
-                      <p className="text-sm text-gray-600">
+                    <div className="min-h-[56px] max-h-[84px] overflow-hidden">
+                      <p className="text-sm text-gray-600 line-clamp-4">
                         {project.description && project.description.trim().length > 0
                           ? project.description
                           : ""}
@@ -328,15 +443,21 @@ export default function ProjectActivity() {
 
                     <div>
                       <Button
-                        className={`${
-                          isDraft
-                            ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
-                            : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
-                        } w-full h-10 transition-colors`}
+                        className={`
+                          w-full h-10 transition-all duration-300 transform
+                          ${isDraft
+                            ? "bg-black text-white hover:bg-black/90 active:bg-black/90 hover:scale-105"
+                            : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white hover:scale-105"
+                          }
+                          group-hover:shadow-lg
+                        `}
                         variant={isDraft ? "default" : "outline"}
                         onClick={() => router.push(`/projects/${project.id}`)}
                       >
-                        Fill in Draft
+                        <span className="flex items-center gap-2">
+                          See details
+                          {isDraft && <Sparkles className="h-3 w-3 animate-pulse" />}
+                        </span>
                       </Button>
                     </div>
                   </>

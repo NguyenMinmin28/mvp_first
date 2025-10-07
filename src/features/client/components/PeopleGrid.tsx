@@ -1122,7 +1122,7 @@ export function PeopleGrid({
                                 (e.target as HTMLImageElement).style.display = 'none';
                               }}
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg transition-colors duration-200 ease-out">
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg transition-colors duration-200 ease-out w-full h-full flex items-center justify-center">
                               {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
                             </AvatarFallback>
                           </Avatar>
@@ -1130,6 +1130,7 @@ export function PeopleGrid({
                             className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
                               ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
                             }`}
+                            style={{ zIndex: 9999, position: 'absolute' }}
                             aria-label={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
                             title={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
                           />

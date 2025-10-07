@@ -14,7 +14,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { Search } from "lucide-react";
+import { Search, Sparkles, Zap, Target } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/components/tooltip";
 import { toast } from "sonner";
 
 type Skill = { id: string; name: string };
@@ -49,7 +50,18 @@ export function ProjectPostForm({
   const [validationErrors, setValidationErrors] = useState<{
     [key: string]: boolean;
   }>({});
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [isFormVisible, setIsFormVisible] = useState(false);
   const skillDropdownRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Form visibility animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsFormVisible(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load saved form data from sessionStorage
   useEffect(() => {
@@ -368,48 +380,100 @@ export function ProjectPostForm({
   const isGuest = status === "unauthenticated";
 
   return (
-    <div className="flex flex-col pt-0 justify-between h-full project-form-content">
+    <TooltipProvider>
+      <div 
+        ref={formRef}
+        className={`
+          flex flex-col pt-0 h-full project-form-content
+          transition-all duration-700 transform
+          ${isFormVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
+        `}
+      >
       {title && (
-        <h1 className="text-5xl font-bold text-gray-900 mb-4">{title}</h1>
+        <h1 className="text-5xl font-bold text-gray-900 mb-8 hover:text-blue-600 transition-colors duration-300 cursor-pointer title-glow title-underline">
+          {title}
+        </h1>
       )}
+      <div className="flex-1 flex flex-col space-y-4">
       {/* Project Title */}
-      <div className="mb-4">
-        <Input
-          id="project-title"
-          placeholder="Project Title"
-          value={projectTitle}
-          onChange={(e) => {
-            setProjectTitle(e.target.value);
-            clearFieldError("projectTitle");
-          }}
-          className={`h-12 w-full bg-[#F3F3F3] border-0 ${validationErrors.projectTitle ? "border-red-500 focus:ring-red-500" : ""}`}
-          required
-        />
+      <div className="mb-4 group">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative">
+              <Input
+                id="project-title"
+                placeholder="Project Title"
+                value={projectTitle}
+                onChange={(e) => {
+                  setProjectTitle(e.target.value);
+                  clearFieldError("projectTitle");
+                }}
+                onFocus={() => setFocusedField("projectTitle")}
+                onBlur={() => setFocusedField(null)}
+                className={`
+                  h-12 w-full bg-[#F3F3F3] border-0 transition-all duration-300
+                  ${validationErrors.projectTitle ? "border-red-500 focus:ring-red-500" : ""}
+                  ${focusedField === "projectTitle" ? "bg-white shadow-lg ring-2 ring-blue-500 ring-opacity-50" : ""}
+                  group-hover:bg-white group-hover:shadow-md
+                `}
+                required
+              />
+              {focusedField === "projectTitle" && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <Target className="h-4 w-4 text-blue-500 animate-pulse" />
+                </div>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
+            <p>Enter a clear, descriptive title for your project</p>
+          </TooltipContent>
+        </Tooltip>
         {validationErrors.projectTitle && (
-          <p className="text-red-500 text-sm mt-1">Project title is required</p>
+          <p className="text-red-500 text-sm mt-1 animate-fade-in">Project title is required</p>
         )}
       </div>
 
       {/* Description */}
-      <div className="mb-4">
-        <textarea
-          id="project-description"
-          placeholder="Project Description"
-          value={projectDescription}
-          onChange={(e) => {
-            setProjectDescription(e.target.value);
-            clearFieldError("projectDescription");
-          }}
-          className={`w-full text-sm px-3 py-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none bg-[#F3F3F3] ${
-            validationErrors.projectDescription
-              ? "border-red-500 focus:ring-red-500"
-              : "focus:ring-black"
-          }`}
-          rows={5}
-          required
-        />
+      <div className="mb-4 group">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative">
+              <textarea
+                id="project-description"
+                placeholder="Project Description"
+                value={projectDescription}
+                onChange={(e) => {
+                  setProjectDescription(e.target.value);
+                  clearFieldError("projectDescription");
+                }}
+                onFocus={() => setFocusedField("projectDescription")}
+                onBlur={() => setFocusedField(null)}
+                className={`
+                  w-full text-sm px-3 py-3 border-0 rounded-md focus:outline-none focus:ring-2 focus:border-transparent resize-none transition-all duration-300
+                  ${validationErrors.projectDescription
+                    ? "border-red-500 focus:ring-red-500 bg-red-50"
+                    : "focus:ring-black bg-[#F3F3F3]"
+                  }
+                  ${focusedField === "projectDescription" ? "bg-white shadow-lg ring-2 ring-blue-500 ring-opacity-50" : ""}
+                  group-hover:bg-white group-hover:shadow-md
+                `}
+                rows={5}
+                required
+              />
+              {focusedField === "projectDescription" && (
+                <div className="absolute right-3 top-3">
+                  <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
+                </div>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
+            <p>Describe your project requirements, goals, and deliverables in detail</p>
+          </TooltipContent>
+        </Tooltip>
         {validationErrors.projectDescription && (
-          <p className="text-red-500 text-sm mt-1">
+          <p className="text-red-500 text-sm mt-1 animate-fade-in">
             Project description is required
           </p>
         )}
@@ -597,41 +661,50 @@ export function ProjectPostForm({
         </div>
       </div>
 
-      {/* Post Project Button */}
-      <div className="mb-4">
-        <Button
-          className="h-12 w-full bg-black text-white hover:bg-black/90"
-          onClick={
-            isGuest ? () => router.push("/auth/signup") : handleFindFreelancer
-          }
-          disabled={isSubmitting}
-        >
-          {isGuest ? (
-            "Sign Up to Post Project"
-          ) : isSubmitting ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Finding...
-            </>
-          ) : (
-            "Find"
-          )}
-        </Button>
       </div>
 
-      {/* Auth prompts when unauthenticated */}
-      {isGuest && (
-        <div className="text-center">
-          <span className="text-sm text-gray-600">
-            Already have an account ?{" "}
-          </span>
-          <a href="/auth/signin" className="text-sm underline">
-            Log in
-          </a>
+      {/* Post Project Button - positioned at bottom */}
+      <div className="mt-auto pb-0 pt-6">
+        <div className="mb-4">
+          <Button
+            className="h-12 w-full bg-black text-white hover:bg-black/90 transition-all duration-300 transform hover:scale-105 hover:shadow-xl btn-press"
+            onClick={
+              isGuest ? () => router.push("/auth/signup") : handleFindFreelancer
+            }
+            disabled={isSubmitting}
+          >
+            {isGuest ? (
+              <span className="flex items-center gap-2">
+                Sign Up to Post Project
+                <Zap className="h-4 w-4" />
+              </span>
+            ) : isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Finding...
+              </>
+            ) : (
+              <span className="flex items-center gap-2">
+                Find
+                <Sparkles className="h-4 w-4" />
+              </span>
+            )}
+          </Button>
         </div>
-      )}
 
-      {/* Hide login link when authenticated */}
+        {/* Auth prompts when unauthenticated */}
+        {isGuest && (
+          <div className="text-center">
+            <span className="text-sm text-gray-600">
+              Already have an account ?{" "}
+            </span>
+            <a href="/auth/signin" className="text-sm underline">
+              Log in
+            </a>
+          </div>
+        )}
+      </div>
     </div>
+    </TooltipProvider>
   );
 }

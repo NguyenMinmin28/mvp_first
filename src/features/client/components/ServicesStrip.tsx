@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
@@ -10,6 +10,7 @@ import ServiceImageGallery from "./ServiceImageGallery";
 import ServiceDetailOverlay, {
   ServiceDetailData,
 } from "./ServiceDetailOverlay";
+import { Star, MapPin, Clock, TrendingUp, Sparkles, Heart, Eye } from "lucide-react";
 
 interface Service {
   id: string;
@@ -49,6 +50,9 @@ export function ServicesStrip() {
   const [isDetailOverlayOpen, setIsDetailOverlayOpen] = useState(false);
   const [selectedServiceForDetail, setSelectedServiceForDetail] =
     useState<ServiceDetailData | null>(null);
+  const [visibleServices, setVisibleServices] = useState<Set<string>>(new Set());
+  const [hoveredService, setHoveredService] = useState<string | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -85,19 +89,48 @@ export function ServicesStrip() {
     };
   }, []);
 
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const serviceId = entry.target.getAttribute('data-service-id');
+            if (serviceId) {
+              setVisibleServices(prev => new Set([...prev, serviceId]));
+            }
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    const serviceElements = document.querySelectorAll('[data-service-id]');
+    serviceElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [services]);
+
   if (loading && services.length === 0) {
     return (
-      <div className="mt-10">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">
-          Services
-        </h2>
+      <div ref={sectionRef} className="mt-24">
+        <div className="flex items-center justify-between mb-6 animate-fade-in-up">
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 hover:text-purple-600 transition-all duration-300 cursor-pointer title-glow title-underline">
+              Services
+            </h2>
+          </div>
+          <Button className="bg-black text-white hover:bg-black/90 transition-all duration-300 transform hover:scale-105" asChild>
+            <a href="/services">Browse more</a>
+          </Button>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <Card key={idx} className="border border-gray-200">
+            <Card key={idx} className="border border-gray-200 card-hover-lift">
               <CardContent className="p-4">
-                <div className="h-24 w-24 rounded-full bg-gray-200 animate-pulse mb-4" />
-                <div className="h-4 w-2/3 bg-gray-200 animate-pulse mb-2" />
-                <div className="h-3 w-1/2 bg-gray-200 animate-pulse" />
+                <div className="h-24 w-24 rounded-lg skeleton mb-4" />
+                <div className="h-4 w-2/3 skeleton mb-2 rounded" />
+                <div className="h-3 w-1/2 skeleton rounded" />
               </CardContent>
             </Card>
           ))}
@@ -177,23 +210,40 @@ export function ServicesStrip() {
   };
 
   return (
-    <div className="mt-24">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">
-          Services
-        </h2>
-        <Button className="bg-black text-white hover:bg-black/90" asChild>
+    <div ref={sectionRef} className="mt-24">
+      <div className="flex items-center justify-between mb-6 animate-fade-in-up">
+        <div className="flex items-center gap-3">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 hover:text-purple-600 transition-all duration-300 cursor-pointer title-glow title-underline">
+            Services
+          </h2>
+        </div>
+        <Button className="bg-black text-white hover:bg-black/90 transition-all duration-300 transform hover:scale-105" asChild>
           <a href="/services">Browse more</a>
         </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {services.slice(0, 4).map((service) => (
-          <Card
-            key={service.id}
-            className="hover:shadow-md transition-shadow border border-gray-200 h-full cursor-pointer"
-            onClick={() => handleServiceClick(service)}
-          >
+        {services.slice(0, 4).map((service, index) => {
+          const isVisible = visibleServices.has(service.id);
+          const isHovered = hoveredService === service.id;
+          
+          return (
+            <Card
+              key={service.id}
+              data-service-id={service.id}
+              className={`
+                border border-gray-200 h-full cursor-pointer
+                transition-all duration-500 transform
+                ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
+                hover:shadow-xl hover:scale-105 hover:-translate-y-2
+                ${isHovered ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
+                group card-hover-lift
+              `}
+              style={{ transitionDelay: `${index * 100}ms` }}
+              onClick={() => handleServiceClick(service)}
+              onMouseEnter={() => setHoveredService(service.id)}
+              onMouseLeave={() => setHoveredService(null)}
+            >
             <CardContent className="p-5 h-full flex flex-col">
               {/* Service Image Gallery */}
               <ServiceImageGallery
@@ -202,28 +252,32 @@ export function ServicesStrip() {
                 title={service.title}
                 className="mb-4"
                 animationType="slide"
+                autoSlide={true}
+                autoSlideInterval={3000}
+                showOverlay={true}
               />
 
               {/* Freelancer Info */}
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100 ring-2 ring-gray-200 group-hover:ring-blue-500 transition-all duration-300">
                   {service.developer.user.image ? (
                     <Image
                       src={service.developer.user.image}
                       alt={service.developer.user.name || "Freelancer"}
                       width={24}
                       height={24}
-                      className="object-cover w-6 h-6"
+                      className="object-cover w-6 h-6 group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
                     <div className="w-6 h-6 bg-gray-200" />
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-medium text-gray-900 leading-tight">
+                  <div className="text-xs font-medium text-gray-900 leading-tight group-hover:text-blue-600 transition-colors duration-300">
                     {service.developer.user.name || "Unknown"}
                   </div>
-                  <div className="text-[10px] text-gray-500">
+                  <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                    <MapPin className="h-2 w-2" />
                     {service.developer.location || ""}
                   </div>
                 </div>
@@ -231,9 +285,10 @@ export function ServicesStrip() {
 
               {/* Stats */}
               <div className="flex items-center justify-between mb-4 text-sm">
-                <div>
-                  <div className="font-semibold leading-tight">
+                <div className="group-hover:scale-105 transition-transform duration-300">
+                  <div className="font-semibold leading-tight flex items-center gap-1">
                     {service.ratingAvg.toFixed(1)}
+                    <Star className="h-3 w-3 text-yellow-500" />
                   </div>
                   <div className="mt-1 flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => {
@@ -242,7 +297,8 @@ export function ServicesStrip() {
                       return (
                         <span
                           key={i}
-                          className={`text-[10px] ${filled ? "text-red-500" : "text-gray-300"} mr-0.5`}
+                          className={`text-[10px] transition-all duration-300 ${filled ? "text-yellow-500" : "text-gray-300"} mr-0.5`}
+                          style={{ animationDelay: `${i * 100}ms` }}
                         >
                           ★
                         </span>
@@ -250,41 +306,49 @@ export function ServicesStrip() {
                     })}
                   </div>
                 </div>
-                <div>
-                  <div className="font-semibold">{service.leadsCount}</div>
+                <div className="group-hover:scale-105 transition-transform duration-300">
+                  <div className="font-semibold flex items-center gap-1">
+                    {service.leadsCount}
+                    <TrendingUp className="h-3 w-3 text-green-500" />
+                  </div>
                   <div className="text-xs text-gray-500">Leads</div>
                 </div>
-                <div>
-                  <div className="font-semibold">
+                <div className="group-hover:scale-105 transition-transform duration-300">
+                  <div className="font-semibold flex items-center gap-1">
                     {service.priceType === "FIXED"
                       ? `$${service.priceMin || 0}`
                       : `$${service.priceMin || 0}/h`}
+                    <Sparkles className="h-3 w-3 text-blue-500" />
                   </div>
                   <div className="text-xs text-gray-500">Price</div>
                 </div>
               </div>
 
               {/* Service Description */}
-              <p className="text-xs text-gray-600 mb-4 line-clamp-3">
+              <p className="text-xs text-gray-600 mb-4 line-clamp-3 group-hover:text-gray-800 transition-colors duration-300">
                 {service.shortDesc}
               </p>
 
               {/* Hide Get in Touch button for developers */}
               {session?.user?.role !== "DEVELOPER" && (
                 <Button
-                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
+                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm transition-all duration-300 transform hover:scale-105 group-hover:shadow-lg btn-press"
                   variant="outline"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleGetInTouch(service);
                   }}
                 >
-                  Get in Touch
+                  <span className="flex items-center gap-2">
+                    Get in Touch
+                    <Sparkles className="h-3 w-3" />
+                  </span>
                 </Button>
               )}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {selectedService && (

@@ -25,6 +25,7 @@ import {
   Zap,
   DollarSign,
   Briefcase,
+  Monitor,
 } from "lucide-react";
 import { User as UserType } from "next-auth";
 import { useRouter } from "next/navigation";
@@ -339,12 +340,12 @@ export function Header({ user }: HeaderProps) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 w-full ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ease-in-out shadow-sm hover:shadow-md ${!isAuthenticated ? "bg-black text-white" : "bg-white/95 backdrop-blur-md text-black border-b border-gray-200/50"}`}
       >
         <div className="container flex h-16 items-center justify-between px-4">
           {/* Logo */}
           <div className="flex items-center gap-6">
-            <button onClick={handleLogoClick} className="cursor-pointer">
+            <button onClick={handleLogoClick} className="cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105 hover:rotate-1">
               <img
                 src={
                   !isAuthenticated
@@ -352,7 +353,7 @@ export function Header({ user }: HeaderProps) {
                     : "/images/home/clervelogoblack.png"
                 }
                 alt="Clevrs"
-                className="h-8 w-auto"
+                className="h-8 w-auto transition-all duration-300"
               />
             </button>
 
@@ -381,34 +382,51 @@ export function Header({ user }: HeaderProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${
                       typeof window !== "undefined" &&
                       window.location.pathname.startsWith("/my-projects")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
+                        ? "bg-black text-white hover:bg-gray-800 hover:text-white shadow-md"
                         : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                          ? "text-white hover:bg-white hover:text-black hover:shadow-lg"
+                          : "text-black hover:bg-black hover:text-white hover:shadow-lg"
                     }`}
                   >
-                    <FolderOpen className="h-4 w-4" />
-                    My Projects
+                    <FolderOpen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="transition-all duration-300">My Projects</span>
+                  </Button>
+                </Link>
+                <Link href="/client-dashboard">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${
+                      typeof window !== "undefined" &&
+                      window.location.pathname.startsWith("/client-dashboard")
+                        ? "bg-black text-white hover:bg-gray-800 hover:text-white shadow-md"
+                        : !isAuthenticated
+                          ? "text-white hover:bg-white hover:text-black hover:shadow-lg"
+                          : "text-black hover:bg-black hover:text-white hover:shadow-lg"
+                    }`}
+                  >
+                    <Monitor className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="transition-all duration-300">My workspace</span>
                   </Button>
                 </Link>
                 <Link href="/services?tab=people">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${
                       typeof window !== "undefined" &&
                       window.location.pathname.startsWith("/services")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
+                        ? "bg-black text-white hover:bg-gray-800 hover:text-white shadow-md"
                         : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                          ? "text-white hover:bg-white hover:text-black hover:shadow-lg"
+                          : "text-black hover:bg-black hover:text-white hover:shadow-lg"
                     }`}
                   >
-                    <Briefcase className="h-4 w-4" />
-                    Services
+                    <Briefcase className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="transition-all duration-300">Services</span>
                   </Button>
                 </Link>
                 {/* Removed Post Project link as requested */}
@@ -416,17 +434,17 @@ export function Header({ user }: HeaderProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${
                       typeof window !== "undefined" &&
                       window.location.pathname.startsWith("/pricing")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
+                        ? "bg-black text-white hover:bg-gray-800 hover:text-white shadow-md"
                         : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                          ? "text-white hover:bg-white hover:text-black hover:shadow-lg"
+                          : "text-black hover:bg-black hover:text-white hover:shadow-lg"
                     }`}
                   >
-                    <DollarSign className="h-4 w-4" />
-                    Pricing
+                    <DollarSign className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="transition-all duration-300">Pricing</span>
                   </Button>
                 </Link>
                 <DropdownMenu>
@@ -434,12 +452,13 @@ export function Header({ user }: HeaderProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}
+                      className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${!isAuthenticated ? "text-white hover:bg-white hover:text-black hover:shadow-lg" : "text-black hover:bg-black hover:text-white hover:shadow-lg"}`}
                     >
-                      About <ChevronDown className="w-4 h-4" />
+                      <span className="transition-all duration-300">About</span> 
+                      <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuContent align="start" className="w-56 animate-in slide-in-from-top-2 duration-300">
                     <DropdownMenuItem asChild>
                       <Link href="/about">About us</Link>
                     </DropdownMenuItem>
@@ -532,12 +551,13 @@ export function Header({ user }: HeaderProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}
+                      className={`flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${!isAuthenticated ? "text-white hover:bg-white hover:text-black hover:shadow-lg" : "text-black hover:bg-black hover:text-white hover:shadow-lg"}`}
                     >
-                      About <ChevronDown className="w-4 h-4" />
+                      <span className="transition-all duration-300">About</span> 
+                      <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuContent align="start" className="w-56 animate-in slide-in-from-top-2 duration-300">
                     <DropdownMenuItem asChild>
                       <Link href="/about">About us</Link>
                     </DropdownMenuItem>
@@ -569,10 +589,11 @@ export function Header({ user }: HeaderProps) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-1 text-sm">
-                      About <ChevronDown className="w-4 h-4" />
+                      <span className="transition-all duration-300">About</span> 
+                      <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuContent align="start" className="w-56 animate-in slide-in-from-top-2 duration-300">
                     <DropdownMenuItem asChild>
                       <Link href="/about">About us</Link>
                     </DropdownMenuItem>
@@ -1210,7 +1231,7 @@ export function Header({ user }: HeaderProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200/50 shadow-lg animate-in slide-in-from-top-2 duration-300">
+          <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200/50 shadow-lg animate-in slide-in-from-top-2 duration-500 ease-out">
             <div className="container px-4 py-4 space-y-4">
               {/* Portal Switch Mobile (hidden when authenticated) */}
               {!isAuthenticated && (
@@ -1232,7 +1253,7 @@ export function Header({ user }: HeaderProps) {
 
               {/* Navigation Links Mobile */}
               {isAuthenticated && userRole === "CLIENT" && (
-                <nav className="space-y-2">
+                <nav className="space-y-2 animate-in fade-in-0 slide-in-from-left-2 duration-700 delay-100">
                   {/* Notifications Mobile */}
                   <div className="relative">
                     <button
@@ -1497,19 +1518,25 @@ export function Header({ user }: HeaderProps) {
                       Workspace
                     </div>
                   </Link>
-                  <Link href="/my-projects" className="block py-2 text-gray-700 hover:text-black transition-all duration-300 ease-in-out transform hover:translate-x-2 hover:scale-105 rounded-lg px-2">
+                  <Link href="/my-projects" className="block py-2 text-gray-700 hover:text-black transition-all duration-300 ease-in-out transform hover:translate-x-2 hover:scale-105 rounded-lg px-2 hover:bg-gray-50">
                     <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
-                      My Projects
+                      <FolderOpen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                      <span className="transition-all duration-300">My Projects</span>
+                    </div>
+                  </Link>
+                  <Link href="/client-dashboard" className="block py-2 text-gray-700 hover:text-black transition-all duration-300 ease-in-out transform hover:translate-x-2 hover:scale-105 rounded-lg px-2 hover:bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                      <span className="transition-all duration-300">My workspace</span>
                     </div>
                   </Link>
                   <Link
                     href="/pricing"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    className="block py-2 text-gray-700 hover:text-black transition-all duration-300 ease-in-out transform hover:translate-x-2 hover:scale-105 rounded-lg px-2 hover:bg-gray-50"
                   >
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Pricing
+                      <DollarSign className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                      <span className="transition-all duration-300">Pricing</span>
                     </div>
                   </Link>
                   <div className="py-2">
