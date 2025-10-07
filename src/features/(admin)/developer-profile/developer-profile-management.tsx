@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/ui/components/dialog";
 import { Textarea } from "@/ui/components/textarea";
-import { CheckCircle, XCircle, Clock, Eye, Search } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Eye, Search, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/ui/components/input";
 
@@ -82,6 +82,7 @@ export function DeveloperProfileManagement() {
     useState<DeveloperProfile | null>(null);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [resettingRole, setResettingRole] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: "all",
     level: "all",
@@ -213,6 +214,37 @@ export function DeveloperProfileManagement() {
     setFilters({ status: "all", level: "all", approvalStatus: "all" });
     setSearch("");
     fetchProfiles(1);
+  };
+
+  // Handle reset role
+  const handleResetRole = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to reset the role for ${userName}? This will remove their developer profile and allow them to choose a new role.`)) {
+      return;
+    }
+
+    try {
+      setResettingRole(userId);
+      const response = await fetch(`/api/admin/users/${userId}/reset-role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        toast.success(`Role reset successfully for ${userName}`);
+        // Refresh the profiles list
+        fetchProfiles(pagination.currentPage);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to reset role");
+      }
+    } catch (error) {
+      console.error("Error resetting role:", error);
+      toast.error("Failed to reset role");
+    } finally {
+      setResettingRole(null);
+    }
   };
 
   useEffect(() => {
@@ -405,9 +437,9 @@ export function DeveloperProfileManagement() {
     {
       key: "actions",
       label: "Actions",
-      width: "w-24",
+      width: "w-32",
       render: (_, item) => (
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -415,6 +447,20 @@ export function DeveloperProfileManagement() {
             title="View Details"
           >
             <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleResetRole(item.userId, item.name)}
+            disabled={resettingRole === item.userId}
+            title="Reset Role (Allow user to choose role again)"
+            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+          >
+            {resettingRole === item.userId ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+            ) : (
+              <RotateCcw className="w-4 h-4" />
+            )}
           </Button>
         </div>
       ),
