@@ -55,13 +55,13 @@ export function ServiceImageGallery({
   useEffect(() => {
     if (!showOverlay) return;
 
-    let showTimeoutId: NodeJS.Timeout;
-    let hideTimeoutId: NodeJS.Timeout;
+    let showTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let hideTimeoutId: ReturnType<typeof setTimeout> | undefined;
     
     // Only show overlay if hovering the main container but not the navigation buttons
     if ((isHovered || isOverlayHovered) && !isNavigationHovered) {
       // Clear any pending hide timeout
-      clearTimeout(hideTimeoutId);
+      if (hideTimeoutId) clearTimeout(hideTimeoutId);
       // Show overlay after a short delay
       showTimeoutId = setTimeout(() => {
         console.log('Showing image overlay for:', title);
@@ -69,7 +69,7 @@ export function ServiceImageGallery({
       }, 500);
     } else {
       // Clear any pending show timeout
-      clearTimeout(showTimeoutId);
+      if (showTimeoutId) clearTimeout(showTimeoutId);
       // Hide overlay after a delay to prevent flickering
       hideTimeoutId = setTimeout(() => {
         console.log('Hiding image overlay for:', title);
@@ -78,8 +78,8 @@ export function ServiceImageGallery({
     }
 
     return () => {
-      clearTimeout(showTimeoutId);
-      clearTimeout(hideTimeoutId);
+      if (showTimeoutId) clearTimeout(showTimeoutId);
+      if (hideTimeoutId) clearTimeout(hideTimeoutId);
     };
   }, [isHovered, isOverlayHovered, isNavigationHovered, showOverlay, title]);
 
