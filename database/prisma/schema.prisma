@@ -584,6 +584,7 @@ model DeveloperProfile {
   favoritedBy             FavoriteDeveloper[]   @relation("DeveloperFavorites")
   services                Service[]
   contactGrants           ContactGrant[]        @relation("DeveloperContactGrants")
+  portfolios              Portfolio[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime? @updatedAt
@@ -1499,5 +1500,27 @@ model ServiceLike {
   @@unique([userId, serviceId])
   @@index([userId])
   @@index([serviceId])
+}
+
+/**
+ * ===== Portfolio Models =====
+ */
+model Portfolio {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  developerId    String   @db.ObjectId
+  developer      DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  
+  title          String
+  description    String?
+  projectUrl     String?
+  imageUrl       String?
+  sortOrder      Int      @default(0) // For ordering portfolios (0-4 for 5 slots)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([developerId])
+  @@index([sortOrder])
+  @@unique([developerId, sortOrder]) // Ensure only one portfolio per slot per developer
 }
 

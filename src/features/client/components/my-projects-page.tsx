@@ -1306,56 +1306,60 @@ export default function MyProjectsPage() {
       </Tabs>
       </div>
 
-      {/* Pagination Controls */}
-      {totalItems > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-medium">{startIdx + 1}</span> –{" "}
-            <span className="font-medium">
-              {Math.min(endIdx, totalItems)}
-            </span>{" "}
-            of <span className="font-medium">{totalItems}</span>{" "}
-            items
+        {/* Pagination Controls */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+            <div className="text-sm text-slate-600 bg-slate-50 px-4 py-2 rounded-lg">
+              Showing <span className="font-semibold text-slate-800">{startIdx + 1}</span> –{" "}
+              <span className="font-semibold text-slate-800">
+                {Math.min(endIdx, totalItems)}
+              </span>{" "}
+              of <span className="font-semibold text-slate-800">{totalItems}</span>{" "}
+              items
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+              >
+                Prev
+              </Button>
+              <span className="text-sm text-slate-700 bg-white px-3 py-2 rounded-lg border border-slate-200 font-medium">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+              >
+                Last
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(1)}
-              disabled={page === 1}
-            >
-              First
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Prev
-            </Button>
-            <span className="text-sm text-gray-700">
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(totalPages)}
-              disabled={page === totalPages}
-            >
-              Last
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Review Modal */}
       {reviewData && (
@@ -1372,12 +1376,12 @@ export default function MyProjectsPage() {
         />
       )}
 
-      {/* Message Detail Modal */}
-      <MessageDetailModal
-        isOpen={showMessageModal}
-        onClose={handleCloseMessageModal}
-        message={selectedMessage}
-      />
-    </div>
+        {/* Message Detail Modal */}
+        <MessageDetailModal
+          isOpen={showMessageModal}
+          onClose={handleCloseMessageModal}
+          message={selectedMessage}
+        />
+      </div>
   );
 }
