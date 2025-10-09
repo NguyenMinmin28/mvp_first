@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSessionUser } from "@/features/auth/auth-server";
-import { db } from "@/core/database/db";
+import { prisma } from "@/core/database/db";
 
 export async function GET() {
   try {
@@ -10,7 +10,7 @@ export async function GET() {
     }
 
     // Get developer profile
-    const developerProfile = await db.developerProfile.findUnique({
+    const developerProfile = await prisma.developerProfile.findUnique({
       where: { userId: user.id },
       include: {
         portfolios: {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get developer profile
-    const developerProfile = await db.developerProfile.findUnique({
+    const developerProfile = await prisma.developerProfile.findUnique({
       where: { userId: user.id }
     });
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete existing portfolios
-    await db.portfolio.deleteMany({
+    await prisma.portfolio.deleteMany({
       where: { developerId: developerProfile.id }
     });
 
@@ -73,13 +73,13 @@ export async function POST(request: NextRequest) {
       }));
 
     if (portfolioData.length > 0) {
-      await db.portfolio.createMany({
+      await prisma.portfolio.createMany({
         data: portfolioData
       });
     }
 
     // Return updated portfolios
-    const updatedPortfolios = await db.portfolio.findMany({
+    const updatedPortfolios = await prisma.portfolio.findMany({
       where: { developerId: developerProfile.id },
       orderBy: { sortOrder: "asc" }
     });

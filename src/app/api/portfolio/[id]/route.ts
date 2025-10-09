@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSessionUser } from "@/features/auth/auth-server";
-import { db } from "@/core/database/db";
+import { prisma } from "@/core/database/db";
 
 export async function PUT(
   request: NextRequest,
@@ -16,7 +16,7 @@ export async function PUT(
     const { title, description, projectUrl, imageUrl, sortOrder } = body;
 
     // Get developer profile
-    const developerProfile = await db.developerProfile.findUnique({
+    const developerProfile = await prisma.developerProfile.findUnique({
       where: { userId: user.id }
     });
 
@@ -25,7 +25,7 @@ export async function PUT(
     }
 
     // Update portfolio
-    const updatedPortfolio = await db.portfolio.update({
+    const updatedPortfolio = await prisma.portfolio.update({
       where: { 
         id: params.id,
         developerId: developerProfile.id // Ensure user owns this portfolio
@@ -60,7 +60,7 @@ export async function DELETE(
     }
 
     // Get developer profile
-    const developerProfile = await db.developerProfile.findUnique({
+    const developerProfile = await prisma.developerProfile.findUnique({
       where: { userId: user.id }
     });
 
@@ -69,7 +69,7 @@ export async function DELETE(
     }
 
     // Delete portfolio
-    await db.portfolio.delete({
+    await prisma.portfolio.delete({
       where: { 
         id: params.id,
         developerId: developerProfile.id // Ensure user owns this portfolio
