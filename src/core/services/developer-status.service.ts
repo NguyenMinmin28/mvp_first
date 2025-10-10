@@ -50,6 +50,21 @@ export class DeveloperStatusService {
         console.warn("⚠️ Could not update user.lastLoginAt while recording status activity", e);
       }
 
+      // Record activity log
+      try {
+        await prisma.developerActivityLog.create({
+          data: {
+            developerId: developerProfile.id,
+            status: newStatus,
+            action: oldStatus !== newStatus ? "status_change" : "status_update",
+            timestamp: new Date(),
+          },
+        });
+        console.log(`📝 Activity log recorded for developer ${developerProfile.id}`);
+      } catch (e) {
+        console.warn("⚠️ Could not record activity log", e);
+      }
+
       console.log(`✅ Developer status updated successfully`);
 
       // Only notify followers if status changed TO "available"
@@ -89,5 +104,83 @@ export class DeveloperStatusService {
    */
   static async setDeveloperAvailable(userId: string): Promise<void> {
     await this.updateDeveloperStatus(userId, "available");
+  }
+
+  /**
+   * Record login activity
+   */
+  static async recordLoginActivity(userId: string): Promise<void> {
+    try {
+      const developerProfile = await prisma.developerProfile.findUnique({
+        where: { userId },
+      });
+
+      if (!developerProfile) {
+        console.log(`❌ No developer profile found for user ${userId}`);
+        return;
+      }
+
+      // Record login activity
+      await prisma.developerActivityLog.create({
+        data: {
+          developerId: developerProfile.id,
+          status: "available",
+          action: "login",
+          timestamp: new Date(),
+        },
+      });
+
+      console.log(`📝 Login activity recorded for developer ${developerProfile.id}`);
+    } catch (error) {
+      console.error("Error recording login activity:", error);
+    }
+  }
+
+  /**
+   * Record logout activity
+   */
+  static async recordLogoutActivity(userId: string): Promise<void> {
+    try {
+      const developerProfile = await prisma.developerProfile.findUnique({
+        where: { userId },
+      });
+
+      if (!developerProfile) {
+        console.log(`❌ No developer profile found for user ${userId}`);
+        return;
+      }
+
+      // Record logout activity
+      await prisma.developerActivityLog.create({
+        data: {
+          developerId: developerProfile.id,
+          status: "busy",
+          action: "logout",
+          timestamp: new Date(),
+        },
+      });
+
+      console.log(`📝 Logout activity recorded for developer ${developerProfile.id}`);
+    } catch (error) {
+      console.error("Error recording logout activity:", error);
+    }
+  }
+
+  /**
+   * Get latest activity logs for a developer
+   */
+  static async getLatestActivityLogs(developerId: string, limit: number = 4) {
+    try {
+      const logs = await prisma.developerActivityLog.findMany({
+        where: { developerId },
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+      });
+
+      return logs;
+    } catch (error) {
+      console.error("Error getting activity logs:", error);
+      return [];
+    }
   }
 }

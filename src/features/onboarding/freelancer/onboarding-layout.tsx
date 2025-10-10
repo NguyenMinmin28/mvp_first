@@ -21,12 +21,12 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <header className="sticky top-0 z-50 w-full bg-black">
-          <div className="container flex h-14 items-center justify-between px-4">
+          <div className="container flex h-20 items-center justify-between px-6">
             <a href="/" className="flex items-center gap-2">
-              <img src="/images/home/clervelogo.png" alt="Clevrs" className="h-6 w-auto" />
+              <img src="/images/home/clervelogo.png" alt="Clevrs" className="h-10 w-auto" />
             </a>
-            <div className="flex items-center gap-3">
-              <div className="text-sm px-3 py-1 rounded-full border border-white/30 text-white">
+            <div className="flex items-center gap-4">
+              <div className="text-base px-4 py-2 rounded-full border border-white/30 text-white">
                 Loading...
               </div>
             </div>
@@ -49,23 +49,23 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Minimal header for onboarding to avoid redirect loops */}
       <header className="sticky top-0 z-50 w-full bg-black">
-        <div className="container flex h-14 items-center justify-between px-4">
+        <div className="container flex h-20 items-center justify-between px-6">
           <a href="/" className="flex items-center gap-2">
-            <img src="/images/home/clervelogo.png" alt="Clevrs" className="h-6 w-auto" />
+            <img src="/images/home/clervelogo.png" alt="Clevrs" className="h-10 w-auto" />
           </a>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="text-sm px-3 py-1 rounded-full border border-white/30 text-white hover:bg-white/10"
+              className="text-base px-4 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors"
             >
               Back
             </button>
             {session?.user?.email && (
-              <span className="text-sm text-white/90 hidden sm:block">{session.user.email}</span>
+              <span className="text-base text-white/90 hidden sm:block">{session.user.email}</span>
             )}
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-sm px-3 py-1 rounded-full border border-white/30 text-white hover:bg-white/10"
+              className="text-base px-4 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors"
             >
               Sign out
             </button>

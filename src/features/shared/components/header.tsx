@@ -471,6 +471,23 @@ export function Header({ user }: HeaderProps) {
                     Services
                   </Button>
                 </Link>
+                <Link href="/dashboard-user">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 ${
+                      typeof window !== "undefined" &&
+                      window.location.pathname.startsWith("/dashboard-user")
+                        ? "bg-black text-white hover:bg-black hover:text-white"
+                        : !isAuthenticated
+                          ? "text-white hover:bg-white hover:text-black"
+                          : "text-black hover:bg-black hover:text-white"
+                    }`}
+                  >
+                    <Briefcase className="h-4 w-4" />
+                    Workspace
+                  </Button>
+                </Link>
                 <Link href="/ideas">
                   <Button
                     variant="ghost"
@@ -1491,6 +1508,14 @@ export function Header({ user }: HeaderProps) {
               {isAuthenticated && userRole === "DEVELOPER" && (
                 <nav className="space-y-2">
                   {/* Notifications Mobile */}
+                  <Link href="/dashboard-user">
+                    <button
+                      className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
+                    >
+                      <Briefcase className="h-4 w-4" />
+                      Workspace
+                    </button>
+                  </Link>
                   <div className="relative">
                     <button
                       className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"

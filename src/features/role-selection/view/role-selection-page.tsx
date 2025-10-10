@@ -171,29 +171,29 @@ export default function CompleteProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
-      <header className="w-full h-14 bg-black flex items-center">
-        <div className="max-w-4xl mx-auto w-full px-4 flex items-center justify-between">
+      <header className="w-full h-20 bg-black flex items-center">
+        <div className="max-w-5xl mx-auto w-full px-6 flex items-center justify-between">
           <img 
             src="/images/home/clervelogo.png" 
             alt="Clevrs" 
-            className="h-6 w-auto"
+            className="h-10 w-auto"
           />
           
           {/* User Account Info and Logout */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-white">
-              <User className="w-4 h-4" />
-              <span className="text-sm font-medium">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 text-white">
+              <User className="w-5 h-5" />
+              <span className="text-base font-medium">
                 {session?.user?.name || session?.user?.email || "User"}
               </span>
             </div>
             <Button
               onClick={handleLogout}
               variant="outline"
-              size="sm"
-              className="bg-transparent border-white text-white hover:bg-white hover:text-black"
+              size="default"
+              className="bg-transparent border-white text-white hover:bg-white hover:text-black px-4 py-2"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <LogOut className="w-5 h-5 mr-2" />
               Logout
             </Button>
           </div>

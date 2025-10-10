@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PortfolioSlot } from "./portfolio-slot";
+import { PortfolioModal } from "./portfolio-modal";
 import { Button } from "@/ui/components/button";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 interface PortfolioItem {
   id?: string;
@@ -20,9 +22,11 @@ interface PortfolioGridProps {
 
 export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: PortfolioGridProps) {
   const [portfolios, setPortfolios] = useState<PortfolioItem[]>(() => {
+    console.log('🏗️ Initializing PortfolioGrid with:', initialPortfolios);
+    
     // Initialize with 5 empty slots
     const slots = Array.from({ length: 5 }, (_, index) => {
-      const existing = initialPortfolios.find(p => p.id || p.title || p.imageUrl);
+      const existing = initialPortfolios[index];
       return existing || {
         title: "",
         description: "",
@@ -30,105 +34,182 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
         imageUrl: "",
       };
     });
+    
+    console.log('📋 Initialized slots:', slots);
     return slots;
   });
 
-  const [activeSlots, setActiveSlots] = useState<number[]>(() => {
-    // Find which slots have content
-    return portfolios
-      .map((portfolio, index) => 
-        portfolio.title || portfolio.description || portfolio.projectUrl || portfolio.imageUrl ? index : -1
-      )
-      .filter(index => index !== -1);
-  });
+  const [activeModal, setActiveModal] = useState<number | null>(null);
+  const prevInitialPortfoliosRef = useRef<PortfolioItem[]>([]);
+  const onPortfoliosChangeRef = useRef(onPortfoliosChange);
+
+  // Update ref when callback changes
+  useEffect(() => {
+    onPortfoliosChangeRef.current = onPortfoliosChange;
+  }, [onPortfoliosChange]);
 
   useEffect(() => {
-    onPortfoliosChange(portfolios);
-  }, [portfolios, onPortfoliosChange]);
+    onPortfoliosChangeRef.current(portfolios);
+  }, [portfolios]);
 
-  const handlePortfolioUpdate = (slotIndex: number, updatedPortfolio: PortfolioItem) => {
+  // Update portfolios when initialPortfolios change (e.g., when data is loaded)
+  useEffect(() => {
+    // Only run once when component mounts or when initialPortfolios actually changes
+    if (initialPortfolios && initialPortfolios.length > 0) {
+      const currentString = JSON.stringify(prevInitialPortfoliosRef.current);
+      const newString = JSON.stringify(initialPortfolios);
+      
+      if (currentString !== newString) {
+        console.log('🔄 Updating portfolios from initialPortfolios:', initialPortfolios);
+        
+        // Create 5 slots, filling with existing data where available
+        const slots = Array.from({ length: 5 }, (_, index) => {
+          // Find portfolio at this index position
+          const existing = initialPortfolios.find((p, i) => i === index) || 
+                          initialPortfolios[index] || 
+                          {
+                            title: "",
+                            description: "",
+                            projectUrl: "",
+                            imageUrl: "",
+                          };
+          return existing;
+        });
+        
+        console.log('📋 Created slots from initialPortfolios:', slots);
+        setPortfolios(slots);
+        
+        // Update ref to prevent future loops
+        prevInitialPortfoliosRef.current = initialPortfolios;
+      }
+    }
+  }, [initialPortfolios]);
+
+  const handlePortfolioEdit = (slotIndex: number) => {
+    setActiveModal(slotIndex);
+  };
+
+  const handlePortfolioSave = async (slotIndex: number, updatedPortfolio: PortfolioItem) => {
+    console.log('🔄 Saving portfolio:', { slotIndex, updatedPortfolio });
+    
+    setPortfolios(prev => {
+      const newPortfolios = [...prev];
+      newPortfolios[slotIndex] = updatedPortfolio;
+      console.log('📝 Updated portfolios state:', newPortfolios);
+      return newPortfolios;
+    });
+
+    // Auto-save to database
+    try {
+      const updatedPortfolios = [...portfolios];
+      updatedPortfolios[slotIndex] = updatedPortfolio;
+      
+      console.log('💾 Sending to API:', { portfolios: updatedPortfolios });
+      
+      const response = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portfolios: updatedPortfolios }),
+      });
+
+      console.log('📡 API Response:', response.status, response.ok);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Save successful:', result);
+        toast.success("Portfolio saved automatically!");
+      } else {
+        const error = await response.json();
+        console.error('❌ Save failed:', error);
+        toast.error("Failed to save portfolio automatically");
+      }
+    } catch (error) {
+      console.error('💥 Error auto-saving portfolio:', error);
+      toast.error("Failed to save portfolio automatically");
+    }
+  };
+
+  const handlePortfolioDelete = async (slotIndex: number) => {
+    const updatedPortfolio = {
+      title: "",
+      description: "",
+      projectUrl: "",
+      imageUrl: "",
+    };
+
     setPortfolios(prev => {
       const newPortfolios = [...prev];
       newPortfolios[slotIndex] = updatedPortfolio;
       return newPortfolios;
     });
 
-    // Update active slots
-    const hasContent = updatedPortfolio.title || updatedPortfolio.description || 
-                      updatedPortfolio.projectUrl || updatedPortfolio.imageUrl;
-    
-    setActiveSlots(prev => {
-      if (hasContent && !prev.includes(slotIndex)) {
-        return [...prev, slotIndex].sort();
-      } else if (!hasContent && prev.includes(slotIndex)) {
-        return prev.filter(index => index !== slotIndex);
+    // Auto-save to database
+    try {
+      const updatedPortfolios = [...portfolios];
+      updatedPortfolios[slotIndex] = updatedPortfolio;
+      
+      const response = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portfolios: updatedPortfolios }),
+      });
+
+      if (response.ok) {
+        toast.success("Portfolio deleted and saved!");
       }
-      return prev;
-    });
-  };
-
-  const handlePortfolioRemove = (slotIndex: number) => {
-    setPortfolios(prev => {
-      const newPortfolios = [...prev];
-      newPortfolios[slotIndex] = {
-        title: "",
-        description: "",
-        projectUrl: "",
-        imageUrl: "",
-      };
-      return newPortfolios;
-    });
-
-    setActiveSlots(prev => prev.filter(index => index !== slotIndex));
-  };
-
-  const addNewSlot = () => {
-    // Find the first empty slot
-    const emptySlotIndex = portfolios.findIndex(
-      portfolio => !portfolio.title && !portfolio.description && 
-                  !portfolio.projectUrl && !portfolio.imageUrl
-    );
-    
-    if (emptySlotIndex !== -1) {
-      // Focus on the first empty slot
-      setActiveSlots(prev => [...prev, emptySlotIndex].sort());
+    } catch (error) {
+      console.error('Error auto-saving portfolio deletion:', error);
+      toast.error("Failed to delete portfolio");
     }
   };
 
-  const hasEmptySlots = activeSlots.length < 5;
+  const handleCloseModal = () => {
+    setActiveModal(null);
+  };
+
+  const activeSlotsCount = portfolios.filter(p => 
+    p.title || p.description || p.projectUrl || p.imageUrl
+  ).length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Your Portfolio</h2>
-          <p className="text-gray-600 mt-1">
-            Showcase up to 5 of your best projects to attract clients
-          </p>
-        </div>
-        {hasEmptySlots && (
-          <Button onClick={addNewSlot} variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Project
-          </Button>
-        )}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Portfolio</h2>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Showcase up to 5 of your best projects to attract clients. Click on any slot to add or edit your portfolio projects.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {portfolios.map((portfolio, index) => (
           <PortfolioSlot
             key={index}
             slotIndex={index}
             portfolio={portfolio}
-            onUpdate={handlePortfolioUpdate}
-            onRemove={handlePortfolioRemove}
+            onEdit={handlePortfolioEdit}
+            onRemove={handlePortfolioDelete}
           />
         ))}
       </div>
 
-      <div className="text-sm text-gray-500 text-center">
-        {activeSlots.length} of 5 portfolio slots used
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full text-sm text-gray-600">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          {activeSlotsCount} of 5 portfolio slots used
+        </div>
       </div>
+
+      {/* Portfolio Modal */}
+      {activeModal !== null && (
+        <PortfolioModal
+          isOpen={activeModal !== null}
+          onClose={handleCloseModal}
+          portfolio={portfolios[activeModal]}
+          onSave={(updatedPortfolio) => handlePortfolioSave(activeModal, updatedPortfolio)}
+          onDelete={() => handlePortfolioDelete(activeModal)}
+          slotIndex={activeModal}
+        />
+      )}
     </div>
   );
 }

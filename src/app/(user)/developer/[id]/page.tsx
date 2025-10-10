@@ -26,7 +26,7 @@ export default async function DeveloperPublicProfilePage({
     where: { id: params.id },
     include: {
       user: {
-        select: { id: true, name: true, email: true, image: true },
+        select: { id: true, name: true, email: true, image: true, lastLoginAt: true },
       },
       skills: { include: { skill: true } },
       reviewsSummary: {
@@ -37,6 +37,7 @@ export default async function DeveloperPublicProfilePage({
           // Skip updatedAt to avoid null value issues
         },
       },
+      portfolios: true,
     },
   });
 
@@ -118,12 +119,26 @@ export default async function DeveloperPublicProfilePage({
     hourlyRate: developer.hourlyRateUsd,
     level: developer.level,
     currentStatus: developer.currentStatus,
+    lastLoginAt: developer.user.lastLoginAt,
     adminApprovalStatus: developer.adminApprovalStatus,
     skills: developer.skills.map((s: any) => ({
       skillId: s.skillId,
       skillName: (s as any).skill?.name,
     })),
-    portfolioLinks: developer.portfolioLinks,
+    // Use real portfolio items from Portfolio collection (sorted by sortOrder)
+    portfolioItems: (developer as any).portfolios
+      ? (developer as any).portfolios
+          .slice()
+          .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+          .map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            url: p.projectUrl,
+            imageUrl: p.imageUrl,
+            createdAt: p.createdAt,
+          }))
+      : [],
     resumeUrl: (developer as any).resumeUrl || null,
     isConnected, // Pass connection status to components
     isFavorited,

@@ -151,19 +151,10 @@ export async function middleware(request: NextRequest) {
         const approvalStatus = token?.adminApprovalStatus;
         console.log("🔍 Developer approval status:", approvalStatus);
         
-        if (approvalStatus === "pending") {
-          console.log("🔍 Developer pending approval, redirecting to pending page");
-          return NextResponse.redirect(new URL("/onboarding/freelancer/pending-approval", request.url));
-        }
-        
-        if (approvalStatus === "approved") {
-          console.log("🔍 Developer approved, redirecting to dashboard-user");
-          return NextResponse.redirect(new URL("/dashboard-user", request.url));
-        }
-        
-        // Default case: draft, rejected, or unknown status
-        console.log("🔍 Developer default case (status:", approvalStatus, "), redirecting to pending page");
-        return NextResponse.redirect(new URL("/onboarding/freelancer/pending-approval", request.url));
+        // All developers (pending, approved, draft, rejected) go to dashboard
+        // Dashboard will handle showing appropriate message based on approval status
+        console.log("🔍 Developer redirecting to dashboard-user (status:", approvalStatus, ")");
+        return NextResponse.redirect(new URL("/dashboard-user", request.url));
       }
     }
     

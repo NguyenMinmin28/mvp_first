@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import BasicDetails from "@/features/developer/components/profile/basic-details";
 import SkillsSection from "@/features/developer/components/profile/skills-section";
 import PortfolioSection from "@/features/developer/components/profile/portfolio-section";
+import PortfolioGrid from "@/features/developer/components/dashboard/portfolio-grid";
 import EmploymentHistory from "@/features/developer/components/profile/employment-history";
 import EducationSection from "@/features/developer/components/profile/education-section";
 import WorkHistory from "@/features/developer/components/profile/work-history";
@@ -237,8 +238,10 @@ export function DeveloperProfileClient({
 
                     <TabsContent value="portfolio" className="mt-8 py-6 -mx-4 sm:-mx-6 lg:-mx-8">
                       <div className="h-[700px] overflow-y-auto overflow-x-hidden">
-                        <PortfolioSection
-                          portfolioLinks={profile.portfolioLinks}
+                        <PortfolioGrid
+                          portfolioLinks={Array.isArray(profile?.portfolioItems) ? profile.portfolioItems : []}
+                          onAddPortfolio={undefined}
+                          variant="public"
                         />
                       </div>
                     </TabsContent>
@@ -264,7 +267,7 @@ export function DeveloperProfileClient({
                 </div>
               </div>
               <div className="xl:col-span-2">
-                <IdeaSparkList profile={profile} />
+                <IdeaSparkList profile={profile} developerId={developerId} />
               </div>
             </div>
           )}

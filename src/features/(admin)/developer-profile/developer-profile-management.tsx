@@ -56,6 +56,8 @@ interface DeveloperProfile {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // User role information
+  userRole: string | null;
 }
 
 interface PaginationInfo {
@@ -105,10 +107,16 @@ export function DeveloperProfileManagement() {
             : "all",
       });
 
+      // Add search parameter if search term exists
+      if (search.trim()) {
+        params.append('search', search.trim());
+      }
+
       const response = await fetch(`/api/admin/developers?${params}`);
       if (!response.ok) throw new Error("Failed to fetch profiles");
 
       const json = await response.json();
+      console.log("🔍 API Response:", json.developers?.[0]); // Debug first developer
       const items = (json.developers || []).map((dev: any) => {
         const skills = (dev.skills || [])
           .map((s: any) => s.skill?.name)
@@ -143,9 +151,11 @@ export function DeveloperProfileManagement() {
           lastLoginAt: dev.user?.lastLoginAt || null,
           createdAt: dev.createdAt,
           updatedAt: dev.updatedAt || dev.createdAt,
+          userRole: dev.user?.role || null,
         } as DeveloperProfile;
       });
 
+      console.log("🔍 Mapped items:", items[0]); // Debug first mapped item
       setProfiles(items);
       setPagination({
         currentPage: json.pagination?.page || page,
@@ -218,7 +228,7 @@ export function DeveloperProfileManagement() {
 
   // Handle reset role
   const handleResetRole = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to reset the role for ${userName}? This will remove their developer profile and allow them to choose a new role.`)) {
+    if (!confirm(`Are you sure you want to reset the role for ${userName}? This will remove their current role and allow them to choose a new role. Their profile data will be preserved.`)) {
       return;
     }
 
@@ -251,6 +261,15 @@ export function DeveloperProfileManagement() {
     fetchProfiles();
   }, []);
 
+  // Auto-search when search term changes (with debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchProfiles(1);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [search]);
+
   // Table columns
   const columns: Column<DeveloperProfile>[] = [
     {
@@ -278,6 +297,26 @@ export function DeveloperProfileManagement() {
             <div className="text-xs text-gray-500">{item.email}</div>
           </div>
         </div>
+      ),
+    },
+    {
+      key: "userRole",
+      label: "Role",
+      sortable: true,
+      render: (value) => (
+        <Badge
+          variant={
+            value === "ADMIN"
+              ? "destructive"
+              : value === "DEVELOPER"
+                ? "default"
+                : value === "CLIENT"
+                  ? "secondary"
+                  : "outline"
+          }
+        >
+          {value || "No Role"}
+        </Badge>
       ),
     },
     {
@@ -563,7 +602,7 @@ export function DeveloperProfileManagement() {
       <DataTable
         data={profiles}
         columns={columns}
-        searchPlaceholder="Search by name, email, bio..."
+        searchPlaceholder="Search by name, email, phone, skills, location, bio..."
         loading={loading}
         hideSearch
         unstyled
@@ -573,7 +612,7 @@ export function DeveloperProfileManagement() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search by name, email, bio..."
+                  placeholder="Search by name, email, phone, skills, location, bio..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 h-11"
@@ -683,6 +722,46 @@ export function DeveloperProfileManagement() {
             </DialogHeader>
 
             <div className="space-y-4">
+              {/* Role Status Section */}
+              <div className="bg-gray-50 p-4 rounded-lg border">
+                <h3 className="font-medium text-gray-900 mb-2">Account Status</h3>
+                <div className="flex items-center gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Current Role</label>
+                    <div className="mt-1">
+                      {console.log("🔍 Selected profile userRole:", selectedProfile.userRole)}
+                      {selectedProfile.userRole && selectedProfile.userRole !== null ? (
+                        <Badge
+                          variant={
+                            selectedProfile.userRole === "ADMIN"
+                              ? "destructive"
+                              : selectedProfile.userRole === "DEVELOPER"
+                                ? "default"
+                                : selectedProfile.userRole === "CLIENT"
+                                  ? "secondary"
+                                  : "outline"
+                          }
+                        >
+                          {selectedProfile.userRole}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-orange-600 border-orange-300">
+                          No Role (Reset)
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Profile Status</label>
+                    <div className="mt-1">
+                      <Badge variant={selectedProfile.isProfileCompleted ? "success" : "outline"}>
+                        {selectedProfile.isProfileCompleted ? "Completed" : "Incomplete"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Name</label>

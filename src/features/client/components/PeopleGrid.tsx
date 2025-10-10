@@ -16,9 +16,15 @@ import { toast } from "sonner";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
 import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
+import PortfolioGrid from "@/features/developer/components/dashboard/portfolio-grid";
 
 const ServiceDetailOverlay = dynamic(
   () => import("@/features/client/components/ServiceDetailOverlay"),
+  { ssr: false, loading: () => <div className="p-4 text-sm text-gray-600">Loading…</div> }
+);
+
+const PortfolioDetailOverlay = dynamic(
+  () => import("@/features/client/components/PortfolioDetailOverlay"),
   { ssr: false, loading: () => <div className="p-4 text-sm text-gray-600">Loading…</div> }
 );
 
@@ -153,12 +159,15 @@ export function PeopleGrid({
   const router = useRouter();
   const { data: session } = useSession();
   const [developerServices, setDeveloperServices] = useState<Record<string, DeveloperService[]>>({});
+  const [developerPortfolios, setDeveloperPortfolios] = useState<Record<string, any[]>>({});
   const [selectedService, setSelectedService] = useState<ServiceDetailData | null>(null);
   const [isServiceOverlayOpen, setIsServiceOverlayOpen] = useState(false);
   const [isOverlayLoading, setIsOverlayLoading] = useState(false);
   const serviceDetailCacheRef = useRef<Record<string, ServiceDetailData>>({});
   const [selectedFreelancer, setSelectedFreelancer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPortfolio, setSelectedPortfolio] = useState<any | null>(null);
+  const [isPortfolioOverlayOpen, setIsPortfolioOverlayOpen] = useState(false);
   const isOverride = Array.isArray(overrideDevelopers);
   
   // Internal state với fallback từ props
@@ -607,8 +616,18 @@ export function PeopleGrid({
       });
     }
     
+    // Prioritize developers who have portfolios loaded (client-side)
+    const originalIndex: Record<string, number> = {};
+    devList.forEach((d, i) => (originalIndex[d.id] = i));
+    filteredList = filteredList.slice().sort((a, b) => {
+      const hasA = Array.isArray(developerPortfolios[a.id]) && developerPortfolios[a.id].length > 0;
+      const hasB = Array.isArray(developerPortfolios[b.id]) && developerPortfolios[b.id].length > 0;
+      if (hasA === hasB) return (originalIndex[a.id] ?? 0) - (originalIndex[b.id] ?? 0);
+      return hasB ? 1 : -1; // put true (has portfolio) first
+    });
+
     return filteredList;
-  }, [devList, levelFilter, filters, skills, freelancerResponseStatuses]);
+  }, [devList, levelFilter, filters, skills, freelancerResponseStatuses, developerPortfolios]);
   const devIdsKey = filteredDevList.map(d => d.id).join(',');
 
   // Countdown timer effect
@@ -655,13 +674,25 @@ export function PeopleGrid({
     if (filteredDevList.length === 0) return;
 
     const fetchWithAbort = async (developerId: string) => {
-      if (developerServices[developerId]) return;
-      const controller = new AbortController();
-      abortControllersRef.current[developerId] = controller;
-      try {
-        await fetchDeveloperServices(developerId, controller.signal);
-      } finally {
-        delete abortControllersRef.current[developerId];
+      // Services
+      if (!developerServices[developerId]) {
+        const controller = new AbortController();
+        abortControllersRef.current[developerId] = controller;
+        try {
+          await fetchDeveloperServices(developerId, controller.signal);
+        } finally {
+          delete abortControllersRef.current[developerId];
+        }
+      }
+      // Portfolios
+      if (!developerPortfolios[developerId]) {
+        const controller2 = new AbortController();
+        abortControllersRef.current[developerId + "_pf"] = controller2;
+        try {
+          await fetchDeveloperPortfolios(developerId, controller2.signal);
+        } finally {
+          delete abortControllersRef.current[developerId + "_pf"];
+        }
       }
     };
 
@@ -776,6 +807,22 @@ export function PeopleGrid({
     } catch (e) {
       if ((e as any)?.name === 'AbortError') return; // ignore aborted fetches
       console.error("Error loading developer services:", e);
+    }
+  };
+
+  const fetchDeveloperPortfolios = async (developerId: string, signal?: AbortSignal) => {
+    try {
+      const res = await fetch(`/api/developer/${developerId}/portfolios?limit=5`, { cache: "no-store", signal });
+      const json = await res.json();
+      if (res.ok && Array.isArray(json?.items)) {
+        setDeveloperPortfolios(prev => ({
+          ...prev,
+          [developerId]: json.items,
+        }));
+      }
+    } catch (e) {
+      if ((e as any)?.name === 'AbortError') return;
+      console.error("Error loading developer portfolios:", e);
     }
   };
 
@@ -1127,8 +1174,8 @@ export function PeopleGrid({
                             </AvatarFallback>
                           </Avatar>
                           <span
-                            className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
-                              ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                            className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                              ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500' : 'bg-gray-400'
                             }`}
                             style={{ zIndex: 9999, position: 'absolute' }}
                             aria-label={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
@@ -1349,73 +1396,25 @@ export function PeopleGrid({
               </div>
             </div>
 
-            {/* Project Galleries Grid - 4 Project Galleries (Images Only) - responsive */}
+            {/* Portfolio Grid - 5 slots with gray placeholders */}
             <div className="px-4 sm:px-6 pb-4 sm:pb-6">
               <div className="pt-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                  {[
-                    { url: 'https://reallygooddesigns.com/wp-content/uploads/2024/11/creative-website-designs.jpg', title: 'E-commerce Platform', delay: 0 },
-                    { url: 'https://53.fs1.hubspotusercontent-na1.net/hubfs/53/website-design-16-20241121-8236349.webp', title: 'Mobile App Design', delay: 100 },
-                    { url: 'https://static.vecteezy.com/system/resources/previews/016/547/646/non_2x/creative-website-template-designs-illustration-concepts-of-web-page-design-for-website-and-mobile-website-vector.jpg', title: 'Brand Identity', delay: 200 },
-                    { url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnXfZO3obE15TS3kuUeF7pv6XkNSOVJeihyQ&s', title: 'Web Application', delay: 300 }
-                  ].map((project, projectIdx) => (
-                    <div key={projectIdx} className="group/project">
-                      <div 
-                        className="relative w-full h-32 sm:h-56 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ease-out cursor-pointer group/project will-change-transform"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          // Navigate to developer profile to see full portfolio
-                          window.open(`/developer/${developer.id}`, '_blank');
-                        }}
-                      >
-                        {/* Project Image */}
-                        <img
-                          src={project.url}
-                          alt={project.title}
-                          className="w-full h-full object-cover group-hover/project:scale-110 group-hover/project:rotate-2 transition-all duration-500 ease-out will-change-transform"
-                          loading={devIndex < 4 && projectIdx < 2 ? "eager" : "lazy"}
-                          decoding="async"
-                        />
-                        
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/project:opacity-100 transition-opacity duration-300 ease-out"></div>
-                        
-                        {/* Hover Content */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover/project:opacity-100 transition-all duration-300 ease-out transform translate-y-2 group-hover/project:translate-y-0">
-                          <div className="text-center text-white">
-                            <div className="text-xs sm:text-sm font-semibold mb-1">{project.title}</div>
-                            <div className="text-xs opacity-90">View Project</div>
-                          </div>
-                        </div>
-                        
-                        {/* Project Number Badge */}
-                        <div className="absolute top-2 right-2 w-6 h-6 sm:w-7 sm:h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg group-hover/project:scale-110 group-hover/project:-rotate-12 transition-all duration-300">
-                          <span className="text-xs sm:text-sm font-bold text-gray-800">{projectIdx + 1}</span>
-                        </div>
-                        
-                        {/* Corner Accent */}
-                        <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[20px] border-l-white border-b-[20px] border-b-transparent opacity-0 group-hover/project:opacity-100 transition-opacity duration-300"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* View All Projects Button */}
-                <div className="text-center mt-3 sm:mt-4">
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto text-blue-600 hover:text-blue-700 text-sm sm:text-base transition-colors duration-200 ease-out font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      // Navigate to developer profile to see full portfolio
-                      window.open(`/developer/${developer.id}`, '_blank');
-                    }}
-                  >
-                    View All Projects (5+)
-                  </Button>
-                </div>
+                <PortfolioGrid
+                  portfolioLinks={Array.isArray(developerPortfolios[developer.id]) ? developerPortfolios[developer.id] : []}
+                  onAddPortfolio={undefined}
+                  onItemClick={(item) => {
+                    setSelectedPortfolio({
+                      ...item,
+                      developer: {
+                        id: developer.id,
+                        user: { name: developer.user.name, image: developer.user.image },
+                        location: developer.location,
+                      }
+                    });
+                    setIsPortfolioOverlayOpen(true);
+                  }}
+                  variant="public"
+                />
               </div>
             </div>
           </div>
@@ -1510,6 +1509,16 @@ export function PeopleGrid({
           setSelectedService(updatedService);
         }}
         projectId={projectId}
+      />
+
+      {/* Portfolio Detail Overlay - always mounted for smooth slide animation */}
+      <PortfolioDetailOverlay
+        isOpen={isPortfolioOverlayOpen}
+        item={selectedPortfolio}
+        onClose={() => {
+          setIsPortfolioOverlayOpen(false);
+          setSelectedPortfolio(null);
+        }}
       />
 
       {/* Get in Touch Modal */}

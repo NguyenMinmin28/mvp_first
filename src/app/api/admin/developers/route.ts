@@ -41,11 +41,11 @@ export async function GET(request: NextRequest) {
 
     // Add search functionality
     if (search.trim()) {
-      const searchTerm = search.trim().toLowerCase();
+      const searchTerm = search.trim();
       
-      if (searchTerm.length >= 2) {
+      if (searchTerm.length >= 1) { // Reduced minimum length to 1 for better search
         whereClause.OR = [
-          // Search in user name
+          // Search in user name (exact match first, then contains)
           {
             user: {
               name: {
@@ -54,13 +54,29 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          // Search in user email
+          // Search in user email (exact match first, then contains)
           {
             user: {
               email: {
                 contains: searchTerm,
                 mode: "insensitive",
               },
+            },
+          },
+          // Search in phone number
+          {
+            user: {
+              phoneE164: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+          // Search in WhatsApp number
+          {
+            whatsappNumber: {
+              contains: searchTerm,
+              mode: "insensitive",
             },
           },
           // Search in bio
@@ -90,6 +106,19 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          // Search in LinkedIn URL
+          {
+            linkedinUrl: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+          // Search in portfolio links
+          {
+            portfolioLinks: {
+              has: searchTerm,
+            },
+          },
         ];
       }
     }
@@ -107,6 +136,8 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             phoneE164: true,
+            role: true,
+            isProfileCompleted: true,
           },
         },
         skills: {

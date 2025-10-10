@@ -50,6 +50,12 @@ const navigationItems = [
     description: "Overview and statistics",
   },
   {
+    name: "User Management",
+    href: "/admin/users",
+    icon: Users,
+    description: "Manage all users and roles",
+  },
+  {
     name: "Developer Profile",
     href: adminRoutes.DEVELOPER_PROFILE,
     icon: Users,

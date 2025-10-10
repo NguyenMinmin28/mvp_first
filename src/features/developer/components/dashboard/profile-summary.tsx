@@ -298,9 +298,9 @@ export default function ProfileSummary({
         <CardContent className="pt-4 px-3 sm:px-4 pb-3 sm:pb-4">
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
             {/* Left: Avatar */}
-            <div className="lg:w-[280px] w-full lg:max-w-[300px]">
+            <div className="lg:w-[200px] w-full lg:max-w-[200px]">
               <div className="relative inline-block">
-                <Avatar className="w-full h-48 sm:h-64 lg:h-72 xl:h-80 rounded-md">
+                <Avatar className="!w-32 !h-32 sm:!w-36 sm:!h-36 lg:!w-40 lg:!h-40 !rounded-md !shrink-0">
                   <AvatarImage
                     src={
                       photoUrl ||
@@ -308,8 +308,9 @@ export default function ProfileSummary({
                       profile?.image ||
                       undefined
                     }
+                    className="object-cover w-full h-full"
                   />
-                  <AvatarFallback>
+                  <AvatarFallback className="!text-lg !font-semibold !w-full !h-full !flex !items-center !justify-center !rounded-md !bg-muted">
                     {(name || profile?.name || "").slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -645,12 +646,19 @@ export default function ProfileSummary({
                     ) : Array.isArray((profile as any)?.portfolioLinks) &&
                       (profile as any).portfolioLinks.length > 0 ? (
                       <a
-                        href={(profile as any).portfolioLinks[0]}
+                        href={
+                          typeof (profile as any).portfolioLinks[0] === 'string' 
+                            ? (profile as any).portfolioLinks[0]
+                            : (profile as any).portfolioLinks[0]?.url || '#'
+                        }
                         target="_blank"
                         rel="noreferrer"
                         className="underline text-blue-600 break-all"
                       >
-                        {(profile as any).portfolioLinks[0]}
+                        {typeof (profile as any).portfolioLinks[0] === 'string' 
+                          ? (profile as any).portfolioLinks[0]
+                          : (profile as any).portfolioLinks[0]?.title || (profile as any).portfolioLinks[0]?.url || 'Portfolio Link'
+                        }
                       </a>
                     ) : (
                       ""

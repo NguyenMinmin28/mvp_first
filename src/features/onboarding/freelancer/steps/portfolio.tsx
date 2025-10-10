@@ -23,13 +23,19 @@ export default function PortfolioStep() {
   useEffect(() => {
     const loadPortfolios = async () => {
       try {
+        console.log('🔄 Loading portfolios...');
         const response = await fetch('/api/portfolio');
+        console.log('📡 Load response:', response.status, response.ok);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('📦 Loaded portfolios data:', data);
           setPortfolios(data.portfolios || []);
+        } else {
+          console.error('❌ Failed to load portfolios:', response.status);
         }
       } catch (error) {
-        console.error('Error loading portfolios:', error);
+        console.error('💥 Error loading portfolios:', error);
       }
     };
 
@@ -43,22 +49,12 @@ export default function PortfolioStep() {
   const handleNext = async () => {
     setIsLoading(true);
     try {
-      // Save portfolios to database
-      const response = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolios }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save portfolios');
-      }
-
-      toast.success("Portfolio saved successfully!");
+      // Portfolios are already auto-saved, just proceed to next step
+      toast.success("Portfolio completed!");
       router.push("/onboarding/freelancer/verification");
     } catch (error) {
-      console.error('Error saving portfolios:', error);
-      toast.error("Failed to save portfolio. Please try again.");
+      console.error('Error proceeding to next step:', error);
+      toast.error("Failed to proceed. Please try again.");
     } finally {
       setIsLoading(false);
     }

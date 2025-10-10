@@ -585,6 +585,7 @@ model DeveloperProfile {
   services                Service[]
   contactGrants           ContactGrant[]        @relation("DeveloperContactGrants")
   portfolios              Portfolio[]
+  activityLogs            DeveloperActivityLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime? @updatedAt
@@ -593,6 +594,21 @@ model DeveloperProfile {
   @@index([adminApprovalStatus])
   @@index([currentStatus])
   @@index([adminApprovalStatus, currentStatus, level, whatsappVerified], map: "idx_devprofile_eligibility")
+}
+
+model DeveloperActivityLog {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  developerId  String @db.ObjectId
+  developer    DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  
+  status       PresenceStatus
+  action       String // "login", "logout", "status_change"
+  timestamp    DateTime @default(now())
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([developerId, timestamp])
+  @@index([timestamp])
 }
 
 model DeveloperSkill {

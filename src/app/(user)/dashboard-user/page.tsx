@@ -29,6 +29,9 @@ export default async function DashboardUserPage() {
             skills: {
               include: { skill: true },
             },
+            portfolios: {
+              orderBy: { sortOrder: 'asc' }
+            },
           },
         },
       },
@@ -68,7 +71,14 @@ export default async function DashboardUserPage() {
           experienceYears: user.developerProfile.experienceYears,
           level: user.developerProfile.level,
           linkedinUrl: user.developerProfile.linkedinUrl,
-          portfolioLinks: user.developerProfile.portfolioLinks,
+          portfolioLinks: user.developerProfile.portfolios?.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            url: p.projectUrl,
+            imageUrl: p.imageUrl,
+            createdAt: p.createdAt.toISOString(),
+          })) || [],
           location: user.developerProfile.location,
           age: (user.developerProfile as any).age,
           hourlyRate: user.developerProfile.hourlyRateUsd,

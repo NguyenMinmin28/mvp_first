@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
 import { Button } from "@/ui/components/button";
+import { Textarea } from "@/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -16,10 +17,27 @@ export default function BasicInformationStep() {
   const initialBasic = (() => {
     if (typeof window === 'undefined') return {} as any;
     try { return JSON.parse(localStorage.getItem('onboarding.basicInfo') || '{}'); } catch { return {}; }
-  })() as { fullName?: string; email?: string; countryCode?: string; phone?: string };
+  })() as { 
+    fullName?: string; 
+    email?: string; 
+    countryCode?: string; 
+    phone?: string;
+    bio?: string;
+    location?: string;
+    age?: number;
+    linkedinUrl?: string;
+    hourlyRateUsd?: number;
+    experienceYears?: number;
+  };
   const [fullName, setFullName] = useState(initialBasic.fullName || "");
   const [email, setEmail] = useState(initialBasic.email || "");
   const [phone, setPhone] = useState(initialBasic.phone || "");
+  const [bio, setBio] = useState(initialBasic.bio || "");
+  const [location, setLocation] = useState(initialBasic.location || "");
+  const [age, setAge] = useState(initialBasic.age || "");
+  const [linkedinUrl, setLinkedinUrl] = useState(initialBasic.linkedinUrl || "");
+  const [hourlyRateUsd, setHourlyRateUsd] = useState(initialBasic.hourlyRateUsd || "");
+  const [experienceYears, setExperienceYears] = useState(initialBasic.experienceYears || "");
   const [sending, setSending] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
@@ -49,13 +67,24 @@ export default function BasicInformationStep() {
     }
   }, [status]);
 
-  // Autosave basic info (name only here) so Back/Next preserves data
+  // Autosave basic info so Back/Next preserves data
   useEffect(() => {
     try {
-      const payload = { fullName, email, countryCode, phone };
+      const payload = { 
+        fullName, 
+        email, 
+        countryCode, 
+        phone,
+        bio,
+        location,
+        age,
+        linkedinUrl,
+        hourlyRateUsd,
+        experienceYears
+      };
       localStorage.setItem("onboarding.basicInfo", JSON.stringify(payload));
     } catch {}
-  }, [fullName, email, countryCode, phone]);
+  }, [fullName, email, countryCode, phone, bio, location, age, linkedinUrl, hourlyRateUsd, experienceYears]);
 
   useEffect(() => {
     try {
@@ -66,6 +95,12 @@ export default function BasicInformationStep() {
       if (typeof draft.email === 'string') setEmail(draft.email);
       if (typeof draft.countryCode === 'string') setCountryCode(draft.countryCode);
       if (typeof draft.phone === 'string') setPhone(draft.phone);
+      if (typeof draft.bio === 'string') setBio(draft.bio);
+      if (typeof draft.location === 'string') setLocation(draft.location);
+      if (typeof draft.age === 'number') setAge(draft.age);
+      if (typeof draft.linkedinUrl === 'string') setLinkedinUrl(draft.linkedinUrl);
+      if (typeof draft.hourlyRateUsd === 'number') setHourlyRateUsd(draft.hourlyRateUsd);
+      if (typeof draft.experienceYears === 'number') setExperienceYears(draft.experienceYears);
     } catch {}
   }, []);
 
@@ -237,16 +272,96 @@ export default function BasicInformationStep() {
             )}
           </div>
 
+          {/* Bio Section */}
+          <div className="space-y-1">
+            <Label>Bio / About Me</Label>
+            <Textarea 
+              value={bio} 
+              onChange={(e) => setBio(e.target.value)} 
+              placeholder="Tell us about yourself, your experience, and what makes you unique..."
+              rows={4}
+              className="resize-none"
+            />
+            <p className="text-xs text-gray-500">This will be displayed on your public profile</p>
+          </div>
+
+          {/* Location and Age */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>Location</Label>
+              <Input 
+                value={location} 
+                onChange={(e) => setLocation(e.target.value)} 
+                placeholder="e.g., New York, USA" 
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Age</Label>
+              <Input 
+                type="number"
+                value={age} 
+                onChange={(e) => setAge(e.target.value)} 
+                placeholder="25" 
+                min="18"
+                max="100"
+              />
+            </div>
+          </div>
+
+          {/* LinkedIn URL */}
+          <div className="space-y-1">
+            <Label>LinkedIn Profile URL</Label>
+            <Input 
+              value={linkedinUrl} 
+              onChange={(e) => setLinkedinUrl(e.target.value)} 
+              placeholder="https://linkedin.com/in/yourprofile" 
+              type="url"
+            />
+          </div>
+
+          {/* Experience and Hourly Rate */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>Years of Experience</Label>
+              <Input 
+                type="number"
+                value={experienceYears} 
+                onChange={(e) => setExperienceYears(e.target.value)} 
+                placeholder="3" 
+                min="0"
+                max="50"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Hourly Rate (USD)</Label>
+              <Input 
+                type="number"
+                value={hourlyRateUsd} 
+                onChange={(e) => setHourlyRateUsd(e.target.value)} 
+                placeholder="50" 
+                min="5"
+                max="1000"
+              />
+              <p className="text-xs text-gray-500">Your preferred hourly rate in USD</p>
+            </div>
+          </div>
+
           <div className="pt-2">
             <Button className="min-w-28" onClick={async () => {
               try {
-                // Best-effort server save of whatsapp/name
+                // Best-effort server save of all basic info
                 await fetch('/api/user/save-onboarding', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     fullName: fullName || undefined,
                     whatsappNumber: countryCode && phone ? `${countryCode}${phone.replace(/[^0-9]/g, "")}` : undefined,
+                    bio: bio || undefined,
+                    location: location || undefined,
+                    age: age ? parseInt(age.toString()) : undefined,
+                    linkedinUrl: linkedinUrl || undefined,
+                    hourlyRateUsd: hourlyRateUsd ? parseInt(hourlyRateUsd.toString()) : undefined,
+                    experienceYears: experienceYears ? parseInt(experienceYears.toString()) : undefined,
                   }),
                 }).catch(() => {});
               } catch {}
