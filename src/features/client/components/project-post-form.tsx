@@ -373,7 +373,7 @@ export function ProjectPostForm({
         <h1 className="text-5xl font-bold text-gray-900 mb-4">{title}</h1>
       )}
       {/* Project Title */}
-      <div>
+      <div className="mb-4">
         <Input
           id="project-title"
           placeholder="Project Title"
@@ -391,7 +391,7 @@ export function ProjectPostForm({
       </div>
 
       {/* Description */}
-      <div>
+      <div className="mb-4">
         <textarea
           id="project-description"
           placeholder="Project Description"
@@ -416,7 +416,7 @@ export function ProjectPostForm({
       </div>
 
       {/* Skills */}
-      <div>
+      <div className="mb-4">
         {Array.isArray(selectedSkills) && selectedSkills.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {selectedSkills.map((s) => (
@@ -485,7 +485,7 @@ export function ProjectPostForm({
       </div>
 
       {/* Budget Range */}
-      <div>
+      <div className="mb-4">
         <div className="flex items-center space-x-3">
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
@@ -570,7 +570,7 @@ export function ProjectPostForm({
       </div>
 
       {/* Project Type - moved below Budget as requested */}
-      <div>
+      <div className="mb-6">
         <div className="flex items-center space-x-6">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -598,24 +598,26 @@ export function ProjectPostForm({
       </div>
 
       {/* Post Project Button */}
-      <Button
-        className="h-12 w-full bg-black text-white hover:bg-black/90"
-        onClick={
-          isGuest ? () => router.push("/auth/signup") : handleFindFreelancer
-        }
-        disabled={isSubmitting}
-      >
-        {isGuest ? (
-          "Sign Up to Post Project"
-        ) : isSubmitting ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Finding...
-          </>
-        ) : (
-          "Find"
-        )}
-      </Button>
+      <div className="mb-4">
+        <Button
+          className="h-12 w-full bg-black text-white hover:bg-black/90"
+          onClick={
+            isGuest ? () => router.push("/auth/signup") : handleFindFreelancer
+          }
+          disabled={isSubmitting}
+        >
+          {isGuest ? (
+            "Sign Up to Post Project"
+          ) : isSubmitting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Finding...
+            </>
+          ) : (
+            "Find"
+          )}
+        </Button>
+      </div>
 
       {/* Auth prompts when unauthenticated */}
       {isGuest && (
