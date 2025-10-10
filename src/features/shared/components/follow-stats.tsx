@@ -114,8 +114,8 @@ export function FollowStats({
         <span>{followersCount === 1 ? "follower" : "followers"}</span>
       </div>
 
-      {/* Follow Button (only for clients) */}
-      {showFollowButton && isClient && session?.user?.role !== "DEVELOPER" && (
+      {/* Follow Button (for clients and developers) */}
+      {showFollowButton && (isClient || session?.user?.role === "DEVELOPER") && (
         <Button
           variant={isFollowing ? "outline" : "default"}
           size="sm"

@@ -169,54 +169,44 @@ export function SearchAndFilter({
     <div className="w-full space-y-4">
       {/* Search Bar and Toggle */}
       <div className="flex items-center gap-4">
-        {/* Search Input with enhanced animations */}
-        <div className="flex-1 relative group">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-blue-500 group-focus-within:scale-110" />
+        {/* Search Input */}
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <Input
             type="text"
             placeholder={activeTab === "service" ? "Search services, skills, categories..." : "Search developers"}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10 h-12 text-base rounded-lg border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-300 hover:border-gray-400 hover:shadow-md focus:shadow-lg"
+            className="pl-10 pr-10 h-12 text-base rounded-lg border-gray-300 focus:border-gray-400 focus:ring-0"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-all duration-300 hover:scale-110"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               ✕
             </button>
           )}
-          {/* Animated search indicator */}
-          {searchQuery && (
-            <div className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 w-full rounded-full animate-pulse"></div>
-          )}
         </div>
 
-        {/* People/Service Toggle with enhanced animations */}
-        <div className="flex bg-gray-100 rounded-lg p-1 relative">
-          {/* Animated background slider */}
-          <div 
-            className={`absolute top-1 bottom-1 bg-white rounded-md shadow-sm transition-all duration-300 ease-out ${
-              activeTab === "people" ? "left-1 w-[calc(50%-0.25rem)]" : "left-[calc(50%+0.25rem)] w-[calc(50%-0.25rem)]"
-            }`}
-          />
+        {/* People/Service Toggle */}
+        <div className="flex bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => handleTabChange("people")}
-            className={`relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-300 z-10 ${
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === "people"
-                ? "text-black font-semibold"
-                : "text-gray-600 hover:text-gray-800 hover:scale-105"
+                ? "bg-white text-black shadow-sm"
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             People
           </button>
           <button
             onClick={() => handleTabChange("service")}
-            className={`relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-300 z-10 ${
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === "service"
-                ? "text-black font-semibold"
-                : "text-gray-600 hover:text-gray-800 hover:scale-105"
+                ? "bg-white text-black shadow-sm"
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             Service
@@ -224,36 +214,29 @@ export function SearchAndFilter({
         </div>
       </div>
 
-      {/* Filter Buttons with enhanced animations */}
+      {/* Filter Buttons */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Filter Button */}
         <Button
           variant="outline"
-          className="h-9 px-4 border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md group"
+          className="h-9 px-4 border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium"
         >
-          <SlidersHorizontal className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:rotate-180" />
+          <SlidersHorizontal className="w-4 h-4 mr-2" />
           Filter
         </Button>
 
-        {/* Filter Options with enhanced animations */}
-        {filterOptions.map((filter, index) => (
+        {/* Filter Options */}
+        {filterOptions.map((filter) => (
           <button
             key={filter}
             onClick={() => handleFilterClick(filter)}
-            className={`px-4 py-2 text-sm font-medium transition-all duration-300 transform hover:scale-105 rounded-lg ${
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
               selectedFilters.includes(filter)
-                ? "bg-[#F5F6F9] text-gray-900 shadow-md scale-105"
-                : "text-[#A3A3A3] hover:text-gray-700 hover:bg-gray-50 hover:shadow-sm"
+                ? "bg-[#F5F6F9] text-gray-900"
+                : "text-[#A3A3A3] hover:text-gray-700 hover:bg-gray-50"
             }`}
-            style={{
-              animationDelay: `${index * 100}ms`,
-              animation: 'fadeInUp 0.5s ease-out forwards'
-            }}
           >
             {filter}
-            {selectedFilters.includes(filter) && (
-              <span className="ml-2 text-blue-500 animate-bounce">✓</span>
-            )}
           </button>
         ))}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { cn } from "@/core/utils/utils";
+import { cn } from "@/lib/utils";
 
 // Fade In Animation
 export interface FadeInProps {

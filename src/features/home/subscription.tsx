@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -108,7 +107,7 @@ function PlanCard({
   features: string[];
 }) {
   return (
-    <div className="rounded-2xl border bg-white/70 p-6 flex flex-col h-full hover:shadow-2xl hover:scale-105 transition-all duration-500 hover:border-gray-300">
+    <div className="rounded-2xl border bg-white/70 p-6 flex flex-col h-full">
       <div className="mb-6">
         <h3 className="font-semibold text-lg text-left">{name}</h3>
         <div className="mt-2 mx-1 h-px bg-[#DEE0E2]"></div>
@@ -119,7 +118,7 @@ function PlanCard({
       </div>
       <Link
         href="/pricing"
-        className="h-10 inline-flex items-center justify-center rounded-full bg-black text-white px-6 text-sm hover:bg-gray-800 transition-all duration-300 hover:shadow-lg"
+        className="h-10 inline-flex items-center justify-center rounded-full bg-black text-white px-6 text-sm"
       >
         {name === "Basic Plan"
           ? "Current Plan"
@@ -185,86 +184,46 @@ function BenefitCard() {
 }
 
 export default function Subscription() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsVisible(true);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <TooltipProvider>
-      <section ref={sectionRef} className="w-full py-10 md:py-16 px-8">
+      <section className="w-full py-10 md:py-16 px-8">
         <div className="container mx-auto max-w-8xl px-0">
-          <h2 className={`text-4xl font-extrabold tracking-tight mb-8 transition-all duration-1000 transform ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}>
+          <h2 className="text-4xl font-extrabold tracking-tight mb-8">
             Subscription for clients
           </h2>
           {/* 4 Equal Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className={`transition-all duration-1000 transform ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '100ms' }}>
-              <PlanCard
-                name="Basic Plan"
-                price="$0"
-                period="monthly"
-                features={[
-                  "Monthly Post 1 project free.",
-                  "Contact up to 5 freelancer per project.",
-                  "Get notified when freelancers show interest",
-                ]}
-              />
-            </div>
-            <div className={`transition-all duration-1000 transform ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '200ms' }}>
-              <PlanCard
-                name="Plus Plan"
-                price="$19.95"
-                period="monthly"
-                features={[
-                  "Post up to 10 projects per month.",
-                  "Contact up to 10 freelancer per project",
-                  "Get notified when freelancers show interest",
-                ]}
-              />
-            </div>
-            <div className={`transition-all duration-1000 transform ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '300ms' }}>
-              <PlanCard
-                name="Pro Plan"
-                price="$99.95"
-                period="monthly"
-                features={[
-                  "Unlimited project postings",
-                  "Unlimited contacts per project.",
-                  "Get notified when freelancers show interest",
-                ]}
-              />
-            </div>
-            <div className={`transition-all duration-1000 transform ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`} style={{ transitionDelay: '400ms' }}>
-              <BenefitCard />
-            </div>
+            <PlanCard
+              name="Basic Plan"
+              price="$0"
+              period="monthly"
+              features={[
+                "Monthly Post 1 project free.",
+                "Contact up to 5 freelancer per project.",
+                "Get notified when freelancers show interest",
+              ]}
+            />
+            <PlanCard
+              name="Plus Plan"
+              price="$19.95"
+              period="monthly"
+              features={[
+                "Post up to 10 projects per month.",
+                "Contact up to 10 freelancer per project",
+                "Get notified when freelancers show interest",
+              ]}
+            />
+            <PlanCard
+              name="Pro Plan"
+              price="$99.95"
+              period="monthly"
+              features={[
+                "Unlimited project postings",
+                "Unlimited contacts per project.",
+                "Get notified when freelancers show interest",
+              ]}
+            />
+            <BenefitCard />
           </div>
         </div>
       </section>

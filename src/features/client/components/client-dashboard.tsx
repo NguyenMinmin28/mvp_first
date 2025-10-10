@@ -14,8 +14,7 @@ import { RoleMismatchNotice } from "@/ui/components/role-mismatch-notice";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { FileText, AlertCircle, Heart, Star, Users, Briefcase, Sparkles } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/components/tooltip";
+import { FileText, AlertCircle } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
@@ -49,16 +48,6 @@ export default function ClientDashboard() {
   } | null>(null);
   const [hasSavedFormData, setHasSavedFormData] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [isConnectsVisible, setIsConnectsVisible] = useState(false);
-
-  // Connects section visibility animation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsConnectsVisible(true);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Check for saved form data from any session
   useEffect(() => {
@@ -191,12 +180,12 @@ export default function ClientDashboard() {
         {/* Title Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
           <div>
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-4 hover:text-blue-600 transition-all duration-300 cursor-pointer title-glow title-underline">
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
               Project Post
             </h2>
           </div>
           <div>
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-4 hover:text-purple-600 transition-all duration-300 cursor-pointer title-glow title-underline">
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
               Connects
             </h2>
           </div>
@@ -213,190 +202,128 @@ export default function ClientDashboard() {
           />
 
           {/* Right Section - Connects Cards */}
-          <TooltipProvider>
-            <div 
-              className={`
-                w-full transition-all duration-700 transform
-                ${isConnectsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
-              `}
-            >
+          <div className="w-full">
             <div className="grid grid-cols-2 gap-4 w-full">
               {/* Favourite Card */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/favorites" prefetch>
-                    <Card 
-                      className={`
-                        cursor-pointer bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-300 h-36 flex flex-col justify-center items-center
-                        hover:shadow-xl hover:scale-105 hover:-translate-y-2
-                        ${hoveredCard === "favourite" ? "ring-2 ring-red-500 ring-opacity-50" : ""}
-                        group card-hover-lift
-                      `}
-                      onMouseEnter={() => setHoveredCard("favourite")}
-                      onMouseLeave={() => setHoveredCard(null)}
-                    >
-                      <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                        <div className="flex justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                          <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
-                            <Heart className="h-8 w-8 text-red-500 group-hover:animate-pulse" />
-                          </div>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-base group-hover:text-red-600 transition-colors duration-300">
-                          Favourite
-                        </h3>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
-                  <p>Freelancers you have followed</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link href="/favorites" prefetch>
+                <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image
+                          src="/images/client/favourite.png"
+                          alt="Favourite"
+                          width={40}
+                          height={40}
+                        />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-base">
+                      Favourite
+                    </h3>
+                  </CardContent>
+                </Card>
+              </Link>
 
               {/* Starter Card */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/favorites?level=FRESHER" prefetch>
-                    <Card 
-                      className={`
-                        cursor-pointer bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-300 h-36 flex flex-col justify-center items-center
-                        hover:shadow-xl hover:scale-105 hover:-translate-y-2
-                        ${hoveredCard === "starter" ? "ring-2 ring-green-500 ring-opacity-50" : ""}
-                        group card-hover-lift
-                      `}
-                      onMouseEnter={() => setHoveredCard("starter")}
-                      onMouseLeave={() => setHoveredCard(null)}
-                    >
-                      <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                        <div className="flex justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                          <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
-                            <Star className="h-8 w-8 text-green-500 group-hover:animate-pulse" />
-                          </div>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-base group-hover:text-green-600 transition-colors duration-300">
-                          Starter
-                        </h3>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
-                  <p>Your favorite starter freelancers</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link href="/favorites?level=FRESHER" prefetch>
+                <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image
+                          src="/images/client/starter.png"
+                          alt="Starter"
+                          width={40}
+                          height={40}
+                        />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-base">
+                      Starter
+                    </h3>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             <div className="grid grid-cols-2 gap-4 w-full mt-4">
               {/* Professional Card */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/favorites?level=MID" prefetch>
-                    <Card 
-                      className={`
-                        cursor-pointer bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-300 h-36 flex flex-col justify-center items-center
-                        hover:shadow-xl hover:scale-105 hover:-translate-y-2
-                        ${hoveredCard === "professional" ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
-                        group card-hover-lift
-                      `}
-                      onMouseEnter={() => setHoveredCard("professional")}
-                      onMouseLeave={() => setHoveredCard(null)}
-                    >
-                      <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                        <div className="flex justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                          <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-300">
-                            <Users className="h-8 w-8 text-blue-500 group-hover:animate-pulse" />
-                          </div>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-base group-hover:text-blue-600 transition-colors duration-300">
-                          Professional
-                        </h3>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
-                  <p>Your favorite professional freelancers</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link href="/favorites?level=MID" prefetch>
+                <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image
+                          src="/images/client/pro.png"
+                          alt="Professional"
+                          width={40}
+                          height={40}
+                        />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-base">
+                      Professional
+                    </h3>
+                  </CardContent>
+                </Card>
+              </Link>
 
               {/* Experts Card */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/favorites?level=EXPERT" prefetch>
-                    <Card 
-                      className={`
-                        cursor-pointer bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-300 h-36 flex flex-col justify-center items-center
-                        hover:shadow-xl hover:scale-105 hover:-translate-y-2
-                        ${hoveredCard === "expert" ? "ring-2 ring-purple-500 ring-opacity-50" : ""}
-                        group card-hover-lift
-                      `}
-                      onMouseEnter={() => setHoveredCard("expert")}
-                      onMouseLeave={() => setHoveredCard(null)}
-                    >
-                      <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                        <div className="flex justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                          <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
-                            <Sparkles className="h-8 w-8 text-purple-500 group-hover:animate-pulse" />
-                          </div>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-base group-hover:text-purple-600 transition-colors duration-300">
-                          Experts
-                        </h3>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
-                  <p>Your favorite expert freelancers</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link href="/favorites?level=EXPERT" prefetch>
+                <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image
+                          src="/images/client/exp.png"
+                          alt="Experts"
+                          width={40}
+                          height={40}
+                        />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-base">
+                      Experts
+                    </h3>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             <div className="w-full mt-4">
               {/* Active Projects Card */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    href="/my-projects"
-                    prefetch
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        try {
-                          sessionStorage.setItem("myProjectsInitialTab", "active");
-                        } catch {}
-                      }
-                    }}
-                  >
-                    <Card 
-                      className={`
-                        cursor-pointer bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-300 h-36 flex flex-col justify-center items-center
-                        hover:shadow-xl hover:scale-105 hover:-translate-y-2
-                        ${hoveredCard === "active" ? "ring-2 ring-orange-500 ring-opacity-50" : ""}
-                        group card-hover-lift
-                      `}
-                      onMouseEnter={() => setHoveredCard("active")}
-                      onMouseLeave={() => setHoveredCard(null)}
-                    >
-                      <CardContent className="flex flex-col items-center justify-center h-full p-5">
-                        <div className="flex justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                          <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
-                            <Briefcase className="h-8 w-8 text-orange-500 group-hover:animate-pulse" />
-                          </div>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-base group-hover:text-orange-600 transition-colors duration-300">
-                          Active Projects
-                        </h3>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
-                  <p>Manage and track your ongoing projects</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link
+                href="/my-projects"
+                prefetch
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    try {
+                      sessionStorage.setItem("myProjectsInitialTab", "active");
+                    } catch {}
+                  }
+                }}
+              >
+                <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
+                  <CardContent className="flex flex-col items-center justify-center h-full p-5">
+                    <div className="flex justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Image
+                          src="/images/client/active.png"
+                          alt="Active Projects"
+                          width={40}
+                          height={40}
+                        />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-base">
+                      Active Projects
+                    </h3>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           </div>
-          </TooltipProvider>
         </div>
       </div>
 

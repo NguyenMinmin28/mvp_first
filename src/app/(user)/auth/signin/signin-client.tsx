@@ -294,225 +294,89 @@ export default function SignInClient() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
-      {/* Top Navigation */}
-      <nav className="absolute top-0 left-0 right-0 z-10 py-6 px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <img 
-              src="/images/home/clervelogoblack.png" 
-              alt="Clevrs" 
-              className="h-10 w-auto transition-transform duration-300 group-hover:scale-105"
-            />
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="/help" className="text-sm text-gray-600 hover:text-black transition-colors">
-              Help Center
-            </Link>
-            <Link href="/pricing" className="text-sm text-gray-600 hover:text-black transition-colors">
-              Pricing
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <main className="min-h-screen bg-white">
 
-      {/* Main Content - Two Column Layout */}
-      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-        <div className="max-w-7xl w-full mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            
-            {/* Left Column - Branding & Features */}
-            <div className="hidden lg:block space-y-8 animate-fade-in-bottom">
-              <div>
-                <h1 className="text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
-                  Welcome back to
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                    Clevrs
-                  </span>
-                </h1>
-                <p className="text-xl text-gray-600 leading-relaxed">
-                  Connect with talented freelancers or find your next project. Zero commission, direct collaboration.
-                </p>
-              </div>
-
-              {/* Trust Indicators */}
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 group">
-                  <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Secure & Trusted</h3>
-                    <p className="text-gray-600 text-sm">Bank-level security to protect your data and transactions</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 group">
-                  <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Lightning Fast</h3>
-                    <p className="text-gray-600 text-sm">Get matched with perfect freelancers in minutes, not days</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 group">
-                  <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">0% Commission</h3>
-                    <p className="text-gray-600 text-sm">Keep 100% of your earnings. No hidden fees ever.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial */}
-              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-                <div className="flex items-center gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-4 italic">"Clevrs transformed how I find projects. Direct contact with clients means better rates and relationships!"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    SK
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Sarah Kim</p>
-                    <p className="text-sm text-gray-500">Full-stack Developer</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Sign In Form */}
-            <div className="w-full max-w-md mx-auto lg:mx-0">
-              <div className="bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-gray-100 animate-scale-up">
-                {/* Mobile Logo */}
-                <div className="lg:hidden mb-6 text-center">
-                  <img 
-                    src="/images/home/clervelogoblack.png" 
-                    alt="Clevrs" 
-                    className="h-10 w-auto mx-auto mb-4"
-                  />
-                </div>
-
-                {/* Header */}
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Sign in</h2>
-                  <p className="text-gray-600">Welcome back! Please enter your details.</p>
+      {/* Centered form */}
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="flex justify-center py-16">
+          <div className="w-full max-w-md">
+            {/* Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-semibold text-gray-900">Sign in</h1>
             </div>
 
             {/* Server Error Display */}
             {serverError && (
-                  <div className="mb-6">
+              <div className="mb-4">
                 <ErrorDisplay error={serverError} onDismiss={() => setServerError(null)} />
               </div>
             )}
 
-                {/* Form */}
-                <form onSubmit={handleSubmit(handleEmailSignIn)} className="space-y-5">
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email address
-                    </label>
+            {/* Inputs */}
+            <div className="space-y-3">
               <Input
                 id="email"
                 type="email"
-                      placeholder="name@example.com"
+                placeholder="Enter email"
                 {...register("email")}
-                      className={`h-12 ${errors.email ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"} transition-all duration-300`}
-                    />
-                    {errors.email && (
-                      <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                      Password
-                    </label>
+                className={`${errors.email ? "border-red-500" : ""} appearance-none !bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
+                style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
+              />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                placeholder="Enter password"
                 {...register("password")}
-                      className={`h-12 ${errors.password ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"} transition-all duration-300`}
+                className={`${errors.password ? "border-red-500" : ""} appearance-none !bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
+                style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
               />
-                    {errors.password && (
-                      <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-                    )}
             </div>
 
+            {/* Continue button */}
             <Button
-                    type="submit"
+              type="button"
+              onClick={handleSubmit(handleEmailSignIn)}
               disabled={!isValid || isLoading}
-                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Signing in...
-                      </div>
-                    ) : (
-                      "Sign in"
-                    )}
+              className="w-full mt-4 bg-black text-white hover:bg-black/90 disabled:opacity-100"
+            >
+              {isLoading ? "Loading..." : "Continue"}
             </Button>
-                </form>
 
             {/* Divider */}
             <div className="flex items-center my-6">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-                  <span className="mx-4 text-sm text-gray-500 font-medium">OR</span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="mx-4 text-xs text-gray-900">or</span>
+              <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-                {/* Google Sign In */}
+            {/* Google button */}
             <Button
               onClick={handleGoogleSignIn}
               disabled={isLoading}
               variant="outline"
-                  className="w-full h-12 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 transform hover:scale-105"
+              className="w-full bg-gray-100 hover:bg-gray-100 text-gray-800 border-0"
             >
               {mounted ? (
-                    <Icons.google className="w-5 h-5 mr-3" />
-                  ) : (
-                    <div className="w-5 h-5 mr-3 bg-current rounded" />
-                  )}
-                  <span className="font-semibold text-gray-700">Continue with Google</span>
+                <Icons.google className="w-4 h-4 mr-2" />
+              ) : (
+                <div className="w-4 h-4 mr-2 bg-current rounded" />
+              )}
+              Continue with Google
+            </Button>
+
+            {/* Sign up section */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600 mb-3">
+                Don't have an account?
+              </p>
+              <Link href="/auth/signup">
+                <Button
+                  variant="outline"
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Create Account
                 </Button>
-
-                {/* Sign Up Link */}
-                <div className="mt-8 text-center">
-                  <p className="text-gray-600">
-                    Don't have an account?{" "}
-                    <Link href="/auth/signup" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                      Sign up for free
               </Link>
-                  </p>
-                </div>
-
-                {/* Security Badge */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    <span>Your data is protected with 256-bit encryption</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

@@ -27,12 +27,6 @@ import {
   CheckCircle,
   AlertCircle,
   MoreHorizontal,
-  Sparkles,
-  TrendingUp,
-  Zap,
-  Star,
-  ArrowRight,
-  Activity,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -304,21 +298,21 @@ export default function MyProjectsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-gradient-to-r from-gray-900 to-black text-white border-2 border-gray-900 shadow-lg";
+        return "bg-green-100 text-green-800";
       case "in_progress":
-        return "bg-white text-gray-900 border-2 border-gray-900 shadow-md font-black";
+        return "bg-blue-100 text-blue-800";
       case "accepted":
-        return "bg-white text-gray-900 border-2 border-gray-400 shadow-md font-bold";
+        return "bg-purple-100 text-purple-800";
       case "submitted":
-        return "bg-white text-gray-700 border-2 border-gray-300 shadow-sm font-semibold";
+        return "bg-yellow-100 text-yellow-800";
       case "assigning":
-        return "bg-gray-100 text-gray-900 border-2 border-gray-400 shadow-sm font-semibold";
+        return "bg-orange-100 text-orange-800";
       case "draft":
-        return "bg-gray-50 text-gray-600 border-2 border-gray-200 font-medium";
+        return "bg-gray-100 text-gray-800";
       case "canceled":
-        return "bg-white text-red-600 border-2 border-red-600 shadow-sm font-bold";
+        return "bg-red-100 text-red-800";
       default:
-        return "bg-gray-50 text-gray-600 border-2 border-gray-200";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -493,141 +487,83 @@ export default function MyProjectsPage() {
     }
   };
 
-  const getStatusEmoji = (status: string) => {
-    switch (status) {
-      case "accepted": return "✅";
-      case "rejected": return "❌";
-      case "pending": return "⏳";
-      case "expired": return "⏰";
-      default: return "📧";
-    }
-  };
-
   const renderManualInvitationCard = (invitation: any, projectTitle: string) => (
-    <div
+    <Card
       key={`invitation-${invitation.id}`}
-      className="group relative animate-fade-in-up"
+      className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-blue-200 hover:border-blue-300 bg-blue-50"
     >
-      {/* Elegant shadow */}
-      <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-5 group-hover:opacity-10 transition-opacity duration-500" />
-      
-      <Card className="relative overflow-hidden border-2 border-gray-200 bg-white hover:border-black hover:bg-gray-50 shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] rounded-2xl">
-        {/* Subtle shine effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-        
-        <CardContent className="relative p-5 lg:p-6">
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-            {/* Avatar/Icon section */}
-            <div className="flex items-start gap-4 flex-1">
-              {/* Elegant Icon */}
-              <div className="relative flex-shrink-0">
-                <div className="absolute inset-0 bg-black rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity duration-300" />
-                <div className="relative w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-xl border border-gray-800">
-                  <MessageSquare className="h-7 w-7 lg:h-8 lg:w-8 text-white" />
-                </div>
-                {/* Status indicator */}
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center text-xs font-bold">
-                  {getStatusEmoji(invitation.responseStatus)}
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0 space-y-3">
-                {/* Header */}
-                <div className="space-y-2">
-                  <div className="flex items-start gap-3 flex-wrap">
-                    <h3 className="text-base lg:text-lg font-black text-gray-900 group-hover:text-black transition-all duration-300">
-                      {invitation.developer?.name || invitation.developer?.user?.name || "Developer"}
-                    </h3>
-                    <Badge
-                      className={`text-xs lg:text-sm font-black border-2 shadow-md transition-all duration-300 ${
-                        invitation.responseStatus === "accepted" 
-                          ? "bg-white text-green-600 border-green-600" :
-                        invitation.responseStatus === "rejected" 
-                          ? "bg-white text-red-600 border-red-600" :
-                        invitation.responseStatus === "pending" 
-                          ? "bg-white text-orange-600 border-orange-600 animate-pulse" :
-                        invitation.responseStatus === "expired"
-                          ? "bg-white text-gray-600 border-gray-600"
-                          : "bg-white text-black border-black"
-                      }`}
-                    >
-                      {invitation.responseStatus === "accepted" ? "✓ Accepted" :
-                       invitation.responseStatus === "rejected" ? "✗ Rejected" :
-                       invitation.responseStatus === "pending" ? "⌛ Pending" :
-                       invitation.responseStatus === "expired" ? "⏰ Expired" :
+      <CardContent className="p-4 lg:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4">
+          <div className="flex items-start gap-3 lg:gap-4 flex-1">
+            <div className="flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 lg:gap-3 mb-2">
+                <h3 className="text-base lg:text-lg font-semibold text-blue-900 truncate">
+                  {invitation.title || `Message to ${invitation.developer.name || "Developer"}`}
+                </h3>
+                <Badge
+                  className={`text-xs lg:text-sm ${
+                    invitation.responseStatus === "accepted" ? "bg-green-100 text-green-800" :
+                    invitation.responseStatus === "rejected" ? "bg-red-100 text-red-800" :
+                    invitation.responseStatus === "pending" ? "bg-yellow-100 text-yellow-800" :
+                    "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-1">
+                    {invitation.responseStatus === "accepted" ? "✅" :
+                     invitation.responseStatus === "rejected" ? "❌" :
+                     invitation.responseStatus === "pending" ? "⏳" : ""}
+                    <span className="hidden sm:inline">
+                      {invitation.responseStatus === "accepted" ? "Accepted" :
+                       invitation.responseStatus === "rejected" ? "Rejected" :
+                       invitation.responseStatus === "pending" ? "Pending" :
                        invitation.responseStatus}
-                    </Badge>
-                  </div>
-                  
-                  {/* Project info */}
-                  <div className="flex items-center gap-2 text-sm lg:text-base">
-                    <div className="w-6 h-6 bg-gradient-to-br from-gray-900 to-black rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FileText className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-gray-600 font-semibold">Project:</span>
-                    <span className="font-black text-gray-900 truncate">{projectTitle}</span>
-                  </div>
-                </div>
-
-                {/* Message preview */}
-                {invitation.clientMessage && (
-                  <div className="relative pl-4 border-l-4 border-black">
-                    <p className="text-sm lg:text-base text-gray-700 italic line-clamp-2 leading-relaxed font-medium">
-                      "{invitation.clientMessage}"
-                    </p>
-                  </div>
-                )}
-
-                {/* Meta info */}
-                <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                  <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 rounded-lg shadow-sm border border-gray-200 hover:border-gray-900 transition-colors duration-200">
-                    <Calendar className="h-3.5 w-3.5 text-gray-900" />
-                    <span className="text-xs lg:text-sm font-bold text-gray-900">
-                      {new Date(invitation.assignedAt).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
                     </span>
                   </div>
-                  {invitation.budget && (
-                    <div className="flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded-lg shadow-md">
-                      <DollarSign className="h-3.5 w-3.5" />
-                      <span className="text-xs lg:text-sm font-black">
-                        {invitation.budget}
-                      </span>
-                    </div>
-                  )}
-                  {invitation.description && (
-                    <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
-                      <Sparkles className="h-3.5 w-3.5 text-gray-900" />
-                      <span className="text-xs lg:text-sm text-gray-900 font-semibold truncate max-w-[150px]">
-                        {invitation.description}
-                      </span>
-                    </div>
-                  )}
+                </Badge>
+              </div>
+
+              <div className="text-sm lg:text-base text-blue-700 mb-2 lg:mb-3">
+                <strong>Project:</strong> {projectTitle}
+              </div>
+
+              {invitation.clientMessage && (
+                <p className="text-sm lg:text-base text-blue-600 mb-2 lg:mb-3 italic">
+                  "{invitation.clientMessage}"
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 lg:gap-4 text-xs lg:text-sm text-blue-500">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 lg:h-4 lg:w-4" />
+                  {new Date(invitation.assignedAt).toLocaleDateString()}
                 </div>
+                {invitation.budget && (
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3 lg:h-4 lg:w-4" />
+                    Budget: {invitation.budget}
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Action button */}
-            <div className="flex items-start lg:items-center">
-              <Button
-                size="sm"
-                className="relative w-full lg:w-auto bg-black hover:bg-gray-900 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 group/btn overflow-hidden rounded-lg px-6 py-5"
-                onClick={() => handleViewMessageDetail(invitation)}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-                <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300 relative z-10" />
-                <span className="relative z-10 font-bold">View Details</span>
-                <ArrowRight className="h-4 w-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-300 relative z-10" />
-              </Button>
-            </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          <div className="flex flex-wrap items-center gap-1 lg:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+              onClick={() => handleViewMessageDetail(invitation)}
+            >
+              <MessageSquare className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
+              View Details
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   if (isLoading) {
@@ -639,44 +575,21 @@ export default function MyProjectsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 lg:px-6 py-4 lg:py-8 space-y-6 lg:space-y-8 relative overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Elegant Background Pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDIiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] pointer-events-none opacity-60" />
-      
-      {/* Elegant Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 lg:gap-6 animate-fade-in-up relative z-10">
-        <div className="flex items-center gap-4 group">
-          {/* Minimalist Icon */}
-          <div className="relative">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
-            <div className="relative w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-gray-900 via-black to-gray-800 rounded-2xl flex items-center justify-center transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-2xl border border-gray-800">
-              <FileText className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
-              <div className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center text-black text-xs font-black shadow-xl border-2 border-gray-900">
-                {projects.length}
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <h1 className="text-3xl lg:text-5xl font-black text-gray-900 hover:text-black transition-all duration-300 cursor-pointer tracking-tight">
-              My Projects
-            </h1>
-            <p className="text-sm lg:text-base text-gray-600 mt-2 flex items-center gap-2 font-medium">
-              <div className="relative flex items-center">
-                <Activity className="w-4 h-4 text-gray-900" />
-                <div className="absolute inset-0 w-4 h-4 bg-gray-900 rounded-full blur-sm opacity-20 animate-ping" />
-              </div>
-              <span>Manage and track all your projects in one place</span>
-            </p>
-          </div>
+    <div className="container mx-auto px-4 lg:px-6 py-4 lg:py-8 space-y-4 lg:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+            My Projects
+          </h1>
+          <p className="text-sm lg:text-base text-gray-600 mt-1">
+            Manage and track all your projects
+          </p>
         </div>
-        
         <Link href="/client-dashboard">
-          <Button className="group relative flex items-center gap-3 w-full sm:w-auto bg-black hover:bg-gray-900 text-white border-0 px-6 py-6 lg:px-8 lg:py-7 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-black/50 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300 relative z-10" />
-            <span className="text-sm lg:text-base font-bold relative z-10">Create New Project</span>
-            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300 relative z-10" />
+          <Button className="flex items-center gap-2 w-full sm:w-auto">
+            <Plus className="h-4 w-4" />
+            <span className="text-sm lg:text-base">New Project</span>
           </Button>
         </Link>
       </div>
@@ -735,174 +648,111 @@ export default function MyProjectsPage() {
         </Card>
       )}
 
-      {/* Stats Cards - Elegant Black & White */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 relative z-10">
-        <div className="animate-fade-in-up group" style={{ animationDelay: '100ms' }}>
-          <div className="relative">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-            
-            <Card className="relative border-2 border-gray-200 bg-white hover:bg-gray-50 rounded-2xl shadow-lg hover:shadow-2xl hover:border-black transition-all duration-500 transform hover:-translate-y-1 hover:scale-[1.02] cursor-pointer overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              
-              <CardContent className="p-5 lg:p-6 relative z-10">
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 flex-shrink-0 shadow-lg">
-                    <FileText className="h-6 w-6 lg:h-7 lg:w-7 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs lg:text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">
-                      Total Projects
-                    </p>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900">
-                      {projects.length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <Card>
+          <CardContent className="p-3 lg:p-4">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs lg:text-sm text-gray-600">
+                  Total Projects
+                </p>
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold">
+                  {projects.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="animate-fade-in-up group" style={{ animationDelay: '200ms' }}>
-          <div className="relative">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-            
-            <Card className="relative border-2 border-gray-200 bg-white hover:bg-gray-50 rounded-2xl shadow-lg hover:shadow-2xl hover:border-black transition-all duration-500 transform hover:-translate-y-1 hover:scale-[1.02] cursor-pointer overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              
-              <CardContent className="p-5 lg:p-6 relative z-10">
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 flex-shrink-0 shadow-lg">
-                    <CheckCircle className="h-6 w-6 lg:h-7 lg:w-7 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs lg:text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Completed</p>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900">
-                      {projects.filter((p) => p.status === "completed").length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-3 lg:p-4">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="p-1.5 lg:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-green-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs lg:text-sm text-gray-600">Completed</p>
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold">
+                  {projects.filter((p) => p.status === "completed").length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="animate-fade-in-up group" style={{ animationDelay: '300ms' }}>
-          <div className="relative">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-            
-            <Card className="relative border-2 border-gray-200 bg-white hover:bg-gray-50 rounded-2xl shadow-lg hover:shadow-2xl hover:border-black transition-all duration-500 transform hover:-translate-y-1 hover:scale-[1.02] cursor-pointer overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              
-              <CardContent className="p-5 lg:p-6 relative z-10">
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 flex-shrink-0 shadow-lg">
-                    <Clock className="h-6 w-6 lg:h-7 lg:w-7 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs lg:text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">In Progress</p>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900">
-                      {
-                        projects.filter((p) =>
-                          [
-                            "submitted",
-                            "assigning",
-                            "accepted",
-                            "in_progress",
-                          ].includes(p.status)
-                        ).length
-                      }
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-3 lg:p-4">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs lg:text-sm text-gray-600">In Progress</p>
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold">
+                  {
+                    projects.filter((p) =>
+                      [
+                        "submitted",
+                        "assigning",
+                        "accepted",
+                        "in_progress",
+                      ].includes(p.status)
+                    ).length
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="animate-fade-in-up group" style={{ animationDelay: '400ms' }}>
-          <div className="relative">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-            
-            <Card className="relative border-2 border-gray-200 bg-white hover:bg-gray-50 rounded-2xl shadow-lg hover:shadow-2xl hover:border-black transition-all duration-500 transform hover:-translate-y-1 hover:scale-[1.02] cursor-pointer overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              
-              <CardContent className="p-5 lg:p-6 relative z-10">
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 flex-shrink-0 shadow-lg">
-                    <DollarSign className="h-6 w-6 lg:h-7 lg:w-7 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs lg:text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Total Budget</p>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 truncate">
-                      {(() => {
-                        const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
-                        if (totalBudget >= 1000000000) {
-                          return `$${(totalBudget / 1000000000).toFixed(1)}B`;
-                        } else if (totalBudget >= 1000000) {
-                          return `$${(totalBudget / 1000000).toFixed(1)}M`;
-                        } else if (totalBudget >= 1000) {
-                          return `$${(totalBudget / 1000).toFixed(1)}K`;
-                        } else {
-                          return `$${totalBudget.toLocaleString()}`;
-                        }
-                      })()}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-3 lg:p-4">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="p-1.5 lg:p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                <DollarSign className="h-4 w-4 lg:h-5 lg:w-5 text-yellow-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs lg:text-sm text-gray-600">Total Budget</p>
+                <p className="text-sm sm:text-lg lg:text-2xl font-bold truncate">
+                  {(() => {
+                    const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
+                    if (totalBudget >= 1000000000) {
+                      return `$${(totalBudget / 1000000000).toFixed(1)}B`;
+                    } else if (totalBudget >= 1000000) {
+                      return `$${(totalBudget / 1000000).toFixed(1)}M`;
+                    } else if (totalBudget >= 1000) {
+                      return `$${(totalBudget / 1000).toFixed(1)}K`;
+                    } else {
+                      return `$${totalBudget.toLocaleString()}`;
+                    }
+                  })()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filters and Search - Elegant Design */}
-      <div className="animate-fade-in-up relative z-10" style={{ animationDelay: '500ms' }}>
-        <Card className="border-2 border-gray-200 bg-white hover:border-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group">
-          {/* Subtle gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-          
-          <CardContent className="p-6 lg:p-8 relative">
-            <div className="flex flex-col gap-4 lg:gap-5">
-              {/* Search bar - with enhanced effects */}
-              <div className="w-full">
-                <div className="relative group/search">
-                  {/* Animated icon */}
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-300">
-                    <Search className="h-5 w-5 text-gray-400 group-focus-within/search:text-black group-focus-within/search:scale-110 transition-all duration-300" />
-                  </div>
-                  
-                  {/* Enhanced input */}
-                  <Input
-                    placeholder="Search projects..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 pr-12 py-6 text-sm lg:text-base border-2 border-gray-200 focus:border-black hover:border-gray-400 rounded-xl transition-all duration-300 bg-white focus:bg-gray-50 font-medium placeholder:text-gray-400 shadow-sm focus:shadow-lg"
-                  />
-                  
-                  {/* Search indicator */}
-                  {searchTerm && (
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="text-gray-400 hover:text-black transition-colors duration-200"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Focus ring animation */}
-                  <div className="absolute inset-0 rounded-xl border-2 border-black opacity-0 group-focus-within/search:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                </div>
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-4 lg:p-6">
+          <div className="flex flex-col gap-3 lg:gap-4">
+            {/* Search bar - full width */}
+            <div className="w-full">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 text-sm lg:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150"
+                />
               </div>
+            </div>
             
             {/* Mobile native selects */}
             <div className="sm:hidden space-y-3">
@@ -992,154 +842,86 @@ export default function MyProjectsPage() {
           </div>
         </CardContent>
       </Card>
-      </div>
 
-      {/* Tabs - Elegant Design */}
-      <div className="animate-fade-in-up relative z-10" style={{ animationDelay: '600ms' }}>
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-5 lg:space-y-6"
-        >
-          <TabsList className="w-full bg-white border-2 border-gray-200 gap-2 
-                               overflow-x-auto scrollbar-none 
-                               flex sm:grid sm:grid-cols-3 lg:grid-cols-5 min-w-0
-                               h-auto p-2 rounded-xl shadow-lg">
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4 lg:space-y-6"
+      >
+        <TabsList className="w-full bg-gray-100 gap-1 
+                             overflow-x-auto scrollbar-none 
+                             flex sm:grid sm:grid-cols-3 lg:grid-cols-5 min-w-0
+                             h-auto p-1">
           <TabsTrigger
             value="all"
-            className="relative px-4 py-3 text-xs sm:text-sm font-bold whitespace-nowrap 
-                       data-[state=active]:bg-gradient-to-br data-[state=active]:from-gray-900 data-[state=active]:to-black
-                       data-[state=active]:text-white data-[state=active]:shadow-xl
-                       hover:bg-gray-100
-                       transition-all duration-300 flex-shrink-0 rounded-lg
-                       min-w-fit group overflow-hidden border-2 border-transparent
-                       data-[state=active]:border-gray-900"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            {/* Shine effect on active */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000" />
-            
-            <span className="relative z-10 flex items-center gap-2">
-              <FileText className="w-4 h-4 group-data-[state=active]:scale-110 transition-transform duration-300" />
-              <span className="hidden sm:inline">All ({getTabCount("all")})</span>
-              <span className="sm:hidden">All</span>
-            </span>
+            <span className="hidden sm:inline">All ({getTabCount("all")})</span>
+            <span className="sm:hidden">All</span>
           </TabsTrigger>
           <TabsTrigger
             value="active"
-            className="relative px-4 py-3 text-xs sm:text-sm font-bold whitespace-nowrap 
-                       data-[state=active]:bg-gradient-to-br data-[state=active]:from-gray-900 data-[state=active]:to-black
-                       data-[state=active]:text-white data-[state=active]:shadow-xl
-                       hover:bg-gray-100
-                       transition-all duration-300 flex-shrink-0 rounded-lg
-                       min-w-fit group overflow-hidden border-2 border-transparent
-                       data-[state=active]:border-gray-900"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000" />
-            <span className="relative z-10 flex items-center gap-2">
-              <Activity className="w-4 h-4 group-data-[state=active]:scale-110 transition-transform duration-300" />
-              <span className="hidden sm:inline">Active ({getTabCount("active")})</span>
-              <span className="sm:hidden">Active</span>
-            </span>
+            <span className="hidden sm:inline">Active ({getTabCount("active")})</span>
+            <span className="sm:hidden">Active</span>
           </TabsTrigger>
           <TabsTrigger
             value="completed"
-            className="relative px-4 py-3 text-xs sm:text-sm font-bold whitespace-nowrap 
-                       data-[state=active]:bg-gradient-to-br data-[state=active]:from-gray-900 data-[state=active]:to-black
-                       data-[state=active]:text-white data-[state=active]:shadow-xl
-                       hover:bg-gray-100
-                       transition-all duration-300 flex-shrink-0 rounded-lg
-                       min-w-fit group overflow-hidden border-2 border-transparent
-                       data-[state=active]:border-gray-900"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000" />
-            <span className="relative z-10 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 group-data-[state=active]:scale-110 transition-transform duration-300" />
-              <span className="hidden sm:inline">Completed ({getTabCount("completed")})</span>
-              <span className="sm:hidden">Done</span>
-            </span>
+            <span className="hidden sm:inline">Completed ({getTabCount("completed")})</span>
+            <span className="sm:hidden">Done</span>
           </TabsTrigger>
           <TabsTrigger
             value="draft"
-            className="relative px-4 py-3 text-xs sm:text-sm font-bold whitespace-nowrap 
-                       data-[state=active]:bg-gradient-to-br data-[state=active]:from-gray-900 data-[state=active]:to-black
-                       data-[state=active]:text-white data-[state=active]:shadow-xl
-                       hover:bg-gray-100
-                       transition-all duration-300 flex-shrink-0 rounded-lg
-                       min-w-fit group overflow-hidden border-2 border-transparent
-                       data-[state=active]:border-gray-900"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000" />
-            <span className="relative z-10 flex items-center gap-2">
-              <FileText className="w-4 h-4 group-data-[state=active]:scale-110 transition-transform duration-300" />
-              <span className="hidden sm:inline">Draft ({getTabCount("draft")})</span>
-              <span className="sm:hidden">Draft</span>
-            </span>
+            <span className="hidden sm:inline">Draft ({getTabCount("draft")})</span>
+            <span className="sm:hidden">Draft</span>
           </TabsTrigger>
           <TabsTrigger
             value="messages"
-            className="relative px-4 py-3 text-xs sm:text-sm font-bold whitespace-nowrap 
-                       data-[state=active]:bg-gradient-to-br data-[state=active]:from-gray-900 data-[state=active]:to-black
-                       data-[state=active]:text-white data-[state=active]:shadow-xl
-                       hover:bg-gray-100
-                       transition-all duration-300 flex-shrink-0 rounded-lg
-                       min-w-fit group overflow-hidden border-2 border-transparent
-                       data-[state=active]:border-gray-900"
+            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm whitespace-nowrap 
+                       data-[state=active]:bg-white data-[state=active]:shadow-sm 
+                       transition-all duration-150 flex-shrink-0 rounded-sm
+                       min-w-fit"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000" />
-            <span className="relative z-10 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 group-data-[state=active]:scale-110 transition-transform duration-300" />
-              <span className="hidden sm:inline">Messages ({getTabCount("messages")})</span>
-              <span className="sm:hidden">Chat</span>
-            </span>
+            <span className="hidden sm:inline">Messages ({getTabCount("messages")})</span>
+            <span className="sm:hidden">Chat</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-3 lg:space-y-4">
           {totalItems === 0 ? (
-            <div className="relative group">
-              <div className="absolute inset-0 bg-black rounded-2xl blur-3xl opacity-5" />
-              
-              <Card className="relative border-2 border-gray-200 bg-white hover:border-gray-900 rounded-2xl shadow-xl overflow-hidden">
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-60" />
-                
-                <CardContent className="relative p-12 lg:p-16 text-center">
-                  {/* Elegant icon */}
-                  <div className="relative inline-block mb-8">
-                    <div className="absolute inset-0 bg-black rounded-full blur-2xl opacity-10 animate-pulse" />
-                    <div className="relative w-24 h-24 lg:w-32 lg:h-32 bg-gradient-to-br from-gray-900 to-black rounded-2xl flex items-center justify-center shadow-2xl border-2 border-gray-800 animate-float">
-                      {activeTab === "messages" ? (
-                        <MessageSquare className="h-12 w-12 lg:h-16 lg:w-16 text-white" />
-                      ) : (
-                        <FileText className="h-12 w-12 lg:h-16 lg:w-16 text-white" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-2xl lg:text-4xl font-black text-gray-900 mb-4">
-                    {activeTab === "messages" ? "No messages found" : "No projects found"}
-                  </h3>
-                  
-                  <p className="text-base lg:text-lg text-gray-600 mb-8 max-w-md mx-auto leading-relaxed font-medium">
-                    {searchTerm || statusFilter !== "all"
-                      ? "Try adjusting your search or filters to find what you're looking for"
-                      : activeTab === "messages" 
-                        ? "Start connecting with talented developers by sending your first message"
-                        : "Begin your journey by creating your first amazing project"}
-                  </p>
-                  
-                  {!searchTerm && statusFilter === "all" && activeTab !== "messages" && (
-                    <Link href="/client-dashboard">
-                      <Button className="relative bg-black hover:bg-gray-900 text-white border-0 px-8 py-6 rounded-xl text-base font-bold shadow-2xl hover:shadow-black/50 transform hover:scale-105 transition-all duration-300 overflow-hidden group/btn">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-                        <Plus className="h-5 w-5 mr-2 relative z-10" />
-                        <span className="relative z-10">Create Your First Project</span>
-                        <ArrowRight className="h-5 w-5 ml-2 relative z-10 group-hover/btn:translate-x-1 transition-transform duration-300" />
-                      </Button>
-                    </Link>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardContent className="p-6 lg:p-8 text-center">
+                <FileText className="h-8 w-8 lg:h-12 lg:w-12 text-gray-400 mx-auto mb-3 lg:mb-4" />
+                <h3 className="text-base lg:text-lg font-medium text-gray-900  mb-2">
+                  {activeTab === "messages" ? "No messages found" : "No projects found"}
+                </h3>
+                <p className="text-sm lg:text-base text-gray-500  mb-3 lg:mb-4">
+                  {searchTerm || statusFilter !== "all"
+                    ? "Try adjusting your search or filters"
+                    : activeTab === "messages" 
+                      ? "You haven't sent any messages to developers yet"
+                      : "Get started by creating your first project"}
+                </p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid gap-3 lg:gap-4 mobile-no-overflow">
               {/* Render manual invitations for messages tab */}
@@ -1148,218 +930,214 @@ export default function MyProjectsPage() {
               ))}
               
               {/* Render projects */}
-              {visibleProjects.map((project, index) => (
-                <div 
+              {visibleProjects.map((project) => (
+                <Card
                   key={project.id}
-                  className="animate-fade-in-up group/card" 
-                  style={{ animationDelay: `${700 + index * 100}ms` }}
+                  className="hover:shadow-lg hover:scale-[1.01] transition-all duration-200 border border-gray-200 hover:border-gray-300 mobile-no-overflow"
                 >
-                  <div className="relative">
-                    {/* Elegant shadow */}
-                    <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-5 group-hover/card:opacity-10 transition-opacity duration-500" />
-                    
-                    <Card className="relative hover:shadow-2xl hover:scale-[1.01] transition-all duration-500 border-2 border-gray-200 hover:border-black mobile-no-overflow overflow-hidden bg-white hover:bg-gray-50 rounded-2xl">
-                      {/* Shine effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full group-hover/card:translate-x-full transition-transform duration-1000" />
-                      
-                      <CardContent className="p-4 sm:p-5 lg:p-6 mobile-overflow-safe relative z-10">
-                        <div className="flex flex-col gap-4 sm:gap-5 mobile-overflow-safe">
-                          {/* Header: Icon, Title, Status */}
-                          <div className="flex items-start gap-3 sm:gap-4">
-                            {/* Elegant Icon */}
-                            <div className="relative flex-shrink-0">
-                              <div className="absolute inset-0 bg-black rounded-xl blur-lg opacity-10 group-hover/card:opacity-20 transition-opacity duration-300" />
-                              <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center group-hover/card:scale-110 group-hover/card:rotate-3 transition-all duration-300 shadow-lg border border-gray-800">
-                                <FileText className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
+                  <CardContent className="p-3 sm:p-4 lg:p-6 mobile-overflow-safe">
+                    <div className="flex flex-col gap-3 sm:gap-4 mobile-overflow-safe">
+                      {/* Header: Icon, Title, Status */}
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <FileText className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-gray-600" />
+                        </div>
+                        <div className="flex-1 min-w-0 mobile-overflow-safe">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 lg:gap-3 mb-2 mobile-overflow-safe">
+                            <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mobile-text-truncate min-w-0 flex-1">
+                              {project.name}
+                            </h3>
+                            <Badge
+                              className={`${getStatusColor(project.status)} text-xs lg:text-sm w-fit flex-shrink-0`}
+                            >
+                              <div className="flex items-center gap-1">
+                                {getStatusIcon(project.status)}
+                                <span className="hidden sm:inline">
+                                  {getStatusText(project.status)}
+                                </span>
                               </div>
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 mobile-overflow-safe space-y-2">
-                              <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 mobile-overflow-safe">
-                                <h3 className="text-base sm:text-lg lg:text-xl font-black text-gray-900 mobile-text-truncate min-w-0 flex-1 group-hover/card:text-black transition-colors duration-300">
-                                  {project.name}
-                                </h3>
-                                <Badge
-                                  className={`${getStatusColor(project.status)} text-xs lg:text-sm w-fit flex-shrink-0 rounded-lg px-3 py-1.5 uppercase tracking-wide transition-all duration-300 group-hover/card:scale-105`}
-                                >
-                                  <div className="flex items-center gap-1.5">
-                                    {getStatusIcon(project.status)}
-                                    <span className="hidden sm:inline font-bold">
-                                      {getStatusText(project.status)}
-                                    </span>
-                                  </div>
-                                </Badge>
-                              </div>
-
-                              {project.description && (
-                                <p className="text-sm lg:text-base text-gray-600 line-clamp-2 font-medium">
-                                  {project.description}
-                                </p>
-                              )}
-
-                              {/* Meta info pills */}
-                              <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 rounded-lg shadow-sm border border-gray-200 hover:border-gray-900 transition-colors duration-200">
-                                  <Calendar className="h-3.5 w-3.5 text-gray-900" />
-                                  <span className="text-xs lg:text-sm font-bold text-gray-900">{project.date}</span>
-                                </div>
-                                {project.budget && (
-                                  <div className="flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded-lg shadow-md">
-                                    <DollarSign className="h-3.5 w-3.5" />
-                                    <span className="text-xs lg:text-sm font-black">
-                                      {(() => {
-                                        const budget = project.budget;
-                                        if (budget >= 1000000000) {
-                                          return `$${(budget / 1000000000).toFixed(1)}B`;
-                                        } else if (budget >= 1000000) {
-                                          return `$${(budget / 1000000).toFixed(1)}M`;
-                                        } else if (budget >= 1000) {
-                                          return `$${(budget / 1000).toFixed(1)}K`;
-                                        } else {
-                                          return `$${budget.toLocaleString()}`;
-                                        }
-                                      })()}
-                                    </span>
-                                  </div>
-                                )}
-                                {project.candidatesCount !== undefined && (
-                                  <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
-                                    <Users className="h-3.5 w-3.5 text-gray-900" />
-                                    <span className="text-xs lg:text-sm font-semibold text-gray-900">
-                                      {project.candidatesCount} {project.candidatesCount === 1 ? 'candidate' : 'candidates'}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                            </Badge>
                           </div>
 
-                          {/* Action Buttons - Enhanced Design */}
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 border-t border-gray-100">
-                            {/* View button */}
-                            <Link href={`/projects/${project.id}`} className="flex-1 min-w-[120px]">
-                              <Button
-                                size="sm"
-                                className="relative w-full bg-black hover:bg-gray-900 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 group/btn overflow-hidden rounded-lg py-5 font-bold"
-                              >
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-                                <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300 relative z-10" />
-                                <span className="truncate relative z-10">View Details</span>
-                                <ArrowRight className="h-4 w-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-300 relative z-10" />
-                              </Button>
-                            </Link>
-                            
-                            {/* Action button (Complete/Review) */}
-                            {project.status === "completed" && (
-                              <Button
-                                size="sm"
-                                className={`flex-1 min-w-[120px] relative overflow-hidden rounded-lg py-5 font-bold transition-all duration-300 ${
-                                  reviewedProjects.has(project.id)
-                                    ? "bg-gray-100 text-gray-500 border-2 border-gray-200 cursor-not-allowed"
-                                    : "bg-white text-gray-900 border-2 border-gray-900 hover:bg-gray-900 hover:text-white shadow-lg hover:shadow-xl"
-                                }`}
-                                onClick={() =>
-                                  handleReviewProject(project.id, project.name)
-                                }
-                                disabled={reviewedProjects.has(project.id)}
-                              >
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                <span className="truncate">
-                                  {reviewedProjects.has(project.id) ? "Reviewed" : "Review"}
+                          {project.description && (
+                            <p className="text-xs sm:text-sm lg:text-base text-gray-600 mb-2 sm:mb-3 line-clamp-safe">
+                              {project.description}
+                            </p>
+                          )}
+
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm text-gray-500 mobile-overflow-safe">
+                            <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none mobile-overflow-safe">
+                              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                              <span className="mobile-text-truncate min-w-0">{project.date}</span>
+                            </div>
+                            {project.budget && (
+                              <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none mobile-overflow-safe">
+                                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <span className="mobile-text-truncate min-w-0 font-medium">
+                                  {(() => {
+                                    const budget = project.budget;
+                                    if (budget >= 1000000000) {
+                                      return `$${(budget / 1000000000).toFixed(1)}B ${project.currency}`;
+                                    } else if (budget >= 1000000) {
+                                      return `$${(budget / 1000000).toFixed(1)}M ${project.currency}`;
+                                    } else if (budget >= 1000) {
+                                      return `$${(budget / 1000).toFixed(1)}K ${project.currency}`;
+                                    } else {
+                                      return `$${budget.toLocaleString()} ${project.currency}`;
+                                    }
+                                  })()}
                                 </span>
-                                {!reviewedProjects.has(project.id) && (
-                                  <Star className="h-4 w-4 ml-2" />
-                                )}
-                              </Button>
+                              </div>
                             )}
-                            {project.status !== "completed" &&
-                              project.status !== "draft" &&
-                              project.status !== "canceled" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleCompleteProject(project.id)}
-                                  disabled={completingProjects.has(project.id)}
-                                  className="flex-1 min-w-[120px] bg-white text-gray-900 border-2 border-gray-900 hover:bg-gray-900 hover:text-white rounded-lg py-5 font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-                                >
-                                  {completingProjects.has(project.id) ? (
-                                    <Clock className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                  )}
-                                  <span className="truncate">
-                                    {completingProjects.has(project.id)
-                                      ? "Completing..."
-                                      : "Mark Complete"}
-                                  </span>
-                                </Button>
-                              )}
+                            {project.candidatesCount !== undefined && (
+                              <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none mobile-overflow-safe">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <span className="mobile-text-truncate min-w-0">
+                                  {project.candidatesCount} candidates
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
+                      </div>
+
+                      {/* Action Buttons - Vertical stack on mobile, horizontal on desktop */}
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-2 pt-1 min-w-0">
+                        {/* View button - full width on mobile */}
+                        <Link href={`/projects/${project.id}`} className="w-full sm:flex-none min-w-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm h-8 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-150 w-full"
+                          >
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">View</span>
+                          </Button>
+                        </Link>
+                        
+                        {/* Action button (Complete/Review) - full width on mobile */}
+                        <div className="w-full sm:flex-none min-w-0">
+                          {project.status === "completed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`text-xs sm:text-sm h-8 transition-all duration-150 w-full ${
+                                reviewedProjects.has(project.id)
+                                  ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-500"
+                                  : "hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                              }`}
+                              onClick={() =>
+                                handleReviewProject(project.id, project.name)
+                              }
+                              disabled={reviewedProjects.has(project.id)}
+                            >
+                              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                              <span className="truncate">
+                                {reviewedProjects.has(project.id)
+                                  ? "Reviewed"
+                                  : "Review"}
+                              </span>
+                            </Button>
+                          )}
+                          {project.status !== "completed" &&
+                            project.status !== "draft" &&
+                            project.status !== "canceled" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCompleteProject(project.id)}
+                                disabled={completingProjects.has(project.id)}
+                                className="text-green-600 border-green-600 hover:bg-green-50 hover:border-green-700 hover:text-green-700 text-xs sm:text-sm h-8 transition-all duration-150 w-full"
+                              >
+                                {completingProjects.has(project.id) ? (
+                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 animate-spin flex-shrink-0" />
+                                ) : (
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                                )}
+                                <span className="hidden sm:inline truncate">
+                                  {completingProjects.has(project.id)
+                                    ? "Completing..."
+                                    : "Mark Complete"}
+                                </span>
+                                <span className="sm:hidden truncate">
+                                  {completingProjects.has(project.id)
+                                    ? "Completing..."
+                                    : "Complete"}
+                                </span>
+                              </Button>
+                            )}
+                        </div>
+                        
+                        {/* More button - full width on mobile, inline on desktop */}
+                        <div className="w-full sm:w-auto sm:ml-auto">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 sm:h-8 lg:h-9 w-full sm:w-auto flex-shrink-0"
+                          >
+                            <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
-      </div>
 
-        {/* Pagination Controls */}
-        {totalItems > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-            <div className="text-sm text-slate-600 bg-slate-50 px-4 py-2 rounded-lg">
-              Showing <span className="font-semibold text-slate-800">{startIdx + 1}</span> –{" "}
-              <span className="font-semibold text-slate-800">
-                {Math.min(endIdx, totalItems)}
-              </span>{" "}
-              of <span className="font-semibold text-slate-800">{totalItems}</span>{" "}
-              items
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(1)}
-                disabled={page === 1}
-                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
-              >
-                First
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
-              >
-                Prev
-              </Button>
-              <span className="text-sm text-slate-700 bg-white px-3 py-2 rounded-lg border border-slate-200 font-medium">
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
-              >
-                Next
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(totalPages)}
-                disabled={page === totalPages}
-                className="border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
-              >
-                Last
-              </Button>
-            </div>
+      {/* Pagination Controls */}
+      {totalItems > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <div className="text-sm text-gray-600">
+            Showing <span className="font-medium">{startIdx + 1}</span> –{" "}
+            <span className="font-medium">
+              {Math.min(endIdx, totalItems)}
+            </span>{" "}
+            of <span className="font-medium">{totalItems}</span>{" "}
+            items
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Prev
+            </Button>
+            <span className="text-sm text-gray-700">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+            >
+              Last
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {reviewData && (
@@ -1376,12 +1154,12 @@ export default function MyProjectsPage() {
         />
       )}
 
-        {/* Message Detail Modal */}
-        <MessageDetailModal
-          isOpen={showMessageModal}
-          onClose={handleCloseMessageModal}
-          message={selectedMessage}
-        />
-      </div>
+      {/* Message Detail Modal */}
+      <MessageDetailModal
+        isOpen={showMessageModal}
+        onClose={handleCloseMessageModal}
+        message={selectedMessage}
+      />
+    </div>
   );
 }

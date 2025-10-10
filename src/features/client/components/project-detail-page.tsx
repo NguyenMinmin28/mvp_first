@@ -790,144 +790,60 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
-      {/* Elegant Background Pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDIiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] pointer-events-none opacity-60" />
-      
+    <div className="flex flex-col lg:flex-row h-screen bg-white">
       {/* Main Content */}
-      <div className="flex-1 overflow-auto relative z-10">
-        {/* Project Header - Modern & Bold */}
-        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-lg border-b-2 border-gray-200 shadow-lg animate-fade-in-up">
-          <div className="p-4 lg:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              {/* Title with Icon */}
-              <div className="flex items-start gap-4 flex-1 group">
-                {/* Elegant Icon */}
-                <div className="relative flex-shrink-0">
-                  <div className="absolute inset-0 bg-black rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
-                  <div className="relative w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-gray-900 to-black rounded-2xl flex items-center justify-center shadow-2xl border-2 border-gray-800 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                    <Briefcase className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
-                  </div>
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-2xl lg:text-4xl font-black text-gray-900 mb-2 tracking-tight group-hover:text-black transition-colors duration-300">
-                    {projectData?.title || project?.title || project?.name || "Project name here..."}
-                  </h1>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4" />
-                    <span className="font-medium">Created {formatDate(project.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Budget Badge - Premium Style */}
-              <div className="flex items-center gap-3">
-                <div className="relative group/budget">
-                  <div className="absolute inset-0 bg-black rounded-xl blur-lg opacity-20 group-hover/budget:opacity-30 transition-opacity duration-300" />
-                  <div className="relative px-6 py-4 rounded-xl bg-gradient-to-br from-gray-900 to-black text-white shadow-xl border-2 border-gray-800 group-hover/budget:scale-105 transition-all duration-300">
-                    <div className="text-xs uppercase tracking-wider text-gray-300 mb-1 font-bold">Budget</div>
-                    <div className="text-lg lg:text-xl font-black">
-                      {(() => {
-                        const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
-                        const max = projectData?.budgetMax ?? project?.budgetMax;
-                        const currency = projectData?.currency || project?.currency || "USD";
-                        if (min && max) return `${formatAmount(min, currency)} - ${formatAmount(max, currency)}`;
-                        if (min) return `${formatAmount(min, currency)}`;
-                        return `${formatAmount(1000, currency)} - ${formatAmount(2000, currency)}`;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <div className="flex-1 overflow-auto">
+        {/* Project Name and Budget */}
+        <div className="p-4 lg:p-6 pb-0">
+          <div className="flex items-center justify-between px-4 py-3">
+            <h1 className="text-3xl font-bold text-black">
+              {projectData?.title || project?.title || project?.name || "Project name here..."}
+            </h1>
+            <div className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-600">
+              {(() => {
+                const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
+                const max = projectData?.budgetMax ?? project?.budgetMax;
+                const currency = projectData?.currency || project?.currency || "USD";
+                if (min && max) return `${formatAmount(min, currency)} - ${formatAmount(max, currency)}`;
+                if (min) return `${formatAmount(min, currency)}`;
+                return `${formatAmount(1000, currency)} - ${formatAmount(2000, currency)}`;
+              })()}
             </div>
           </div>
         </div>
         
-        <div className="p-4 lg:p-8 space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          {/* Project Description Card - Elegant */}
-          <div className="relative group/desc">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-5 group-hover/desc:opacity-10 transition-opacity duration-500" />
-            
-            <div className="relative bg-white border-2 border-gray-200 hover:border-black rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-500">
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full group-hover/desc:translate-x-full transition-transform duration-1000 rounded-2xl" />
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center shadow-lg">
-                    <Eye className="w-5 h-5 text-white" />
-                  </div>
-                  <h2 className="text-xl lg:text-2xl font-black text-gray-900">Project Description</h2>
-                </div>
-                
-                <div className="prose prose-gray max-w-none">
-                  <p className="text-base lg:text-lg leading-relaxed text-gray-700 font-medium">
-                    {(projectData?.description || project?.description || "No description available for this project.").replace(/^Quick post:\s*/i, '')}
-                  </p>
-                </div>
+        {/* Full width separator line - outside padding container */}
+        <div className="w-full" style={{ height: '2px', backgroundColor: '#BEBEBE' }}></div>
+        
+        <div className="p-4 lg:p-6 pt-0">
+          {/* Project Description */}
+          <div className="mb-6">
+            <div className="px-4">
+              <div className="leading-relaxed" style={{ color: '#999999', fontFamily: 'Uber Move Text, sans-serif' }}>
+                {(projectData?.description || project?.description || "No description available for this project.").replace(/^Quick post:\s*/i, '')}
               </div>
             </div>
           </div>
 
-          {/* Project Skills Card - Modern Pills */}
-          <div className="relative group/skills">
-            <div className="absolute inset-0 bg-black rounded-2xl blur-2xl opacity-5 group-hover/skills:opacity-10 transition-opacity duration-500" />
-            
-            <div className="relative bg-white border-2 border-gray-200 hover:border-black rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-500">
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full group-hover/skills:translate-x-full transition-transform duration-1000 rounded-2xl" />
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center shadow-lg">
-                    <Star className="w-5 h-5 text-white" />
-                  </div>
-                  <h2 className="text-xl lg:text-2xl font-black text-gray-900">Required Skills</h2>
-                </div>
-                
-                <div className="flex flex-wrap gap-3">
-                  {projectSkills && projectSkills.length > 0 ? (
-                    projectSkills.map((name, index) => (
-                      <div 
-                        key={name} 
-                        className="group/pill relative animate-fade-in-up"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
-                        <div className="absolute inset-0 bg-black rounded-lg blur-md opacity-10 group-hover/pill:opacity-20 transition-opacity duration-300" />
-                        <div className="relative px-4 py-2.5 bg-white border-2 border-gray-900 rounded-lg font-bold text-sm text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 cursor-default">
-                          {name}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <span className="text-base text-gray-500 font-medium">{getSkillsText()}</span>
-                  )}
-                </div>
+          {/* Project Skills */}
+          <div className="mb-6">
+            <div className="px-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Skills required</div>
+              <div className="flex flex-wrap gap-2">
+                {projectSkills && projectSkills.length > 0 ? (
+                  projectSkills.map((name) => (
+                    <Badge key={name} variant="secondary" className="bg-gray-100 text-gray-700 border border-gray-200">
+                      {name}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">{getSkillsText()}</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Candidates Section Header */}
-          <div className="relative group/candidates animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-black rounded-xl blur-lg opacity-20 transition-opacity duration-300" />
-                <div className="relative w-12 h-12 bg-gradient-to-br from-gray-900 to-black rounded-xl flex items-center justify-center shadow-lg">
-                  <User className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl lg:text-3xl font-black text-gray-900">Matched Candidates</h2>
-                <p className="text-sm text-gray-600 font-medium mt-1">
-                  {freelancers.length > 0 
-                    ? `${freelancers.length} developer${freelancers.length > 1 ? 's' : ''} found for your project`
-                    : "Finding the perfect developers for your project"
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
+       
 
           {/* Freelancer Cards */}
           {isLoading || (isSearching && freelancers.length === 0) ? (
@@ -941,27 +857,11 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
               size="lg"
             />
           ) : error ? (
-            <div className="relative group/error">
-              <div className="absolute inset-0 bg-red-500 rounded-2xl blur-2xl opacity-10" />
-              
-              <div className="relative bg-white border-2 border-red-200 rounded-2xl p-8 lg:p-12 shadow-xl text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl animate-bounce">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-black text-gray-900 mb-4">Oops! Something went wrong</h3>
-                <p className="text-lg text-red-600 mb-6 font-medium">{error}</p>
-                <Button 
-                  onClick={fetchFreelancers}
-                  className="bg-black hover:bg-gray-900 text-white border-0 px-8 py-6 rounded-xl text-base font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Try Again
-                </Button>
-              </div>
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={fetchFreelancers} variant="outline">
+                Try Again
+              </Button>
             </div>
           ) : (
                 <PeopleGrid 

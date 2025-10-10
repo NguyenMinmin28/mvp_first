@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/core/utils/utils";
+import { cn } from "@/lib/utils";
 
 export interface LoadingSpinnerProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";

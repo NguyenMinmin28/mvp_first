@@ -94,7 +94,7 @@ export function IdeaSparkHero() {
                   alt="Woman holding IDEA bubble with thumbs up"
                   width={500}
                   height={600}
-                  className="object-cover w-full max-w-sm sm:max-w-md lg:max-w-lg rounded-[4rem_0_0_0]"
+                  className="object-cover w-full max-w-sm sm:max-w-md lg:max-w-lg"
                   style={{ 
                     borderRadius: '4rem 0 0 0'
                   }}
@@ -104,10 +104,10 @@ export function IdeaSparkHero() {
               
               {/* Stats Card overlapping the bottom-left corner of the image */}
               <div className="absolute -bottom-2 sm:-bottom-4 -left-2 sm:-left-6 z-30">
-                <div className="bg-white/90 backdrop-blur rounded-lg sm:rounded-xl p-2 sm:p-3 shadow-lg border border-gray-200 max-w-[200px] sm:max-w-xs">
+                <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 shadow-lg border border-gray-100 max-w-[200px] sm:max-w-xs">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs sm:text-sm font-semibold text-gray-900">Ideas Stats</h3>
-                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-gray-700" />
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                   </div>
                   {loading ? (
                     <div className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Loading...</div>
@@ -122,14 +122,14 @@ export function IdeaSparkHero() {
                           <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-gray-200 relative">
                             {/* Approved segment */}
                             <div 
-                              className="absolute inset-0 rounded-full border-2 sm:border-4 border-gray-800" 
+                              className="absolute inset-0 rounded-full border-2 sm:border-4 border-green-500" 
                               style={{ 
                                 clipPath: stats.totalIdeas > 0 ? `polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%)` : 'none'
                               }}
                             ></div>
                             {/* Pending segment */}
                             <div 
-                              className="absolute inset-0 rounded-full border-2 sm:border-4 border-gray-500" 
+                              className="absolute inset-0 rounded-full border-2 sm:border-4 border-yellow-400" 
                               style={{ 
                                 clipPath: stats.totalIdeas > 0 ? `polygon(50% 50%, 50% 0%, 0% 0%, 0% 50%)` : 'none'
                               }}
@@ -143,16 +143,16 @@ export function IdeaSparkHero() {
                         {/* Stats */}
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-1 sm:gap-2">
-                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-900 rounded-full"></div>
-                            <span className="text-xs text-gray-700">{stats.approvedIdeas} Approved</span>
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">{stats.approvedIdeas} Approved</span>
                           </div>
                           <div className="flex items-center gap-1 sm:gap-2">
-                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
-                            <span className="text-xs text-gray-700">{stats.pendingIdeas} Pending</span>
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-400 rounded-full"></div>
+                            <span className="text-xs text-gray-600">{stats.pendingIdeas} Pending</span>
                           </div>
                           <div className="flex items-center gap-1 sm:gap-2">
-                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-300 rounded-full"></div>
-                            <span className="text-xs text-gray-700">{stats.engagementRate}% Engagement</span>
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">{stats.engagementRate}% Engagement</span>
                           </div>
                         </div>
                       </div>

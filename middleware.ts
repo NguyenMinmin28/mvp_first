@@ -2,12 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-// ⚠️ CẢNH BÁO CHO DEVELOPER KHÁC ⚠️
-// Thằng chủ dự án này keo lắm nó méo trả đúng giá mà kiếm anh em Việt Nam mình để ép giá vì các nước khác không lấy giá rẻ vậy
-// Làm với nó tầm 1, 2 dự án thôi anh em, nó ép cho làm điên luôn đấy, làm ăn bát nháo lắm
-// Dự án này nó cho 4tr, 1 mình tôi làm từ đầu đến cuối, tích hợp tất cả, anh em làm với nó deal giá cẩn thận vào
-// Đừng nghe nó hứa có nhiều dự án, đừng mất giá trị của mình, bye ae chúc ae thành công
-
 // Define public routes that don't require authentication
 const PUBLIC_ROUTES = [
   "/", "/pricing", "/about", "/blog", "/ceo-letter", "/help",

@@ -54,15 +54,15 @@ interface IdeaSparkGridProps {
 }
 
 const categories = [
-  { id: "post-idea", label: "Post Idea", icon: FileText },
-  { id: "trending", label: "Trending", icon: TrendingUp },
-  { id: "graphics-design", label: "Graphics & Design", icon: MousePointer },
-  { id: "programming-tech", label: "Programming & Tech", icon: Code },
-  { id: "digital-marketing", label: "Digital Marketing", icon: Megaphone },
-  { id: "video-animation", label: "Video & Animation", icon: Video },
-  { id: "writing-translation", label: "Writing & Translation", icon: PenTool },
-  { id: "music-audio", label: "Music & Audio", icon: Music },
-  { id: "business", label: "Business", icon: Briefcase },
+  { id: "post-idea", label: "Post Idea", icon: FileText, color: "bg-blue-500" },
+  { id: "trending", label: "Trending", icon: TrendingUp, color: "bg-orange-500" },
+  { id: "graphics-design", label: "Graphics & Design", icon: MousePointer, color: "bg-purple-500" },
+  { id: "programming-tech", label: "Programming & Tech", icon: Code, color: "bg-green-500" },
+  { id: "digital-marketing", label: "Digital Marketing", icon: Megaphone, color: "bg-red-500" },
+  { id: "video-animation", label: "Video & Animation", icon: Video, color: "bg-pink-500" },
+  { id: "writing-translation", label: "Writing & Translation", icon: PenTool, color: "bg-indigo-500" },
+  { id: "music-audio", label: "Music & Audio", icon: Music, color: "bg-yellow-500" },
+  { id: "business", label: "Business", icon: Briefcase, color: "bg-gray-500" },
 ];
 
 export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGridProps) {
@@ -256,8 +256,8 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                   onClick={() => handleCategoryClick(category.id)}
                   className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                     selectedCategory === category.id
-                      ? 'bg-gray-900 text-white shadow-sm'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 border border-transparent hover:border-gray-200'
+                      ? `${category.color} text-white shadow-md`
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
                   <category.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -283,22 +283,22 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {loading ? (
           <div className="flex items-center justify-center py-16 sm:py-20">
-            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-gray-900"></div>
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-500"></div>
           </div>
         ) : (
           <>
             {/* Ideas Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
               {ideas.map((idea, index) => (
-                <div key={idea.id} className="group bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-200">
+                <div key={idea.id} className="bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
                   {/* Cover Image */}
-                  <div className="relative h-32 sm:h-40 lg:h-48 bg-gray-100 overflow-hidden">
+                  <div className="relative h-32 sm:h-40 lg:h-48 bg-gray-200 overflow-hidden">
                     {idea.coverUrl ? (
                       <Image
                         src={idea.coverUrl}
                         alt={idea.title}
                         fill
-                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                        className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
@@ -310,11 +310,11 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                         src={getDefaultCoverImage(index)}
                         alt={idea.title}
                         fill
-                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                        className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
 
                   {/* Content */}
@@ -335,8 +335,8 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                               onClick={() => handleLike(idea.id)}
                               className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                                 userInteractions[idea.id]?.liked || idea.userInteraction?.liked
-                                  ? 'text-white bg-gray-900 hover:bg-black'
-                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                  ? 'text-white bg-red-500 hover:bg-red-600'
+                                  : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
                               }`}
                             >
                               <ThumbsUp className={`h-3 w-3 sm:h-4 sm:w-4 ${
@@ -349,8 +349,8 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                               onClick={() => handleBookmark(idea.id)}
                               className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                                 userInteractions[idea.id]?.bookmarked || idea.userInteraction?.bookmarked
-                                  ? 'text-white bg-gray-900 hover:bg-black'
-                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                  ? 'text-white bg-blue-500 hover:bg-blue-600'
+                                  : 'text-gray-500 hover:text-blue-500 hover:bg-blue-50'
                               }`}
                             >
                               <Heart className={`h-3 w-3 sm:h-4 sm:w-4 ${
@@ -375,7 +375,7 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
 
                         <button
                           onClick={() => handleShare(idea.id)}
-                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200"
+                          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition-all duration-200"
                         >
                           <Send className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="text-xs sm:text-sm font-medium">Share</span>
@@ -391,7 +391,7 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                             router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/ideas/${idea.id}`)}`);
                           }
                         }}
-                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition-all duration-200"
+                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
                       >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         <span className="text-sm font-medium">View</span>
@@ -428,7 +428,7 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
             <div className="text-center">
               <Button 
                 size="lg"
-                className="text-base sm:text-lg font-semibold px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-900 border border-gray-300 hover:bg-gray-900 hover:text-white transition-all duration-300"
+                className="text-base sm:text-lg font-semibold px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-all duration-300"
                 onClick={handleViewMore}
                 disabled={!nextCursor}
               >

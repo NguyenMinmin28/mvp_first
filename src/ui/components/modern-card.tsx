@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/core/utils/utils";
+import { cn } from "@/lib/utils";
 
 export interface ModernCardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "elevated" | "outlined" | "glass";

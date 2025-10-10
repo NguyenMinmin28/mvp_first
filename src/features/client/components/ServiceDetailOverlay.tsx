@@ -365,15 +365,13 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-              {/* Follow button - only for clients */}
-              {session?.user?.role !== "DEVELOPER" && (
-                <button
-                  onClick={onFollow}
-                  className="px-3 sm:px-4 h-9 sm:h-10 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-36 sm:w-40"
-                >
-                  Follow
-                </button>
-              )}
+              {/* Follow button - available for all users */}
+              <button
+                onClick={onFollow}
+                className="px-3 sm:px-4 h-9 sm:h-10 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-sm w-36 sm:w-40"
+              >
+                Follow
+              </button>
               
               {/* Get in Touch button - only for clients */}
               {session?.user?.role !== "DEVELOPER" && (
