@@ -435,8 +435,10 @@ export function UserManagement() {
             data={users}
             columns={columns}
             loading={loading}
-            emptyMessage="No users found"
           />
+          {!loading && users.length === 0 && (
+            <div className="text-sm text-gray-500 mt-3">No users found</div>
+          )}
           
           {pagination.totalPages > 1 && (
             <div className="mt-4">
@@ -444,8 +446,6 @@ export function UserManagement() {
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
                 onPageChange={fetchUsers}
-                hasNextPage={pagination.hasNextPage}
-                hasPrevPage={pagination.hasPrevPage}
               />
             </div>
           )}
