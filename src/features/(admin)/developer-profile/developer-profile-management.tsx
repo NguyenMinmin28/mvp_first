@@ -729,7 +729,6 @@ export function DeveloperProfileManagement() {
                   <div>
                     <label className="text-sm font-medium text-gray-600">Current Role</label>
                     <div className="mt-1">
-                      {console.log("🔍 Selected profile userRole:", selectedProfile.userRole)}
                       {selectedProfile.userRole && selectedProfile.userRole !== null ? (
                         <Badge
                           variant={
