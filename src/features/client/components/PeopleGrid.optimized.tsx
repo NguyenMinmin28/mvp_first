@@ -14,6 +14,7 @@ import type { ServiceDetailData } from "@/features/client/components/ServiceDeta
 import { toast } from "sonner";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
+import { DeveloperProfileSlideBar } from "./developer-profile-slide-bar";
 import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
 
 const ServiceDetailOverlay = dynamic(
@@ -125,6 +126,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
   const [selectedFreelancer, setSelectedFreelancer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceForContact, setSelectedServiceForContact] = useState<{ id: string; title: string } | null>(null);
+  const [selectedDeveloper, setSelectedDeveloper] = useState<{id: string, name?: string} | null>(null);
   const isOverride = Array.isArray(overrideDevelopers);
   
   // Internal state với fallback từ props
@@ -354,7 +356,13 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
     return (
       <div key={developer.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-all duration-200 ease-out hover:-translate-y-1 hover:border-blue-300 group overflow-hidden will-change-transform">
         <div className="flex items-center space-x-4 mb-4">
-          <Avatar className="h-12 w-12 transition-transform duration-200 ease-out will-change-transform group-hover:scale-105">
+          <Avatar 
+            className="h-12 w-12 transition-transform duration-200 ease-out will-change-transform group-hover:scale-105 cursor-pointer"
+            onClick={() => setSelectedDeveloper({
+              id: developer.id,
+              name: developer.user.name
+            })}
+          >
             <AvatarImage 
               src={developer.photoUrl || developer.user.image || '/images/avata/default.jpeg'} 
               className="transition-transform duration-200 ease-out will-change-transform group-hover:scale-105"
@@ -376,7 +384,15 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900">{developer.user.name}</h3>
+            <h3 
+              className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => setSelectedDeveloper({
+                id: developer.id,
+                name: developer.user.name
+              })}
+            >
+              {developer.user.name}
+            </h3>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <MapPin className="h-4 w-4" />
               <span>{developer.location || "Location not specified"}</span>
@@ -524,6 +540,16 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
         serviceTitle={selectedServiceForContact?.title || ""}
         developerName={selectedFreelancer?.user?.name || ""}
       />
+
+      {/* Developer Profile Slide Bar */}
+      {selectedDeveloper && (
+        <DeveloperProfileSlideBar
+          isOpen={!!selectedDeveloper}
+          onClose={() => setSelectedDeveloper(null)}
+          developerId={selectedDeveloper.id}
+          developerName={selectedDeveloper.name}
+        />
+      )}
     </div>
   );
 });

@@ -59,14 +59,14 @@ export function GetInTouchButton({
     setShowContactOptions(true);
   };
 
-  const handleMessageSubmit = async (data: { message: string; title?: string; budget?: string; description?: string }) => {
+  const handleMessageSubmit = async (data: { message: string; title?: string; budget?: string; description?: string; selectedProjectId?: string }) => {
     setShowMessageForm(false);
     setShowFindingOverlay(true);
 
     let loadingToastId: string | number | undefined;
     try {
       loadingToastId = toast.loading("Sending message...");
-      // Send all the data including message, budget, and description
+      // Send all the data including message, budget, description, and selected project
       const result = await sendInvite(developerId, data);
       
       if (result.success) {

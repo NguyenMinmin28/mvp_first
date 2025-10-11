@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { developerId, message, title, budget, description } = body;
+    const { developerId, message, title, budget, description, selectedProjectId } = body;
 
     if (!developerId) {
       return NextResponse.json(
@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
           title: title?.trim() || null,
           budget: budget?.trim() || null,
           description: description?.trim() || null,
-          isDirectMessage: true
+          isDirectMessage: true,
+          selectedProjectId: selectedProjectId || null
         }
       } as any
     });

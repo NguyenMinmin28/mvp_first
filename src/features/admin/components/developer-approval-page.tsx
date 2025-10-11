@@ -300,14 +300,14 @@ export default function DeveloperApprovalPage({ user }: Props) {
 
   const getLevelBadge = (level: string) => {
     const colors = {
-      EXPERT: "bg-purple-100 text-purple-800",
-      MID: "bg-blue-100 text-blue-800",
-      FRESHER: "bg-green-100 text-green-800",
+      EXPERT: "bg-gradient-to-r from-purple-600 to-purple-700 text-white",
+      MID: "bg-gradient-to-r from-blue-600 to-blue-700 text-white",
+      FRESHER: "bg-gradient-to-r from-green-600 to-green-700 text-white",
     };
 
     return (
-      <Badge className={colors[level as keyof typeof colors] || colors.MID}>
-        {level}
+      <Badge className={`font-medium ${colors[level as keyof typeof colors] || colors.MID}`}>
+        {level === 'EXPERT' ? 'EXPERT' : level === 'MID' ? 'PRO' : 'STARTER'}
       </Badge>
     );
   };

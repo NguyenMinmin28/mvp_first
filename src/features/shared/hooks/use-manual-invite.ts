@@ -12,7 +12,7 @@ interface ManualInviteResult {
 }
 
 interface UseManualInviteResult {
-  sendInvite: (developerId: string, data: { message: string; title?: string; budget?: string; description?: string }) => Promise<ManualInviteResult>;
+  sendInvite: (developerId: string, data: { message: string; title?: string; budget?: string; description?: string; selectedProjectId?: string }) => Promise<ManualInviteResult>;
   loading: boolean;
   error: string | null;
 }
@@ -21,7 +21,7 @@ export function useManualInvite(projectId?: string): UseManualInviteResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sendInvite = async (developerId: string, data: { message: string; title?: string; budget?: string; description?: string }): Promise<ManualInviteResult> => {
+  const sendInvite = async (developerId: string, data: { message: string; title?: string; budget?: string; description?: string; selectedProjectId?: string }): Promise<ManualInviteResult> => {
     try {
       setLoading(true);
       setError(null);
@@ -42,6 +42,7 @@ export function useManualInvite(projectId?: string): UseManualInviteResult {
           title: data.title?.trim() || null,
           budget: data.budget?.trim() || null,
           description: data.description?.trim() || null,
+          selectedProjectId: data.selectedProjectId || null,
         }),
       });
 

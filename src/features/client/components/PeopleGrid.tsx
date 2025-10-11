@@ -15,6 +15,7 @@ import type { ServiceDetailData } from "@/features/client/components/ServiceDeta
 import { toast } from "sonner";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
+import { DeveloperProfileSlideBar } from "./developer-profile-slide-bar";
 import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
 import PortfolioGrid from "@/features/developer/components/dashboard/portfolio-grid";
 import { FilterDrawer, FilterState } from "@/features/client/components/FilterDrawer";
@@ -206,6 +207,7 @@ export function PeopleGrid({
   const [followedUserIds, setFollowedUserIds] = useState<Set<string>>(new Set());
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<FilterState | null>(null);
+  const [selectedDeveloper, setSelectedDeveloper] = useState<{id: string, name?: string} | null>(null);
 
   // Compute local statuses: if countdown hits 0, treat as expired for UI
   const computedStatuses = useMemo(() => {
@@ -998,10 +1000,11 @@ export function PeopleGrid({
   };
 
   const handleDeveloperClick = (developer: Developer, e?: React.MouseEvent) => {
-    // Only redirect to developer profile if not in project detail page
-    if (!projectId) {
-      router.push(`/developer/${developer.id}`);
-    }
+    // Open the developer profile slide bar
+    setSelectedDeveloper({
+      id: developer.id,
+      name: developer.user.name
+    });
   };
 
   const handleApplyFilters = (filters: FilterState) => {
@@ -1265,12 +1268,20 @@ export function PeopleGrid({
                             </h3>
                           </div>
                           
-                          {/* PRO Badge, Location, Status and Countdown - responsive layout */}
+                          {/* Level Badge, Location, Status and Countdown - responsive layout */}
                           <div className="space-y-2 sm:space-y-0">
-                            {/* First row: PRO Badge and Location */}
+                            {/* First row: Level Badge and Location */}
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge className="text-white text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: '#515151' }}>
-                                PRO
+                              <Badge className={`text-white text-xs font-medium px-2 py-0.5 rounded ${
+                                hideHeaderControls 
+                                  ? 'bg-gray-600' // Original design for services page
+                                  : developer.level === 'EXPERT' 
+                                    ? 'bg-gradient-to-r from-purple-600 to-purple-700' 
+                                    : developer.level === 'MID' 
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+                                    : 'bg-gradient-to-r from-green-600 to-green-700'
+                              }`}>
+                                {hideHeaderControls ? 'PRO' : (developer.level === 'EXPERT' ? 'EXPERT' : developer.level === 'MID' ? 'PRO' : 'STARTER')}
                               </Badge>
                               <p className="text-xs sm:text-sm" style={{ color: '#999999' }}>
                                 {developer.location || "Location not specified"}
@@ -1485,6 +1496,7 @@ export function PeopleGrid({
                     setIsPortfolioOverlayOpen(true);
                   }}
                   variant="public"
+                  hideTitle={true}
                 />
               </div>
             </div>
@@ -1613,6 +1625,17 @@ export function PeopleGrid({
         onApplyFilters={handleApplyFilters}
         initialFilters={appliedFilters || undefined}
       />
+
+      {/* Developer Profile Slide Bar */}
+      {selectedDeveloper && (
+        <DeveloperProfileSlideBar
+          isOpen={!!selectedDeveloper}
+          onClose={() => setSelectedDeveloper(null)}
+          developerId={selectedDeveloper.id}
+          developerName={selectedDeveloper.name}
+          useOriginalDesign={hideHeaderControls}
+        />
+      )}
     </>
   );
 }

@@ -14,6 +14,7 @@ interface DeveloperProfileSlideBarProps {
   onClose: () => void;
   developerId: string;
   developerName?: string;
+  useOriginalDesign?: boolean;
 }
 
 interface DeveloperProfile {
@@ -73,7 +74,8 @@ export function DeveloperProfileSlideBar({
   isOpen, 
   onClose, 
   developerId, 
-  developerName 
+  developerName,
+  useOriginalDesign = false
 }: DeveloperProfileSlideBarProps) {
   const [profile, setProfile] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -235,10 +237,17 @@ export function DeveloperProfileSlideBar({
                   </div>
 
                   <Badge 
-                    variant={profile.level === 'EXPERT' ? 'default' : profile.level === 'MID' ? 'secondary' : 'outline'}
-                    className="mb-4 text-sm px-3 py-1"
+                    className={`mb-4 text-sm px-3 py-1 text-white font-medium ${
+                      useOriginalDesign 
+                        ? 'bg-gray-600' // Original design for services page
+                        : profile.level === 'EXPERT' 
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-700 border-purple-600' 
+                          : profile.level === 'MID' 
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-blue-600'
+                          : 'bg-gradient-to-r from-green-600 to-green-700 border-green-600'
+                    }`}
                   >
-                    {profile.level || 'UNKNOWN'}
+                    {useOriginalDesign ? 'PRO' : (profile.level === 'EXPERT' ? 'EXPERT' : profile.level === 'MID' ? 'PRO' : 'STARTER')}
                   </Badge>
 
                   {/* Action Buttons */}

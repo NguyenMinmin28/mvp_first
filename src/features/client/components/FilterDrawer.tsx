@@ -211,7 +211,7 @@ export function FilterDrawer({ isOpen, onClose, onApplyFilters, initialFilters }
                       placeholder="Min"
                       value={filters.priceMin}
                       onChange={(e) => handleFilterChange("priceMin", e.target.value)}
-                      className={`pl-8 h-10 ${filters.paymentType === "hourly" ? "pr-12" : ""}`}
+                      className="pl-8 pr-12 h-10"
                       min="0"
                     />
                     {filters.paymentType === "hourly" && (
@@ -230,7 +230,7 @@ export function FilterDrawer({ isOpen, onClose, onApplyFilters, initialFilters }
                       placeholder="Max"
                       value={filters.priceMax}
                       onChange={(e) => handleFilterChange("priceMax", e.target.value)}
-                      className={`pl-8 h-10 ${filters.paymentType === "hourly" ? "pr-12" : ""}`}
+                      className="pl-8 pr-12 h-10"
                       min="0"
                     />
                     {filters.paymentType === "hourly" && (

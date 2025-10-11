@@ -138,9 +138,9 @@ export function AdminProjectAssignmentModal({
 
   const getLevelColor = (level: string) => {
     switch (level) {
-      case "EXPERT": return "bg-purple-100 text-purple-800";
-      case "MID": return "bg-blue-100 text-blue-800";
-      case "FRESHER": return "bg-green-100 text-green-800";
+      case "EXPERT": return "bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium";
+      case "MID": return "bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium";
+      case "FRESHER": return "bg-gradient-to-r from-green-600 to-green-700 text-white font-medium";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -229,7 +229,7 @@ export function AdminProjectAssignmentModal({
                         <Badge className={getLevelColor(developer.level)}>
                           <div className="flex items-center gap-1">
                             {getLevelIcon(developer.level)}
-                            {developer.level}
+                            {developer.level === 'EXPERT' ? 'EXPERT' : developer.level === 'MID' ? 'PRO' : 'STARTER'}
                           </div>
                         </Badge>
                         <Badge variant="outline" className="text-xs">

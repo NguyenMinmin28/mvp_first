@@ -517,7 +517,7 @@ export function ProjectPostForm({
                 setBudgetMin(e.target.value);
                 clearFieldError("budget");
               }}
-              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""} ${paymentMethod === "hourly" ? "pr-12" : ""}`}
+              className={`h-12 w-full pl-8 pr-6 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
               min="0"
               step="0.01"
               required
@@ -537,8 +537,8 @@ export function ProjectPostForm({
               }}
             />
             {paymentMethod === "hourly" && (
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black text-sm font-medium">
-                /hr
+              <span className="absolute top-1/2 transform -translate-y-1/2 text-black text-sm font-medium pointer-events-none" style={{ left: `${64 + (budgetMin.length * 8)}px` }}>
+                / hour
               </span>
             )}
           </div>
@@ -555,7 +555,7 @@ export function ProjectPostForm({
                 setBudgetMax(e.target.value);
                 clearFieldError("budget");
               }}
-              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""} ${paymentMethod === "hourly" ? "pr-12" : ""}`}
+              className={`h-12 w-full pl-8 pr-6 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
               min="0"
               step="0.01"
               required
@@ -575,8 +575,8 @@ export function ProjectPostForm({
               }}
             />
             {paymentMethod === "hourly" && (
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black text-sm font-medium">
-                /hr
+              <span className="absolute top-1/2 transform -translate-y-1/2 text-black text-sm font-medium pointer-events-none" style={{ left: `${64 + (budgetMax.length * 8)}px` }}>
+                / hour
               </span>
             )}
           </div>

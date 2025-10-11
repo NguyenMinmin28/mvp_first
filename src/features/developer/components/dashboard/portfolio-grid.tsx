@@ -20,6 +20,7 @@ interface PortfolioGridProps {
   onEditPortfolio?: (item: PortfolioItem) => void;
   onItemClick?: (item: PortfolioItem, index: number) => void;
   variant?: "public" | "edit"; // public: hide CTA and empty messages
+  hideTitle?: boolean; // hide the "Portfolio" title
 }
 
 export default function PortfolioGrid({
@@ -28,6 +29,7 @@ export default function PortfolioGrid({
   onEditPortfolio,
   onItemClick,
   variant = "edit",
+  hideTitle = false,
 }: PortfolioGridProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -43,9 +45,10 @@ export default function PortfolioGrid({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Portfolio</h3>
-        {onAddPortfolio && variant !== "public" && (
+      {!hideTitle && (
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Portfolio</h3>
+          {onAddPortfolio && variant !== "public" && (
           <Button
             onClick={onAddPortfolio}
             variant="outline"
@@ -56,7 +59,8 @@ export default function PortfolioGrid({
             Add Portfolio
           </Button>
         )}
-      </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {portfolioSlots.map((portfolio, index) => (

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // Single query: fetch all candidate messages visible to this client
     // - Direct messages initiated by this client (clientId match)
     // - Any candidates under this client's projects
-    const allClientCandidates = await (prisma as any).assignmentCandidate.findMany({
+    const allClientCandidates = await prisma.assignmentCandidate.findMany({
       where: {
         OR: [
           { clientId: clientProfile.id },
@@ -50,6 +50,10 @@ export async function GET(request: NextRequest) {
         developer: { include: { user: { select: { name: true, email: true } } } }
       },
       orderBy: { assignedAt: "desc" }
+    }).catch((error) => {
+      console.error("Error fetching assignment candidates:", error);
+      // Return empty array if there's an error (e.g., malformed ObjectID)
+      return [];
     });
 
     // Group by project
@@ -77,6 +81,39 @@ export async function GET(request: NextRequest) {
 
     const filtered = q ? allClientCandidates.filter(matchesQuery) : allClientCandidates;
 
+    // Get all referenced project IDs and validate ObjectID format
+    const referencedProjectIds = filtered
+      .map((invitation: any) => invitation.metadata?.selectedProjectId)
+      .filter(Boolean)
+      .filter((id: string) => {
+        // Validate ObjectID format (24 hex characters)
+        return /^[0-9a-fA-F]{24}$/.test(id);
+      }) as string[];
+
+    // Fetch referenced project details
+    const referencedProjects = referencedProjectIds.length > 0 
+      ? await prisma.project.findMany({
+          where: {
+            id: { in: referencedProjectIds },
+            clientId: clientProfile.id
+          },
+          select: {
+            id: true,
+            title: true
+          }
+        }).catch((error) => {
+          console.error("Error fetching referenced projects:", error);
+          // Return empty array if there's an error (e.g., malformed ObjectID)
+          return [];
+        })
+      : [];
+
+    // Create a map for quick lookup
+    const referencedProjectMap = referencedProjects.reduce((acc, project) => {
+      acc[project.id] = project;
+      return acc;
+    }, {} as Record<string, { id: string; title: string }>);
+
     const invitationsByProject = filtered.reduce((acc: any, invitation: any) => {
       const key = invitation.project?.id || 'direct';
       const title = invitation.project?.title || 'Direct Messages';
@@ -91,6 +128,9 @@ export async function GET(request: NextRequest) {
         title: invitation.metadata?.title,
         budget: invitation.metadata?.budget,
         description: invitation.metadata?.description,
+        referencedProject: invitation.metadata?.selectedProjectId 
+          ? referencedProjectMap[invitation.metadata.selectedProjectId] || null
+          : null,
         developer: {
           name: invitation.developer?.user?.name || 'Developer',
           email: invitation.developer?.user?.email || 'No email'
@@ -106,8 +146,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("Error fetching manual invitations:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
