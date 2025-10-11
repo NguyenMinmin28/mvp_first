@@ -50,13 +50,8 @@ export class PayPalMapper {
         status: "active",
         currentPeriodStart: new Date(),
         currentPeriodEnd: nextBillingTime,
-        cancelAtPeriodEnd: false,
-        // Store PayPal billing info for tracking
-        metadata: {
-          ...dbSubscription.metadata,
-          paypalBillingInfo: subscription.billing_info,
-          lastWebhookUpdate: new Date().toISOString()
-        }
+        cancelAtPeriodEnd: false
+        // Note: metadata field removed as it doesn't exist in the Subscription schema
       }
     });
 
@@ -233,15 +228,8 @@ export class PayPalMapper {
           status: "active",
           currentPeriodStart: new Date(),
           currentPeriodEnd: nextBillingTime,
-          cancelAtPeriodEnd: false,
-          // Update metadata with latest payment info and reset failure count
-          metadata: {
-            ...dbSubscription.metadata,
-            lastPaymentId: payment.id,
-            lastPaymentAmount: payment.amount?.value || payment.amount?.total,
-            lastPaymentTime: new Date().toISOString(),
-            paymentFailureCount: 0 // Reset failure count on successful payment
-          }
+          cancelAtPeriodEnd: false
+          // Note: metadata field removed as it doesn't exist in the Subscription schema
         }
       });
 
@@ -302,22 +290,12 @@ export class PayPalMapper {
       return;
     }
 
-    // Get current failure count from metadata
-    const currentMetadata = dbSubscription.metadata as any || {};
-    const failureCount = currentMetadata.paymentFailureCount || 0;
-    const newFailureCount = failureCount + 1;
-
-    // Update subscription status and failure tracking
+    // Update subscription status (simplified without failure tracking since metadata field doesn't exist)
     await prisma.subscription.update({
       where: { id: dbSubscription.id },
       data: {
-        status: newFailureCount >= 3 ? "cancelled" : "past_due", // Cancel after 3 failures
-        metadata: {
-          ...currentMetadata,
-          paymentFailureCount: newFailureCount,
-          lastPaymentFailure: new Date().toISOString(),
-          lastFailedPaymentId: payment.id
-        }
+        status: "past_due" // Set to past_due on payment failure
+        // Note: metadata field removed as it doesn't exist in the Subscription schema
       }
     });
 
