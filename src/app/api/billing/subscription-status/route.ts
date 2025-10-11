@@ -48,9 +48,8 @@ export async function GET(request: NextRequest) {
     const nextBilling = new Date(subscription.currentPeriodEnd);
     const daysUntilBilling = Math.ceil((nextBilling.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Get payment failure count
-    const metadata = subscription.metadata as any || {};
-    const failureCount = metadata.paymentFailureCount || 0;
+    // Get payment failure count (default to 0 since metadata field doesn't exist in schema)
+    const failureCount = 0;
 
     return NextResponse.json({
       hasActiveSubscription: true,
