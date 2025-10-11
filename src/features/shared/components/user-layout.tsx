@@ -4,7 +4,7 @@ import { ErrorBoundary } from "./error-boundary";
 import dynamic from "next/dynamic";
 
 // Dynamically import Header with SSR disabled to avoid useContext errors
-const Header = dynamic(() => import("./header").then(mod => mod.Header), { 
+const Header = dynamic(() => import("./header"), { 
   ssr: false,
   loading: () => <div className="h-16" /> // Placeholder to prevent layout shift
 });

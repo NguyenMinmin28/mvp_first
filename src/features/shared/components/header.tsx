@@ -61,7 +61,7 @@ type UnifiedNotif = {
   } | null;
 };
 
-export function Header({ user }: HeaderProps) {
+export default function Header({ user }: HeaderProps) {
   const router = useRouter();
   const { logout } = useCustomLogout();
   const [mounted, setMounted] = useState(false);

@@ -1,4 +1,4 @@
-export { Header } from "./header";
+export { default as Header } from "./header";
 export { AdminHeader } from "./admin-header";
 export { AdminLayout } from "./admin-layout";
 export { AdminSidebar } from "./admin-sidebar";
