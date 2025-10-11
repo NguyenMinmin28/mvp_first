@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       where: {
         clientId: session.user.id,
         status: {
-          in: ["active", "past_due", "trialing"]
+          in: ["active", "past_due"]
         }
       },
       include: {
