@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         package: true,
         payments: {
           where: {
-            status: "completed"
+            status: "captured"
           },
           orderBy: {
             capturedAt: "desc"
