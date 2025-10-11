@@ -16,7 +16,10 @@ export async function GET() {
     let dbError = null;
     
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      // Use a simple query to test database connection
+      await prisma.user.findFirst({
+        select: { id: true }
+      });
       dbStatus = 'connected';
     } catch (error) {
       dbStatus = 'error';
