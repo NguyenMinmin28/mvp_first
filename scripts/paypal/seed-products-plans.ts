@@ -43,26 +43,21 @@ interface PayPalPlan {
 
 const PLANS_CONFIG = [
   {
-    name: "Basic Plan",
-    description: "Basic subscription for small projects",
-    priceUSD: "29.00",
-    projectsPerMonth: 2,
-    contactClicksPerProject: 3
+    name: "Free Plan",
+    description: "Free plan with 25 connects total",
+    priceUSD: "0.00",
+    projectsPerMonth: 999, // Unlimited
+    contactClicksPerProject: 0, // Not used for connects model
+    connectsPerMonth: 25
   },
   {
-    name: "Standard Plan", 
-    description: "Standard subscription for growing businesses",
-    priceUSD: "49.00",
-    projectsPerMonth: 5,
-    contactClicksPerProject: 5,
+    name: "Plus Plan", 
+    description: "Plus subscription with 99 connects per month",
+    priceUSD: "19.95",
+    projectsPerMonth: 999, // Unlimited
+    contactClicksPerProject: 0, // Not used for connects model
+    connectsPerMonth: 99,
     isPopular: true
-  },
-  {
-    name: "Premium Plan",
-    description: "Premium subscription for enterprise clients",
-    priceUSD: "99.00", 
-    projectsPerMonth: 15,
-    contactClicksPerProject: 10
   }
 ];
 

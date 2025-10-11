@@ -67,9 +67,21 @@ export function WhatsAppContactModal({
           {/* Developer Info */}
           <div className="flex items-center space-x-4 animate-in fade-in-0 slide-in-from-left-2 duration-500 delay-100">
             <Avatar className="h-16 w-16 ring-4 ring-green-100">
-              <AvatarImage src={developer.image || undefined} />
-              <AvatarFallback className="bg-green-100 text-green-800">
-                {developer.name?.charAt(0)?.toUpperCase() || "D"}
+              <AvatarImage 
+                src={developer.image || '/images/avata/default.jpeg'} 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                }}
+              />
+              <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center">
+                <img 
+                  src="/images/avata/default.jpeg" 
+                  alt="Default Avatar"
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
               </AvatarFallback>
             </Avatar>
             <div>

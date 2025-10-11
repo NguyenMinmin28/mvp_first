@@ -1,8 +1,14 @@
 import { ReactNode } from "react";
 
-// Import Header normally to avoid SSR issues
-import { Header } from "./header";
+import { ErrorBoundary } from "./error-boundary";
 import dynamic from "next/dynamic";
+
+// Dynamically import Header with SSR disabled to avoid useContext errors
+const Header = dynamic(() => import("./header").then(mod => mod.Header), { 
+  ssr: false,
+  loading: () => <div className="h-16" /> // Placeholder to prevent layout shift
+});
+
 // Use require to avoid TS path extension issues
 const ClientUserEnhancements = dynamic(
   async () => {
@@ -25,16 +31,17 @@ export function UserLayout({
   showFooter = true,
 }: UserLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* Header */}
-      <Header user={user} />
+    <ErrorBoundary>
+      <div className="min-h-screen flex flex-col bg-white">
+        {/* Header */}
+        <Header user={user} />
 
-      {/* Main Content */}
-      <main className="flex-1">{children}</main>
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col">{children}</main>
 
-      {/* Footer */}
-      {showFooter && (
-        <footer className="bg-black text-white">
+        {/* Footer */}
+        {showFooter && (
+          <footer className="bg-black text-white">
           <div className="container mx-auto px-4 sm:px-6 py-12">
             <div className="mb-10">
               <img
@@ -224,8 +231,9 @@ export function UserLayout({
         </footer>
       )}
 
-      {/* Client-only helpers: Toaster, prefetch, chunk guard */}
-      <ClientUserEnhancements />
-    </div>
+        {/* Client-only helpers: Toaster, prefetch, chunk guard */}
+        <ClientUserEnhancements />
+      </div>
+    </ErrorBoundary>
   );
 }

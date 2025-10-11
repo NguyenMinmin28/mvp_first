@@ -15,7 +15,7 @@ async function sendQuotaExceededNotification(userId: string, clientProfileId: st
     
     // Get current subscription info for the notification
     const subscription = await billingService.getActiveSubscription(clientProfileId);
-    const currentPlan = subscription?.package?.name || "Basic Plan";
+    const currentPlan = subscription?.package?.name || "Free Plan";
     const projectLimit = subscription?.package?.projectsPerMonth || 1;
 
     console.log(`📊 Current plan: ${currentPlan}, limit: ${projectLimit}`);
@@ -216,7 +216,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate currency if provided (whitelist)
-    const allowedCurrencies = new Set(["USD", "VND"]);
+    const allowedCurrencies = new Set([
+      "USD", "VND", "EUR", "GBP", "JPY", "CAD", "AUD", "SGD", "KRW", "INR",
+      "NZD", "HKD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "BRL",
+      "MXN", "ZAR", "TRY", "RUB", "CNY", "THB", "MYR", "IDR", "PHP"
+    ]);
     let finalCurrency: string | undefined = undefined;
     if (currency) {
       const c = String(currency).toUpperCase();

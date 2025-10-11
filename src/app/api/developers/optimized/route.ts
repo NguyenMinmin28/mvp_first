@@ -46,9 +46,16 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const filters = searchParams.get("filters") ? searchParams.get("filters")!.split(",") : [];
     const skills = searchParams.get("skills") ? searchParams.get("skills")!.split(",") : [];
+    const priceMin = searchParams.get("priceMin");
+    const priceMax = searchParams.get("priceMax");
+    const currency = searchParams.get("currency") || "USD";
+    const paymentType = searchParams.get("paymentType");
+    const level = searchParams.get("level") ? searchParams.get("level")!.split(",") : [];
+    const location = searchParams.get("location");
+    const availability = searchParams.get("availability") ? searchParams.get("availability")!.split(",") : [];
     const cursor = searchParams.get('cursor');
 
-    console.log('📊 API params:', { limit, sortBy, search, filters, skills, cursor: !!cursor });
+    console.log('📊 API params:', { limit, sortBy, search, filters, skills, priceMin, priceMax, currency, paymentType, level, location, availability, cursor: !!cursor });
 
     // Build where clause
     const where: any = {
@@ -117,6 +124,81 @@ export async function GET(request: NextRequest) {
           }
         }
       });
+    }
+
+    // Add new filter parameters
+    if (level.length > 0) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        level: {
+          in: level
+        }
+      });
+    }
+
+    if (location && location.trim()) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        location: {
+          contains: location.trim(),
+          mode: 'insensitive'
+        }
+      });
+    }
+
+    if (availability.length > 0) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        currentStatus: {
+          in: availability
+        }
+      });
+    }
+
+    // Add price range filtering (based on hourly rate or services)
+    if (priceMin || priceMax) {
+      where.AND = where.AND || [];
+      
+      // Convert price to USD if needed (simplified - in real app you'd use exchange rates)
+      const minPrice = priceMin ? parseFloat(priceMin) : 0;
+      const maxPrice = priceMax ? parseFloat(priceMax) : Number.MAX_SAFE_INTEGER;
+      
+      // Filter by hourly rate
+      if (paymentType === "hourly" || paymentType === "both") {
+        where.AND.push({
+          hourlyRateUsd: {
+            gte: minPrice,
+            lte: maxPrice
+          }
+        });
+      }
+      
+      // For fixed price, we'd need to join with services table
+      // This is a simplified approach - in production you'd want more sophisticated filtering
+      if (paymentType === "fixed" || paymentType === "both") {
+        where.AND.push({
+          services: {
+            some: {
+              status: 'PUBLISHED',
+              visibility: 'PUBLIC',
+              OR: [
+                {
+                  priceMin: {
+                    gte: minPrice,
+                    lte: maxPrice
+                  }
+                },
+                {
+                  priceMax: {
+                    gte: minPrice,
+                    lte: maxPrice
+                  }
+                }
+              ]
+            }
+          }
+        });
+      }
     }
 
     // Add cursor filter for keyset pagination

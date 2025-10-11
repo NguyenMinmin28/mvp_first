@@ -39,79 +39,51 @@ interface PricingPlan {
 
 const plans: PricingPlan[] = [
   {
-    id: "basic",
-    name: "Basic",
-    price: 29,
+    id: "free",
+    name: "Free",
+    price: 0,
     currency: "USD",
     period: "month",
-    description: "Perfect for small projects and startups",
+    description: "Perfect for getting started",
     features: [
-      "5 projects per month",
-      "2 contact reveals per project",
-      "Expert + Mid + Fresher rotation",
-      "15-minute response window",
-      "Email support",
+      "25 connects total",
+      "Post unlimited projects",
+      "Contact developers with connects",
+      "Get notified when freelancers show interest",
+      "Basic support",
       "Project management dashboard"
     ],
-    projectsPerMonth: 5,
-    contactRevealsPerProject: 2,
-    responseTimeGuarantee: "15 minutes",
+    projectsPerMonth: 999,
+    contactRevealsPerProject: 0,
+    responseTimeGuarantee: "24 hours",
     support: "Email support",
     icon: <Users className="h-6 w-6" />,
     gradient: "from-blue-50 to-indigo-50",
     buttonText: "Get Started"
   },
   {
-    id: "standard",
-    name: "Standard",
-    price: 79,
+    id: "plus",
+    name: "Plus",
+    price: 19.95,
     currency: "USD",
     period: "month",
     description: "Most popular for growing businesses",
     popular: true,
     features: [
-      "15 projects per month",
-      "5 contact reveals per project", 
-      "Priority rotation placement",
-      "10-minute response window",
-      "Advanced analytics dashboard",
-      "Priority email support",
-      "Custom skill requirements",
-      "Batch refresh unlimited"
+      "99 connects per month",
+      "Post unlimited projects",
+      "Contact developers with connects",
+      "Get notified when freelancers show interest",
+      "Priority support",
+      "Advanced analytics dashboard"
     ],
-    projectsPerMonth: 15,
-    contactRevealsPerProject: 5,
-    responseTimeGuarantee: "10 minutes",
+    projectsPerMonth: 999,
+    contactRevealsPerProject: 0,
+    responseTimeGuarantee: "12 hours",
     support: "Priority email support",
     icon: <Star className="h-6 w-6" />,
     gradient: "from-purple-50 to-pink-50",
     buttonText: "Most Popular"
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    price: 199,
-    currency: "USD", 
-    period: "month",
-    description: "For enterprises and high-volume clients",
-    features: [
-      "Unlimited projects",
-      "Unlimited contact reveals",
-      "Instant developer matching",
-      "5-minute response window",
-      "Dedicated account manager",
-      "24/7 phone + chat support",
-      "Custom integration API",
-      "Advanced reporting suite",
-      "SLA guarantee"
-    ],
-    projectsPerMonth: 999,
-    contactRevealsPerProject: 999,
-    responseTimeGuarantee: "5 minutes",
-    support: "24/7 phone + chat",
-    icon: <Crown className="h-6 w-6" />,
-    gradient: "from-amber-50 to-orange-50",
-    buttonText: "Contact Sales"
   }
 ];
 
@@ -124,8 +96,8 @@ export default function PricingPlans() {
     
     // Simulate API call for now
     setTimeout(() => {
-      if (planId === "premium") {
-        toast.success("We'll be in touch with enterprise pricing details!");
+      if (planId === "free") {
+        toast.success("Free plan activated! You now have 25 connects to get started.");
       } else {
         toast.info("Payment integration coming in Sprint 2! Plan selection noted.");
       }

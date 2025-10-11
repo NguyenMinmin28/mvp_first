@@ -19,18 +19,19 @@ type Plan = {
 
 const plans: Plan[] = [
   {
-    id: "basic",
-    name: "Basic Plan",
+    id: "free",
+    name: "Free Plan",
     price: "$0",
     priceNumber: 0,
     period: "/monthly",
     features: [
-      "Monthly Post 1 project free.",
-      "Contact up to 10 freelancer per project.",
-      "Get notified when freelancers show interest.",
+      "25 connects total",
+      "Post unlimited projects",
+      "Contact developers with connects",
+      "Get notified when freelancers show interest",
     ],
     cta: "CHOOSE YOUR PLAN",
-    providerPlanId: "P-BASIC-PLAN-ID", // Sẽ được thay thế bằng real plan ID
+    providerPlanId: "P-FREE-PLAN-ID", // Will be replaced with real plan ID
   },
   {
     id: "plus",
@@ -39,26 +40,13 @@ const plans: Plan[] = [
     priceNumber: 19.95,
     period: "/monthly",
     features: [
-      "Post up to 10 projects per month.",
-      "Unlimited contacts per project.",
-      "Get notified when freelancers show interest.",
+      "99 connects per month",
+      "Post unlimited projects",
+      "Contact developers with connects",
+      "Get notified when freelancers show interest",
     ],
     cta: "CHOOSE YOUR PLAN",
     providerPlanId: "P-2L869865T2585332XNC24EXA",
-  },
-  {
-    id: "pro",
-    name: "Pro Plan",
-    price: "$99.95",
-    priceNumber: 99.95,
-    period: "/monthly",
-    features: [
-      "Unlimited project postings",
-      "Unlimited contacts per project.",
-      "Get notified when freelancers show interest.",
-    ],
-    cta: "CHOOSE YOUR PLAN",
-    providerPlanId: "P-6BH23931L7595043MNC24EXQ",
   },
 ];
 
@@ -70,6 +58,26 @@ export default function SimplePricingPage({
   currentSubscription,
 }: SimplePricingPageProps) {
   const { data: session } = useSession();
+
+  // Calculate renewal date and days remaining
+  const getRenewalInfo = () => {
+    if (!currentSubscription?.currentPeriodEnd) return null;
+    
+    const renewalDate = new Date(currentSubscription.currentPeriodEnd);
+    const now = new Date();
+    const daysUntilRenewal = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      renewalDate: renewalDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      daysUntilRenewal
+    };
+  };
+
+  const renewalInfo = getRenewalInfo();
 
   const handlePlanSelection = (plan: Plan) => {
     if (!session) {
@@ -84,8 +92,8 @@ export default function SimplePricingPage({
   };
 
   const renderPlanButton = (plan: Plan) => {
-    // Basic Plan ($0) - luôn disable cho người dùng đã đăng nhập
-    if (plan.id === "basic" && session) {
+    // Free Plan ($0) - always disabled for logged in users
+    if (plan.id === "free" && session) {
       return (
         <div className="h-16 flex flex-col justify-center">
           <Button
@@ -95,15 +103,15 @@ export default function SimplePricingPage({
             ✓ Included Free
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-1">
-            You already have Basic Plan access
+            You already have Free Plan access
           </p>
         </div>
       );
     }
 
-    // Plus Plan và Pro Plan - hiển thị PayPal buttons
-    if (session && (plan.id === "plus" || plan.id === "pro")) {
-      // Kiểm tra xem user có đang subscribe plan này không
+    // Plus Plan - show PayPal buttons
+    if (session && plan.id === "plus") {
+      // Check if user is currently subscribed to this plan
       const isCurrentPlan = currentSubscription?.package?.name === plan.name;
       const hasActiveSubscription = !!currentSubscription;
 
@@ -121,21 +129,19 @@ export default function SimplePricingPage({
       );
     }
 
-    // Chưa đăng nhập - hiển thị label theo yêu cầu trên trang public/home
+    // Not logged in - show appropriate labels
     const unauthenticatedLabel =
-      plan.id === "basic"
+      plan.id === "free"
         ? "Current Plan"
         : plan.id === "plus"
           ? "Upgrade to Plus"
-          : plan.id === "pro"
-            ? "Upgrade to Pro"
-            : plan.cta;
+          : plan.cta;
 
     return (
       <div className="h-16 flex items-center">
         <Button
           className="w-full h-12 text-sm font-semibold"
-          disabled={plan.id === "basic"}
+          disabled={plan.id === "free"}
           onClick={() => handlePlanSelection(plan)}
         >
           {unauthenticatedLabel}
@@ -156,30 +162,45 @@ export default function SimplePricingPage({
           <div className="mb-8 p-4 bg-green-100/80 border border-green-300 rounded-lg max-w-2xl mx-auto">
             <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
+              <div className="flex-1">
                 <h3 className="font-semibold text-green-900">
-                  {currentSubscription?.package?.name || "Basic Plan"}{" "}
+                  {currentSubscription?.package?.name || "Free Plan"}{" "}
                   {currentSubscription ? "Active" : "Included"}
                 </h3>
                 <p className="text-sm text-green-700">
                   {currentSubscription
                     ? `You're currently subscribed to ${currentSubscription.package.name}. ${
-                        currentSubscription.package.name === "Basic Plan"
+                        currentSubscription.package.name === "Free Plan"
                           ? "Enjoy your free access!"
                           : "Manage your subscription in your profile."
                       }`
-                    : "You already have access to Basic Plan features. Upgrade to unlock more projects and contacts!"}
+                    : "You already have access to Free Plan features. Upgrade to unlock more connects!"}
                 </p>
+                {renewalInfo && currentSubscription?.status === "active" && currentSubscription.package.name !== "Free Plan" && (
+                  <div className="mt-3 p-3 bg-white/60 rounded border border-green-200">
+                    <p className="text-sm text-green-800 font-medium flex items-center gap-2">
+                      🔄 Auto-renewal: {renewalInfo.renewalDate}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      {renewalInfo.daysUntilRenewal > 0 
+                        ? `${renewalInfo.daysUntilRenewal} days remaining until next billing`
+                        : renewalInfo.daysUntilRenewal === 0
+                        ? "Renews today"
+                        : "Renewal overdue"
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-4xl mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.id}
-              className={`border-2 flex flex-col hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "basic" && session ? "opacity-75" : ""}`}
+              className={`border-2 flex flex-col hover:shadow-lg hover:bg-gray-50 transition-all duration-200 ${plan.id === "free" && session ? "opacity-75" : ""}`}
             >
               <CardHeader>
                 <CardTitle className="text-base font-semibold">

@@ -20,7 +20,7 @@ export async function GET(
       );
     }
 
-    // Get developer profile
+    // Get developer profile with complete data
     const developer = await prisma.developerProfile.findUnique({
       where: { id: developerId },
       include: {
@@ -30,6 +30,27 @@ export async function GET(
             name: true,
             email: true,
             image: true
+          }
+        },
+        skills: {
+          include: {
+            skill: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        reviewsSummary: true,
+        _count: {
+          select: {
+            services: {
+              where: { status: "PUBLISHED", visibility: "PUBLIC" }
+            },
+            assignmentCandidates: {
+              where: { responseStatus: "accepted" }
+            }
           }
         }
       }
@@ -42,18 +63,43 @@ export async function GET(
       );
     }
 
+    // Get portfolios
+    const portfolios = await prisma.portfolio.findMany({
+      where: { developerId: developerId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      take: 10,
+    });
+
     return NextResponse.json({
-      developer: {
-        id: developer.id,
-        name: developer.user.name,
-        email: developer.user.email,
-        photoUrl: developer.photoUrl,
-        image: developer.user.image,
-        location: developer.location,
-        experienceYears: developer.experienceYears,
-        level: developer.level,
-        currentStatus: developer.currentStatus
-      }
+      id: developer.id,
+      name: developer.user.name,
+      email: developer.user.email,
+      photoUrl: developer.photoUrl,
+      image: developer.user.image,
+      location: developer.location,
+      bio: developer.bio,
+      experienceYears: developer.experienceYears,
+      level: developer.level,
+      currentStatus: developer.currentStatus,
+      hourlyRateUsd: developer.hourlyRateUsd,
+      usualResponseTimeMs: developer.usualResponseTimeMs,
+      jobsCount: developer._count?.assignmentCandidates || 0,
+      reviews: {
+        averageRating: developer.reviewsSummary?.averageRating || 0,
+        totalReviews: developer.reviewsSummary?.totalReviews || 0,
+      },
+      skills: developer.skills?.map(s => s.skill.name) || [],
+      portfolioLinks: portfolios.map(p => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        url: p.projectUrl,
+        imageUrl: p.imageUrl,
+      })) || [],
+      workHistory: [],
+      education: [],
+      certifications: [],
+      languages: []
     });
 
   } catch (error) {

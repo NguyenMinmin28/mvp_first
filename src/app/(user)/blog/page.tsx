@@ -25,7 +25,7 @@ export default async function BlogPage() {
   
   return (
     <UserLayout user={user}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="min-h-[calc(100vh-200px)] bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Main Content */}
         <main className="flex-1">
           <div className="container mx-auto px-4 py-8">

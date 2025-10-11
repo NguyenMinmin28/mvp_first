@@ -326,8 +326,8 @@ export default function DashboardClient({
 
   return (
     <UserLayout user={session.user}>
-      <section className="w-full py-8">
-        <div className="container mx-auto px-4">
+      <section className="w-full py-8 flex-1 flex flex-col">
+        <div className="container mx-auto px-4 flex-1 flex flex-col">
           {isApprovalPending && (
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
               <h2 className="text-2xl font-bold text-blue-900 mb-2">Profile Submitted</h2>
@@ -342,8 +342,8 @@ export default function DashboardClient({
               <ProfileSummary profile={profile} />
 
               {/* Dashboard Tabs - Responsive Design */}
-              <div className="mt-6 sm:mt-8 relative z-30 -mx-4 sm:-mx-6 lg:-mx-8">
-                <Tabs defaultValue="overview" className="w-full px-4 sm:px-6 lg:px-8">
+              <div className="mt-6 sm:mt-8 relative z-30 -mx-4 sm:-mx-6 lg:-mx-8 flex-1 flex flex-col">
+                <Tabs defaultValue="overview" className="w-full px-4 sm:px-6 lg:px-8 flex-1 flex flex-col">
                   {/* Mobile: Grid Layout */}
                   <div className="block sm:hidden">
                     <TabsList className="min-h-10 items-center bg-muted p-1 text-muted-foreground grid grid-cols-3 gap-2 px-4 py-3 rounded-xl border border-gray-200 shadow-md h-auto relative z-40 w-full">
@@ -414,8 +414,8 @@ export default function DashboardClient({
                     </div>
                   </div>
 
-                  <TabsContent value="overview" className="mt-8 py-6">
-                    <div className="h-[600px] overflow-y-auto">
+                  <TabsContent value="overview" className="mt-8 py-6 flex-1">
+                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
                       <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div className="bg-white rounded-lg border p-6">
@@ -532,8 +532,8 @@ export default function DashboardClient({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="projects" className="mt-8 py-6">
-                    <div className="h-[600px] overflow-y-auto">
+                  <TabsContent value="projects" className="mt-8 py-6 flex-1">
+                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
                       <div className="space-y-6">
                         <ProjectStatusFilter
                           value={projectStatus}
@@ -573,7 +573,7 @@ export default function DashboardClient({
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 min-h-[500px]">
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 flex-1 min-h-[500px]">
                           <div className="xl:col-span-1">
                             <ProjectsSidebar
                               filter={projectStatus}
@@ -675,8 +675,8 @@ export default function DashboardClient({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="portfolio" className="mt-8 py-6">
-                    <div className="h-[600px] overflow-y-auto">
+                  <TabsContent value="portfolio" className="mt-8 py-6 flex-1">
+                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
                       {/** Use onboarding PortfolioGrid to enable per-slot add/edit with autosave */}
                       <OnboardingPortfolioGrid
                         initialPortfolios={

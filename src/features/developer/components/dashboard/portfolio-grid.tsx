@@ -33,7 +33,7 @@ export default function PortfolioGrid({
 
   // When public view and no portfolio at all, show branded letter placeholders
   const isAllEmpty = variant === "public" && (portfolioLinks?.length || 0) === 0;
-  const brandedLetters = isAllEmpty ? ["C", "L", "E", "R", "V"] : null;
+  const brandedLetters = isAllEmpty ? ["C", "L", "E", "V", "R"] : null;
 
 
   // Tạo array 5 slots, fill với portfolio có sẵn và empty slots

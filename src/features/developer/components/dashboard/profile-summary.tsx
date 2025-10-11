@@ -298,28 +298,42 @@ export default function ProfileSummary({
         <CardContent className="pt-4 px-3 sm:px-4 pb-3 sm:pb-4">
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
             {/* Left: Avatar */}
-            <div className="lg:w-[200px] w-full lg:max-w-[200px]">
+            <div className="lg:w-[200px] w-full lg:max-w-[200px] relative z-10">
               <div className="relative inline-block">
-                <Avatar className="!w-32 !h-32 sm:!w-36 sm:!h-36 lg:!w-40 lg:!h-40 !rounded-md !shrink-0">
+                <Avatar className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full shrink-0 relative">
                   <AvatarImage
                     src={
                       photoUrl ||
                       profile?.photoUrl ||
                       profile?.image ||
-                      undefined
+                      "/images/avata/default.jpeg"
                     }
-                    className="object-cover w-full h-full"
+                    className="object-cover w-full h-full rounded-full"
+                    onError={(e) => {
+                      // Set to default image on error
+                      (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                    }}
                   />
-                  <AvatarFallback className="!text-lg !font-semibold !w-full !h-full !flex !items-center !justify-center !rounded-md !bg-muted">
-                    {(name || profile?.name || "").slice(0, 2).toUpperCase()}
+                  <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center rounded-full">
+                    <img 
+                      src="/images/avata/default.jpeg" 
+                      alt="Default Avatar"
+                      className="w-full h-full object-cover rounded-full"
+                      onError={(e) => {
+                        // If default image also fails, show a simple placeholder
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
                   </AvatarFallback>
                 </Avatar>
+                {/* Status dot positioned like in PeopleGrid */}
                 <span
-                  className={`absolute right-0 top-0 inline-block w-6 h-6 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                  className={`absolute right-1 top-1 inline-block w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white z-50 ${
                     resolvedPresence === "available"
                       ? "bg-green-500"
                       : "bg-gray-400"
                   }`}
+                  style={{ zIndex: 9999 }}
                   aria-label={
                     resolvedPresence === "available"
                       ? "Available"
@@ -357,18 +371,24 @@ export default function ProfileSummary({
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0 relative z-50">
                         {!hideControls && !developerId ? (
-                          <div className="flex items-center gap-2">
-                            <StatusDropdown
-                              currentStatus={status || "available"}
-                              onStatusChange={(newStatus) =>
-                                submitStatus(newStatus as "available" | "busy")
-                              }
-                            />
-                            <ActionDropdown
-                              onEditProfile={() => router.push("/profile")}
-                            />
+                          <div className="flex items-center gap-2 relative z-50">
+                            <div className="relative z-50">
+                              <StatusDropdown
+                                currentStatus={status || "available"}
+                                onStatusChange={(newStatus) =>
+                                  submitStatus(newStatus as "available" | "busy")
+                                }
+                                className="relative z-50"
+                              />
+                            </div>
+                            <div className="relative z-50">
+                              <ActionDropdown
+                                onEditProfile={() => router.push("/profile")}
+                                className="relative z-50"
+                              />
+                            </div>
                           </div>
                         ) : (
                           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">

@@ -5,65 +5,45 @@ async function seedBillingPackages() {
   try {
     console.log("🌱 Seeding billing packages...");
 
-    // Define the packages according to the documentation model
+    // Define the packages according to the new pricing structure
     const packages = [
       {
-        name: "Basic",
-        priceUSD: 29.99,
-        projectsPerMonth: 3,
-        contactClicksPerProject: 2,
+        name: "Free Plan",
+        priceUSD: 0,
+        projectsPerMonth: 999, // Unlimited projects
+        contactClicksPerProject: 0, // Not used for connects model
+        connectsPerMonth: 25, // Total connects (not monthly)
         features: [
-          "3 projects per month",
-          "2 contact reveals per project",
-          "Basic support",
-          "48-hour response time"
+          "25 connects total",
+          "Post unlimited projects",
+          "Contact developers with connects",
+          "Get notified when freelancers show interest"
         ],
         isPopular: false,
         provider: "paypal" as const,
-        providerPlanId: "BASIC_PLAN_ID", // Replace with actual PayPal plan ID
+        providerPlanId: "P-FREE-PLAN-ID", // Replace with actual PayPal plan ID
         interval: "monthly",
-        trialPeriodDays: 7,
-        trialProjectsCount: 1,
+        trialPeriodDays: 0,
+        trialProjectsCount: 0,
       },
       {
-        name: "Standard",
-        priceUSD: 59.99,
-        projectsPerMonth: 10,
-        contactClicksPerProject: 5,
+        name: "Plus Plan",
+        priceUSD: 19.95,
+        projectsPerMonth: 999, // Unlimited projects
+        contactClicksPerProject: 0, // Not used for connects model
+        connectsPerMonth: 99, // Monthly connects
         features: [
-          "10 projects per month",
-          "5 contact reveals per project",
-          "Priority support",
-          "24-hour response time",
-          "Advanced matching algorithm"
+          "99 connects per month",
+          "Post unlimited projects",
+          "Contact developers with connects",
+          "Get notified when freelancers show interest"
         ],
         isPopular: true,
         provider: "paypal" as const,
-        providerPlanId: "STANDARD_PLAN_ID", // Replace with actual PayPal plan ID
+        providerPlanId: "P-2L869865T2585332XNC24EXA", // Existing PayPal plan ID
         interval: "monthly",
-        trialPeriodDays: 14,
-        trialProjectsCount: 2,
-      },
-      {
-        name: "Premium",
-        priceUSD: 99.99,
-        projectsPerMonth: 25,
-        contactClicksPerProject: 10,
-        features: [
-          "25 projects per month",
-          "10 contact reveals per project",
-          "Dedicated support",
-          "12-hour response time",
-          "Advanced matching algorithm",
-          "Custom requirements",
-          "Priority developer pool"
-        ],
-        isPopular: false,
-        provider: "paypal" as const,
-        providerPlanId: "PREMIUM_PLAN_ID", // Replace with actual PayPal plan ID
-        interval: "monthly",
-        trialPeriodDays: 14,
-        trialProjectsCount: 3,
+        trialPeriodDays: 7,
+        trialProjectsCount: 1,
       },
     ];
 

@@ -11,6 +11,7 @@ import { Badge } from "@/ui/components/badge";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { AlertTriangle, CheckCircle, Clock, Users, Target } from "lucide-react";
 import { toast } from "sonner";
+import { CURRENCIES, getCurrency } from "@/core/utils/currency";
 
 interface Skill {
   id: string;
@@ -350,60 +351,83 @@ export default function NewProjectForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-3">
-              <Input
-                type="number"
-                placeholder="Min"
-                value={formData.budgetMin}
-                onChange={(e) => setFormData(prev => ({ ...prev, budgetMin: e.target.value }))}
-                className="flex-1"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                onKeyDown={(e) => {
-                  if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
-                }}
-                onInput={(e) => {
-                  const el = e.currentTarget;
-                  if (el.value === "") return;
-                  const n = Number(el.value);
-                  if (Number.isNaN(n)) {
-                    el.value = "";
-                    return;
-                  }
-                  if (n < 0) el.value = "0";
-                }}
-              />
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  {getCurrency(formData.currency)?.symbol || "$"}
+                </span>
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={formData.budgetMin}
+                  onChange={(e) => setFormData(prev => ({ ...prev, budgetMin: e.target.value }))}
+                  className={`flex-1 pl-8 ${formData.paymentMethod === "hourly" ? "pr-12" : ""}`}
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                  }}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    if (el.value === "") return;
+                    const n = Number(el.value);
+                    if (Number.isNaN(n)) {
+                      el.value = "";
+                      return;
+                    }
+                    if (n < 0) el.value = "0";
+                  }}
+                />
+                {formData.paymentMethod === "hourly" && (
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black text-sm font-medium">
+                    /hr
+                  </span>
+                )}
+              </div>
               <span className="text-gray-600">-</span>
-              <Input
-                type="number"
-                placeholder="Max"
-                value={formData.budgetMax}
-                onChange={(e) => setFormData(prev => ({ ...prev, budgetMax: e.target.value }))}
-                className="flex-1"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                onKeyDown={(e) => {
-                  if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
-                }}
-                onInput={(e) => {
-                  const el = e.currentTarget;
-                  if (el.value === "") return;
-                  const n = Number(el.value);
-                  if (Number.isNaN(n)) {
-                    el.value = "";
-                    return;
-                  }
-                  if (n < 0) el.value = "0";
-                }}
-              />
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  {getCurrency(formData.currency)?.symbol || "$"}
+                </span>
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={formData.budgetMax}
+                  onChange={(e) => setFormData(prev => ({ ...prev, budgetMax: e.target.value }))}
+                  className={`flex-1 pl-8 ${formData.paymentMethod === "hourly" ? "pr-12" : ""}`}
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                  }}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    if (el.value === "") return;
+                    const n = Number(el.value);
+                    if (Number.isNaN(n)) {
+                      el.value = "";
+                      return;
+                    }
+                    if (n < 0) el.value = "0";
+                  }}
+                />
+                {formData.paymentMethod === "hourly" && (
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black text-sm font-medium">
+                    /hr
+                  </span>
+                )}
+              </div>
               <select
                 value={formData.currency}
                 onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               >
-                <option value="USD">USD</option>
-                <option value="VND">VND</option>
+                {CURRENCIES.map((currencyOption) => (
+                  <option key={currencyOption.code} value={currencyOption.code}>
+                    {currencyOption.symbol} {currencyOption.code} - {currencyOption.name}
+                  </option>
+                ))}
               </select>
             </div>
             <p className="text-xs text-gray-500">

@@ -65,6 +65,7 @@ export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const { logout } = useCustomLogout();
   const [mounted, setMounted] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [unread, setUnread] = useState<number>(0);
   const [openNotif, setOpenNotif] = useState(false);
@@ -281,12 +282,28 @@ export function Header({ user }: HeaderProps) {
     }
   };
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
     setShowLogoutConfirm(false);
-    if (pendingLogoutPortal) {
-      setActivePortal(pendingLogoutPortal);
-      setPendingLogoutPortal(null);
-      logout(`/auth/signin?portal=${pendingLogoutPortal}`);
+    
+    try {
+      if (pendingLogoutPortal) {
+        setActivePortal(pendingLogoutPortal);
+        setPendingLogoutPortal(null);
+        await logout(`/auth/signin?portal=${pendingLogoutPortal}`);
+      } else {
+        await logout();
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback to direct navigation
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -352,6 +369,23 @@ export function Header({ user }: HeaderProps) {
             {/* Navigation Links - Show based on user role */}
             {isAuthenticated && mounted && userRole === "CLIENT" && (
               <nav className="hidden md:flex items-center gap-4">
+                <Link href="/client-dashboard">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 ${
+                      typeof window !== "undefined" &&
+                      window.location.pathname.startsWith("/client-dashboard")
+                        ? "bg-black text-white hover:bg-black hover:text-white"
+                        : !isAuthenticated
+                          ? "text-white hover:bg-white hover:text-black"
+                          : "text-black hover:bg-black hover:text-white"
+                    }`}
+                  >
+                    <Briefcase className="h-4 w-4" />
+                    My Workspace
+                  </Button>
+                </Link>
                 <Link href="/my-projects">
                   <Button
                     variant="ghost"
@@ -454,23 +488,6 @@ export function Header({ user }: HeaderProps) {
 
             {isAuthenticated && mounted && userRole === "DEVELOPER" && (
               <nav className="hidden md:flex items-center gap-4">
-                <Link href="/services">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/services")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
-                    }`}
-                  >
-                    <FolderOpen className="h-4 w-4" />
-                    Services
-                  </Button>
-                </Link>
                 <Link href="/dashboard-user">
                   <Button
                     variant="ghost"
@@ -486,6 +503,23 @@ export function Header({ user }: HeaderProps) {
                   >
                     <Briefcase className="h-4 w-4" />
                     Workspace
+                  </Button>
+                </Link>
+                <Link href="/services">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center gap-2 ${
+                      typeof window !== "undefined" &&
+                      window.location.pathname.startsWith("/services")
+                        ? "bg-black text-white hover:bg-black hover:text-white"
+                        : !isAuthenticated
+                          ? "text-white hover:bg-white hover:text-black"
+                          : "text-black hover:bg-black hover:text-white"
+                    }`}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    Services
                   </Button>
                 </Link>
                 <Link href="/ideas">
@@ -1100,10 +1134,15 @@ export function Header({ user }: HeaderProps) {
                         src={userData?.photoUrl || user.image || undefined}
                         alt={user.name || user.email || "User"}
                       />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {user.name
-                          ? getUserInitials(user.name)
-                          : user.email?.charAt(0).toUpperCase() || "U"}
+                      <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center">
+                        <img 
+                          src="/images/avata/default.jpeg" 
+                          alt="Default Avatar"
+                          className="w-full h-full object-cover rounded-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -1438,6 +1477,15 @@ export function Header({ user }: HeaderProps) {
                     )}
                   </div>
 
+                  <Link
+                    href="/client-dashboard"
+                    className="block py-2 text-gray-700 hover:text-black"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      My Workspace
+                    </div>
+                  </Link>
                   <Link
                     href="/my-projects"
                     className="block py-2 text-gray-700 hover:text-black"

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Tìm Basic Plan package
     const basicPackage = await db.package.findFirst({
       where: {
-        name: "Basic Plan",
+        name: "Free Plan",
         priceUSD: 0
       }
     });

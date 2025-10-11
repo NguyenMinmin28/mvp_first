@@ -7,6 +7,7 @@ import { Button } from "@/ui/components/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
+import { DeveloperProfileSlideBar } from "./developer-profile-slide-bar";
 
 interface Freelancer {
   id: string;
@@ -32,6 +33,7 @@ export function FreelancersStrip() {
   const { data: session } = useSession();
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedDeveloper, setSelectedDeveloper] = useState<{id: string, name?: string} | null>(null);
   // Using shared GetInTouchButton flow; no local modal state needed
 
   useEffect(() => {
@@ -59,7 +61,10 @@ export function FreelancersStrip() {
   // Contact handled by GetInTouchButton
 
   const handleCardClick = (freelancer: Freelancer) => {
-    router.push(`/developer/${freelancer.id}`);
+    setSelectedDeveloper({
+      id: freelancer.id,
+      name: freelancer.name || undefined
+    });
   };
 
   if (loading && freelancers.length === 0) {
@@ -127,22 +132,25 @@ export function FreelancersStrip() {
             <CardContent className="p-5 h-full flex flex-col">
                 {/* Freelancer Info */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="relative inline-block w-12 h-12 rounded-full overflow-hidden bg-gray-100">
-                    {freelancer.image ? (
-                      <Image 
-                        src={freelancer.image} 
-                        alt={freelancer.name || "Freelancer"} 
-                        width={48} 
-                        height={48} 
-                        className="object-cover w-12 h-12" 
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200" />
-                    )}
+                  <div className="relative inline-block">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                      {freelancer.image ? (
+                        <Image 
+                          src={freelancer.image} 
+                          alt={freelancer.name || "Freelancer"} 
+                          width={48} 
+                          height={48} 
+                          className="object-cover w-12 h-12" 
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-200" />
+                      )}
+                    </div>
                     <span
-                      className={`absolute right-0 top-0 inline-block w-4 h-4 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                      className={`absolute right-0.5 top-0.5 inline-block w-3 h-3 rounded-full border-2 border-white ${
                         freelancer.currentStatus === 'available' ? 'bg-green-500' : 'bg-gray-400'
                       }`}
+                      style={{ zIndex: 10 }}
                       aria-label={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
                       title={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
                     />
@@ -235,6 +243,16 @@ export function FreelancersStrip() {
       </div>
 
       {/* Contact modals handled internally by GetInTouchButton */}
+      
+      {/* Developer Profile Slide Bar */}
+      {selectedDeveloper && (
+        <DeveloperProfileSlideBar
+          isOpen={!!selectedDeveloper}
+          onClose={() => setSelectedDeveloper(null)}
+          developerId={selectedDeveloper.id}
+          developerName={selectedDeveloper.name}
+        />
+      )}
     </div>
   );
 }

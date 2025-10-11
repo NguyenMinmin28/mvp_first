@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
+import { CURRENCIES, getCurrency } from "@/core/utils/currency";
 
 type Skill = { id: string; name: string };
 
@@ -178,7 +179,7 @@ export function ProjectPostForm({
     const fetchSkills = async () => {
       setSkillsLoading(true);
       try {
-        const res = await fetch("/api/skills", { cache: "no-store" });
+        const res = await fetch("/api/skills?limit=200", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           // Đảm bảo data.skills là array
@@ -386,7 +387,7 @@ export function ProjectPostForm({
           required
         />
         {validationErrors.projectTitle && (
-          <p className="text-red-500 text-sm mt-1">Project title is required</p>
+          <p className="text-black text-sm mt-1">Project title is required</p>
         )}
       </div>
 
@@ -409,7 +410,7 @@ export function ProjectPostForm({
           required
         />
         {validationErrors.projectDescription && (
-          <p className="text-red-500 text-sm mt-1">
+          <p className="text-black text-sm mt-1">
             Project description is required
           </p>
         )}
@@ -438,47 +439,64 @@ export function ProjectPostForm({
             onClick={handleToggleDropdown}
           >
             {Array.isArray(selectedSkills) && selectedSkills.length > 0
-              ? `${selectedSkills.length}/5 selected`
+              ? selectedSkills.length <= 2 
+                ? selectedSkills.map(s => s.name).join(", ")
+                : `${selectedSkills.length}/5 selected`
               : "Skills (max 5)"}
             <span className="ml-2">▾</span>
           </Button>
           {skillOpen && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border-0 bg-white shadow-lg">
+            <div className="absolute z-[9999] top-full left-0 right-0 mt-1 max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-xl">
+              {/* Search input */}
+              <div className="p-2 border-b border-gray-100">
+                <input
+                  type="text"
+                  placeholder="Search skills..."
+                  value={skillQuery}
+                  onChange={(e) => setSkillQuery(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
               {skillsLoading ? (
                 <div className="p-2 text-sm text-gray-500">
                   Loading skills...
                 </div>
               ) : !Array.isArray(filteredSkills) ||
                 filteredSkills.length === 0 ? (
-                <div className="p-2 text-sm text-gray-500">No options</div>
+                <div className="p-2 text-sm text-gray-500">
+                  {skillQuery ? "No skills found matching your search" : "No options"}
+                </div>
               ) : (
-                filteredSkills.map((s) => (
-                  <label
-                    key={s.id}
-                    className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-sm ${Array.isArray(skills) && skills.length >= 5 && !skills.includes(s.id) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={Array.isArray(skills) && skills.includes(s.id)}
-                      disabled={
-                        Array.isArray(skills) &&
-                        skills.length >= 5 &&
-                        !skills.includes(s.id)
-                      }
-                      onChange={(e) =>
-                        e.target.checked ? addSkill(s.id) : removeSkill(s.id)
-                      }
-                    />
-                    <span>{s.name}</span>
-                  </label>
-                ))
+                <div className="max-h-64 overflow-y-auto">
+                  {filteredSkills.map((s) => (
+                    <label
+                      key={s.id}
+                      className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-sm ${Array.isArray(skills) && skills.length >= 5 && !skills.includes(s.id) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={Array.isArray(skills) && skills.includes(s.id)}
+                        disabled={
+                          Array.isArray(skills) &&
+                          skills.length >= 5 &&
+                          !skills.includes(s.id)
+                        }
+                        onChange={(e) =>
+                          e.target.checked ? addSkill(s.id) : removeSkill(s.id)
+                        }
+                      />
+                      <span>{s.name}</span>
+                    </label>
+                  ))}
+                </div>
               )}
             </div>
           )}
         </div>
         {validationErrors.skills && (
-          <p className="text-red-500 text-sm mt-1">
+          <p className="text-black text-sm mt-1">
             Please select at least one skill (max 5)
           </p>
         )}
@@ -489,7 +507,7 @@ export function ProjectPostForm({
         <div className="flex items-center space-x-3">
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-              $
+              {getCurrency(currency)?.symbol || "$"}
             </span>
             <Input
               type="number"
@@ -499,7 +517,7 @@ export function ProjectPostForm({
                 setBudgetMin(e.target.value);
                 clearFieldError("budget");
               }}
-              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
+              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""} ${paymentMethod === "hourly" ? "pr-12" : ""}`}
               min="0"
               step="0.01"
               required
@@ -518,11 +536,16 @@ export function ProjectPostForm({
                 if (n < 0) el.value = "0";
               }}
             />
+            {paymentMethod === "hourly" && (
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black text-sm font-medium">
+                /hr
+              </span>
+            )}
           </div>
           <span className="text-gray-600">-</span>
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-              $
+              {getCurrency(currency)?.symbol || "$"}
             </span>
             <Input
               type="number"
@@ -532,7 +555,7 @@ export function ProjectPostForm({
                 setBudgetMax(e.target.value);
                 clearFieldError("budget");
               }}
-              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""}`}
+              className={`h-12 w-full pl-8 bg-[#F3F3F3] border-0 ${validationErrors.budget ? "border-red-500 focus:ring-red-500" : ""} ${paymentMethod === "hourly" ? "pr-12" : ""}`}
               min="0"
               step="0.01"
               required
@@ -551,19 +574,31 @@ export function ProjectPostForm({
                 if (n < 0) el.value = "0";
               }}
             />
+            {paymentMethod === "hourly" && (
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black text-sm font-medium">
+                /hr
+              </span>
+            )}
           </div>
           <Select value={currency} onValueChange={setCurrency}>
             <SelectTrigger className="h-12 w-20 bg-[#F3F3F3] border-0 focus:ring-2 focus:ring-black focus:ring-offset-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="USD">USD</SelectItem>
-              <SelectItem value="VND">VND</SelectItem>
+              {CURRENCIES.map((currencyOption) => (
+                <SelectItem key={currencyOption.code} value={currencyOption.code}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{currencyOption.symbol}</span>
+                    <span>{currencyOption.code}</span>
+                    <span className="text-gray-500 text-sm">- {currencyOption.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         {validationErrors.budget && (
-          <p className="text-red-500 text-sm mt-1">
+          <p className="text-black text-sm mt-1">
             Enter budget range (min or max)
           </p>
         )}

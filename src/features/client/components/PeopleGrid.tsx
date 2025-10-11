@@ -17,6 +17,8 @@ import { GetInTouchButton } from "@/features/shared/components/get-in-touch-butt
 import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
 import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
 import PortfolioGrid from "@/features/developer/components/dashboard/portfolio-grid";
+import { FilterDrawer, FilterState } from "@/features/client/components/FilterDrawer";
+import { formatPriceRange, getCurrencySymbol } from "@/core/utils/currency";
 
 const ServiceDetailOverlay = dynamic(
   () => import("@/features/client/components/ServiceDetailOverlay"),
@@ -202,6 +204,8 @@ export function PeopleGrid({
   const [likedDeveloperIds, setLikedDeveloperIds] = useState<Set<string>>(new Set());
   const [pendingFollowIds, setPendingFollowIds] = useState<Set<string>>(new Set());
   const [followedUserIds, setFollowedUserIds] = useState<Set<string>>(new Set());
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<FilterState | null>(null);
 
   // Compute local statuses: if countdown hits 0, treat as expired for UI
   const computedStatuses = useMemo(() => {
@@ -296,6 +300,34 @@ export function PeopleGrid({
       console.log('🔍 Adding skills to API call:', skills);
     }
 
+    // Add new filter parameters
+    if (appliedFilters) {
+      if (appliedFilters.priceMin) {
+        params.append("priceMin", appliedFilters.priceMin);
+      }
+      if (appliedFilters.priceMax) {
+        params.append("priceMax", appliedFilters.priceMax);
+      }
+      if (appliedFilters.currency) {
+        params.append("currency", appliedFilters.currency);
+      }
+      if (appliedFilters.paymentType && appliedFilters.paymentType !== "both") {
+        params.append("paymentType", appliedFilters.paymentType);
+      }
+      if (appliedFilters.level && appliedFilters.level.length > 0) {
+        params.append("level", appliedFilters.level.join(","));
+      }
+      if (appliedFilters.location) {
+        params.append("location", appliedFilters.location);
+      }
+      if (appliedFilters.availability && appliedFilters.availability.length > 0) {
+        params.append("availability", appliedFilters.availability.join(","));
+      }
+      if (appliedFilters.skills && appliedFilters.skills.length > 0) {
+        params.append("skills", appliedFilters.skills.join(","));
+      }
+    }
+
     // Add cursor for keyset pagination
     if (cursor) {
       params.append("cursor", cursor);
@@ -354,6 +386,34 @@ export function PeopleGrid({
         fallbackParams.append("skills", skills.join(","));
       }
 
+      // Add new filter parameters to fallback
+      if (appliedFilters) {
+        if (appliedFilters.priceMin) {
+          fallbackParams.append("priceMin", appliedFilters.priceMin);
+        }
+        if (appliedFilters.priceMax) {
+          fallbackParams.append("priceMax", appliedFilters.priceMax);
+        }
+        if (appliedFilters.currency) {
+          fallbackParams.append("currency", appliedFilters.currency);
+        }
+        if (appliedFilters.paymentType && appliedFilters.paymentType !== "both") {
+          fallbackParams.append("paymentType", appliedFilters.paymentType);
+        }
+        if (appliedFilters.level && appliedFilters.level.length > 0) {
+          fallbackParams.append("level", appliedFilters.level.join(","));
+        }
+        if (appliedFilters.location) {
+          fallbackParams.append("location", appliedFilters.location);
+        }
+        if (appliedFilters.availability && appliedFilters.availability.length > 0) {
+          fallbackParams.append("availability", appliedFilters.availability.join(","));
+        }
+        if (appliedFilters.skills && appliedFilters.skills.length > 0) {
+          fallbackParams.append("skills", appliedFilters.skills.join(","));
+        }
+      }
+
       console.log('🔄 Fallback API call:', `/api/developers?${fallbackParams.toString()}`);
       const fallbackRes = await fetch(`/api/developers?${fallbackParams.toString()}`, { cache: "no-store" });
       const fallbackJson = await fallbackRes.json();
@@ -377,7 +437,7 @@ export function PeopleGrid({
         }
       };
     }
-  }, [searchQuery, sortBy, filters, skills]);
+  }, [searchQuery, sortBy, filters, skills, appliedFilters]);
 
   // Load initial data (only when not using overrideDevelopers)
   useEffect(() => {
@@ -745,13 +805,8 @@ export function PeopleGrid({
     console.log("Like developer:", developerId);
   };
 
-  const formatPrice = (min: number, max: number, type: string) => {
-    if (type === "FIXED") {
-      return `$${min} - $${max}`;
-    } else if (type === "HOURLY") {
-      return `$${min}/hr - $${max}/hr`;
-    }
-    return `$${min} - $${max}`;
+  const formatPrice = (min: number, max: number, type: string, currency: string = "USD") => {
+    return formatPriceRange(min, max, currency, type as "FIXED" | "HOURLY");
   };
 
   const formatTimeRemaining = (milliseconds: number) => {
@@ -949,6 +1004,13 @@ export function PeopleGrid({
     }
   };
 
+  const handleApplyFilters = (filters: FilterState) => {
+    setAppliedFilters(filters);
+    console.log("Applied filters:", filters);
+    // The filters will be applied in the next fetchDevelopers call
+    // We need to trigger a re-fetch with the new filters
+  };
+
   if (!isOverride && loading && filteredDevList.length === 0) {
     return (
       <DevelopersSkeleton />
@@ -969,7 +1031,7 @@ export function PeopleGrid({
             aria-label="Filter"
             onClick={(e) => {
               e.stopPropagation();
-              console.log("Open filter drawer");
+              setIsFilterDrawerOpen(true);
             }}
             className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-lg transition-shadow"
           >
@@ -1152,11 +1214,11 @@ export function PeopleGrid({
                       <div className="flex items-start space-x-3">
                         <div className="relative inline-block group/avatar">
                           <Avatar 
-                            className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0 transition-transform duration-200 ease-out will-change-transform group-hover/avatar:scale-105"
+                            className="w-12 h-12 sm:w-16 sm:h-16 cursor-pointer flex-shrink-0 transition-transform duration-200 ease-out will-change-transform group-hover/avatar:scale-105 relative"
                             onClick={() => handleDeveloperClick(developer)}
                           >
                             <AvatarImage 
-                              src={developer.photoUrl || developer.user.image || ''} 
+                              src={developer.photoUrl || developer.user.image || '/images/avata/default.jpeg'} 
                               alt={developer.user.name}
                               className="object-cover w-full h-full transition-transform duration-200 ease-out will-change-transform group-hover/avatar:scale-105"
                               loading={devIndex < 4 ? "eager" : "lazy"}
@@ -1165,19 +1227,28 @@ export function PeopleGrid({
                               }}
                               onError={(e) => {
                                 console.log('Avatar image failed to load for', developer.user.name, 'photoUrl:', developer.photoUrl, 'user.image:', developer.user.image);
-                                // Hide the image element on error to show fallback
-                                (e.target as HTMLImageElement).style.display = 'none';
+                                // Set to default image on error
+                                (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
                               }}
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm sm:text-lg transition-colors duration-200 ease-out w-full h-full flex items-center justify-center">
-                              {developer.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'}
+                            <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center">
+                              <img 
+                                src="/images/avata/default.jpeg" 
+                                alt="Default Avatar"
+                                className="w-full h-full object-cover rounded-full"
+                                onError={(e) => {
+                                  // If default image also fails, show a simple placeholder
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </AvatarFallback>
                           </Avatar>
+                          {/* Status dot outside avatar, overlaying on bottom */}
                           <span
-                            className={`absolute right-0 top-0 inline-block w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
+                            className={`absolute right-0 bottom-0 inline-block w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
                               ((developer as any)?.currentStatus) === 'available' ? 'bg-green-500' : 'bg-gray-400'
                             }`}
-                            style={{ zIndex: 9999, position: 'absolute' }}
+                            style={{ zIndex: 9999 }}
                             aria-label={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
                             title={((developer as any)?.currentStatus) === 'available' ? 'Available' : 'Not Available'}
                           />
@@ -1534,6 +1605,14 @@ export function PeopleGrid({
           developerName={selectedFreelancer.name || undefined}
         />
       )}
+
+      {/* Filter Drawer */}
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        onApplyFilters={handleApplyFilters}
+        initialFilters={appliedFilters || undefined}
+      />
     </>
   );
 }

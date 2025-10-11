@@ -72,14 +72,14 @@ export const ModernDropdown = ({
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-[100]"
             onClick={() => setIsOpen(false)}
           />
 
           {/* Dropdown Content */}
           <div
             className={cn(
-              "absolute z-20 min-w-[200px]",
+              "absolute z-[110] min-w-[200px]",
               alignClasses[align],
               sideClasses[side],
               "bg-white rounded-xl shadow-xl border border-gray-200",

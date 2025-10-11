@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       // Tìm Basic Plan package
       const basicPackage = await tx.package.findFirst({
         where: {
-          name: "Basic Plan",
+          name: "Free Plan",
           priceUSD: 0,
         },
       });

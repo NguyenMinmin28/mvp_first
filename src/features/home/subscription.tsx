@@ -120,13 +120,11 @@ function PlanCard({
         href="/pricing"
         className="h-10 inline-flex items-center justify-center rounded-full bg-black text-white px-6 text-sm"
       >
-        {name === "Basic Plan"
+        {name === "Free Plan"
           ? "Current Plan"
           : name === "Plus Plan"
             ? "Upgrade to Plus"
-            : name === "Pro Plan"
-              ? "Upgrade to Pro"
-              : "Choose your plan"}
+            : "Choose your plan"}
       </Link>
       <div className="mt-8 rounded-xl bg-[#FAFAFA] p-4">
         <p className="font-semibold mb-3">Service Include:</p>
@@ -191,15 +189,16 @@ export default function Subscription() {
           <h2 className="text-4xl font-extrabold tracking-tight mb-8">
             Subscription for clients
           </h2>
-          {/* 4 Equal Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* 3 Equal Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <PlanCard
-              name="Basic Plan"
+              name="Free Plan"
               price="$0"
               period="monthly"
               features={[
-                "Monthly Post 1 project free.",
-                "Contact up to 5 freelancer per project.",
+                "25 connects total",
+                "Post unlimited projects",
+                "Contact developers with connects",
                 "Get notified when freelancers show interest",
               ]}
             />
@@ -208,18 +207,9 @@ export default function Subscription() {
               price="$19.95"
               period="monthly"
               features={[
-                "Post up to 10 projects per month.",
-                "Contact up to 10 freelancer per project",
-                "Get notified when freelancers show interest",
-              ]}
-            />
-            <PlanCard
-              name="Pro Plan"
-              price="$99.95"
-              period="monthly"
-              features={[
-                "Unlimited project postings",
-                "Unlimited contacts per project.",
+                "99 connects per month",
+                "Post unlimited projects",
+                "Contact developers with connects",
                 "Get notified when freelancers show interest",
               ]}
             />

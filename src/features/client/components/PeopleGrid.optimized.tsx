@@ -355,8 +355,25 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
       <div key={developer.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-all duration-200 ease-out hover:-translate-y-1 hover:border-blue-300 group overflow-hidden will-change-transform">
         <div className="flex items-center space-x-4 mb-4">
           <Avatar className="h-12 w-12 transition-transform duration-200 ease-out will-change-transform group-hover:scale-105">
-            <AvatarImage src={developer.photoUrl || developer.user.image} className="transition-transform duration-200 ease-out will-change-transform group-hover:scale-105" />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold transition-colors duration-200 ease-out">{developer.user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage 
+              src={developer.photoUrl || developer.user.image || '/images/avata/default.jpeg'} 
+              className="transition-transform duration-200 ease-out will-change-transform group-hover:scale-105"
+              onError={(e) => {
+                // Set to default image on error
+                (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+              }}
+            />
+            <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center">
+              <img 
+                src="/images/avata/default.jpeg" 
+                alt="Default Avatar"
+                className="w-full h-full object-cover rounded-full"
+                onError={(e) => {
+                  // If default image also fails, show a simple placeholder
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900">{developer.user.name}</h3>

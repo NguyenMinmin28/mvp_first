@@ -38,14 +38,25 @@ export class PayPalMapper {
       return;
     }
 
+    // Calculate next billing time from PayPal data
+    const nextBillingTime = subscription.billing_info?.next_billing_time 
+      ? new Date(subscription.billing_info.next_billing_time)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback to 30 days
+
     // Update subscription status and period info
     await prisma.subscription.update({
       where: { id: dbSubscription.id },
       data: {
         status: "active",
         currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        cancelAtPeriodEnd: false
+        currentPeriodEnd: nextBillingTime,
+        cancelAtPeriodEnd: false,
+        // Store PayPal billing info for tracking
+        metadata: {
+          ...dbSubscription.metadata,
+          paypalBillingInfo: subscription.billing_info,
+          lastWebhookUpdate: new Date().toISOString()
+        }
       }
     });
 
@@ -205,19 +216,46 @@ export class PayPalMapper {
       }
     });
 
-    // If subscription was suspended, reactivate it
-    if (dbSubscription.status === "past_due") {
+    // Handle subscription renewal or reactivation
+    const isRenewal = dbSubscription.status === "active" && 
+      new Date() >= new Date(dbSubscription.currentPeriodEnd);
+    
+    const isReactivation = dbSubscription.status === "past_due";
+
+    if (isRenewal || isReactivation) {
+      // Calculate next billing period
+      const nextBillingTime = new Date();
+      nextBillingTime.setMonth(nextBillingTime.getMonth() + 1); // Add 1 month
+
       await prisma.subscription.update({
         where: { id: dbSubscription.id },
         data: {
-          status: "active"
+          status: "active",
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: nextBillingTime,
+          cancelAtPeriodEnd: false,
+          // Update metadata with latest payment info and reset failure count
+          metadata: {
+            ...dbSubscription.metadata,
+            lastPaymentId: payment.id,
+            lastPaymentAmount: payment.amount?.value || payment.amount?.total,
+            lastPaymentTime: new Date().toISOString(),
+            paymentFailureCount: 0 // Reset failure count on successful payment
+          }
         }
       });
 
+      // Reset usage for new period
+      await billingService.resetUsageForNewPeriod(
+        dbSubscription.id,
+        new Date(),
+        nextBillingTime
+      );
+
       logger.paypal.subscription(
         subscriptionId,
-        "Reactivated after successful payment",
-        { correlationId, paymentId: payment.id }
+        isRenewal ? "Renewed successfully" : "Reactivated after successful payment",
+        { correlationId, paymentId: payment.id, nextBillingTime }
       );
     }
 
@@ -233,7 +271,7 @@ export class PayPalMapper {
   }
 
   /**
-   * Handle payment failure
+   * Handle payment failure with retry logic
    */
   static async handlePaymentFailed(event: PayPalWebhookEvent): Promise<void> {
     const payment = event.resource;
@@ -264,11 +302,22 @@ export class PayPalMapper {
       return;
     }
 
-    // Update subscription status
+    // Get current failure count from metadata
+    const currentMetadata = dbSubscription.metadata as any || {};
+    const failureCount = currentMetadata.paymentFailureCount || 0;
+    const newFailureCount = failureCount + 1;
+
+    // Update subscription status and failure tracking
     await prisma.subscription.update({
       where: { id: dbSubscription.id },
       data: {
-        status: "past_due"
+        status: newFailureCount >= 3 ? "cancelled" : "past_due", // Cancel after 3 failures
+        metadata: {
+          ...currentMetadata,
+          paymentFailureCount: newFailureCount,
+          lastPaymentFailure: new Date().toISOString(),
+          lastFailedPaymentId: payment.id
+        }
       }
     });
 
