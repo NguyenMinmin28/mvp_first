@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/features/auth/auth";
 import { IdeaSparkService } from "@/core/services/ideaspark.service";
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 const ideaSparkService = new IdeaSparkService();
 
 export async function GET(request: NextRequest) {
