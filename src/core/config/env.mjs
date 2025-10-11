@@ -33,7 +33,7 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().min(1),
-    NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.string().min(1),
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.string().min(1).optional(),
     // Cloudinary (optional but recommended for avatar uploads)
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
     NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: z.string().min(1).optional(),

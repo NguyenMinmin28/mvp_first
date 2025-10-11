@@ -10,6 +10,11 @@ const nextConfig = {
     },
   }),
 
+  // Add experimental features for better error handling
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
+
   // Image optimization - Allow all external images dynamically
   images: {
     formats: ["image/webp", "image/avif"],

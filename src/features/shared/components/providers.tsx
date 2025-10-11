@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { PortalProvider } from "@/features/shared/portal-context";
+import { ErrorBoundary } from "@/features/shared/components/error-boundary";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -9,13 +10,15 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <SessionProvider
-      // Reduce refresh frequency to prevent session instability
-      refetchInterval={5 * 60} // 5 minutes - less aggressive
-      refetchOnWindowFocus={false} // Disable to prevent constant refreshes
-      refetchWhenOffline={false}
-    >
-      <PortalProvider>{children}</PortalProvider>
-    </SessionProvider>
+    <ErrorBoundary>
+      <SessionProvider
+        // Reduce refresh frequency to prevent session instability
+        refetchInterval={5 * 60} // 5 minutes - less aggressive
+        refetchOnWindowFocus={false} // Disable to prevent constant refreshes
+        refetchWhenOffline={false}
+      >
+        <PortalProvider>{children}</PortalProvider>
+      </SessionProvider>
+    </ErrorBoundary>
   );
 }

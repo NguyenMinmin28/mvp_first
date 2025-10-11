@@ -29,15 +29,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    const ideas = await ideaSparkService.getPendingIdeas(limit);
+    // Add timeout and better error handling
+    const ideas = await Promise.race([
+      ideaSparkService.getPendingIdeas(limit),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      )
+    ]) as any[];
 
     return NextResponse.json({ ideas });
   } catch (error) {
     console.error("Error fetching pending ideas:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch pending ideas" },
-      { status: 500 }
-    );
+    
+    // Return empty array instead of error to prevent client crashes
+    return NextResponse.json({ 
+      ideas: [],
+      error: error instanceof Error ? error.message : "Failed to fetch pending ideas"
+    });
   }
 }
 
