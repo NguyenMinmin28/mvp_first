@@ -34,6 +34,7 @@ interface Service {
       image?: string | null;
     };
     location?: string | null;
+    photoUrl?: string | null;
   };
   skills: string[];
   categories: string[];
@@ -407,9 +408,9 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                 {/* Developer Info */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
-                    {service.developer.user.image ? (
+                    {service.developer.photoUrl || service.developer.user.image ? (
                       <Image 
-                        src={service.developer.user.image} 
+                        src={service.developer.photoUrl || service.developer.user.image || ''} 
                         alt={service.developer.user.name || "Developer"} 
                         width={48} 
                         height={48} 
@@ -423,7 +424,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                     <div className="font-semibold text-gray-900 leading-tight">
                       {service.developer.user.name || "Unknown"}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 mt-1">
                       {service.developer.location || ""}
                     </div>
                   </div>
@@ -486,7 +487,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-1">
+                <p className="service-description text-sm text-gray-600 mb-4 line-clamp-3 flex-1">
                   {service.shortDesc}
                 </p>
 

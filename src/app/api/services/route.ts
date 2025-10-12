@@ -241,7 +241,11 @@ export async function GET(request: NextRequest) {
       return {
         ...service,
         galleryImages,
-        showcaseImages
+        showcaseImages,
+        developer: {
+          ...service.developer,
+          photoUrl: service.developer.photoUrl
+        }
       };
     });
 

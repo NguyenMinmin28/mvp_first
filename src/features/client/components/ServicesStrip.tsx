@@ -34,6 +34,7 @@ interface Service {
       image?: string | null;
     };
     location?: string | null;
+    photoUrl?: string | null;
   };
   skills: string[];
   categories: string[];
@@ -91,7 +92,7 @@ export function ServicesStrip() {
         <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">
           Services
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, idx) => (
             <Card key={idx} className="border border-gray-200">
               <CardContent className="p-4">
@@ -187,7 +188,7 @@ export function ServicesStrip() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {services.slice(0, 4).map((service) => (
           <Card
             key={service.id}
@@ -207,9 +208,9 @@ export function ServicesStrip() {
               {/* Freelancer Info */}
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100">
-                  {service.developer.user.image ? (
+                  {service.developer.photoUrl || service.developer.user.image ? (
                     <Image
-                      src={service.developer.user.image}
+                      src={service.developer.photoUrl || service.developer.user.image || ''}
                       alt={service.developer.user.name || "Freelancer"}
                       width={24}
                       height={24}
@@ -219,14 +220,14 @@ export function ServicesStrip() {
                     <div className="w-6 h-6 bg-gray-200" />
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-gray-900 leading-tight">
-                    {service.developer.user.name || "Unknown"}
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-gray-900 leading-tight">
+                      {service.developer.user.name || "Unknown"}
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {service.developer.location || ""}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-gray-500">
-                    {service.developer.location || ""}
-                  </div>
-                </div>
               </div>
 
               {/* Stats */}
@@ -264,10 +265,10 @@ export function ServicesStrip() {
                 </div>
               </div>
 
-              {/* Service Description */}
-              <p className="text-xs text-gray-600 mb-4 line-clamp-3">
-                {service.shortDesc}
-              </p>
+                {/* Service Description */}
+                <p className="service-description text-xs text-gray-600 mb-4 line-clamp-3">
+                  {service.shortDesc}
+                </p>
 
               {/* Hide Get in Touch button for developers */}
               {session?.user?.role !== "DEVELOPER" && (

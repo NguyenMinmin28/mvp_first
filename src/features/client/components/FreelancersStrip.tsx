@@ -130,94 +130,97 @@ export function FreelancersStrip() {
             onClick={() => handleCardClick(freelancer)}
           >
             <CardContent className="p-5 h-full flex flex-col">
-                {/* Freelancer Info */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="relative inline-block">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
-                      {freelancer.image ? (
-                        <Image 
-                          src={freelancer.image} 
-                          alt={freelancer.name || "Freelancer"} 
-                          width={48} 
-                          height={48} 
-                          className="object-cover w-12 h-12" 
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-200" />
+                {/* Top Section - Freelancer Info & Stats */}
+                <div className="flex-1">
+                  {/* Freelancer Info */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="relative inline-block">
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                        {freelancer.image ? (
+                          <Image 
+                            src={freelancer.image} 
+                            alt={freelancer.name || "Freelancer"} 
+                            width={48} 
+                            height={48} 
+                            className="object-cover w-12 h-12" 
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200" />
+                        )}
+                      </div>
+                      <span
+                        className={`absolute right-0.5 top-0.5 inline-block w-3 h-3 rounded-full border-2 border-white ${
+                          freelancer.currentStatus === 'available' ? 'bg-green-500' : 'bg-gray-400'
+                        }`}
+                        style={{ zIndex: 10 }}
+                        aria-label={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
+                        title={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 leading-tight">
+                        {freelancer.name || "Unknown"}
+                      </div>
+                      <div className="text-xs text-gray-500 font-semibold mt-1">
+                        {freelancer.location || ""}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center justify-between mb-4 text-sm">
+                    <div>
+                      <div className="font-semibold leading-tight">{freelancer.reviews.averageRating.toFixed(1)}</div>
+                      <div className="mt-1 flex items-center">
+                        {Array.from({ length: 5 }).map((_, i) => {
+                          const ratingValue = Math.floor(freelancer.reviews.averageRating);
+                          const filled = i < ratingValue;
+                          return (
+                            <span
+                              key={i}
+                              className={`text-[10px] ${filled ? "text-red-500" : "text-gray-300"} mr-0.5`}
+                            >
+                              ★
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">{freelancer.jobsCount}</div>
+                      <div className="text-xs text-gray-500">Jobs</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">
+                        {freelancer.hourlyRateUsd ? `$${freelancer.hourlyRateUsd}/h` : "Contact"}
+                      </div>
+                      <div className="text-xs text-gray-500">Rate</div>
+                    </div>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="mb-4">
+                    <div className="flex gap-1 overflow-hidden">
+                      {freelancer.skills.slice(0, 3).map((skill, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full whitespace-nowrap flex-shrink-0"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {freelancer.skills.length > 3 && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full whitespace-nowrap flex-shrink-0">
+                          +{freelancer.skills.length - 3}
+                        </span>
                       )}
                     </div>
-                    <span
-                      className={`absolute right-0.5 top-0.5 inline-block w-3 h-3 rounded-full border-2 border-white ${
-                        freelancer.currentStatus === 'available' ? 'bg-green-500' : 'bg-gray-400'
-                      }`}
-                      style={{ zIndex: 10 }}
-                      aria-label={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
-                      title={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-900 leading-tight">
-                      {freelancer.name || "Unknown"}
-                    </div>
-                    <div className="text-xs text-gray-500 font-semibold">
-                      {freelancer.location || ""}
-                    </div>
                   </div>
                 </div>
 
-
-                {/* Stats */}
-                <div className="flex items-center justify-between mb-4 text-sm">
-                  <div>
-                    <div className="font-semibold leading-tight">{freelancer.reviews.averageRating.toFixed(1)}</div>
-                    <div className="mt-1 flex items-center">
-                      {Array.from({ length: 5 }).map((_, i) => {
-                        const ratingValue = Math.floor(freelancer.reviews.averageRating);
-                        const filled = i < ratingValue;
-                        return (
-                          <span
-                            key={i}
-                            className={`text-[10px] ${filled ? "text-red-500" : "text-gray-300"} mr-0.5`}
-                          >
-                            ★
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">{freelancer.jobsCount}</div>
-                    <div className="text-xs text-gray-500">Jobs</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">
-                      {freelancer.hourlyRateUsd ? `$${freelancer.hourlyRateUsd}/h` : "Contact"}
-                    </div>
-                    <div className="text-xs text-gray-500">Rate</div>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-1">
-                    {freelancer.skills.slice(0, 3).map((skill, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                    {freelancer.skills.length > 3 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                        +{freelancer.skills.length - 3}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Get in Touch Button */}
+                {/* Bottom Section - Get in Touch Button */}
                 <div
+                  className="mt-auto"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -232,7 +235,7 @@ export function FreelancersStrip() {
                   <GetInTouchButton
                     developerId={freelancer.id}
                     developerName={freelancer.name || undefined}
-                    className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
+                    className="w-full h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
                     variant="outline"
                     size="default"
                   />

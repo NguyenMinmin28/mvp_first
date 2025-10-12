@@ -52,11 +52,11 @@ const PLANS_CONFIG = [
   },
   {
     name: "Plus Plan", 
-    description: "Plus subscription with 99 connects per month",
+    description: "Plus subscription with unlimited connects",
     priceUSD: "19.95",
     projectsPerMonth: 999, // Unlimited
     contactClicksPerProject: 0, // Not used for connects model
-    connectsPerMonth: 99,
+    connectsPerMonth: 999, // Unlimited
     isPopular: true
   }
 ];

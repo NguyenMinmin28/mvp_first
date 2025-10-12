@@ -70,8 +70,8 @@ const plans: PricingPlan[] = [
     description: "Most popular for growing businesses",
     popular: true,
     features: [
-      "99 connects per month",
-      "Post unlimited projects",
+      "Unlimited connects",
+      "Unlimited projects",
       "Contact developers with connects",
       "Get notified when freelancers show interest",
       "Priority support",

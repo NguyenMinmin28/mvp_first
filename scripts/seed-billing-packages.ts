@@ -31,10 +31,10 @@ async function seedBillingPackages() {
         priceUSD: 19.95,
         projectsPerMonth: 999, // Unlimited projects
         contactClicksPerProject: 0, // Not used for connects model
-        connectsPerMonth: 99, // Monthly connects
+        connectsPerMonth: 999, // Unlimited connects
         features: [
-          "99 connects per month",
-          "Post unlimited projects",
+          "Unlimited connects",
+          "Unlimited projects",
           "Contact developers with connects",
           "Get notified when freelancers show interest"
         ],

@@ -16,7 +16,7 @@ export default async function ClientDashboardPage() {
   return (
     <UserLayout user={user}>
       <section className="w-full py-8">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <Suspense fallback={<div></div>}>
             <ClientDashboard />
           </Suspense>

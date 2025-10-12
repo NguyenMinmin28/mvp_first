@@ -207,8 +207,8 @@ export default function Subscription() {
               price="$19.95"
               period="monthly"
               features={[
-                "99 connects per month",
-                "Post unlimited projects",
+                "Unlimited connects",
+                "Unlimited projects",
                 "Contact developers with connects",
                 "Get notified when freelancers show interest",
               ]}

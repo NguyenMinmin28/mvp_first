@@ -578,14 +578,14 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                         {/* Skills */}
                         <div className="space-y-1">
                           <p className="text-xs font-medium text-gray-600">Skills:</p>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex gap-1 overflow-hidden">
                             {candidate.developer.skills.slice(0, 3).map((skill, idx) => (
-                              <Badge key={idx} variant="outline" className={`text-xs ${isLoser || isExpired || isRejected ? 'opacity-50' : ''}`}>
+                              <Badge key={idx} variant="outline" className={`text-xs whitespace-nowrap flex-shrink-0 ${isLoser || isExpired || isRejected ? 'opacity-50' : ''}`}>
                                 {skill.skill.name} ({skill.years}y)
                               </Badge>
                             ))}
                             {candidate.developer.skills.length > 3 && (
-                              <Badge variant="outline" className={`text-xs ${isLoser || isExpired || isRejected ? 'opacity-50' : ''}`}>
+                              <Badge variant="outline" className={`text-xs whitespace-nowrap flex-shrink-0 ${isLoser || isExpired || isRejected ? 'opacity-50' : ''}`}>
                                 +{candidate.developer.skills.length - 3} more
                               </Badge>
                             )}
