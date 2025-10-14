@@ -73,6 +73,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get referenced project details if selectedProjectId is provided
+    let referencedProjectTitle = null;
+    if (selectedProjectId) {
+      try {
+        const referencedProject = await prisma.project.findUnique({
+          where: { id: selectedProjectId },
+          select: { title: true }
+        });
+        referencedProjectTitle = referencedProject?.title || null;
+      } catch (error) {
+        console.error("Error fetching referenced project:", error);
+        // Continue without project title
+      }
+    }
+
     // Check if there's already a pending message from this client to this developer
     const existingCandidate = await prisma.assignmentCandidate.findFirst({
       where: {
@@ -117,7 +132,8 @@ export async function POST(request: NextRequest) {
           budget: budget?.trim() || null,
           description: description?.trim() || null,
           isDirectMessage: true,
-          selectedProjectId: selectedProjectId || null
+          selectedProjectId: selectedProjectId || null,
+          selectedProjectTitle: referencedProjectTitle
         }
       } as any
     });

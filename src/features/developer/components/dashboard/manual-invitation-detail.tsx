@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { Check, X, MessageCircle, Clock, DollarSign, User, Building } from "lucide-react";
+import { Check, X, MessageCircle, Clock, DollarSign, User, Building, FolderOpen, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import ProjectReferenceModal from "./project-reference-modal";
 
 interface ManualInvitation {
   id: string;
@@ -28,6 +30,10 @@ interface ManualInvitation {
   title?: string; // Client-entered title
   budget?: string; // Client-entered budget
   description?: string; // Client-entered description
+  referencedProject?: {
+    id: string;
+    title: string;
+  } | null; // Project referenced in the message
   isManualInvite: boolean;
   hasDeadline: boolean;
   acceptanceDeadline: string | null;
@@ -48,6 +54,18 @@ export default function ManualInvitationDetail({
   onAccept, 
   onReject 
 }: ManualInvitationDetailProps) {
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+
+  // Debug log to check invitation data
+  if (invitation) {
+    console.log('🔍 ManualInvitationDetail - invitation data:', {
+      id: invitation.id,
+      message: invitation.message,
+      referencedProject: invitation.referencedProject,
+      metadata: (invitation as any).metadata
+    });
+  }
+
   if (!invitation) {
     return (
       <Card className="h-full">
@@ -176,6 +194,42 @@ export default function ManualInvitationDetail({
           </div>
         )}
 
+        {/* Project Reference */}
+        {invitation.referencedProject && (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Project Reference
+            </h3>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FolderOpen className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-800">
+                      {invitation.referencedProject.title || 'Referenced Project'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    The client referenced this project in their message. You can view the project details to better understand the context.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-3 border-green-300 text-green-700 hover:bg-green-100"
+                  onClick={() => {
+                    setIsProjectModalOpen(true);
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4 mr-1" />
+                  View Project
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Invitation Details */}
         <div className="space-y-3">
           <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -237,6 +291,16 @@ export default function ManualInvitationDetail({
           </div>
         )}
       </CardContent>
+
+      {/* Project Reference Modal */}
+      {invitation?.referencedProject && (
+        <ProjectReferenceModal
+          isOpen={isProjectModalOpen}
+          onClose={() => setIsProjectModalOpen(false)}
+          projectId={invitation.referencedProject.id}
+          projectTitle={invitation.referencedProject.title}
+        />
+      )}
     </Card>
   );
 }

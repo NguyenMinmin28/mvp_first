@@ -19,41 +19,41 @@ html, body {
   width: 100%;
 }
 
-/* Container consistency fixes */
-.container {
-  margin-left: auto !important;
-  margin-right: auto !important;
-  padding-left: 1rem !important;
-  padding-right: 1rem !important;
+/* Container consistency fixes - less aggressive */
+.container:not(.dashboard-container) {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 @media (min-width: 640px) {
-  .container {
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
+  .container:not(.dashboard-container) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .container {
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
+  .container:not(.dashboard-container) {
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
 }
 
-/* Main content area fixes */
-.main-content {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-  width: 100% !important;
+/* Main content area fixes - less aggressive */
+.main-content:not(.dashboard-main) {
+  margin-left: 0;
+  padding-left: 0;
+  width: 100%;
 }
 
-/* Specific fixes for problematic components */
-.client-dashboard,
-.project-post-form,
-.services-grid {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
+/* Specific fixes for problematic components - less aggressive */
+.client-dashboard:not(.dashboard-container),
+.project-post-form:not(.dashboard-container),
+.services-grid:not(.dashboard-container) {
+  margin-left: 0;
+  padding-left: 0;
 }
 
 /* Ensure no horizontal scroll */
@@ -62,31 +62,31 @@ body, html, #__next {
   overflow-x: hidden;
 }
 
-/* Fix for mobile devices */
+/* Fix for mobile devices - less aggressive */
 @media (max-width: 768px) {
-  .container {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+  .container:not(.dashboard-container) {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   
-  .main-content {
-    padding-left: 0 !important;
-    margin-left: 0 !important;
+  .main-content:not(.dashboard-main) {
+    padding-left: 0;
+    margin-left: 0;
   }
 }
 
-/* Fix for tablet devices */
+/* Fix for tablet devices - less aggressive */
 @media (min-width: 769px) and (max-width: 1023px) {
-  .container {
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
+  .container:not(.dashboard-container) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
-/* Fix for desktop devices */
+/* Fix for desktop devices - less aggressive */
 @media (min-width: 1024px) {
-  .container {
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
+  .container:not(.dashboard-container) {
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
 }

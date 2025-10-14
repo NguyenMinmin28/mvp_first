@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/ui/components/button";
 import { toast } from "sonner";
+import { MessageCircle } from "lucide-react";
 import { useCanViewContact } from "../hooks/use-can-view-contact";
 import { useManualInvite } from "../hooks/use-manual-invite";
 import { ContactCard } from "./contact-card";
@@ -134,6 +135,7 @@ export function GetInTouchButton({
         onClick={handleGetInTouch}
         disabled={isDisabled}
       >
+        <MessageCircle className="w-4 h-4 mr-2" />
         {getButtonText()}
       </Button>
 

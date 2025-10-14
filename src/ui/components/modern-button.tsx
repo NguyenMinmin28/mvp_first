@@ -143,7 +143,7 @@ export const FollowButton = React.forwardRef<HTMLButtonElement, Omit<ButtonProps
   ({ isFollowing = false, children, ...props }, ref) => (
     <ModernButton
       ref={ref}
-      variant={isFollowing ? 'outline' : 'primary'}
+      variant="outline"
       {...props}
     >
       {children || (isFollowing ? 'Unfollow' : 'Follow')}

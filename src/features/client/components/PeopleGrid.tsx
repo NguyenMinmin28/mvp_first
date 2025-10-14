@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/ui/components/button";
+import { FollowButton } from "@/ui/components/modern-button";
 import { Badge } from "@/ui/components/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import { Heart, MessageCircle, Star, MapPin, Clock, DollarSign, SlidersHorizontal } from "lucide-react";
@@ -1425,43 +1426,59 @@ export function PeopleGrid({
                   </div>
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                    {!(developer.userLiked || likedDeveloperIds.has(developer.id) || followedUserIds.has(developer.user.id)) && (
-                      <Button
-                        variant="outline"
-                        className="w-full sm:w-28 border-gray-300 text-gray-700 hover:bg-gray-50 text-sm"
-                        disabled={pendingFollowIds.has(developer.id)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          e.nativeEvent.stopImmediatePropagation();
-                          // Optimistic UI & toast
+                    <FollowButton
+                      isFollowing={developer.userLiked || likedDeveloperIds.has(developer.id) || followedUserIds.has(developer.user.id)}
+                      className="w-full sm:w-28 border-gray-300 text-gray-700 hover:bg-gray-50 text-sm"
+                      disabled={pendingFollowIds.has(developer.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        e.nativeEvent.stopImmediatePropagation();
+                        
+                        const isCurrentlyFollowing = developer.userLiked || likedDeveloperIds.has(developer.id) || followedUserIds.has(developer.user.id);
+                        const action = isCurrentlyFollowing ? "unfollow" : "follow";
+                        
+                        // Optimistic UI & toast
+                        if (action === "follow") {
                           setLikedDeveloperIds(prev => new Set(prev).add(developer.id));
                           setFollowedUserIds(prev => new Set(prev).add(developer.user.id));
-                          setPendingFollowIds(prev => new Set(prev).add(developer.id));
                           toast.success(`Following ${developer.user.name} - you'll get updates about their portfolio, reviews, and ideas!`);
-                          // Fire-and-forget API that survives navigation
-                          try {
-                            const payload = JSON.stringify({ 
-                              developerId: developer.user.id, 
-                              action: "follow" 
-                            });
-                            if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-                              const blob = new Blob([payload], { type: 'application/json' });
-                              navigator.sendBeacon('/api/user/follow', blob);
-                            } else {
-                              fetch('/api/user/follow', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: payload,
-                                keepalive: true,
-                              }).catch(() => {});
-                            }
-                          } catch {}
-                        }}
-                      >
-                        Follow
-                      </Button>
-                    )}
+                        } else {
+                          setLikedDeveloperIds(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(developer.id);
+                            return newSet;
+                          });
+                          setFollowedUserIds(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(developer.user.id);
+                            return newSet;
+                          });
+                          toast.success(`Unfollowed ${developer.user.name}`);
+                        }
+                        
+                        setPendingFollowIds(prev => new Set(prev).add(developer.id));
+                        
+                        // Fire-and-forget API that survives navigation
+                        try {
+                          const payload = JSON.stringify({ 
+                            developerId: developer.user.id, 
+                            action: action 
+                          });
+                          if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+                            const blob = new Blob([payload], { type: 'application/json' });
+                            navigator.sendBeacon('/api/user/follow', blob);
+                          } else {
+                            fetch('/api/user/follow', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: payload,
+                              keepalive: true,
+                            }).catch(() => {});
+                          }
+                        } catch {}
+                      }}
+                    />
                     {!isDeveloper && (
                       <GetInTouchButton
                         developerId={developer.id}

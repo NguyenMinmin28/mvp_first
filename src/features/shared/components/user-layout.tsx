@@ -37,7 +37,7 @@ export function UserLayout({
         <Header user={user} />
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col main-content">{children}</main>
+        <main className="flex-1 flex flex-col main-content dashboard-main">{children}</main>
 
         {/* Footer */}
         {showFooter && (

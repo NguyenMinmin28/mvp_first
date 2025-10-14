@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
-import { Check, X, MessageCircle, Clock } from "lucide-react";
+import { Check, X, MessageCircle, Clock, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/core/utils/utils";
 
@@ -29,6 +29,10 @@ interface ManualInvitation {
   title?: string; // Client-entered title
   budget?: string; // Client-entered budget
   description?: string; // Client-entered description
+  referencedProject?: {
+    id: string;
+    title: string;
+  } | null; // Project referenced in the message
   isManualInvite: boolean;
   hasDeadline: boolean;
   acceptanceDeadline: string | null;
@@ -268,9 +272,17 @@ export default function ManualInvitationsSidebar({
             >
               <div className="space-y-2">
                 <div className="flex justify-between items-start">
-                  <h4 className="font-medium text-sm line-clamp-1">
-                    {title}
-                  </h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium text-sm line-clamp-1">
+                      {title}
+                    </h4>
+                    {invitation.referencedProject && (
+                      <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                        <FolderOpen className="h-3 w-3" />
+                        <span>Project Ref</span>
+                      </div>
+                    )}
+                  </div>
                   <Badge 
                     variant={isPending ? "default" : "secondary"}
                     className="text-xs"
@@ -345,16 +357,22 @@ export default function ManualInvitationsSidebar({
 
         {/* Pagination controls */}
         {totalItems > 0 && (
-          <div className="flex items-center justify-between pt-2">
-            <div className="text-xs text-gray-600">
+          <div className="pt-2 space-y-3">
+            <div className="text-xs text-gray-600 text-center">
               Showing <span className="font-medium">{Math.min(totalItems, startIndex + 1)}</span> – {""}
               <span className="font-medium">{Math.min(endIndex, totalItems)}</span> of {""}
               <span className="font-medium">{totalItems}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="h-9 rounded-md px-3" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 mr-2"><path d="m15 18-6-6 6-6"/></svg>
-                Previous
+            <div className="flex items-center justify-center gap-1">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 rounded-md px-2 text-xs" 
+                onClick={() => setPage((p) => Math.max(1, p - 1))} 
+                disabled={page === 1}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 mr-1"><path d="m15 18-6-6 6-6"/></svg>
+                Prev
               </Button>
               {getPageList().map((pItem, idx) => (
                 typeof pItem === 'number' ? (
@@ -362,18 +380,24 @@ export default function ManualInvitationsSidebar({
                     key={idx}
                     variant="outline"
                     size="sm"
-                    className={`h-9 rounded-md px-3 ${pItem === page ? 'bg-black text-white border-black' : ''}`}
+                    className={`h-8 rounded-md px-2 text-xs min-w-[32px] ${pItem === page ? 'bg-black text-white border-black' : ''}`}
                     onClick={() => setPage(pItem as number)}
                   >
                     {pItem}
                   </Button>
                 ) : (
-                  <span key={idx} className="px-3 py-2 text-sm text-muted-foreground">...</span>
+                  <span key={idx} className="px-2 py-1 text-xs text-muted-foreground">...</span>
                 )
               ))}
-              <Button variant="outline" size="sm" className="h-9 rounded-md px-3" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 rounded-md px-2 text-xs" 
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))} 
+                disabled={page === totalPages}
+              >
                 Next
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 ml-2"><path d="m9 18 6-6-6-6"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 ml-1"><path d="m9 18 6-6-6-6"/></svg>
               </Button>
             </div>
           </div>

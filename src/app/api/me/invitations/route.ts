@@ -181,6 +181,10 @@ export async function GET(request: NextRequest) {
           title: isManual && invitation.metadata?.title ? invitation.metadata.title : (project ? null : null),
           budget: isManual && invitation.metadata?.budget ? invitation.metadata.budget : project?.budget,
           description: isManual && invitation.metadata?.description ? invitation.metadata.description : project?.description,
+          referencedProject: isManual && invitation.metadata?.selectedProjectId ? {
+            id: invitation.metadata.selectedProjectId,
+            title: invitation.metadata.selectedProjectTitle || 'Referenced Project'
+          } : null,
           isManualInvite: isManual,
           hasDeadline: invitation.acceptanceDeadline !== null,
           acceptanceDeadline: invitation.acceptanceDeadline,

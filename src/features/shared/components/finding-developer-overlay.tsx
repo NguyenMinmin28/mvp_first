@@ -38,7 +38,7 @@ export function FindingDeveloperOverlay({
           
           <div className="text-center space-y-2">
             <h3 className="text-lg font-semibold text-gray-900">
-              Finding Developer
+              Sending Message
             </h3>
             <p className="text-sm text-gray-600">
               Sending your message to {developerName || "the developer"}...

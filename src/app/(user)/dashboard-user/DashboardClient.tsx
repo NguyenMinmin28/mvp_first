@@ -327,7 +327,7 @@ export default function DashboardClient({
   return (
     <UserLayout user={session.user}>
       <section className="w-full py-8 flex-1 flex flex-col">
-        <div className="container mx-auto px-4 flex-1 flex flex-col">
+        <div className="container dashboard-container mx-auto px-4 flex-1 flex flex-col">
           {isApprovalPending && (
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
               <h2 className="text-2xl font-bold text-blue-900 mb-2">Profile Submitted</h2>
