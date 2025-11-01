@@ -222,8 +222,17 @@ export function useScrollInfiniteLoad(
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
-      if (sentinelRef.current && sentinelRef.current.parentNode) {
-        sentinelRef.current.parentNode.removeChild(sentinelRef.current);
+      // Safely remove sentinel element
+      if (sentinelRef.current) {
+        try {
+          // Use modern remove() method which handles detached nodes gracefully
+          // remove() is safe to call even if element is not in DOM
+          sentinelRef.current.remove();
+        } catch (error) {
+          // Element may have already been removed, ignore error
+          console.debug('Sentinel element already removed:', error);
+        }
+        sentinelRef.current = null;
       }
       document.body.style.overflow = '';
       isLoadingMoreRef.current = false;

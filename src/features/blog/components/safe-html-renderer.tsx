@@ -76,7 +76,15 @@ export function SafeHtmlRenderer({ content, className = '' }: SafeHtmlRendererPr
 
       // Additional DOM sanitization
       const dangerousElements = tempContainer.querySelectorAll('script, iframe, object, embed, style, link, meta, form, input, button, select, textarea');
-      dangerousElements.forEach(el => el.remove());
+      dangerousElements.forEach(el => {
+        try {
+          // Safely remove elements - remove() is safe even if element is detached
+          el.remove();
+        } catch (error) {
+          // Element may have already been removed, ignore error
+          console.debug('Error removing dangerous element:', error);
+        }
+      });
 
       // Remove event handlers from all remaining elements
       const allElements = tempContainer.querySelectorAll('*');

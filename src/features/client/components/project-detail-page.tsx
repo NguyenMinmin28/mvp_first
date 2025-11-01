@@ -92,6 +92,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [isSearching, setIsSearching] = useState(false);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingAttemptsRef = useRef<number>(0);
+  const autoGenerateBatchAttemptedRef = useRef<boolean>(false); // Track if we've tried to auto-generate batch
 
   const formatAmount = (amount: number, currency: string) => {
     try {
@@ -136,11 +137,15 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   };
 
   useEffect(() => {
-    fetchFreelancers();
-    return () => {
-      fetchAbortRef.current?.abort();
-      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
-    };
+    // Reset polling counter when project changes
+    pollingAttemptsRef.current = 0;
+    isSearchingRef.current = false;
+    setIsSearching(false);
+    autoGenerateBatchAttemptedRef.current = false; // Reset auto-generate flag when project changes
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
   }, [project.id]);
 
   // Move ticking clock to requestAnimationFrame to avoid setState storms
@@ -233,7 +238,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         
         // Check accepted candidates trước khi update state
         const acceptedCandidates = candidatesWithFavorites.filter((c: Freelancer) => c.responseStatus === "accepted");
-        const hadAccepted = freelancers.some((c: Freelancer) => c.responseStatus === "accepted");
+        const hadAccepted = freelancersRef.current.some((c: Freelancer) => c.responseStatus === "accepted");
         
         console.log('Setting freelancers state with:', candidatesWithFavorites.map((c: Freelancer) => ({
           id: c.id,
@@ -259,31 +264,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           setProjectSkills(data.skills.map((s: any) => s.name).filter(Boolean));
         }
 
-        // If backend indicates searching or no batch yet and no candidates, start polling
-        const noBatchYet = !data.project?.currentBatchId;
-        const stillSearching = !!data.searching || noBatchYet;
-        const hasNoCandidates = candidatesWithFavorites.length === 0;
-        if (hasNoCandidates && stillSearching) {
-          isSearchingRef.current = true;
-          setIsSearching(true);
-          if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
-          if (pollingAttemptsRef.current < 30) {
-            pollingTimeoutRef.current = setTimeout(() => {
-              pollingAttemptsRef.current += 1;
-              fetchFreelancers();
-            }, 2000);
-          }
-        } else {
-          isSearchingRef.current = false;
-          setIsSearching(false);
-          pollingAttemptsRef.current = 0;
-          if (pollingTimeoutRef.current) {
-            clearTimeout(pollingTimeoutRef.current);
-            pollingTimeoutRef.current = null;
-          }
-        }
-
-        // Show notification nếu có người mới accept
+        // Show notification nếu có người mới accept (before polling check)
         if (acceptedCandidates.length > 0 && !hadAccepted) {
           acceptedCandidates.forEach((candidate: Freelancer) => {
             toast.success(`🎉 ${candidate.developer.user.name} has accepted your project!`, {
@@ -301,6 +282,107 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           });
         }
 
+        // Check if project needs initial batch generation
+        const hasBatch = !!data.project?.currentBatchId;
+        const stillSearching = !!data.searching && hasBatch; // Only search if batch exists and API says it's searching
+        const hasNoCandidates = candidatesWithFavorites.length === 0;
+        const needsInitialBatch = !hasBatch && hasNoCandidates && !autoGenerateBatchAttemptedRef.current && !isLocked;
+        
+        // Auto-generate first batch if project doesn't have one yet
+        if (needsInitialBatch) {
+          console.log('🔄 Project has no batch yet, auto-generating first batch...');
+          autoGenerateBatchAttemptedRef.current = true;
+          isSearchingRef.current = true;
+          setIsSearching(true);
+          
+          // Generate batch in background, then poll for results
+          (async () => {
+            try {
+              const generateResponse = await fetch(`/api/projects/${project.id}/batches/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fresherCount: 2,
+                  midCount: 2,
+                  expertCount: 1
+                }),
+                signal: controller.signal,
+              });
+              
+              if (generateResponse.ok) {
+                console.log('✅ Auto-generated batch successfully, fetching candidates...');
+                // Reset polling counter since we're starting fresh
+                pollingAttemptsRef.current = 0;
+                // Wait a bit for batch to be fully processed, then fetch
+                setTimeout(() => {
+                  fetchFreelancers();
+                }, 1000);
+              } else {
+                console.error('❌ Failed to auto-generate batch');
+                autoGenerateBatchAttemptedRef.current = false; // Allow retry
+                isSearchingRef.current = false;
+                setIsSearching(false);
+              }
+            } catch (error: any) {
+              if (error?.name !== 'AbortError') {
+                console.error('❌ Error auto-generating batch:', error);
+                autoGenerateBatchAttemptedRef.current = false; // Allow retry
+                isSearchingRef.current = false;
+                setIsSearching(false);
+              }
+            }
+          })();
+          return; // Exit early, will fetch again after batch is generated
+        }
+        
+        // If we have a batch now (after auto-generation), start polling if needed
+        if (hasBatch && hasNoCandidates) {
+          // Check if batch might still be processing - poll a few times
+          if (pollingAttemptsRef.current < 10) {
+            isSearchingRef.current = true;
+            setIsSearching(true);
+            if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = setTimeout(() => {
+              pollingAttemptsRef.current += 1;
+              fetchFreelancers();
+            }, 2000);
+            return;
+          }
+        }
+        
+        // Stop polling if we've reached max attempts
+        if (pollingAttemptsRef.current >= 30) {
+          isSearchingRef.current = false;
+          setIsSearching(false);
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+          if (hasNoCandidates && stillSearching) {
+            console.log('Polling stopped: reached max attempts (30)');
+            setError("Search is taking longer than expected. Please refresh the page or try generating a new batch.");
+          }
+          // Don't reset counter here - keep it at 30 to prevent more polling
+        } else if (hasNoCandidates && stillSearching) {
+          // Only poll if we have a batch and API says it's still searching
+          isSearchingRef.current = true;
+          setIsSearching(true);
+          if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+          pollingTimeoutRef.current = setTimeout(() => {
+            pollingAttemptsRef.current += 1;
+            fetchFreelancers();
+          }, 2000);
+        } else {
+          // Search completed, candidates found - stop polling
+          isSearchingRef.current = false;
+          setIsSearching(false);
+          pollingAttemptsRef.current = 0;
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+        }
+
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to fetch freelancers");
@@ -315,7 +397,17 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [project.id, freelancers]); // Add freelancers as dependency
+  }, [project.id]); // Only depend on project.id to prevent infinite loops
+
+  // Effect to fetch freelancers after component mounts or project.id changes
+  // Placed after fetchFreelancers definition to avoid hoisting issues
+  useEffect(() => {
+    fetchFreelancers();
+    return () => {
+      fetchAbortRef.current?.abort();
+      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+    };
+  }, [project.id, fetchFreelancers]); // Include fetchFreelancers since it's stable via useCallback
 
   const getSkillMatchText = (freelancer: Freelancer) => {
     try {
