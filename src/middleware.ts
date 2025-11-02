@@ -7,7 +7,8 @@ const PUBLIC_ROUTES = [
   "/", "/pricing", "/about", "/blog", "/ceo-letter", "/help",
   "/auth/signin", "/auth/signup", 
   "/role-selection", "/ideas", 
-  "/how-clevrs-work", "/newsroom", "/investors"
+  "/how-clevrs-work", "/newsroom", "/investors",
+  "/services"
 ];
 
 import {
@@ -122,10 +123,19 @@ export async function middleware(request: NextRequest) {
   if (token) {
     console.log("🔍 Authenticated user detected");
     
-    // If user has no role, redirect to role selection
+    // If user has no role, redirect to role selection (except for allowed pages)
     if (!token?.role) {
-      console.log("🔍 User has no role, redirecting to role selection");
-      if (pathname !== "/role-selection") {
+      const allowedPagesWithoutRole = [
+        "/role-selection",
+        "/auth/signin",
+        "/auth/signup",
+        "/services",
+      ];
+      const isAllowedPage = allowedPagesWithoutRole.some(
+        (page) => pathname === page || pathname.startsWith(page + "/")
+      );
+      if (!isAllowedPage) {
+        console.log("🔍 User has no role, redirecting to role selection");
         return NextResponse.redirect(new URL("/role-selection", request.url));
       }
       return NextResponse.next();

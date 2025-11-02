@@ -64,13 +64,14 @@ export async function middleware(request: NextRequest) {
   );
   
   // If user is authenticated but has no role, they must select role first
-  // Block access to public pages (except role-selection and auth pages)
+  // Block access to public pages (except role-selection, auth pages, and services)
   if (token && !token?.role && isPublic) {
     const allowedPagesWithoutRole = [
       "/role-selection",
       "/auth/signin",
       "/auth/signup",
       "/auth/setup-password",
+      "/services",
     ];
     const isAllowedPage = allowedPagesWithoutRole.some(
       (page) => pathname === page || pathname.startsWith(page + "/")

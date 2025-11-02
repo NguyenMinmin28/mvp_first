@@ -36,11 +36,11 @@ export default function PortfolioGrid({
 
   // When public view and no portfolio at all, show branded letter placeholders
   const isAllEmpty = variant === "public" && (portfolioLinks?.length || 0) === 0;
-  const brandedLetters = isAllEmpty ? ["C", "L", "E", "V", "R"] : null;
+  const brandedLetters = isAllEmpty ? ["C", "L", "E", "V", "R", "S"] : null;
 
 
-  // Tạo array 5 slots, fill với portfolio có sẵn và empty slots
-  const portfolioSlots = Array.from({ length: 5 }, (_, index) => {
+  // Tạo array 6 slots, fill với portfolio có sẵn và empty slots
+  const portfolioSlots = Array.from({ length: 6 }, (_, index) => {
     return portfolioLinks[index] || null;
   });
 
@@ -63,7 +63,7 @@ export default function PortfolioGrid({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {portfolioSlots.map((portfolio, index) => (
           <div
             key={portfolio?.id || `empty-${index}`}
