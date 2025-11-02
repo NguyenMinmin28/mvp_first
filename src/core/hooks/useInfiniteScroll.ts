@@ -161,18 +161,12 @@ export function useScrollInfiniteLoad(
   const lastLoadMoreTimeRef = useRef(0);
 
   useEffect(() => {
-    // Create sentinel element for intersection observer
-    const sentinel = document.createElement('div');
-    sentinel.style.height = '1px';
-    sentinel.style.width = '100%';
-    sentinel.style.position = 'absolute';
-    sentinel.style.bottom = `${threshold}px`;
-    sentinel.style.pointerEvents = 'none';
-    sentinel.style.visibility = 'hidden';
-    sentinelRef.current = sentinel;
-    
-    // Add sentinel to document
-    document.body.appendChild(sentinel);
+    if (!hasNextPage) {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+      return;
+    }
 
     // Create intersection observer
     observerRef.current = new IntersectionObserver(
@@ -184,25 +178,24 @@ export function useScrollInfiniteLoad(
         if (isIntersecting && hasNextPage && !loadingMore && !isLoadingMoreRef.current) {
           const now = Date.now();
           const timeSinceLastLoad = now - lastLoadMoreTimeRef.current;
-          const minLoadInterval = 1000; // Minimum 1 second between loads
+          const minLoadInterval = 500; // Minimum 500ms between loads
 
           if (timeSinceLastLoad > minLoadInterval) {
             isLoadingMoreRef.current = true;
             lastLoadMoreTimeRef.current = now;
             
-            // Disable scroll events temporarily during loading
-            document.body.style.overflow = 'hidden';
-            
+            console.log('🔄 Infinite scroll: Triggering loadMore');
             // Use requestAnimationFrame to ensure DOM is stable
             requestAnimationFrame(() => {
               try {
                 loadMore();
+              } catch (error) {
+                console.error('Error in loadMore:', error);
               } finally {
-                // Re-enable scroll after loading
+                // Reset loading flag after a short delay
                 setTimeout(() => {
-                  document.body.style.overflow = '';
                   isLoadingMoreRef.current = false;
-                }, 100);
+                }, 500);
               }
             });
           }
@@ -211,30 +204,56 @@ export function useScrollInfiniteLoad(
       {
         root: null,
         rootMargin: `${threshold}px`,
-        threshold: 0
+        threshold: 0.1
       }
     );
 
-    // Start observing
-    observerRef.current.observe(sentinel);
+    // Find the sentinel element in the DOM
+    const findAndObserveSentinel = () => {
+      const sentinel = document.querySelector('[data-infinite-scroll-sentinel]') as HTMLDivElement;
+      if (sentinel && observerRef.current) {
+        sentinelRef.current = sentinel;
+        observerRef.current.observe(sentinel);
+        console.log('✅ Infinite scroll: Sentinel element found and observing');
+        return true;
+      }
+      return false;
+    };
+
+    // Try to find sentinel immediately
+    if (!findAndObserveSentinel()) {
+      // If not found, use MutationObserver to watch for DOM changes
+      const mutationObserver = new MutationObserver(() => {
+        if (findAndObserveSentinel()) {
+          mutationObserver.disconnect();
+        }
+      });
+
+      mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // Also try after a short delay
+      const timeout = setTimeout(() => {
+        findAndObserveSentinel();
+        mutationObserver.disconnect();
+      }, 200);
+      
+      return () => {
+        clearTimeout(timeout);
+        mutationObserver.disconnect();
+        if (observerRef.current) {
+          observerRef.current.disconnect();
+        }
+        isLoadingMoreRef.current = false;
+      };
+    }
 
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
-      // Safely remove sentinel element
-      if (sentinelRef.current) {
-        try {
-          // Use modern remove() method which handles detached nodes gracefully
-          // remove() is safe to call even if element is not in DOM
-          sentinelRef.current.remove();
-        } catch (error) {
-          // Element may have already been removed, ignore error
-          console.debug('Sentinel element already removed:', error);
-        }
-        sentinelRef.current = null;
-      }
-      document.body.style.overflow = '';
       isLoadingMoreRef.current = false;
     };
   }, [loadMore, hasNextPage, loadingMore, threshold]);

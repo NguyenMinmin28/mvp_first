@@ -21,6 +21,7 @@ import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfini
 import PortfolioGrid from "@/features/developer/components/dashboard/portfolio-grid";
 import { FilterDrawer, FilterState } from "@/features/client/components/FilterDrawer";
 import { formatPriceRange, getCurrencySymbol } from "@/core/utils/currency";
+import { AuthRequiredModal } from "@/features/shared/components/auth-required-modal";
 
 const ServiceDetailOverlay = dynamic(
   () => import("@/features/client/components/ServiceDetailOverlay"),
@@ -172,6 +173,7 @@ export function PeopleGrid({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPortfolio, setSelectedPortfolio] = useState<any | null>(null);
   const [isPortfolioOverlayOpen, setIsPortfolioOverlayOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const isOverride = Array.isArray(overrideDevelopers);
   
   // Internal state với fallback từ props
@@ -1435,6 +1437,12 @@ export function PeopleGrid({
                         e.preventDefault();
                         e.nativeEvent.stopImmediatePropagation();
                         
+                        // Check if user is authenticated
+                        if (!session?.user) {
+                          setShowAuthModal(true);
+                          return;
+                        }
+                        
                         const isCurrentlyFollowing = developer.userLiked || likedDeveloperIds.has(developer.id) || followedUserIds.has(developer.user.id);
                         const action = isCurrentlyFollowing ? "unfollow" : "follow";
                         
@@ -1641,6 +1649,13 @@ export function PeopleGrid({
         onClose={() => setIsFilterDrawerOpen(false)}
         onApplyFilters={handleApplyFilters}
         initialFilters={appliedFilters || undefined}
+      />
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        action="follow developers"
       />
 
       {/* Developer Profile Slide Bar */}

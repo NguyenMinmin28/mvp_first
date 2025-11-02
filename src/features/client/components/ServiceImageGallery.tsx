@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 
 interface ServiceImageGalleryProps {
   coverUrl?: string | null;
@@ -61,12 +62,12 @@ export function ServiceImageGallery({
         {images.length > 0 ? (
           <div className="relative w-full h-full">
             {images.map((image, index) => (
-              <Image
+              <ImageWithShimmer
                 key={index}
                 src={image}
                 alt={`${title} ${index + 1}`}
                 fill
-                className={`absolute inset-0 object-cover transition-all duration-500 ease-in-out ${
+                className={`object-cover transition-all duration-500 ease-in-out ${
                   animationType === "slide"
                     ? index === currentImageIndex
                       ? "translate-x-0 opacity-100"
@@ -78,6 +79,7 @@ export function ServiceImageGallery({
                       : "opacity-0 scale-105"
                 }`}
                 sizes="(max-width: 640px) 100vw, 50vw"
+                shimmerSize="card"
               />
             ))}
           </div>

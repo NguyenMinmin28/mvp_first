@@ -331,7 +331,7 @@ export default function Header({ user }: HeaderProps) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 w-full ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}
+        className={`sticky top-0 z-50 w-full m-0 p-0 ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}
       >
         <div className="container flex h-16 items-center justify-between px-4">
           {/* Logo */}
@@ -352,16 +352,16 @@ export default function Header({ user }: HeaderProps) {
             {!isAuthenticated && (
               <div className="hidden md:flex items-center gap-2 text-sm">
                 <button
-                  className={`px-3 py-1 rounded-full border ${activePortal === "client" ? "bg-black text-white" : !isAuthenticated ? "text-white border-white/40" : "text-black"}`}
-                  onClick={() => handlePortalSwitch("client")}
+                  className="px-3 py-1 rounded-full text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer"
+                  onClick={() => router.push("/services?tab=people")}
                 >
-                  Client {user?.id && userRole === "CLIENT" && "✓"}
+                  Expert
                 </button>
                 <button
-                  className={`px-3 py-1 rounded-full border ${activePortal === "freelancer" ? "bg-black text-white" : !isAuthenticated ? "text-white border-white/40" : "text-black"}`}
-                  onClick={() => handlePortalSwitch("freelancer")}
+                  className="px-3 py-1 rounded-full text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer"
+                  onClick={() => router.push("/services")}
                 >
-                  Freelancer {user?.id && userRole === "DEVELOPER" && "✓"}
+                  Gigs
                 </button>
               </div>
             )}
@@ -572,15 +572,21 @@ export default function Header({ user }: HeaderProps) {
 
             {!isAuthenticated && (
               <nav className="hidden md:flex items-center gap-8">
-                <Link href="/ideas" className="text-sm hover:opacity-80">
+                <Link 
+                  href="/ideas" 
+                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                >
                   IdeaSpark
                 </Link>
-                <Link href="/pricing" className="text-sm hover:opacity-80">
+                <Link 
+                  href="/pricing" 
+                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                >
                   Price
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 text-sm">
+                    <button className="flex items-center gap-1 text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer">
                       About <ChevronDown className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
@@ -625,15 +631,21 @@ export default function Header({ user }: HeaderProps) {
             {/* Public right actions */}
             {!isAuthenticated && (
               <div className="hidden md:flex items-center gap-6">
-                <Link href="/help" className="text-sm">
+                <Link 
+                  href="/help" 
+                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                >
                   Help
                 </Link>
-                <Link href="/auth/signin" className="text-sm">
+                <Link 
+                  href="/auth/signin" 
+                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                >
                   Log in
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="inline-flex items-center h-9 px-4 rounded-full bg-white text-black text-sm"
+                  className="inline-flex items-center h-9 px-4 rounded-full bg-white text-black text-sm hover:bg-gray-100 hover:scale-105 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
                 >
                   Sign up
                 </Link>
@@ -1981,19 +1993,19 @@ export default function Header({ user }: HeaderProps) {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <Link
                     href="/help"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    className="block py-2 text-gray-700 hover:text-black underline-animated transition-all duration-200 cursor-pointer"
                   >
                     Help
                   </Link>
                   <Link
                     href="/auth/signin"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    className="block py-2 text-gray-700 hover:text-black underline-animated transition-all duration-200 cursor-pointer"
                   >
                     Log in
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="block py-2 px-4 rounded-full bg-black text-white text-center"
+                    className="block py-2 px-4 rounded-full bg-black text-white text-center hover:bg-gray-800 hover:scale-105 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
                   >
                     Sign up
                   </Link>

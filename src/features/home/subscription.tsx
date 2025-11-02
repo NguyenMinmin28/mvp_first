@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/ui/components/tooltip";
+import { ImgWithShimmer } from "@/ui/components/image-with-shimmer";
 
 function SolidCalendarIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
@@ -107,18 +108,18 @@ function PlanCard({
   features: string[];
 }) {
   return (
-    <div className="rounded-2xl border bg-white/70 p-6 flex flex-col h-full">
-      <div className="mb-6">
-        <h3 className="font-semibold text-lg text-left">{name}</h3>
-        <div className="mt-2 mx-1 h-px bg-[#DEE0E2]"></div>
+    <div className="rounded-2xl border bg-white/70 p-3 md:p-4 flex flex-col h-full">
+      <div className="mb-3">
+        <h3 className="font-semibold text-sm md:text-base text-left">{name}</h3>
+        <div className="mt-1.5 mx-1 h-px bg-[#DEE0E2]"></div>
       </div>
-      <div className="mb-8">
-        <span className="text-3xl font-bold">{price}</span>
+      <div className="mb-3 md:mb-4">
+        <span className="text-2xl md:text-3xl font-bold">{price}</span>
         <span className="ml-2 text-sm text-gray-600">/{period}</span>
       </div>
       <Link
         href="/pricing"
-        className="h-10 inline-flex items-center justify-center rounded-full bg-black text-white px-6 text-sm"
+        className="h-10 inline-flex items-center justify-center rounded-full bg-black text-white px-5 text-sm hover:bg-gray-800 hover:scale-105 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
       >
         {name === "Free Plan"
           ? "Current Plan"
@@ -126,9 +127,9 @@ function PlanCard({
             ? "Upgrade to Plus"
             : "Choose your plan"}
       </Link>
-      <div className="mt-8 rounded-xl bg-[#FAFAFA] p-4">
-        <p className="font-semibold mb-3">Service Include:</p>
-        <ul className="space-y-2 text-sm text-gray-700">
+      <div className="mt-3 md:mt-4 rounded-xl bg-[#FAFAFA] p-3">
+        <p className="font-semibold mb-2 text-sm">Service Include:</p>
+        <ul className="space-y-1.5 text-sm text-gray-700">
           {features.map((f, i) => (
             <FeatureItem key={i} text={f} />
           ))}
@@ -140,41 +141,48 @@ function PlanCard({
 
 function BenefitCard() {
   return (
-    <div className="w-full h-full max-w-full rounded-2xl border bg-white/70 p-6 flex flex-col">
-      <h3 className="font-semibold text-xl mb-6">Benefits</h3>
-      <ul className="space-y-6 text-gray-800">
-        <li className="flex items-start gap-4">
-          <span className="inline-flex h-10 w-10 items-center justify-center">
-            <img
+    <div className="w-full h-full max-w-full rounded-2xl border bg-white/70 p-3 md:p-4 flex flex-col">
+      <h3 className="font-semibold text-sm md:text-base mb-3">Benefits</h3>
+      <ul className="space-y-3 text-gray-800">
+        <li className="flex items-start gap-3">
+          <span className="inline-flex h-8 w-8 items-center justify-center">
+            <ImgWithShimmer
               src="/images/home/calendar.jpg"
               alt="calendar"
-              className="w-6 h-6 object-contain"
+              aspectRatio="1/1"
+              className="w-5 h-5 object-contain"
+              containerClassName="w-5 h-5"
             />
           </span>
-          <p className="font-medium">
+          <p className="font-medium text-sm">
             Post projects anytime and connect instantly
           </p>
         </li>
-        <li className="flex items-start gap-4">
-          <span className="inline-flex h-10 w-10 items-center justify-center">
-            <HollowClockIcon className="w-6 h-6" />
+        <li className="flex items-start gap-3">
+          <span className="inline-flex h-8 w-8 items-center justify-center">
+            <HollowClockIcon className="w-5 h-5" />
           </span>
-          <p className="font-medium">
+          <p className="font-medium text-sm">
             Flexible contracts with direct agreements
           </p>
         </li>
-        <li className="flex items-start gap-4">
-          <span className="inline-flex h-10 w-10 items-center justify-center">
-            <img
+        <li className="flex items-start gap-3">
+          <span className="inline-flex h-8 w-8 items-center justify-center">
+            <ImgWithShimmer
               src="/images/home/pay.png"
               alt="earnings"
-              className="w-6 h-6 object-contain"
+              aspectRatio="1/1"
+              className="w-5 h-5 object-contain"
+              containerClassName="w-5 h-5"
             />
           </span>
-          <p className="font-medium">Keep 100% earnings, zero commission</p>
+          <p className="font-medium text-sm">Keep 100% earnings, zero commission</p>
         </li>
       </ul>
-      <Link href="/pricing" className="inline-block mt-auto underline">
+      <Link 
+        href="/pricing" 
+        className="inline-block mt-auto underline-animated text-sm hover:text-black transition-all duration-200 cursor-pointer"
+      >
         See terms
       </Link>
     </div>
@@ -184,13 +192,13 @@ function BenefitCard() {
 export default function Subscription() {
   return (
     <TooltipProvider>
-      <section className="w-full py-10 md:py-16 px-8">
-        <div className="container mx-auto max-w-8xl px-0">
-          <h2 className="text-4xl font-extrabold tracking-tight mb-8">
+      <section className="w-full py-2 md:py-3">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6">
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-3">
             Subscription for clients
           </h2>
           {/* 3 Equal Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <PlanCard
               name="Free Plan"
               price="$0"

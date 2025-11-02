@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import { Button } from "@/ui/components/button";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -294,27 +295,29 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                   {/* Cover Image */}
                   <div className="relative h-32 sm:h-40 lg:h-48 bg-gray-200 overflow-hidden">
                     {idea.coverUrl ? (
-                      <Image
+                      <ImageWithShimmer
                         src={idea.coverUrl}
                         alt={idea.title}
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        shimmerSize="card"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = getDefaultCoverImage(index);
                         }}
                       />
                     ) : (
-                      <Image
+                      <ImageWithShimmer
                         src={getDefaultCoverImage(index)}
                         alt={idea.title}
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        shimmerSize="card"
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent z-10" />
                   </div>
 
                   {/* Content */}
@@ -402,13 +405,15 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                     <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
                       <div className="flex items-center gap-2 sm:gap-3">
                         <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 overflow-hidden">
-                          <Image
+                          <ImageWithShimmer
                             src={`https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face`}
                             alt={idea.author.name}
                             width={32}
                             height={32}
-                            className="object-cover"
+                            aspectRatio="1/1"
+                            className="object-cover rounded-full"
                             sizes="32px"
+                            shimmerSize="thumbnail"
                           />
                         </div>
                         <div>

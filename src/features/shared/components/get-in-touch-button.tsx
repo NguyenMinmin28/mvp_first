@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/ui/components/button";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
@@ -11,6 +13,7 @@ import { MessageForm } from "./message-form";
 import { FindingDeveloperOverlay } from "./finding-developer-overlay";
 import { ContactOptionsModal } from "./contact-options-modal";
 import { WhatsAppContactModal } from "./whatsapp-contact-modal";
+import { AuthRequiredModal } from "./auth-required-modal";
 
 interface GetInTouchButtonProps {
   developerId: string;
@@ -38,7 +41,10 @@ export function GetInTouchButton({
   const [showFindingOverlay, setShowFindingOverlay] = useState(false);
   const [showContactOptions, setShowContactOptions] = useState(false);
   const [showWhatsAppContact, setShowWhatsAppContact] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
+  const { data: session } = useSession();
+  const router = useRouter();
   const { contactInfo, loading: contactLoading } = useCanViewContact(developerId, projectId);
   const { sendInvite, loading: inviteLoading } = useManualInvite(projectId);
 
@@ -49,6 +55,12 @@ export function GetInTouchButton({
     e.nativeEvent.stopImmediatePropagation(); // Stop all event propagation
     
     if (contactLoading) return;
+
+    // Check if user is authenticated
+    if (!session?.user) {
+      setShowAuthModal(true);
+      return;
+    }
 
     // Always show contact options modal first (Message vs WhatsApp)
     console.log("Showing contact options modal", { 
@@ -196,6 +208,13 @@ export function GetInTouchButton({
           whatsapp: contactInfo?.developer?.whatsapp || null
         }}
         projectId={projectId}
+      />
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        action="contact developers"
       />
     </>
   );

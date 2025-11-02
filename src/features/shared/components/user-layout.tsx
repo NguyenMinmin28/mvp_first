@@ -32,7 +32,7 @@ export function UserLayout({
 }: UserLayoutProps) {
   return (
     <ErrorBoundary>
-      <div className="min-h-screen flex flex-col bg-white">
+      <div className="min-h-screen flex flex-col bg-white w-full m-0 p-0 overflow-x-hidden">
         {/* Header */}
         <Header user={user} />
 

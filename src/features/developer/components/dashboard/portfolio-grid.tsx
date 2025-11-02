@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Plus, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { ImgWithShimmer } from "@/ui/components/image-with-shimmer";
 
 interface PortfolioItem {
   id: string;
@@ -77,10 +78,12 @@ export default function PortfolioGrid({
                   {variant === 'public' ? (
                     <div className="absolute inset-0">
                       {portfolio.imageUrl ? (
-                        <img
+                        <ImgWithShimmer
                           src={portfolio.imageUrl}
                           alt={portfolio.title || 'Portfolio'}
+                          aspectRatio="1/1"
                           className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                          containerClassName="w-full h-full"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -114,10 +117,12 @@ export default function PortfolioGrid({
                       {/* Portfolio Image */}
                       <div className="h-3/4 bg-gradient-to-br from-blue-50 to-purple-50 relative">
                         {portfolio.imageUrl ? (
-                          <img
+                          <ImgWithShimmer
                             src={portfolio.imageUrl}
                             alt={portfolio.title || 'Portfolio'}
+                            aspectRatio="4/3"
                             className="w-full h-full object-cover"
+                            containerClassName="w-full h-full"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

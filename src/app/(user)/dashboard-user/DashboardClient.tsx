@@ -9,7 +9,6 @@ import {
   startTransition,
 } from "react";
 import dynamic from "next/dynamic";
-import ClevrsLoader from "@/features/shared/components/ClevrsLoader";
 import { toast } from "sonner";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ProfileSummary from "@/features/developer/components/dashboard/profile-summary";
@@ -23,25 +22,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 
 const ProjectsSidebar = dynamic(
   () => import("@/features/developer/components/dashboard/projects-sidebar"),
-  { ssr: false, loading: () => <ClevrsLoader /> }
+  { ssr: false }
 );
 const ProjectDetail = dynamic(
   () => import("@/features/developer/components/dashboard/project-detail"),
-  { ssr: false, loading: () => <ClevrsLoader /> }
+  { ssr: false }
 );
 const ManualInvitationDetail = dynamic(
   () =>
     import(
       "@/features/developer/components/dashboard/manual-invitation-detail"
     ),
-  { ssr: false, loading: () => <ClevrsLoader /> }
+  { ssr: false }
 );
 const OnboardingPortfolioGrid = dynamic(
   () =>
     import(
       "@/features/onboarding/freelancer/components/portfolio-grid"
     ).then((m) => m.PortfolioGrid),
-  { ssr: false, loading: () => <ClevrsLoader /> }
+  { ssr: false }
 );
 
 type UserIdeaSummary = {
@@ -319,7 +318,7 @@ export default function DashboardClient({
     if (!ok) setProjects(prev);
   };
 
-  if (!session?.user) return <ClevrsLoader />;
+  if (!session?.user) return null;
 
   const isApprovalPending =
     profile?.adminApprovalStatus && profile.adminApprovalStatus !== "approved";

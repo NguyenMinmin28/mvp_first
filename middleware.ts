@@ -7,7 +7,8 @@ const PUBLIC_ROUTES = [
   "/", "/pricing", "/about", "/blog", "/ceo-letter", "/help",
   "/auth/signin", "/auth/signup", 
   "/role-selection", "/ideas", 
-  "/how-clevrs-work", "/newsroom", "/investors"
+  "/how-clevrs-work", "/newsroom", "/investors",
+  "/services"
 ];
 
 import {
@@ -177,7 +178,7 @@ export const config = {
     "/inbox/:path*",
     "/favorites/:path*",
     "/profile/:path*",
-    "/services/:path*",
+    "/services/create/:path*",
     "/onboarding/:path*",
     "/role-selection",
     "/role-selection/:path*",

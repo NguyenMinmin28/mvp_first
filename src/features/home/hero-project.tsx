@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ProjectPostForm } from "@/features/client/components/project-post-form";
+import { ImgWithShimmer } from "@/ui/components/image-with-shimmer";
 
 export function HeroProject() {
   const formContentRef = useRef<HTMLDivElement | null>(null);
@@ -37,12 +38,12 @@ export function HeroProject() {
     };
   }, []);
   return (
-    <section className="w-full py-8 md:py-4">
+    <section className="w-full py-2 md:py-3">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.1fr] lg:grid-cols-[0.8fr_1.2fr] gap-6 md:gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.1fr] lg:grid-cols-[0.8fr_1.2fr] gap-3 md:gap-4 items-start">
           {/* Left: Form column */}
-          <div className="md:pr-4" ref={formContentRef}>
-            <div className="bg-[#FFFFFF] rounded-lg p-6 border-0">
+          <div className="md:pr-3" ref={formContentRef}>
+            <div className="bg-[#FFFFFF] rounded-lg p-4 border-0">
               <ProjectPostForm
                 title="Post Project"
                 description=""
@@ -54,15 +55,17 @@ export function HeroProject() {
           {/* Right: Image column */}
           <div className="w-full">
             <div
-              className="bg-[#FFFAF3] overflow-hidden flex items-center justify-center p-8 mt-16"
+              className="bg-[#FFFAF3] overflow-hidden flex items-center justify-center p-4 md:p-6 mt-6 md:mt-8"
               style={{
                 height: rightHeight ? `${rightHeight * 0.9}px` : "auto",
               }}
             >
-              <img
+              <ImgWithShimmer
                 alt="Hire freelancer directly"
                 src="/images/home/herobanner2.png"
+                aspectRatio="4/3"
                 className="max-h-full max-w-full object-contain"
+                containerClassName="w-full h-full flex items-center justify-center"
               />
             </div>
           </div>
