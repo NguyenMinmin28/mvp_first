@@ -13,6 +13,7 @@ import {
   WhatsAppTab,
   VerificationTab,
   DeveloperProfileTab,
+  SecurityTab,
 } from "./tabs";
 
 interface ProfileData {
@@ -20,6 +21,7 @@ interface ProfileData {
   name?: string;
   email?: string;
   phoneE164?: string;
+  hasPassword?: boolean;
 
   // Client Profile fields
   companyName?: string;
@@ -338,6 +340,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
           {userRole === "CLIENT" && (
             <TabsTrigger value="company">Company</TabsTrigger>
           )}
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
         {/* Basic Information Tab */}
@@ -410,6 +413,14 @@ export default function InformationTab({ userRole }: InformationTabProps) {
             </TabsContent>
           </>
         )}
+
+        {/* Security Tab - Available for all users */}
+        <TabsContent value="security" className="space-y-6">
+          <SecurityTab
+            hasPassword={profileData.hasPassword || false}
+            email={profileData.email}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -4,6 +4,7 @@ export const revalidate = 0;
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { redirect } from "next/navigation";
 import CompleteProfilePage from "@/features/role-selection/view/role-selection-page";
+import { prisma } from "@/core/database/db";
 
 export const metadata = {
   title: "Choose Your Role – Client or Freelancer",
@@ -21,7 +22,10 @@ export default async function CompleteProfile() {
   // If user already has a role, do not show role-selection
   if (user.role) {
     if (user.role === "CLIENT") {
-      redirect("/client-dashboard");
+      // For CLIENT role, always redirect to pricing page first
+      // This allows user to see plans and confirm/select their choice
+      // Even if they have an auto-created Free Plan subscription from signup
+      redirect("/pricing");
     } else if (user.role === "DEVELOPER") {
       // Send developers to appropriate page based on status
       if (!user.isProfileCompleted) {

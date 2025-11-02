@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import RoleSelection from "../components/role-selection";
 import { toast } from "sonner";
 import Link from "next/link";
+import Header from "@/features/shared/components/header";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/components/dialog";
 import { Button } from "@/ui/components/button";
-import { LogOut, User } from "lucide-react";
 
 type Step = "role-selection" | "client-form" | "developer-form";
 type UserRole = "CLIENT" | "DEVELOPER";
@@ -26,6 +34,8 @@ export default function CompleteProfilePage() {
   const [currentStep, setCurrentStep] = useState<Step>("role-selection");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showRoleRequiredDialog, setShowRoleRequiredDialog] = useState(false);
+  const [isRedirectingAfterRoleSelect, setIsRedirectingAfterRoleSelect] = useState(false);
 
   // Redirect nếu profile đã hoàn thành
   useEffect(() => {
@@ -36,25 +46,59 @@ export default function CompleteProfilePage() {
       return;
     }
 
+    // Skip redirect if we're in the process of redirecting after role selection
+    if (isRedirectingAfterRoleSelect) {
+      console.log("🔍 Currently redirecting after role select, skipping useEffect redirect");
+      return;
+    }
+
     if (session.user.role && session.user.isProfileCompleted) {
       // Check if user has saved form data from guest session
       const savedFormData = sessionStorage.getItem('guestProjectForm');
       
       // Redirect based on role instead of home
       if (session.user.role === "CLIENT") {
-        // If user has saved form data, redirect to client dashboard to show the form
-        if (savedFormData) {
-          console.log("🔍 User has saved form data, redirecting to client dashboard");
-          window.location.href = "/client-dashboard";
-        } else {
-          window.location.href = "/client-dashboard";
+        // Check if this is a new role selection (just completed)
+        // If user is still on role-selection page after completing, they just selected role
+        // In this case, always redirect to pricing first (even if they have auto-created subscription)
+        const isOnRoleSelectionPage = typeof window !== "undefined" && window.location.pathname === "/role-selection";
+        if (isOnRoleSelectionPage) {
+          // User just selected role, always redirect to pricing first
+          console.log("🔍 User just selected CLIENT role, redirecting to /pricing");
+          window.location.href = "/pricing";
+          return;
         }
+        
+        // Otherwise, check if user has manually selected a plan (not auto-created from signup)
+        const checkSubscription = async () => {
+          try {
+            const subRes = await fetch("/api/user/subscriptions", { cache: "no-store" });
+            if (subRes.ok) {
+              const subData = await subRes.json();
+              const hasSubscription = subData.subscriptions && subData.subscriptions.length > 0;
+              if (hasSubscription) {
+                console.log("🔍 User has subscription, redirecting to client dashboard");
+                window.location.href = "/client-dashboard";
+              } else {
+                console.log("🔍 User has no subscription, redirecting to pricing");
+                window.location.href = "/pricing";
+              }
+            } else {
+              window.location.href = "/pricing";
+            }
+          } catch (error) {
+            console.error("Error checking subscription:", error);
+            window.location.href = "/pricing";
+          }
+        };
+        checkSubscription();
+        return;
       } else if (session.user.role === "DEVELOPER") {
         window.location.href = "/inbox";
       } else if (session.user.role === "ADMIN") {
         window.location.href = "/admin";
       } else {
-        window.location.href = "/";
+        window.location.href = "/role-selection";
       }
       return;
     }
@@ -71,7 +115,59 @@ export default function CompleteProfilePage() {
         "🔍 Complete Profile - No role found, showing role selection"
       );
     }
-  }, [session?.user?.id, session?.user?.role, session?.user?.isProfileCompleted, router]);
+  }, [session?.user?.id, session?.user?.role, session?.user?.isProfileCompleted, router, isRedirectingAfterRoleSelect]);
+
+  // Intercept navigation clicks if user hasn't selected a role yet
+  useEffect(() => {
+    const hasRole = session?.user?.role;
+    
+    if (hasRole) {
+      return; // User has role, no need to intercept
+    }
+
+    const handleHeaderLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Find if click is on a link or button within header
+      const link = target.closest('a[href], button');
+      
+      if (!link) return;
+
+      // Check if it's within the header
+      const header = document.querySelector('header');
+      if (!header || !header.contains(link)) return;
+
+      // Allow logout and user menu actions
+      if (
+        link.getAttribute('aria-label')?.toLowerCase().includes('user') ||
+        link.closest('[data-user-menu]') ||
+        link.textContent?.toLowerCase().includes('logout') ||
+        link.textContent?.toLowerCase().includes('sign out') ||
+        link.closest('[role="menuitem"]')
+      ) {
+        return; // Allow logout and user menu
+      }
+
+      // Check if it's a navigation link (not logo)
+      const href = (link as HTMLAnchorElement).href;
+      if (href && !href.includes('#') && link !== header.querySelector('button[onclick*="handleLogoClick"], button[onclick*="LogoClick"]')) {
+        // Allow logo click to go home
+        if (link.closest('button') && target.closest('img[alt*="Clevrs"], img[alt*="logo"]')) {
+          return;
+        }
+
+        // Prevent navigation and show dialog
+        e.preventDefault();
+        e.stopPropagation();
+        setShowRoleRequiredDialog(true);
+      }
+    };
+
+    document.addEventListener('click', handleHeaderLinkClick, true);
+    
+    return () => {
+      document.removeEventListener('click', handleHeaderLinkClick, true);
+    };
+  }, [session?.user?.role]);
 
   const handleRoleSelect = async (role: UserRole) => {
     // Prevent multiple clicks
@@ -86,14 +182,43 @@ export default function CompleteProfilePage() {
       // If user already has this role, skip API and just route
       if (session?.user?.role === role) {
         console.log("🔍 User already has role, skip update and redirect");
+        // Keep loading state true - don't reset it before redirect
         if (role === "CLIENT") {
-          router.push("/client-dashboard");
+          // For clients, always check subscription - if they have one and selected before, go to dashboard
+          // But for new role selection, always go to upgrade page first
+          try {
+            const subRes = await fetch("/api/user/subscriptions", { cache: "no-store" });
+            if (subRes.ok) {
+              const subData = await subRes.json();
+              const hasSubscription = subData.subscriptions && subData.subscriptions.length > 0;
+              // Check if subscription was manually selected (not auto-created from signup)
+              // For now, if user just selected role, always send to pricing page
+              // They can select Free plan there if they want
+              console.log("🔄 Redirecting to /pricing page to let user confirm/select plan");
+              window.location.href = "/pricing";
+              // Don't reset loading - page is redirecting
+              return;
+            } else {
+              console.log("🔄 Subscription check failed, redirecting to /pricing");
+              window.location.href = "/pricing";
+              // Don't reset loading - page is redirecting
+              return;
+            }
+          } catch (error) {
+            console.error("Error checking subscription:", error);
+            window.location.href = "/pricing";
+            // Don't reset loading - page is redirecting
+            return;
+          }
         } else if (role === "DEVELOPER") {
-          router.push("/onboarding/freelancer/basic-information");
+          window.location.href = "/onboarding/freelancer/basic-information";
+          // Don't reset loading - page is redirecting
+          return;
         } else {
           router.push("/");
+          // Don't reset loading - page is redirecting
+          return;
         }
-        return;
       }
       
       // Update user role and create profile
@@ -116,6 +241,9 @@ export default function CompleteProfilePage() {
       const result = await response.json();
       console.log("✅ API success:", result);
 
+      // Set flag to prevent useEffect from redirecting
+      setIsRedirectingAfterRoleSelect(true);
+
       // Update session first, then redirect
       await updateSession();
       console.log("✅ Session updated");
@@ -127,37 +255,38 @@ export default function CompleteProfilePage() {
         `Role ${role === "CLIENT" ? "Client" : "Developer"} selected successfully!`
       );
 
-      // Small delay before redirect to ensure session is updated
-      setTimeout(() => {
-        if (role === "CLIENT") {
-          router.push("/client-dashboard");
-        } else if (role === "DEVELOPER") {
-          router.push("/onboarding/freelancer/basic-information");
-        } else {
-          router.push("/");
-        }
-      }, 500);
+      // Immediately redirect without delay to prevent useEffect from running
+      // Keep isLoading true - don't reset it, let the redirect happen while loading
+      if (role === "CLIENT") {
+        console.log("🔄 Redirecting CLIENT to /pricing page (new account)");
+        // For new accounts, always redirect to /pricing page to let user choose plan
+        // Use window.location.href to force hard redirect and avoid middleware issues
+        window.location.href = "/pricing";
+        // Don't set loading to false - page is redirecting
+        return;
+      } else if (role === "DEVELOPER") {
+        console.log("🔄 Redirecting DEVELOPER to onboarding");
+        // Use window.location.href for immediate redirect, keeping loading state
+        window.location.href = "/onboarding/freelancer/basic-information";
+        // Don't set loading to false - page is redirecting
+        return;
+      } else {
+        router.push("/");
+        // Don't set loading to false - page is redirecting
+        return;
+      }
 
     } catch (error) {
       console.error("❌ Error updating role and creating profile:", error);
+      setIsLoading(false); // Only reset loading on error
       toast.error(
         error instanceof Error
           ? error.message
           : "An error occurred while updating role and creating profile"
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut({ callbackUrl: "/" });
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast.error("An error occurred during logout");
-    }
-  };
 
   // Loading state
   if (!session) {
@@ -170,35 +299,32 @@ export default function CompleteProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Header */}
-      <header className="w-full h-20 bg-black flex items-center">
-        <div className="max-w-5xl mx-auto w-full px-6 flex items-center justify-between">
-          <img 
-            src="/images/home/clervelogo.png" 
-            alt="Clevrs" 
-            className="h-10 w-auto"
-          />
-          
-          {/* User Account Info and Logout */}
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3 text-white">
-              <User className="w-5 h-5" />
-              <span className="text-base font-medium">
-                {session?.user?.name || session?.user?.email || "User"}
-              </span>
-            </div>
+      {/* Header - Always show authenticated style with user info */}
+      <Header user={session?.user || undefined} />
+
+      {/* Dialog for role selection requirement */}
+      <Dialog open={showRoleRequiredDialog} onOpenChange={setShowRoleRequiredDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Role Selection</DialogTitle>
+            <DialogDescription>
+              Please select your role (Client or Freelancer) to continue accessing other pages.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="default"
-              className="bg-transparent border-white text-white hover:bg-white hover:text-black px-4 py-2"
+              onClick={() => {
+                setShowRoleRequiredDialog(false);
+                // Scroll to role selection cards
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="w-full"
             >
-              <LogOut className="w-5 h-5 mr-2" />
-              Logout
+              Select Role Now
             </Button>
-          </div>
-        </div>
-      </header>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content */}
       <main className="flex-1">

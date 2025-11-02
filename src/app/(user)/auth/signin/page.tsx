@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import SignInClient from "./signin-client";
 import { Suspense } from "react";
+import { getServerSessionUser } from "@/features/auth/auth-server";
+import { UserLayout } from "@/features/shared/components/user-layout";
 
 export const metadata: Metadata = {
   title: "Login to Clevrs – Access Your Projects & Freelancers",
@@ -8,10 +10,14 @@ export const metadata: Metadata = {
     "Sign in to your Clevrs account to manage your projects, connect with freelancers, and access all platform features.",
 };
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const user = await getServerSessionUser();
+
   return (
-    <Suspense fallback={<div></div>}>
-      <SignInClient />
-    </Suspense>
+    <UserLayout user={user}>
+      <Suspense fallback={<div></div>}>
+        <SignInClient />
+      </Suspense>
+    </UserLayout>
   );
 }

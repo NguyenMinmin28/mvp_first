@@ -49,7 +49,6 @@ export default function RoleSelection({
       description: "I want to find projects and offer my services",
       icon: Code2,
       features: [
-        "Get 10 free connects every month to reach clients",
         "Post your services and showcase your portfolio",
         "Receive direct project invites from clients",
         "Build trust with a verified profile & rating system",
@@ -66,9 +65,6 @@ export default function RoleSelection({
           <h1 className="text-4xl font-semibold text-gray-900 mb-4 tracking-tight">
             Choose Your Role to Get Started
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Select your role to complete your profile and get started.
-          </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">

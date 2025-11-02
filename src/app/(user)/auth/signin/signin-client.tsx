@@ -19,10 +19,16 @@ import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
 
 import { ErrorDisplay, FieldError } from "@/ui/components/error-display";
-import { Mail, Eye, EyeOff, LogIn } from "lucide-react";
+import { Mail, Eye, EyeOff, LogIn, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Icons } from "@/features/shared/components/icons";
 import { useSession } from "next-auth/react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/ui/components/tooltip";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -36,6 +42,7 @@ export default function SignInClient() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [hasFallbackRedirected, setHasFallbackRedirected] = useState(false);
@@ -68,14 +75,30 @@ export default function SignInClient() {
         console.log("🔄 Fallback redirecting to /admin");
         window.location.href = "/admin";
       } else if (userRole === "CLIENT") {
-        // Check if user has saved form data
-        const savedFormData = sessionStorage.getItem('guestProjectForm');
-        if (savedFormData) {
-          console.log("🔄 Fallback redirecting to /client-dashboard with saved form data");
-        } else {
-          console.log("🔄 Fallback redirecting to /client-dashboard");
-        }
-        window.location.href = "/client-dashboard";
+        // Check if user has subscription - redirect to pricing if not, dashboard if yes
+        fetch("/api/user/subscriptions", { cache: "no-store" })
+          .then((subRes) => {
+            if (subRes.ok) {
+              return subRes.json();
+            } else {
+              throw new Error("Subscription check failed");
+            }
+          })
+          .then((subData) => {
+            const hasSubscription = subData.subscriptions && subData.subscriptions.length > 0;
+            if (hasSubscription) {
+              console.log("🔄 Fallback redirecting CLIENT to /client-dashboard (has subscription)");
+              window.location.href = "/client-dashboard";
+            } else {
+              console.log("🔄 Fallback redirecting CLIENT to /pricing (no subscription)");
+              window.location.href = "/pricing";
+            }
+          })
+          .catch((error) => {
+            console.error("Error checking subscription:", error);
+            console.log("🔄 Fallback redirecting CLIENT to /pricing (error)");
+            window.location.href = "/pricing";
+          });
       } else if (userRole === "DEVELOPER") {
         if (isProfileCompleted) {
           console.log("🔄 Fallback redirecting to /dashboard-user");
@@ -158,14 +181,28 @@ export default function SignInClient() {
               return;
             }
             if (user?.role === "CLIENT") {
-              // Check if user has saved form data
-              const savedFormData = sessionStorage.getItem('guestProjectForm');
-              if (savedFormData) {
-                console.log("🔄 Redirecting to /client-dashboard with saved form data");
-              } else {
-                console.log("🔄 Redirecting to /client-dashboard");
+              // Check if user has subscription - redirect to pricing if not, dashboard if yes
+              try {
+                const subRes = await fetch("/api/user/subscriptions", { cache: "no-store" });
+                if (subRes.ok) {
+                  const subData = await subRes.json();
+                  const hasSubscription = subData.subscriptions && subData.subscriptions.length > 0;
+                  if (hasSubscription) {
+                    console.log("🔄 Redirecting CLIENT to /client-dashboard (has subscription)");
+                    window.location.href = "/client-dashboard";
+                  } else {
+                    console.log("🔄 Redirecting CLIENT to /pricing (no subscription)");
+                    window.location.href = "/pricing";
+                  }
+                } else {
+                  console.log("🔄 Redirecting CLIENT to /pricing (subscription check failed)");
+                  window.location.href = "/pricing";
+                }
+              } catch (error) {
+                console.error("Error checking subscription:", error);
+                console.log("🔄 Redirecting CLIENT to /pricing (error)");
+                window.location.href = "/pricing";
               }
-              window.location.href = "/client-dashboard";
               return;
             }
             if (user?.role === "DEVELOPER") {
@@ -195,8 +232,8 @@ export default function SignInClient() {
   };
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setServerError(null); // Reset error state
+    setIsGoogleLoading(true);
+    setServerError(null);
 
     try {
       console.log("🔄 Starting Google sign in...");
@@ -215,7 +252,7 @@ export default function SignInClient() {
         } else {
           setServerError("Google sign in failed. Please try again.");
         }
-        setIsLoading(false);
+        setIsGoogleLoading(false);
         return;
       }
       
@@ -255,14 +292,28 @@ export default function SignInClient() {
               return;
             }
             if (user?.role === "CLIENT") {
-              // Check if user has saved form data
-              const savedFormData = sessionStorage.getItem('guestProjectForm');
-              if (savedFormData) {
-                console.log("🔄 Redirecting to /client-dashboard with saved form data");
-              } else {
-                console.log("🔄 Redirecting to /client-dashboard");
+              // Check if user has subscription - redirect to pricing if not, dashboard if yes
+              try {
+                const subRes = await fetch("/api/user/subscriptions", { cache: "no-store" });
+                if (subRes.ok) {
+                  const subData = await subRes.json();
+                  const hasSubscription = subData.subscriptions && subData.subscriptions.length > 0;
+                  if (hasSubscription) {
+                    console.log("🔄 Redirecting CLIENT to /client-dashboard (has subscription)");
+                    window.location.href = "/client-dashboard";
+                  } else {
+                    console.log("🔄 Redirecting CLIENT to /pricing (no subscription)");
+                    window.location.href = "/pricing";
+                  }
+                } else {
+                  console.log("🔄 Redirecting CLIENT to /pricing (subscription check failed)");
+                  window.location.href = "/pricing";
+                }
+              } catch (error) {
+                console.error("Error checking subscription:", error);
+                console.log("🔄 Redirecting CLIENT to /pricing (error)");
+                window.location.href = "/pricing";
               }
-              window.location.href = "/client-dashboard";
               return;
             }
             if (user?.role === "DEVELOPER") {
@@ -289,58 +340,168 @@ export default function SignInClient() {
       console.error("Google sign in error:", error);
       setServerError("An error occurred during Google sign in");
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-white">
-
+    <div className="bg-white">
       {/* Centered form */}
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex justify-center py-16">
           <div className="w-full max-w-md">
             {/* Header */}
-            <div className="mb-6">
-              <h1 className="text-3xl font-semibold text-gray-900">Sign in</h1>
+            <div className="mb-8">
+              <h1 className="text-3xl font-semibold text-gray-900 mb-2">Sign in</h1>
+              <p className="text-sm text-gray-600">Welcome back! Please enter your details.</p>
             </div>
 
             {/* Server Error Display */}
             {serverError && (
-              <div className="mb-4">
+              <div className="mb-6">
                 <ErrorDisplay error={serverError} onDismiss={() => setServerError(null)} />
               </div>
             )}
 
-            {/* Inputs */}
-            <div className="space-y-3">
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter email"
-                {...register("email")}
-                className={`${errors.email ? "border-red-500" : ""} appearance-none !bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
-                style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
-              />
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter password"
-                {...register("password")}
-                className={`${errors.password ? "border-red-500" : ""} appearance-none !bg-white focus:!bg-white text-black placeholder-gray-400 border-0 focus-visible:ring-2 focus:ring-2 focus-visible:ring-black focus-visible:ring-offset-0 transition-shadow focus:shadow-md caret-black`}
-                style={{ WebkitBoxShadow: "0 0 0 1000px white inset", boxShadow: "0 0 0 1000px white inset", WebkitTextFillColor: "#000" }}
-              />
-            </div>
+            {/* Form */}
+            <TooltipProvider>
+              <form onSubmit={handleSubmit(handleEmailSignIn)} className="space-y-4">
+                {/* Email Input */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      Email
+                    </label>
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                          aria-label="Email help"
+                        >
+                          <HelpCircle className="w-4 h-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs bg-gray-900 text-white p-3">
+                        <p className="text-sm">
+                          Enter the email address you used to create your account. 
+                          <br />
+                          <span className="text-gray-300">Example: name@example.com</span>
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    autoFocus
+                    autoComplete="email"
+                    tabIndex={1}
+                    {...register("email")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !errors.email && !errors.password && isValid) {
+                        e.preventDefault();
+                        handleSubmit(handleEmailSignIn)();
+                      }
+                    }}
+                    className={`h-12 ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"} transition-all hover:border-gray-400`}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-600">{errors.email.message}</p>
+                  )}
+                </div>
 
-            {/* Continue button */}
-            <Button
-              type="button"
-              onClick={handleSubmit(handleEmailSignIn)}
-              disabled={!isValid || isLoading}
-              className="w-full mt-4 bg-black text-white hover:bg-black/90 disabled:opacity-100"
-            >
-              {isLoading ? "Loading..." : "Continue"}
-            </Button>
+                {/* Password Input */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                        Password
+                      </label>
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                            aria-label="Password help"
+                          >
+                            <HelpCircle className="w-4 h-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs bg-gray-900 text-white p-3">
+                          <p className="text-sm">
+                            Enter the password you created when you signed up. 
+                            <br />
+                            <span className="text-gray-300">Click the eye icon to show/hide your password.</span>
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Link 
+                      href="/auth/forgot-password" 
+                      className="text-sm text-gray-600 hover:text-black transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    tabIndex={2}
+                    {...register("password")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !errors.email && !errors.password && isValid) {
+                        e.preventDefault();
+                        handleSubmit(handleEmailSignIn)();
+                      }
+                    }}
+                    className={`h-12 pr-12 ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"} transition-all hover:border-gray-400`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-600">{errors.password.message}</p>
+                )}
+              </div>
+
+              {/* Continue button */}
+              <Button
+                type="submit"
+                disabled={isLoading}
+                tabIndex={3}
+                className="w-full h-12 mt-6 bg-black text-white hover:bg-black/90 active:scale-[0.98] active:bg-black/95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : (
+                  "Continue"
+                )}
+              </Button>
+            </form>
+            </TooltipProvider>
 
             {/* Divider */}
             <div className="flex items-center my-6">
@@ -352,16 +513,46 @@ export default function SignInClient() {
             {/* Google button */}
             <Button
               onClick={handleGoogleSignIn}
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               variant="outline"
-              className="w-full bg-gray-100 hover:bg-gray-100 text-gray-800 border-0"
+              type="button"
+              className="w-full h-12 bg-white hover:bg-gray-50 active:scale-[0.98] active:bg-gray-100 text-gray-900 border border-gray-300 rounded-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
             >
               {mounted ? (
-                <Icons.google className="w-4 h-4 mr-2" />
+                <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
               ) : (
-                <div className="w-4 h-4 mr-2 bg-current rounded" />
+                <div className="w-5 h-5 mr-3 bg-current rounded" />
               )}
-              Continue with Google
+              <span className="font-medium">
+                {isGoogleLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Connecting...
+                  </span>
+                ) : (
+                  "Continue with Google"
+                )}
+              </span>
             </Button>
 
             {/* Sign up section */}
@@ -381,122 +572,6 @@ export default function SignInClient() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-black text-white mt-16">
-        <div className="container mx-auto px-4 sm:px-6 py-12">
-          <div className="mb-10">
-            <img 
-              src="/images/home/clervelogo.png" 
-              alt="Clevrs" 
-              className="h-8 w-auto mb-2"
-            />
-            <a href="/help" className="mt-2 inline-block underline text-sm text-gray-300">Visit Help Center</a>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8 text-gray-300">
-            <div>
-              <h4 className="font-semibold text-white mb-3">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:underline">About us</a></li>
-                <li><a href="#" className="hover:underline">Our offerings</a></li>
-                <li><a href="#" className="hover:underline">Newsroom</a></li>
-                <li><a href="#" className="hover:underline">Investors</a></li>
-                <li><a href="#" className="hover:underline">Careers</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-3">Products</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:underline">Client</a></li>
-                <li><a href="#" className="hover:underline">Freelancer</a></li>
-                <li><a href="#" className="hover:underline">Pricing</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-3">Global citizenship</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:underline">Safety</a></li>
-                <li><a href="#" className="hover:underline">Sustainability</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-3">Travel</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:underline">Reserve</a></li>
-                <li><a href="#" className="hover:underline">Airports</a></li>
-                <li><a href="#" className="hover:underline">Cities</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-gray-400 text-sm">
-            <div className="flex items-center gap-6 text-white">
-              {/* Facebook */}
-              <a href="#" aria-label="Facebook" className="hover:opacity-80 transition-opacity">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </a>
-              
-              {/* X (Twitter) */}
-              <a href="#" aria-label="X" className="hover:opacity-80 transition-opacity">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
-              </a>
-              
-              {/* YouTube */}
-              <a href="#" aria-label="YouTube" className="hover:opacity-80 transition-opacity">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-              </a>
-              
-              {/* LinkedIn */}
-              <a href="#" aria-label="LinkedIn" className="hover:opacity-80 transition-opacity">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-              </a>
-              
-              {/* Instagram */}
-              <a href="#" aria-label="Instagram" className="hover:opacity-80 transition-opacity">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987 6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.323-1.297C4.198 14.895 3.708 13.744 3.708 12.447s.49-2.448 1.418-3.323c.875-.807 2.026-1.297 3.323-1.297s2.448.49 3.323 1.297c.928.875 1.418 2.026 1.418 3.323s-.49 2.448-1.418 3.244c-.875.807-2.026 1.297-3.323 1.297zm7.83-9.781c-.49 0-.928-.175-1.297-.49-.368-.315-.49-.753-.49-1.243 0-.49.122-.928.49-1.243.369-.315.807-.49 1.297-.49s.928.175 1.297.49c.368.315.49.753.49 1.243 0 .49-.122.928-.49 1.243-.369.315-.807.49-1.297.49z"/>
-                </svg>
-              </a>
-            </div>
-          </div>
-          
-          {/* Bottom Section - Apps, Copyright, and Legal Links */}
-          <div className="mt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            {/* Left Side - Apps and Copyright */}
-            <div className="flex flex-col gap-4">
-              {/* Apps Section */}
-              <div className="flex justify-start">
-                <a href="#" className="inline-block">
-                  <img 
-                    src="/images/home/picgoapp.png" 
-                    alt="Download on Google Play and App Store" 
-                    className="h-12 w-auto"
-                  />
-                </a>
-              </div>
-              
-              {/* Copyright - Bottom Left */}
-              <p className="text-gray-400 text-sm">© 2025 Clevrs</p>
-            </div>
-
-            {/* Right Side - Privacy, Accessibility, Terms */}
-            <div className="flex items-center gap-6 text-sm">
-              <a href="#" className="hover:underline text-gray-400">Privacy</a>
-              <a href="#" className="hover:underline text-gray-400">Accessibility</a>
-              <a href="#" className="hover:underline text-gray-400">Terms</a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </main>
+    </div>
   );
 }

@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      hasPassword: !!user.passwordHash, // Boolean to indicate if user has a password set
       // Include profile-specific fields
       ...(user.clientProfile && {
         companyName: user.clientProfile.companyName,

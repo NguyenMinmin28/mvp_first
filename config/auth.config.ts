@@ -202,7 +202,7 @@ export default {
         if (!existingUser) {
           if (DEBUG_AUTH) console.log("🔄 Google user not found, creating new user:", user.email)
           
-          // Tự động tạo user mới với Google account
+          // Tự động tạo user mới với Google account (without password - user will set it later)
           const newUser = await prisma.$transaction(async (tx) => {
             // Create user with Google account
             const newUserRecord = await tx.user.create({
@@ -212,6 +212,7 @@ export default {
                 image: user.image,
                 emailVerified: new Date(), // Google accounts are pre-verified
                 isProfileCompleted: false, // User needs to complete profile
+                // No passwordHash - user will be prompted to set password
               },
             });
 
@@ -260,6 +261,7 @@ export default {
           try {
             await prisma.user.update({ where: { id: newUser.id }, data: { lastLoginAt: new Date() } });
           } catch {}
+          // New user created - will be redirected to setup-password page
           return true
         }
 

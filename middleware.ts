@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 // Define public routes that don't require authentication
 const PUBLIC_ROUTES = [
   "/", "/pricing", "/about", "/blog", "/ceo-letter", "/help",
-  "/auth/signin", "/auth/signup", 
+  "/auth/signin", "/auth/signup", "/auth/setup-password",
   "/role-selection", "/ideas", 
   "/how-clevrs-work", "/newsroom", "/investors",
   "/services"
@@ -51,20 +51,42 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if the route is public and bypass immediately to avoid any work
-  const isPublic = PUBLIC_ROUTES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
-  if (isPublic) {
-    return NextResponse.next();
-  }
-
-  // Get token from cookie first
+  // Get token from cookie first (need to check token before checking public routes)
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: process.env.NODE_ENV === "production",
   });
+
+  // Check if the route is public
+  const isPublic = PUBLIC_ROUTES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+  
+  // If user is authenticated but has no role, they must select role first
+  // Block access to public pages (except role-selection and auth pages)
+  if (token && !token?.role && isPublic) {
+    const allowedPagesWithoutRole = [
+      "/role-selection",
+      "/auth/signin",
+      "/auth/signup",
+      "/auth/setup-password",
+    ];
+    const isAllowedPage = allowedPagesWithoutRole.some(
+      (page) => pathname === page || pathname.startsWith(page + "/")
+    );
+    if (!isAllowedPage) {
+      if (DEBUG_MW) console.log("🔍 Authenticated user without role trying to access public page, redirecting to role-selection");
+      return NextResponse.redirect(new URL("/role-selection", request.url));
+    }
+  }
+  
+  // Allow public routes if user is not authenticated OR has a role
+  if (isPublic && (!token || token?.role)) {
+    return NextResponse.next();
+  }
+  
+  // If public route but user has no role and it's not an allowed page, already redirected above
 
   if (DEBUG_MW) {
     console.log("🔍 Middleware - Pathname:", pathname, "Token:", !!token, "Role:", token?.role, "AdminStatus:", token?.adminApprovalStatus);
@@ -81,13 +103,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Allow setup-password page for authenticated users (they need to set password)
+  if (token && pathname.startsWith("/auth/setup-password")) {
+    if (DEBUG_MW) console.log("🔍 Authenticated user accessing setup-password, allowing");
+    return NextResponse.next();
+  }
+
   // Authenticated trying to access auth pages -> redirect to appropriate dashboard
   if (token && (pathname.startsWith("/auth/signin") || pathname.startsWith("/auth/signup"))) {
     if (DEBUG_MW) console.log("🔍 Authenticated user on auth page, redirecting to appropriate dashboard");
     if (token.role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin", request.url));
     } else if (token.role === "CLIENT") {
-      return NextResponse.redirect(new URL("/client-dashboard", request.url));
+      // Redirect CLIENT to pricing page - it will check subscription and redirect to dashboard if needed
+      return NextResponse.redirect(new URL("/pricing", request.url));
     } else if (token.role === "DEVELOPER") {
       if (token?.adminApprovalStatus === "approved") {
         return NextResponse.redirect(new URL("/dashboard-user", request.url));
@@ -123,12 +152,35 @@ export async function middleware(request: NextRequest) {
   if (token) {
     if (DEBUG_MW) console.log("🔍 Authenticated user detected");
     
-    // If user has no role, redirect to role selection
+    // If user has no role, force them to select role first
+    // Only allow access to role-selection, auth pages, and setup-password
     if (!token?.role) {
-      if (DEBUG_MW) console.log("🔍 User has no role, redirecting to role selection");
-      if (pathname !== "/role-selection") {
+      if (DEBUG_MW) console.log("🔍 User has no role, checking if they can access current page");
+      
+      // Allow only these pages when user has no role:
+      const allowedPagesWithoutRole = [
+        "/role-selection",
+        "/auth/signin",
+        "/auth/signup",
+        "/auth/setup-password",
+      ];
+      
+      const isAllowedPage = allowedPagesWithoutRole.some(
+        (page) => pathname === page || pathname.startsWith(page + "/")
+      );
+      
+      if (!isAllowedPage) {
+        if (DEBUG_MW) console.log("🔍 User has no role, redirecting to role selection from:", pathname);
         return NextResponse.redirect(new URL("/role-selection", request.url));
       }
+      
+      if (DEBUG_MW) console.log("🔍 User has no role but accessing allowed page, allowing");
+      return NextResponse.next();
+    }
+    
+    // Allow /pricing page for CLIENT users (they need to select a plan)
+    if (pathname === "/pricing" && token.role === "CLIENT") {
+      if (DEBUG_MW) console.log("🔍 CLIENT accessing /pricing page, allowing");
       return NextResponse.next();
     }
     
@@ -140,8 +192,10 @@ export async function middleware(request: NextRequest) {
         if (DEBUG_MW) console.log("🔍 Redirecting ADMIN to /admin");
         return NextResponse.redirect(new URL("/admin", request.url));
       } else if (token.role === "CLIENT") {
-        if (DEBUG_MW) console.log("🔍 Redirecting CLIENT to /client-dashboard");
-        return NextResponse.redirect(new URL("/client-dashboard", request.url));
+        // Redirect CLIENT to pricing page - it will check subscription and redirect to dashboard if needed
+        if (DEBUG_MW) console.log("🔍 Redirecting CLIENT from home page to /pricing");
+        // Let the /pricing page handle the subscription check, redirect to dashboard from there
+        return NextResponse.redirect(new URL("/pricing", request.url));
       } else if (token.role === "DEVELOPER") {
         // Developer logic
         if (!token?.isProfileCompleted) {
@@ -182,5 +236,7 @@ export const config = {
     "/onboarding/:path*",
     "/role-selection",
     "/role-selection/:path*",
+    "/auth/setup-password",
+    "/", // Include home page in matcher
   ],
 };
