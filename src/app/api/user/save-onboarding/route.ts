@@ -53,19 +53,37 @@ export async function POST(request: NextRequest) {
       }
 
       // Update developer profile scalars (use nullish coalescing so 0/false aren't lost)
+      const updateData: any = {
+        bio: body.bio ?? existingProfile.bio,
+        experienceYears: body.experienceYears ?? existingProfile.experienceYears,
+        level: body.level ?? existingProfile.level,
+        linkedinUrl: body.linkedinUrl ?? existingProfile.linkedinUrl,
+        portfolioLinks: body.portfolioLinks ?? existingProfile.portfolioLinks,
+        whatsappNumber: body.whatsappNumber ?? existingProfile.whatsappNumber,
+        whatsappVerified: body.whatsappVerified ?? existingProfile.whatsappVerified,
+        adminApprovalStatus: body.adminApprovalStatus ?? existingProfile.adminApprovalStatus,
+        updatedAt: new Date(),
+      };
+
+      // Store roles if provided (preserve existing if not provided)
+      if (Array.isArray(body.roles)) {
+        updateData.roles = body.roles;
+      } else {
+        // Preserve existing roles if not provided in this update
+        updateData.roles = existingProfile.roles || [];
+      }
+
+      // Store languages if provided (preserve existing if not provided)
+      if (Array.isArray(body.languages)) {
+        updateData.languages = body.languages.length > 0 ? body.languages : null;
+      } else {
+        // Preserve existing languages if not provided in this update
+        updateData.languages = existingProfile.languages || null;
+      }
+
       const updatedProfile = await tx.developerProfile.update({
         where: { userId },
-        data: {
-          bio: body.bio ?? existingProfile.bio,
-          experienceYears: body.experienceYears ?? existingProfile.experienceYears,
-          level: body.level ?? existingProfile.level,
-          linkedinUrl: body.linkedinUrl ?? existingProfile.linkedinUrl,
-          portfolioLinks: body.portfolioLinks ?? existingProfile.portfolioLinks,
-          whatsappNumber: body.whatsappNumber ?? existingProfile.whatsappNumber,
-          whatsappVerified: body.whatsappVerified ?? existingProfile.whatsappVerified,
-          adminApprovalStatus: body.adminApprovalStatus ?? existingProfile.adminApprovalStatus,
-          updatedAt: new Date(),
-        },
+        data: updateData,
       });
 
       // If skills provided as an array of strings, upsert them and link to developer

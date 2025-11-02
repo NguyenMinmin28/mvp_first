@@ -7,6 +7,7 @@ import { Label } from "@/ui/components/label";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { ArrowLeft } from "lucide-react";
 
 export default function AgreementAndSubmitStep() {
   const router = useRouter();
@@ -83,8 +84,21 @@ export default function AgreementAndSubmitStep() {
             <Label>I confirm the uploaded work is mine</Label>
           </label>
 
-          <div className="pt-2">
-            <Button className="min-w-28" disabled={!agreeTerms || !confirmOwnership || submitting} onClick={handleSubmit}>
+          <div className="pt-2 flex flex-col-reverse sm:flex-row gap-3">
+            <Button 
+              variant="outline"
+              className="flex-1 sm:flex-initial min-w-28" 
+              onClick={() => router.push("/onboarding/freelancer/verification")}
+              disabled={submitting}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button 
+              className="flex-1 sm:flex-initial min-w-28" 
+              disabled={!agreeTerms || !confirmOwnership || submitting} 
+              onClick={handleSubmit}
+            >
               {submitting ? "Submitting..." : "Finish"}
             </Button>
           </div>

@@ -6,6 +6,9 @@ import {
   WhatsAppService,
 } from "@/core/services/whatsapp.service";
 import { OtpService } from "@/core/services/otp.service";
+import { prisma } from "@/core/database/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/features/auth/auth";
 
 export async function POST(request: NextRequest) {
   console.log("🚀 API: WhatsApp OTP endpoint called");
@@ -54,6 +57,38 @@ export async function POST(request: NextRequest) {
             "Invalid phone number format. Please use international format (+country code)",
         },
         { status: 400 }
+      );
+    }
+
+    // Check if phone number is already verified by another user
+    // Get current user session if available (for updating existing user's phone)
+    const session = await getServerSession(authOptions);
+    const currentUserId = session?.user?.id;
+
+    // Check in User.phoneE164
+    const existingUserByPhone = await prisma.user.findFirst({
+      where: {
+        phoneE164: phoneE164,
+        isPhoneVerified: true,
+        ...(currentUserId ? { id: { not: currentUserId } } : {}),
+      },
+    });
+
+    // Check in DeveloperProfile.whatsappNumber
+    const existingDeveloperByPhone = await prisma.developerProfile.findFirst({
+      where: {
+        whatsappNumber: phoneE164,
+        whatsappVerified: true,
+        ...(currentUserId ? { userId: { not: currentUserId } } : {}),
+      },
+    });
+
+    if (existingUserByPhone || existingDeveloperByPhone) {
+      return NextResponse.json(
+        {
+          error: "This phone number is already verified and associated with another account. Please use a different phone number.",
+        },
+        { status: 409 } // Conflict
       );
     }
 

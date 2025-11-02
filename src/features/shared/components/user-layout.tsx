@@ -30,6 +30,9 @@ export function UserLayout({
   user,
   showFooter = true,
 }: UserLayoutProps) {
+  // Calculate header height: 64px (h-16) + 32px (welcome bar if authenticated) = 96px when authenticated, 64px otherwise
+  const headerHeight = user ? '96px' : '64px';
+  
   return (
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col bg-white w-full m-0 p-0 overflow-x-hidden">
@@ -37,7 +40,7 @@ export function UserLayout({
         <Header user={user} />
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col main-content dashboard-main">{children}</main>
+        <main className="flex-1 flex flex-col main-content dashboard-main" style={{ paddingTop: headerHeight }}>{children}</main>
 
         {/* Footer */}
         {showFooter && (

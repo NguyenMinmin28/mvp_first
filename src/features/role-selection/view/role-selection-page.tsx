@@ -327,7 +327,7 @@ export default function CompleteProfilePage() {
       </Dialog>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1" style={{ paddingTop: session?.user ? '96px' : '64px' }}>
         <RoleSelection
           onRoleSelect={handleRoleSelect}
           currentRole={selectedRole || undefined}

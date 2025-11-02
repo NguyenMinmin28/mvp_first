@@ -194,10 +194,14 @@ export default function InformationTab({ userRole }: InformationTabProps) {
           setShowOtpInput(true);
           setOtpCode("");
         } else {
+          setShowOtpInput(false); // Don't show OTP input if there's an error
+          setOtpCode(""); // Clear OTP code
           throw new Error(result.error || "Failed to send verification code");
         }
       } else {
         const errorData = await response.json();
+        setShowOtpInput(false); // Don't show OTP input if there's an error
+        setOtpCode(""); // Clear OTP code
         throw new Error(errorData.error || "Failed to send verification code");
       }
     } catch (error) {

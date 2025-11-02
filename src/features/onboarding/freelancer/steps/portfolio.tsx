@@ -4,6 +4,7 @@ import { Button } from "@/ui/components/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 import { PortfolioGrid } from "../components/portfolio-grid";
 
 interface PortfolioItem {
@@ -60,10 +61,6 @@ export default function PortfolioStep() {
     }
   };
 
-  const handleSkip = () => {
-    router.push("/onboarding/freelancer/verification");
-  };
-
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl md:text-4xl font-extrabold">Portfolio</h1>
@@ -73,20 +70,22 @@ export default function PortfolioStep() {
         onPortfoliosChange={handlePortfoliosChange}
       />
 
-      <div className="pt-4 flex gap-3">
+      <div className="pt-4 flex flex-col-reverse sm:flex-row gap-3">
         <Button 
-          className="min-w-28" 
+          variant="outline"
+          className="flex-1 sm:flex-initial min-w-28" 
+          onClick={() => router.push("/onboarding/freelancer/skills-and-roles")}
+          disabled={isLoading}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        <Button 
+          className="flex-1 sm:flex-initial min-w-28" 
           onClick={handleNext}
           disabled={isLoading}
         >
           {isLoading ? "Saving..." : "Next"}
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={handleSkip}
-          disabled={isLoading}
-        >
-          Skip
         </Button>
       </div>
     </div>

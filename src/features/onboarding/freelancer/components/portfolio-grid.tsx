@@ -24,8 +24,8 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
   const [portfolios, setPortfolios] = useState<PortfolioItem[]>(() => {
     console.log('🏗️ Initializing PortfolioGrid with:', initialPortfolios);
     
-    // Initialize with 5 empty slots
-    const slots = Array.from({ length: 5 }, (_, index) => {
+    // Initialize with 6 empty slots
+    const slots = Array.from({ length: 6 }, (_, index) => {
       const existing = initialPortfolios[index];
       return existing || {
         title: "",
@@ -62,8 +62,8 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
       if (currentString !== newString) {
         console.log('🔄 Updating portfolios from initialPortfolios:', initialPortfolios);
         
-        // Create 5 slots, filling with existing data where available
-        const slots = Array.from({ length: 5 }, (_, index) => {
+        // Create 6 slots, filling with existing data where available
+        const slots = Array.from({ length: 6 }, (_, index) => {
           // Find portfolio at this index position
           const existing = initialPortfolios.find((p, i) => i === index) || 
                           initialPortfolios[index] || 
@@ -176,7 +176,7 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Portfolio</h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Showcase up to 5 of your best projects to attract clients. Click on any slot to add or edit your portfolio projects.
+          Showcase up to 6 of your best projects to attract clients. Click on any slot to add or edit your portfolio projects.
         </p>
       </div>
 
@@ -195,7 +195,7 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
       <div className="text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full text-sm text-gray-600">
           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          {activeSlotsCount} of 5 portfolio slots used
+          {activeSlotsCount} of 6 portfolio slots used
         </div>
       </div>
 

@@ -265,15 +265,15 @@ model User {
   ideaReports        IdeaReport[]        @relation("IdeaReportReporter")
 
   // Service Relations
-  serviceLeads       ServiceLead[]       @relation("ClientLeads")
-  serviceFavorites   ServiceFavorite[]
-  serviceLikes       ServiceLike[]
-  notifications      NotificationUser[]
+  serviceLeads     ServiceLead[]      @relation("ClientLeads")
+  serviceFavorites ServiceFavorite[]
+  serviceLikes     ServiceLike[]
+  notifications    NotificationUser[]
 
   // Follow Relations
-  follows            Follow[]            @relation("UserFollows")
-  followedBy         Follow[]            @relation("UserFollowedBy")
-  followNotifications FollowNotification[] @relation("UserFollowNotifications")
+  follows                      Follow[]             @relation("UserFollows")
+  followedBy                   Follow[]             @relation("UserFollowedBy")
+  followNotifications          FollowNotification[] @relation("UserFollowNotifications")
   developerFollowNotifications FollowNotification[] @relation("DeveloperFollowNotifications")
 
   @@index([lastLoginAt])
@@ -347,13 +347,13 @@ model ClientProfile {
   location    String? // Country/City
   photoUrl    String? // Profile photo URL
 
-  currentSubscriptionId String?              @db.ObjectId
-  subscriptions         Subscription[]       @relation("ClientSubscriptions")
-  payments              Payment[]            @relation("ClientPayments")
-  projects              Project[]            @relation("ClientProjects")
-  contactReveals        ContactRevealEvent[] @relation("ClientContactReveals")
-  favoriteDevelopers    FavoriteDeveloper[]  @relation("ClientFavorites")
-  contactGrants         ContactGrant[]       @relation("ClientContactGrants")
+  currentSubscriptionId String?               @db.ObjectId
+  subscriptions         Subscription[]        @relation("ClientSubscriptions")
+  payments              Payment[]             @relation("ClientPayments")
+  projects              Project[]             @relation("ClientProjects")
+  contactReveals        ContactRevealEvent[]  @relation("ClientContactReveals")
+  favoriteDevelopers    FavoriteDeveloper[]   @relation("ClientFavorites")
+  contactGrants         ContactGrant[]        @relation("ClientContactGrants")
   candidates            AssignmentCandidate[] @relation("ClientCandidates")
 
   createdAt DateTime @default(now())
@@ -562,6 +562,10 @@ model DeveloperProfile {
   hourlyRateUsd   Int? // USD per hour
   // Single-file resume/CV URL (PDF/DOC, <=5MB from UI)
   resumeUrl       String?
+  // Roles that the developer can take on
+  roles           String[] // e.g., ["Frontend Developer", "Backend Developer"]
+  // Language proficiency: array of objects stored as JSON
+  languages       Json? // Array of { language: string, proficiency: string }
 
   adminApprovalStatus AdminApprovalStatus @default(draft)
   approvedAt          DateTime?
@@ -577,17 +581,17 @@ model DeveloperProfile {
   reviewsSummary   ReviewsAggregate? @relation("DevProfileToReviews", fields: [reviewsSummaryId], references: [id])
 
   skills                  DeveloperSkill[]
-  contactRevealedProjects Project[]             @relation("ProjectContactReveals")
-  assignmentCandidates    AssignmentCandidate[] @relation("DeveloperCandidates")
-  contactReveals          ContactRevealEvent[]  @relation("DeveloperContactReveals")
-  rotationCursors         RotationCursor[]      @relation("DeveloperToRotationCursors")
-  favoritedBy             FavoriteDeveloper[]   @relation("DeveloperFavorites")
+  contactRevealedProjects Project[]              @relation("ProjectContactReveals")
+  assignmentCandidates    AssignmentCandidate[]  @relation("DeveloperCandidates")
+  contactReveals          ContactRevealEvent[]   @relation("DeveloperContactReveals")
+  rotationCursors         RotationCursor[]       @relation("DeveloperToRotationCursors")
+  favoritedBy             FavoriteDeveloper[]    @relation("DeveloperFavorites")
   services                Service[]
-  contactGrants           ContactGrant[]        @relation("DeveloperContactGrants")
+  contactGrants           ContactGrant[]         @relation("DeveloperContactGrants")
   portfolios              Portfolio[]
   activityLogs            DeveloperActivityLog[]
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
 
   @@index([level])
@@ -597,16 +601,16 @@ model DeveloperProfile {
 }
 
 model DeveloperActivityLog {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  developerId  String @db.ObjectId
-  developer    DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
-  
-  status       PresenceStatus
-  action       String // "login", "logout", "status_change"
-  timestamp    DateTime @default(now())
-  
-  createdAt    DateTime @default(now())
-  
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  developerId String           @db.ObjectId
+  developer   DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  status    PresenceStatus
+  action    String // "login", "logout", "status_change"
+  timestamp DateTime       @default(now())
+
+  createdAt DateTime @default(now())
+
   @@index([developerId, timestamp])
   @@index([timestamp])
 }
@@ -649,12 +653,44 @@ model Skill {
   updatedAt DateTime @updatedAt
 
   // Relations
-  developerSkills DeveloperSkill[] @relation("SkillToDeveloperSkills")
-  rotationCursors RotationCursor[] @relation("SkillToRotationCursors")
-  ideaSkills      IdeaSkill[] @relation("IdeaSkillSkills")
+  developerSkills DeveloperSkill[]        @relation("SkillToDeveloperSkills")
+  rotationCursors RotationCursor[]        @relation("SkillToRotationCursors")
+  ideaSkills      IdeaSkill[]             @relation("IdeaSkillSkills")
   serviceLinks    ServiceSkillOnService[]
 
   @@index([category], map: "idx_skills_category")
+}
+
+/**
+ * ===== Developer Roles =====
+ */
+model DeveloperRole {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  slug      String   @unique
+  category  String? // e.g., "Development", "Design", "Management"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category], map: "idx_developer_roles_category")
+  @@index([isActive], map: "idx_developer_roles_active")
+}
+
+/**
+ * ===== Languages =====
+ */
+model Language {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  slug      String   @unique
+  code      String? // ISO 639-1 language code (e.g., "en", "es", "fr")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code], map: "idx_languages_code")
+  @@index([isActive], map: "idx_languages_active")
 }
 
 /**
@@ -676,7 +712,7 @@ model Project {
   budgetMin       Float? // Legacy
   budgetMax       Float? // Legacy
   currency        String    @default("USD")
-  paymentMethod   String?   // "hourly" or "fixed"
+  paymentMethod   String? // "hourly" or "fixed"
   // Timeline (optional)
   expectedStartAt DateTime?
   expectedEndAt   DateTime?
@@ -702,7 +738,7 @@ model Project {
   // Relations
   assignmentBatches    AssignmentBatch[]       @relation("ProjectBatches")
   progressUpdates      ProjectProgressUpdate[] @relation("ProjectUpdates")
-  assignmentCandidates AssignmentCandidate[] @relation("ProjectCandidates")
+  assignmentCandidates AssignmentCandidate[]   @relation("ProjectCandidates")
   contactRevealEvents  ContactRevealEvent[]    @relation("ProjectContactReveals")
   reviews              Review[]                @relation("ProjectReviews")
   contactGrants        ContactGrant[]          @relation("ProjectContactGrants")
@@ -773,17 +809,17 @@ model AssignmentBatch {
 model AssignmentCandidate {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  batchId String?         @db.ObjectId // Can be null for direct messages
+  batchId String?          @db.ObjectId // Can be null for direct messages
   batch   AssignmentBatch? @relation("BatchCandidates", fields: [batchId], references: [id])
 
-  projectId String? @db.ObjectId // Can be null for direct messages
+  projectId String?  @db.ObjectId // Can be null for direct messages
   project   Project? @relation("ProjectCandidates", fields: [projectId], references: [id])
-  
+
   notificationLogs NotificationLog[] @relation("CandidateNotifications")
 
-  clientId    String?          @db.ObjectId // Can be null for system-generated candidates
-  client      ClientProfile?   @relation("ClientCandidates", fields: [clientId], references: [id])
-  
+  clientId String?        @db.ObjectId // Can be null for system-generated candidates
+  client   ClientProfile? @relation("ClientCandidates", fields: [clientId], references: [id])
+
   developerId String           @db.ObjectId
   developer   DeveloperProfile @relation("DeveloperCandidates", fields: [developerId], references: [id])
 
@@ -801,9 +837,9 @@ model AssignmentCandidate {
   invalidatedAt   DateTime? // When batch replaced
 
   // Manual invite fields
-  source         BatchType @default(AUTO_ROTATION)
-  clientMessage  String?   // Message from client for manual invites
-  metadata       Json?     // Additional data like budget, description, etc.
+  source        BatchType @default(AUTO_ROTATION)
+  clientMessage String? // Message from client for manual invites
+  metadata      Json? // Additional data like budget, description, etc.
 
   // Removed unique constraint on (batchId, developerId) because Mongo treats null as a value
   // which caused duplicate key errors for legacy rows with batchId = null.
@@ -823,20 +859,20 @@ model AssignmentCandidate {
  * ===== Contact Grant System =====
  */
 model ContactGrant {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  projectId    String?  @db.ObjectId // grant tied to project (preferred), can be null for package/other permissions
-  clientId     String   @db.ObjectId
-  developerId  String   @db.ObjectId
-  allowEmail   Boolean  @default(true)
-  allowPhone   Boolean  @default(true)
-  allowWhatsApp Boolean @default(true)
-  reason       ContactGrantReason
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime? // null = permanent
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  projectId     String?            @db.ObjectId // grant tied to project (preferred), can be null for package/other permissions
+  clientId      String             @db.ObjectId
+  developerId   String             @db.ObjectId
+  allowEmail    Boolean            @default(true)
+  allowPhone    Boolean            @default(true)
+  allowWhatsApp Boolean            @default(true)
+  reason        ContactGrantReason
+  createdAt     DateTime           @default(now())
+  expiresAt     DateTime? // null = permanent
 
   // Relations
-  project   Project? @relation("ProjectContactGrants", fields: [projectId], references: [id])
-  client    ClientProfile @relation("ClientContactGrants", fields: [clientId], references: [id])
+  project   Project?         @relation("ProjectContactGrants", fields: [projectId], references: [id])
+  client    ClientProfile    @relation("ClientContactGrants", fields: [clientId], references: [id])
   developer DeveloperProfile @relation("DeveloperContactGrants", fields: [developerId], references: [id])
   viewLogs  ContactViewLog[]
 
@@ -848,13 +884,13 @@ model ContactGrant {
 }
 
 model ContactViewLog {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  grantId      String   @db.ObjectId
-  viewerId     String   @db.ObjectId // client id
-  developerId  String   @db.ObjectId
-  projectId    String?  @db.ObjectId
-  context      String?  // page/url
-  viewedAt     DateTime @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  grantId     String   @db.ObjectId
+  viewerId    String   @db.ObjectId // client id
+  developerId String   @db.ObjectId
+  projectId   String?  @db.ObjectId
+  context     String? // page/url
+  viewedAt    DateTime @default(now())
 
   // Relations
   grant ContactGrant @relation(fields: [grantId], references: [id])
@@ -968,7 +1004,7 @@ model RotationCursor {
 
   lastDeveloperId String?           @db.ObjectId // Legacy field for backward compatibility
   lastDeveloper   DeveloperProfile? @relation("DeveloperToRotationCursors", fields: [lastDeveloperId], references: [id])
-  
+
   lastDeveloperIds String[] @default([]) // New field for multiple developers
 
   updatedAt DateTime @updatedAt
@@ -985,13 +1021,13 @@ model RotationCursor {
 model NotificationLog {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  candidateId String @db.ObjectId
+  candidateId String              @db.ObjectId
   candidate   AssignmentCandidate @relation("CandidateNotifications", fields: [candidateId], references: [id])
 
-  type String // "project_assignment", "reminder", "deadline_warning"
-  status String // "sent", "delivered", "failed"
-  sentAt DateTime
-  deliveredAt DateTime?
+  type         String // "project_assignment", "reminder", "deadline_warning"
+  status       String // "sent", "delivered", "failed"
+  sentAt       DateTime
+  deliveredAt  DateTime?
   errorMessage String?
 
   createdAt DateTime @default(now())
@@ -1018,18 +1054,18 @@ model Notification {
 }
 
 model NotificationUser {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  notificationId String   @db.ObjectId
-  userId         String   @db.ObjectId
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  notificationId String    @db.ObjectId
+  userId         String    @db.ObjectId
   readAt         DateTime?
   archivedAt     DateTime?
 
   notification Notification @relation(fields: [notificationId], references: [id])
   user         User         @relation(fields: [userId], references: [id])
 
+  @@unique([notificationId, userId], map: "uq_notifuser_notification_user")
   @@index([userId, readAt], map: "idx_notifuser_user_read")
   @@index([userId, archivedAt], map: "idx_notifuser_user_archived")
-  @@unique([notificationId, userId], map: "uq_notifuser_notification_user")
 }
 
 /**
@@ -1049,7 +1085,7 @@ model Idea {
 
   status    IdeaStatus     @default(PENDING)
   adminTags IdeaAdminTag[]
-  
+
   // Thêm fields mới
   rejectedReason String? // lý do từ chối
   isSpotlight    Boolean @default(false) // có phải spotlight tuần này không
@@ -1070,12 +1106,12 @@ model Idea {
   updatedAt DateTime @updatedAt
 
   // 1-n quan hệ "ảo" qua khoá ngoại
-  likes     IdeaLike[]
-  comments  IdeaComment[]
-  bookmarks IdeaBookmark[]
-  connects  IdeaConnect[]
-  reports   IdeaReport[]
-  skills    IdeaSkill[] @relation("IdeaSkills")
+  likes      IdeaLike[]
+  comments   IdeaComment[]
+  bookmarks  IdeaBookmark[]
+  connects   IdeaConnect[]
+  reports    IdeaReport[]
+  skills     IdeaSkill[]     @relation("IdeaSkills")
   spotlights IdeaSpotlight[] @relation("IdeaSpotlights")
 
   @@index([status, createdAt(sort: Desc)])
@@ -1111,17 +1147,17 @@ model IdeaBookmark {
 }
 
 model IdeaComment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  ideaId    String   @db.ObjectId
-  userId    String   @db.ObjectId
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  ideaId    String    @db.ObjectId
+  userId    String    @db.ObjectId
   content   String
-  parentId  String?  @db.ObjectId // hỗ trợ reply theo luồng
-  isHelpful Boolean  @default(false) // admin mark helpful
+  parentId  String?   @db.ObjectId // hỗ trợ reply theo luồng
+  isHelpful Boolean   @default(false) // admin mark helpful
   deletedAt DateTime? // soft delete
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  User      User     @relation(fields: [userId], references: [id])
-  Idea      Idea     @relation(fields: [ideaId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  User      User      @relation(fields: [userId], references: [id])
+  Idea      Idea      @relation(fields: [ideaId], references: [id])
 
   @@index([ideaId, createdAt(sort: Desc)])
   @@index([parentId])
@@ -1146,16 +1182,16 @@ model IdeaConnect {
 }
 
 model IdeaReport {
-  id         String        @id @default(auto()) @map("_id") @db.ObjectId
-  ideaId     String        @db.ObjectId
-  reporterId String        @db.ObjectId
-  reason     String        // lý do report
-  status     ReportStatus  @default(OPEN)
-  adminNote  String?       // ghi chú admin
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  ideaId     String       @db.ObjectId
+  reporterId String       @db.ObjectId
+  reason     String // lý do report
+  status     ReportStatus @default(OPEN)
+  adminNote  String? // ghi chú admin
   resolvedAt DateTime?
-  createdAt  DateTime      @default(now())
-  User       User          @relation("IdeaReportReporter", fields: [reporterId], references: [id])
-  Idea       Idea          @relation(fields: [ideaId], references: [id])
+  createdAt  DateTime     @default(now())
+  User       User         @relation("IdeaReportReporter", fields: [reporterId], references: [id])
+  Idea       Idea         @relation(fields: [ideaId], references: [id])
 
   @@index([ideaId, createdAt(sort: Desc)])
   @@index([reporterId, createdAt(sort: Desc)])
@@ -1163,12 +1199,12 @@ model IdeaReport {
 }
 
 model IdeaSkill {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  ideaId   String @db.ObjectId
-  skillId  String @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ideaId    String   @db.ObjectId
+  skillId   String   @db.ObjectId
   createdAt DateTime @default(now())
-  Idea     Idea   @relation("IdeaSkills", fields: [ideaId], references: [id])
-  Skill    Skill  @relation("IdeaSkillSkills", fields: [skillId], references: [id])
+  Idea      Idea     @relation("IdeaSkills", fields: [ideaId], references: [id])
+  Skill     Skill    @relation("IdeaSkillSkills", fields: [skillId], references: [id])
 
   @@unique([ideaId, skillId])
   @@index([skillId])
@@ -1194,7 +1230,7 @@ model SparkPointLedger {
   ideaId    String?        @db.ObjectId
   type      SparkEventType
   points    Int            @default(0)
-  meta      Json?          // thông tin bổ sung (rank, reason, etc.)
+  meta      Json? // thông tin bổ sung (rank, reason, etc.)
   createdAt DateTime       @default(now())
   User      User           @relation(fields: [userId], references: [id])
 
@@ -1209,9 +1245,9 @@ model IdeaSpotlight {
   ideaId    String   @db.ObjectId
   rank      Int      @default(0)
   createdAt DateTime @default(now())
-  
+
   // Relations
-  Idea      Idea     @relation("IdeaSpotlights", fields: [ideaId], references: [id])
+  Idea Idea @relation("IdeaSpotlights", fields: [ideaId], references: [id])
 
   @@unique([weekStart, ideaId])
   @@index([weekStart, rank])
@@ -1242,7 +1278,7 @@ model Post {
   status      PostStatus @default(DRAFT)
   type        PostType   @default(ARTICLE)
   categoryId  String?    @db.ObjectId
-  tags        String[]   // Array of tag IDs
+  tags        String[] // Array of tag IDs
   authorId    String     @db.ObjectId
   views       Int        @default(0)
   clicks      Int        @default(0)
@@ -1253,9 +1289,9 @@ model Post {
   updatedAt   DateTime   @updatedAt
 
   // Relations
-  category   Category? @relation(fields: [categoryId], references: [id])
-  author     Author   @relation(fields: [authorId], references: [id])
-  comments   Comment[]
+  category Category? @relation(fields: [categoryId], references: [id])
+  author   Author    @relation(fields: [authorId], references: [id])
+  comments Comment[]
 
   @@index([status, publishedAt])
   @@index([categoryId])
@@ -1265,34 +1301,34 @@ model Post {
 }
 
 model Category {
-  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  slug        String @unique
+  slug        String   @unique
   description String?
   color       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  posts Post[]
+  posts        Post[]
   serviceLinks ServiceCategoryOnService[]
 }
 
 model Tag {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  slug      String @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String                @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  slug         String                @unique
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
   serviceLinks ServiceTagOnService[]
 }
 
 model Author {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   avatar    String?
   bio       String?
-  userId    String? @db.ObjectId // Link to existing user if applicable
+  userId    String?  @db.ObjectId // Link to existing user if applicable
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1304,19 +1340,19 @@ model Author {
 }
 
 model Comment {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
   content   String
-  authorId  String @db.ObjectId
-  postId    String @db.ObjectId
-  parentId  String? @db.ObjectId // For nested comments
+  authorId  String           @db.ObjectId
+  postId    String           @db.ObjectId
+  parentId  String?          @db.ObjectId // For nested comments
   status    ModerationStatus @default(published)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relations
-  post    Post   @relation(fields: [postId], references: [id])
-  author  Author @relation(fields: [authorId], references: [id])
-  parent  Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  post    Post      @relation(fields: [postId], references: [id])
+  author  Author    @relation(fields: [authorId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies Comment[] @relation("CommentReplies")
 
   @@index([postId])
@@ -1329,11 +1365,11 @@ model Comment {
  * ===== Favorite Developers =====
  */
 model FavoriteDeveloper {
-  id             String @id @default(auto()) @map("_id") @db.ObjectId
-  clientId       String @db.ObjectId
-  developerId    String @db.ObjectId
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  clientId    String   @db.ObjectId
+  developerId String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   client    ClientProfile    @relation("ClientFavorites", fields: [clientId], references: [id], onDelete: Cascade)
@@ -1348,11 +1384,11 @@ model FavoriteDeveloper {
  * ===== Follow System =====
  */
 model Follow {
-  id             String @id @default(auto()) @map("_id") @db.ObjectId
-  followerId     String @db.ObjectId // Client who follows
-  followingId    String @db.ObjectId // Developer being followed
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  followerId  String   @db.ObjectId // Client who follows
+  followingId String   @db.ObjectId // Developer being followed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   follower  User @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
@@ -1368,15 +1404,15 @@ model Follow {
  * ===== Follow Notifications =====
  */
 model FollowNotification {
-  id             String @id @default(auto()) @map("_id") @db.ObjectId
-  followerId     String @db.ObjectId // Client who follows
-  developerId    String @db.ObjectId // Developer being followed
-  type           String // "portfolio_update", "review_received", "availability_change", "idea_posted"
-  title          String
-  message        String
-  metadata       Json? // Additional data like ideaId, reviewId, etc.
-  isRead         Boolean @default(false)
-  createdAt      DateTime @default(now())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  followerId  String   @db.ObjectId // Client who follows
+  developerId String   @db.ObjectId // Developer being followed
+  type        String // "portfolio_update", "review_received", "availability_change", "idea_posted"
+  title       String
+  message     String
+  metadata    Json? // Additional data like ideaId, reviewId, etc.
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   // Relations
   follower  User @relation("UserFollowNotifications", fields: [followerId], references: [id], onDelete: Cascade)
@@ -1392,38 +1428,38 @@ model FollowNotification {
  * ===== Service Models =====
  */
 model Service {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  slug         String   @unique
-  title        String
-  shortDesc    String
-  description  String
-  coverUrl     String?
-  priceType    PriceType
-  priceMin     Int?
-  priceMax     Int?
-  deliveryDays Int?
-  revisions    Int?
-  status       ServiceStatus @default(DRAFT)
-  visibility   Visibility    @default(PUBLIC)
-  ratingAvg    Float         @default(0)
-  ratingCount  Int           @default(0)
-  views        Int           @default(0)
-  likesCount   Int           @default(0)
-  favoritesCount Int         @default(0)
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  slug           String        @unique
+  title          String
+  shortDesc      String
+  description    String
+  coverUrl       String?
+  priceType      PriceType
+  priceMin       Int?
+  priceMax       Int?
+  deliveryDays   Int?
+  revisions      Int?
+  status         ServiceStatus @default(DRAFT)
+  visibility     Visibility    @default(PUBLIC)
+  ratingAvg      Float         @default(0)
+  ratingCount    Int           @default(0)
+  views          Int           @default(0)
+  likesCount     Int           @default(0)
+  favoritesCount Int           @default(0)
 
-  developerId  String           @db.ObjectId
-  developer    DeveloperProfile @relation(fields: [developerId], references: [id])
+  developerId String           @db.ObjectId
+  developer   DeveloperProfile @relation(fields: [developerId], references: [id])
 
-  media        ServiceMedia[]
-  categories   ServiceCategoryOnService[]
-  skills       ServiceSkillOnService[]
-  tags         ServiceTagOnService[]
-  leads        ServiceLead[]       @relation("ServiceLeads")
-  favorites    ServiceFavorite[]
-  likes        ServiceLike[]
+  media      ServiceMedia[]
+  categories ServiceCategoryOnService[]
+  skills     ServiceSkillOnService[]
+  tags       ServiceTagOnService[]
+  leads      ServiceLead[]              @relation("ServiceLeads")
+  favorites  ServiceFavorite[]
+  likes      ServiceLike[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([developerId])
   @@index([status])
@@ -1434,12 +1470,12 @@ model Service {
 }
 
 model ServiceMedia {
-  id         String     @id @default(auto()) @map("_id") @db.ObjectId
-  serviceId  String     @db.ObjectId
-  service    Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  url        String
-  kind       MediaKind
-  sortOrder  Int        @default(0)
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId String    @db.ObjectId
+  service   Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  url       String
+  kind      MediaKind
+  sortOrder Int       @default(0)
 
   @@index([serviceId])
   @@index([sortOrder])
@@ -1456,9 +1492,9 @@ model ServiceCategoryOnService {
 }
 
 model ServiceSkillOnService {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  serviceId String @db.ObjectId
-  skillId   String @db.ObjectId
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId String  @db.ObjectId
+  skillId   String  @db.ObjectId
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
@@ -1466,9 +1502,9 @@ model ServiceSkillOnService {
 }
 
 model ServiceTagOnService {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  serviceId String @db.ObjectId
-  tagId     String @db.ObjectId
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId String  @db.ObjectId
+  tagId     String  @db.ObjectId
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
@@ -1476,15 +1512,15 @@ model ServiceTagOnService {
 }
 
 model ServiceLead {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  serviceId   String     @db.ObjectId
-  service     Service    @relation("ServiceLeads", fields: [serviceId], references: [id])
-  clientId    String     @db.ObjectId
-  client      User       @relation("ClientLeads", fields: [clientId], references: [id])
-  message     String?
-  status      LeadStatus @default(NEW)
-  contactVia  ContactVia @default(IN_APP)
-  createdAt   DateTime   @default(now())
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId  String     @db.ObjectId
+  service    Service    @relation("ServiceLeads", fields: [serviceId], references: [id])
+  clientId   String     @db.ObjectId
+  client     User       @relation("ClientLeads", fields: [clientId], references: [id])
+  message    String?
+  status     LeadStatus @default(NEW)
+  contactVia ContactVia @default(IN_APP)
+  createdAt  DateTime   @default(now())
 
   @@index([serviceId])
   @@index([clientId])
@@ -1522,21 +1558,20 @@ model ServiceLike {
  * ===== Portfolio Models =====
  */
 model Portfolio {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  developerId    String   @db.ObjectId
-  developer      DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
-  
-  title          String
-  description    String?
-  projectUrl     String?
-  imageUrl       String?
-  sortOrder      Int      @default(0) // For ordering portfolios (0-4 for 5 slots)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  developerId String           @db.ObjectId
+  developer   DeveloperProfile @relation(fields: [developerId], references: [id], onDelete: Cascade)
 
+  title       String
+  description String?
+  projectUrl  String?
+  imageUrl    String?
+  sortOrder   Int     @default(0) // For ordering portfolios (0-4 for 5 slots)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([developerId, sortOrder]) // Ensure only one portfolio per slot per developer
   @@index([developerId])
   @@index([sortOrder])
-  @@unique([developerId, sortOrder]) // Ensure only one portfolio per slot per developer
 }
-

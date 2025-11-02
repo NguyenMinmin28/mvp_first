@@ -6,6 +6,8 @@ import { Label } from "@/ui/components/label";
 import { Button } from "@/ui/components/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
+import { fireAndForget } from "@/core/utils/fireAndForget";
 
 export default function VerificationStep() {
   const router = useRouter();
@@ -56,20 +58,35 @@ export default function VerificationStep() {
             <Input value={xUrl} onChange={(e) => setXUrl(e.target.value)} placeholder="https://x.com/username" />
           </div>
 
-          <div className="pt-2">
-            <Button className="min-w-28" onClick={async () => {
-              try {
-                await fetch('/api/user/save-onboarding', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    linkedinUrl: linkedin || undefined,
-                    portfolioLinks: undefined,
-                  }),
-                }).catch(() => {});
-              } catch {}
-              router.push("/onboarding/freelancer/agreement");
-            }}>Next</Button>
+          <div className="pt-2 flex flex-col-reverse sm:flex-row gap-3">
+            <Button 
+              variant="outline"
+              className="flex-1 sm:flex-initial min-w-28" 
+              onClick={() => router.push("/onboarding/freelancer/portfolio")}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button 
+              className="flex-1 sm:flex-initial min-w-28" 
+              onClick={() => {
+                // Save to localStorage first
+                try {
+                  localStorage.setItem("onboarding.verification", JSON.stringify({ linkedin, facebook, instagram, xUrl }));
+                } catch {}
+                
+                // Fire-and-forget server save (don't wait for response)
+                fireAndForget('/api/user/save-onboarding', {
+                  linkedinUrl: linkedin || undefined,
+                  portfolioLinks: undefined,
+                });
+                
+                // Navigate immediately
+                router.push("/onboarding/freelancer/agreement");
+              }}
+            >
+              Next
+            </Button>
           </div>
         </CardContent>
       </Card>

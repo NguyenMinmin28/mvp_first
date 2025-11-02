@@ -27,7 +27,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { User as UserType } from "next-auth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePortal } from "@/features/shared/portal-context";
@@ -43,6 +43,7 @@ import {
 
 interface HeaderProps {
   user?: UserType;
+  disableNavigation?: boolean; // Disable all navigation when true (e.g., during onboarding)
 }
 
 type UnifiedNotif = {
@@ -61,8 +62,9 @@ type UnifiedNotif = {
   } | null;
 };
 
-export default function Header({ user }: HeaderProps) {
+export default function Header({ user, disableNavigation = false }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { logout } = useCustomLogout();
   const [mounted, setMounted] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -77,6 +79,22 @@ export default function Header({ user }: HeaderProps) {
     "client" | "freelancer" | null
   >(null);
   const [userData, setUserData] = useState<any>(null);
+  const [showOnboardingAlert, setShowOnboardingAlert] = useState(false);
+
+  // Auto-detect onboarding pages if disableNavigation is not explicitly set
+  const isOnboardingPage = typeof window !== "undefined" && 
+    window.location.pathname.startsWith("/onboarding");
+  const isNavigationDisabled = disableNavigation || isOnboardingPage;
+
+  const handleNavigationClick = (e?: React.MouseEvent) => {
+    if (isNavigationDisabled) {
+      e?.preventDefault();
+      e?.stopPropagation();
+      setShowOnboardingAlert(true);
+      return false;
+    }
+    return true;
+  };
 
   // Use portal context with fallback
   const portalContext = usePortal();
@@ -245,6 +263,11 @@ export default function Header({ user }: HeaderProps) {
   };
 
   const handlePortalSwitch = (targetPortal: "client" | "freelancer") => {
+    if (isNavigationDisabled) {
+      setShowOnboardingAlert(true);
+      return; // Prevent navigation during onboarding
+    }
+
     if (!isAuthenticated) {
       showLoginModalForPortal(targetPortal);
       return;
@@ -330,13 +353,38 @@ export default function Header({ user }: HeaderProps) {
 
   return (
     <>
+      {/* Onboarding Alert Dialog */}
+      <Dialog open={showOnboardingAlert} onOpenChange={setShowOnboardingAlert}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Your Profile</DialogTitle>
+            <DialogDescription>
+              Please complete all required information before navigating to other pages.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowOnboardingAlert(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <header
-        className={`sticky top-0 z-50 w-full m-0 p-0 ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b"}`}
+        className={`fixed top-0 left-0 right-0 z-[100] w-full m-0 p-0 ${!isAuthenticated ? "bg-black text-white" : "bg-white text-black border-b shadow-sm"}`}
       >
         <div className="container flex h-16 items-center justify-between px-4">
           {/* Logo */}
           <div className="flex items-center gap-6">
-            <button onClick={handleLogoClick} className="cursor-pointer">
+            <button 
+              onClick={(e) => {
+                if (isNavigationDisabled) {
+                  e.preventDefault();
+                  setShowOnboardingAlert(true);
+                } else {
+                  handleLogoClick();
+                }
+              }}
+              className="cursor-pointer"
+            >
               <img
                 src={
                   !isAuthenticated
@@ -353,13 +401,25 @@ export default function Header({ user }: HeaderProps) {
               <div className="hidden md:flex items-center gap-2 text-sm">
                 <button
                   className="px-3 py-1 rounded-full text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer"
-                  onClick={() => router.push("/services?tab=people")}
+                  onClick={() => {
+                    if (isNavigationDisabled) {
+                      setShowOnboardingAlert(true);
+                    } else {
+                      router.push("/services?tab=people");
+                    }
+                  }}
                 >
-                  Expert
+                  Experts
                 </button>
                 <button
                   className="px-3 py-1 rounded-full text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer"
-                  onClick={() => router.push("/services")}
+                  onClick={() => {
+                    if (isNavigationDisabled) {
+                      setShowOnboardingAlert(true);
+                    } else {
+                      router.push("/services");
+                    }
+                  }}
                 >
                   Gigs
                 </button>
@@ -369,201 +429,279 @@ export default function Header({ user }: HeaderProps) {
             {/* Navigation Links - Show based on user role */}
             {isAuthenticated && mounted && userRole === "CLIENT" && (
               <nav className="hidden md:flex items-center gap-4">
-                <Link href="/client-dashboard">
+                <Link 
+                  href="/client-dashboard"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/client-dashboard")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/client-dashboard")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <Briefcase className="h-4 w-4" />
                     My Workspace
                   </Button>
+                  {pathname?.startsWith("/client-dashboard") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
-                <Link href="/my-projects">
+                <Link 
+                  href="/my-projects"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/my-projects")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/my-projects")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <FolderOpen className="h-4 w-4" />
                     My Projects
                   </Button>
+                  {pathname?.startsWith("/my-projects") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
-                <Link href="/services?tab=people">
+                <Link 
+                  href="/services?tab=people"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/services")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/services")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <Briefcase className="h-4 w-4" />
                     Services
                   </Button>
+                  {pathname?.startsWith("/services") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
                 {/* Removed Post Project link as requested */}
-                <Link href="/pricing">
+                <Link 
+                  href="/pricing"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/pricing")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/pricing")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <DollarSign className="h-4 w-4" />
                     Pricing
                   </Button>
+                  {pathname?.startsWith("/pricing") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}
-                    >
-                      About <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <div className="relative">
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`flex items-center gap-2 ${
+                          pathname?.startsWith("/about") || 
+                          pathname?.startsWith("/how-clevrs-work") ||
+                          pathname?.startsWith("/newsroom") ||
+                          pathname?.startsWith("/investors") ||
+                          pathname?.startsWith("/blog")
+                            ? "text-black hover:text-black"
+                            : "text-black hover:bg-black hover:text-white"
+                        }`}
+                        onClick={(e) => {
+                          if (isNavigationDisabled) {
+                            e.preventDefault();
+                            setShowOnboardingAlert(true);
+                          }
+                        }}
+                      >
+                        About <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    {(pathname?.startsWith("/about") || 
+                      pathname?.startsWith("/how-clevrs-work") ||
+                      pathname?.startsWith("/newsroom") ||
+                      pathname?.startsWith("/investors") ||
+                      pathname?.startsWith("/blog")) && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                    )}
+                  </div>
                   <DropdownMenuContent align="start" className="w-56">
                     <DropdownMenuItem asChild>
-                      <Link href="/about">About us</Link>
+                      <Link href="/about" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>About us</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                      <Link href="/how-clevrs-work" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>How Clevrs Work</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/newsroom">Newsroom</Link>
+                      <Link href="/newsroom" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Newsroom</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/investors">Investor Relation</Link>
+                      <Link href="/investors" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Investor Relation</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/blog">Blog</Link>
+                      <Link href="/blog" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Blog</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Link href="/ideas">
+                <Link 
+                  href="/ideas"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/ideas")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/ideas")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <Zap className="h-4 w-4" />
                     Idea Spark
                   </Button>
+                  {pathname?.startsWith("/ideas") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
               </nav>
             )}
 
             {isAuthenticated && mounted && userRole === "DEVELOPER" && (
               <nav className="hidden md:flex items-center gap-4">
-                <Link href="/dashboard-user">
+                <Link 
+                  href="/dashboard-user"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/dashboard-user")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/dashboard-user")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <Briefcase className="h-4 w-4" />
                     Workspace
                   </Button>
+                  {pathname?.startsWith("/dashboard-user") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
-                <Link href="/services">
+                <Link 
+                  href="/services"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/services")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/services")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <FolderOpen className="h-4 w-4" />
                     Services
                   </Button>
+                  {pathname?.startsWith("/services") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
-                <Link href="/ideas">
+                <Link 
+                  href="/ideas"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className="relative h-full"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`flex items-center gap-2 ${
-                      typeof window !== "undefined" &&
-                      window.location.pathname.startsWith("/ideas")
-                        ? "bg-black text-white hover:bg-black hover:text-white"
-                        : !isAuthenticated
-                          ? "text-white hover:bg-white hover:text-black"
-                          : "text-black hover:bg-black hover:text-white"
+                      pathname?.startsWith("/ideas")
+                        ? "text-black hover:text-black"
+                        : "text-black hover:bg-black hover:text-white"
                     }`}
                   >
                     <Zap className="h-4 w-4" />
                     IdeaSpark
                   </Button>
+                  {pathname?.startsWith("/ideas") && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
                 </Link>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`flex items-center gap-2 ${!isAuthenticated ? "text-white hover:bg-white hover:text-black" : "text-black hover:bg-black hover:text-white"}`}
-                    >
-                      About <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <div className="relative">
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`flex items-center gap-2 ${
+                          pathname?.startsWith("/about") || 
+                          pathname?.startsWith("/how-clevrs-work") ||
+                          pathname?.startsWith("/newsroom") ||
+                          pathname?.startsWith("/investors") ||
+                          pathname?.startsWith("/blog")
+                            ? "text-black hover:text-black"
+                            : "text-black hover:bg-black hover:text-white"
+                        }`}
+                        onClick={(e) => {
+                          if (isNavigationDisabled) {
+                            e.preventDefault();
+                            setShowOnboardingAlert(true);
+                          }
+                        }}
+                      >
+                        About <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    {(pathname?.startsWith("/about") || 
+                      pathname?.startsWith("/how-clevrs-work") ||
+                      pathname?.startsWith("/newsroom") ||
+                      pathname?.startsWith("/investors") ||
+                      pathname?.startsWith("/blog")) && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                    )}
+                  </div>
                   <DropdownMenuContent align="start" className="w-56">
                     <DropdownMenuItem asChild>
-                      <Link href="/about">About us</Link>
+                      <Link href="/about" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>About us</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                      <Link href="/how-clevrs-work" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>How Clevrs Work</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/newsroom">Newsroom</Link>
+                      <Link href="/newsroom" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Newsroom</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/investors">Investor Relation</Link>
+                      <Link href="/investors" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Investor Relation</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/blog">Blog</Link>
+                      <Link href="/blog" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Blog</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -573,38 +711,59 @@ export default function Header({ user }: HeaderProps) {
             {!isAuthenticated && (
               <nav className="hidden md:flex items-center gap-8">
                 <Link 
-                  href="/ideas" 
-                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                  href="/ideas"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className={`text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer relative ${
+                    pathname?.startsWith("/ideas") ? "[&::after]:!w-full [&::after]:!bg-white" : ""
+                  }`}
                 >
                   IdeaSpark
                 </Link>
                 <Link 
-                  href="/pricing" 
-                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                  href="/pricing"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className={`text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer relative ${
+                    pathname?.startsWith("/pricing") ? "[&::after]:!w-full [&::after]:!bg-white" : ""
+                  }`}
                 >
                   Price
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer">
+                    <button 
+                      className={`flex items-center gap-1 text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer relative ${
+                        pathname?.startsWith("/about") || 
+                        pathname?.startsWith("/how-clevrs-work") ||
+                        pathname?.startsWith("/newsroom") ||
+                        pathname?.startsWith("/investors") ||
+                        pathname?.startsWith("/blog")
+                          ? "[&::after]:!w-full [&::after]:!bg-white" : ""
+                      }`}
+                      onClick={(e) => {
+                        if (isNavigationDisabled) {
+                          e.preventDefault();
+                          setShowOnboardingAlert(true);
+                        }
+                      }}
+                    >
                       About <ChevronDown className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
                     <DropdownMenuItem asChild>
-                      <Link href="/about">About us</Link>
+                      <Link href="/about" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>About us</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/how-clevrs-work">How Clevrs Work</Link>
+                      <Link href="/how-clevrs-work" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>How Clevrs Work</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/newsroom">Newsroom</Link>
+                      <Link href="/newsroom" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Newsroom</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/investors">Investor Relation</Link>
+                      <Link href="/investors" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Investor Relation</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/blog">Blog</Link>
+                      <Link href="/blog" onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}>Blog</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -619,7 +778,13 @@ export default function Header({ user }: HeaderProps) {
               variant="ghost"
               size="sm"
               className={`md:hidden ${!isAuthenticated ? "text-white" : "text-black"}`}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => {
+                if (isNavigationDisabled) {
+                  setShowOnboardingAlert(true);
+                } else {
+                  setMobileMenuOpen(!mobileMenuOpen);
+                }
+              }}
             >
               {mobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -632,19 +797,24 @@ export default function Header({ user }: HeaderProps) {
             {!isAuthenticated && (
               <div className="hidden md:flex items-center gap-6">
                 <Link 
-                  href="/help" 
-                  className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
+                  href="/help"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  className={`text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer relative ${
+                    pathname?.startsWith("/help") ? "[&::after]:!w-full [&::after]:!bg-white" : ""
+                  }`}
                 >
                   Help
                 </Link>
                 <Link 
-                  href="/auth/signin" 
+                  href="/auth/signin"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                   className="text-sm hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer"
                 >
                   Log in
                 </Link>
                 <Link
                   href="/auth/signup"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                   className="inline-flex items-center h-9 px-4 rounded-full bg-white text-black text-sm hover:bg-gray-100 hover:scale-105 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
                 >
                   Sign up
@@ -659,6 +829,10 @@ export default function Header({ user }: HeaderProps) {
                   <button
                     className="relative inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-white hover:text-black"
                     onClick={async () => {
+                      if (isNavigationDisabled) {
+                        setShowOnboardingAlert(true);
+                        return;
+                      }
                       const willOpen = !openNotif;
                       setOpenNotif(willOpen);
                       if (willOpen) {
@@ -744,10 +918,10 @@ export default function Header({ user }: HeaderProps) {
                     <>
                       {/* click-away overlay */}
                       <div
-                        className="fixed inset-0 z-40"
+                        className="fixed inset-0 z-[105]"
                         onClick={() => setOpenNotif(false)}
                       />
-                      <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded-lg shadow-lg z-50">
+                      <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded-lg shadow-lg z-[110]">
                         <div className="flex items-center justify-between px-3 py-2 border-b">
                           <span className="text-sm font-medium">
                             Notifications
@@ -792,6 +966,10 @@ export default function Header({ user }: HeaderProps) {
                                   : "bg-white shadow-sm border border-gray-200 hover:shadow-md"
                               }`}
                               onClick={async () => {
+                                if (isNavigationDisabled) {
+                                  setShowOnboardingAlert(true);
+                                  return;
+                                }
                                 if (!n.read) {
                                   try {
                                     if (n.origin === "general") {
@@ -1126,6 +1304,7 @@ export default function Header({ user }: HeaderProps) {
                 </div>
                 <Link
                   href="/help"
+                  onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                   className="text-sm hover:bg-white hover:text-black px-3 py-1.5 rounded-full"
                 >
                   Help
@@ -1169,17 +1348,32 @@ export default function Header({ user }: HeaderProps) {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      if (isNavigationDisabled) {
+                        setShowOnboardingAlert(true);
+                      } else {
+                        router.push("/profile");
+                      }
+                    }}
+                  >
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      if (isNavigationDisabled) {
+                        setShowOnboardingAlert(true);
+                      }
+                    }}
+                  >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={async () => {
+                      // Allow logout even during onboarding
                       try {
                         await logout("/");
                       } catch (error) {
@@ -1239,6 +1433,10 @@ export default function Header({ user }: HeaderProps) {
                     <button
                       className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
                       onClick={async () => {
+                        if (isNavigationDisabled) {
+                          setShowOnboardingAlert(true);
+                          return;
+                        }
                         const willOpen = !openNotif;
                         setOpenNotif(willOpen);
                         if (willOpen) {
@@ -1317,7 +1515,7 @@ export default function Header({ user }: HeaderProps) {
 
                     {/* Mobile Notifications Dropdown */}
                     {openNotif && (
-                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto mx-2">
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] max-h-96 overflow-y-auto mx-2">
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">
@@ -1343,6 +1541,10 @@ export default function Header({ user }: HeaderProps) {
                                   key={`${n.origin}:${n.id}`}
                                   className={`p-3 hover:bg-gray-50 ${!n.read ? "bg-blue-50" : ""}`}
                                   onClick={async () => {
+                                    if (isNavigationDisabled) {
+                                      setShowOnboardingAlert(true);
+                                      return;
+                                    }
                                     if (!n.read) {
                                       try {
                                         if (n.origin === "general") {
@@ -1491,7 +1693,12 @@ export default function Header({ user }: HeaderProps) {
 
                   <Link
                     href="/client-dashboard"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/client-dashboard")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
@@ -1500,7 +1707,12 @@ export default function Header({ user }: HeaderProps) {
                   </Link>
                   <Link
                     href="/my-projects"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/my-projects")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <FolderOpen className="h-4 w-4" />
@@ -1509,7 +1721,12 @@ export default function Header({ user }: HeaderProps) {
                   </Link>
                   <Link
                     href="/pricing"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/pricing")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
@@ -1523,31 +1740,56 @@ export default function Header({ user }: HeaderProps) {
                     <div className="ml-6 mt-2 space-y-1">
                       <Link
                         href="/about"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/about")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         About us
                       </Link>
                       <Link
                         href="/how-clevrs-work"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/how-clevrs-work")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         How Clevrs Work
                       </Link>
                       <Link
                         href="/newsroom"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/newsroom")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Newsroom
                       </Link>
                       <Link
                         href="/investors"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/investors")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Investor Relation
                       </Link>
                       <Link
                         href="/blog"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/blog")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Blog
                       </Link>
@@ -1555,7 +1797,12 @@ export default function Header({ user }: HeaderProps) {
                   </div>
                   <Link
                     href="/ideas"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/ideas")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4" />
@@ -1568,9 +1815,16 @@ export default function Header({ user }: HeaderProps) {
               {isAuthenticated && userRole === "DEVELOPER" && (
                 <nav className="space-y-2">
                   {/* Notifications Mobile */}
-                  <Link href="/dashboard-user">
+                  <Link 
+                    href="/dashboard-user"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                  >
                     <button
-                      className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
+                      className={`flex items-center gap-2 py-2 w-full text-left hover:text-black ${
+                        pathname?.startsWith("/dashboard-user")
+                          ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                          : "text-gray-700"
+                      }`}
                     >
                       <Briefcase className="h-4 w-4" />
                       Workspace
@@ -1580,6 +1834,10 @@ export default function Header({ user }: HeaderProps) {
                     <button
                       className="flex items-center gap-2 py-2 text-gray-700 hover:text-black w-full text-left"
                       onClick={async () => {
+                        if (isNavigationDisabled) {
+                          setShowOnboardingAlert(true);
+                          return;
+                        }
                         const willOpen = !openNotif;
                         setOpenNotif(willOpen);
                         if (willOpen) {
@@ -1658,7 +1916,7 @@ export default function Header({ user }: HeaderProps) {
 
                     {/* Mobile Notifications Dropdown */}
                     {openNotif && (
-                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto mx-2">
+                      <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] max-h-96 overflow-y-auto mx-2">
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">
@@ -1684,6 +1942,10 @@ export default function Header({ user }: HeaderProps) {
                                   key={`${n.origin}:${n.id}`}
                                   className={`p-3 hover:bg-gray-50 ${!n.read ? "bg-blue-50" : ""}`}
                                   onClick={async () => {
+                                    if (isNavigationDisabled) {
+                                      setShowOnboardingAlert(true);
+                                      return;
+                                    }
                                     if (!n.read) {
                                       try {
                                         if (n.origin === "general") {
@@ -1832,7 +2094,12 @@ export default function Header({ user }: HeaderProps) {
 
                   <Link
                     href="/services"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/services")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
@@ -1841,7 +2108,12 @@ export default function Header({ user }: HeaderProps) {
                   </Link>
                   <Link
                     href="/ideas"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/ideas")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4" />
@@ -1855,31 +2127,56 @@ export default function Header({ user }: HeaderProps) {
                     <div className="ml-6 mt-2 space-y-1">
                       <Link
                         href="/about"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/about")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         About us
                       </Link>
                       <Link
                         href="/how-clevrs-work"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/how-clevrs-work")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         How Clevrs Work
                       </Link>
                       <Link
                         href="/newsroom"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/newsroom")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Newsroom
                       </Link>
                       <Link
                         href="/investors"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/investors")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Investor Relation
                       </Link>
                       <Link
                         href="/blog"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/blog")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Blog
                       </Link>
@@ -1892,13 +2189,23 @@ export default function Header({ user }: HeaderProps) {
                 <nav className="space-y-2">
                   <Link
                     href="/ideas"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/ideas")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     IdeaSpark
                   </Link>
                   <Link
                     href="/pricing"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/pricing")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     Price
                   </Link>
@@ -1907,31 +2214,56 @@ export default function Header({ user }: HeaderProps) {
                     <div className="ml-4 mt-2 space-y-1">
                       <Link
                         href="/about"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/about")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         About us
                       </Link>
                       <Link
                         href="/how-clevrs-work"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/how-clevrs-work")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         How Clevrs Work
                       </Link>
                       <Link
                         href="/newsroom"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/newsroom")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Newsroom
                       </Link>
                       <Link
                         href="/investors"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/investors")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Investor Relation
                       </Link>
                       <Link
                         href="/blog"
-                        className="block py-1 text-sm text-gray-600 hover:text-black"
+                        onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                        className={`block py-1 text-sm hover:text-black ${
+                          pathname?.startsWith("/blog")
+                            ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                            : "text-gray-600"
+                        }`}
                       >
                         Blog
                       </Link>
@@ -1939,7 +2271,12 @@ export default function Header({ user }: HeaderProps) {
                   </div>
                   <Link
                     href="/ideas"
-                    className="block py-2 text-gray-700 hover:text-black"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
+                    className={`block py-2 hover:text-black ${
+                      pathname?.startsWith("/ideas")
+                        ? "text-blue-600 underline decoration-blue-600 decoration-2"
+                        : "text-gray-700"
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4" />
@@ -1954,17 +2291,34 @@ export default function Header({ user }: HeaderProps) {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <Link
                     href="/help"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                     className="block py-2 text-gray-700 hover:text-black"
                   >
                     Help
                   </Link>
-                  <button className="w-full text-left py-2 text-gray-700 hover:text-black">
+                  <button 
+                    className="w-full text-left py-2 text-gray-700 hover:text-black"
+                    onClick={() => {
+                      if (isNavigationDisabled) {
+                        setShowOnboardingAlert(true);
+                      } else {
+                        router.push("/profile");
+                      }
+                    }}
+                  >
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       Profile
                     </div>
                   </button>
-                  <button className="w-full text-left py-2 text-gray-700 hover:text-black">
+                  <button 
+                    className="w-full text-left py-2 text-gray-700 hover:text-black"
+                    onClick={() => {
+                      if (isNavigationDisabled) {
+                        setShowOnboardingAlert(true);
+                      }
+                    }}
+                  >
                     <div className="flex items-center gap-2">
                       <Settings className="h-4 w-4" />
                       Settings
@@ -1973,6 +2327,7 @@ export default function Header({ user }: HeaderProps) {
                   <button
                     className="w-full text-left py-2 text-red-600 hover:text-red-800"
                     onClick={async () => {
+                      // Allow logout even during onboarding
                       try {
                         await logout("/");
                       } catch (error) {
@@ -1993,18 +2348,21 @@ export default function Header({ user }: HeaderProps) {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <Link
                     href="/help"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                     className="block py-2 text-gray-700 hover:text-black underline-animated transition-all duration-200 cursor-pointer"
                   >
                     Help
                   </Link>
                   <Link
                     href="/auth/signin"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                     className="block py-2 text-gray-700 hover:text-black underline-animated transition-all duration-200 cursor-pointer"
                   >
                     Log in
                   </Link>
                   <Link
                     href="/auth/signup"
+                    onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
                     className="block py-2 px-4 rounded-full bg-black text-white text-center hover:bg-gray-800 hover:scale-105 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
                   >
                     Sign up
