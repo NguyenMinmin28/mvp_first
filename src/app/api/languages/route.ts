@@ -100,11 +100,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Proficiency levels
-export const PROFICIENCY_LEVELS = [
-  { value: "native", label: "Native" },
-  { value: "fluent", label: "Fluent" },
-  { value: "conversational", label: "Conversational" },
-  { value: "basic", label: "Basic" },
-] as const;
-
