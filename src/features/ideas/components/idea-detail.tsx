@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import { Button } from "@/ui/components/button";
 import { 
   Heart, 
@@ -143,12 +143,14 @@ export function IdeaDetail({ idea, currentUserId }: IdeaDetailProps) {
           {/* Cover Image */}
           {(idea.coverUrl || idea.cover) && (
             <div className="relative h-64 md:h-80 bg-gray-200">
-              <Image
+              <ImageWithShimmer
                 src={idea.coverUrl || `/api/files/${idea.cover?.storageKey}`}
                 alt={idea.title}
                 fill
+                aspectRatio="16/9"
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 768px"
+                shimmerSize="card"
               />
             </div>
           )}
@@ -163,12 +165,13 @@ export function IdeaDetail({ idea, currentUserId }: IdeaDetailProps) {
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2">
                 {idea.author?.image ? (
-                  <Image
+                  <ImageWithShimmer
                     src={idea.author.image}
                     alt={idea.author.name || 'Author'}
                     width={32}
                     height={32}
                     className="rounded-full"
+                    shimmerSize="thumbnail"
                   />
                 ) : (
                   <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">

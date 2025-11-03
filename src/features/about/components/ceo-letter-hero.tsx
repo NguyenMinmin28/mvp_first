@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import { Button } from "@/ui/components/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -31,12 +31,13 @@ export function CeoLetterHero() {
         {/* Image - CEO */}
         <div className="mb-8 flex justify-center">
           <div className="max-w-4xl w-full">
-            <Image
+            <ImageWithShimmer
               src="/images/about/ceo.png"
               alt="Kash, Chief Executive Officer"
               width={800}
               height={500}
               className="object-cover w-full rounded-2xl shadow-2xl"
+              shimmerSize="hero"
               priority
             />
           </div>

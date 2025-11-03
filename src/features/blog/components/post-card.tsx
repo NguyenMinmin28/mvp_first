@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { ImageWithShimmer } from '@/ui/components/image-with-shimmer';
 import Link from 'next/link';
 import { Badge } from '@/ui/components/badge';
 import { Calendar, MapPin, Clock, Eye } from 'lucide-react';
@@ -53,16 +53,14 @@ export function PostCard({ post, onTrackClick }: PostCardProps) {
       <Link href={`/blog/${post.slug}`} onClick={handleClick}>
         <div className="relative aspect-[16/10] overflow-hidden">
           {post.coverUrl ? (
-            <Image
+            <ImageWithShimmer
               src={post.coverUrl}
               alt={post.title}
               fill
+              aspectRatio="16/10"
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
+              shimmerSize="card"
             />
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -105,16 +103,13 @@ export function PostCard({ post, onTrackClick }: PostCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {post.author.avatar ? (
-                <Image
+                <ImageWithShimmer
                   src={post.author.avatar}
                   alt={post.author.name}
                   width={32}
                   height={32}
                   className="rounded-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
+                  shimmerSize="thumbnail"
                 />
               ) : (
                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">

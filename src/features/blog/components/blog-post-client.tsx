@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import { ImageWithShimmer } from '@/ui/components/image-with-shimmer';
 import Link from 'next/link';
 import { Badge } from '@/ui/components/badge';
 import { Button } from '@/ui/components/button';
@@ -235,16 +235,13 @@ export function BlogPostClient({ slug }: BlogPostClientProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {post.author?.avatar && (
-                <Image
+                <ImageWithShimmer
                   src={post.author.avatar}
                   alt={post.author.name || 'Author'}
                   width={48}
                   height={48}
                   className="rounded-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
+                  shimmerSize="thumbnail"
                 />
               )}
               <div>
@@ -271,17 +268,14 @@ export function BlogPostClient({ slug }: BlogPostClientProps) {
         {/* Cover Image */}
         {post.coverUrl && (
           <div className="mb-8">
-            <Image
+            <ImageWithShimmer
               src={post.coverUrl}
               alt={post.title}
               width={1200}
               height={600}
-              className="w-full rounded-xl"
+              className="w-full rounded-xl object-cover"
+              shimmerSize="hero"
               priority
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
             />
           </div>
         )}
@@ -342,15 +336,13 @@ export function BlogPostClient({ slug }: BlogPostClientProps) {
                   <article className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
                     <div className="relative aspect-[16/10] overflow-hidden">
                       {post.coverUrl && (
-                        <Image
+                        <ImageWithShimmer
                           src={post.coverUrl}
                           alt={post.title || 'Related post'}
                           fill
+                          aspectRatio="16/10"
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
+                          shimmerSize="card"
                         />
                       )}
                       {post.category && (

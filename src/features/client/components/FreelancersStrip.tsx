@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
-import Image from "next/image";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import { useRouter } from "next/navigation";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
 import { DeveloperProfileSlideBar } from "./developer-profile-slide-bar";
@@ -137,12 +137,13 @@ export function FreelancersStrip() {
                     <div className="relative inline-block">
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
                         {freelancer.image ? (
-                          <Image 
+                          <ImageWithShimmer 
                             src={freelancer.image} 
                             alt={freelancer.name || "Freelancer"} 
                             width={48} 
                             height={48} 
                             className="object-cover w-12 h-12" 
+                            shimmerSize="thumbnail"
                           />
                         ) : (
                           <div className="w-12 h-12 bg-gray-200" />

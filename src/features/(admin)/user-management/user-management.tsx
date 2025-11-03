@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/ui/components/select";
-import { Eye, Search, RotateCcw, Users, UserCheck, UserX } from "lucide-react";
+import { Eye, Search, RotateCcw, Users, UserCheck, UserX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/ui/components/input";
 
@@ -56,6 +56,7 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [resettingRole, setResettingRole] = useState<string | null>(null);
+  const [clearingPlans, setClearingPlans] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     role: "all",
     status: "all",
@@ -87,6 +88,30 @@ export function UserManagement() {
       toast.error("Failed to fetch users");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle clear subscriptions/plans
+  const handleClearPlans = async (userId: string, userName: string) => {
+    if (!confirm(`Xoá toàn bộ subscription/plan của ${userName}?`)) {
+      return;
+    }
+    try {
+      setClearingPlans(userId);
+      const response = await fetch(`/api/admin/users/${userId}/clear-subscriptions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to clear plans");
+      }
+      toast.success(`Đã xoá plans của ${userName}`);
+    } catch (e: any) {
+      console.error("clear plans error", e);
+      toast.error(e.message || "Failed to clear plans");
+    } finally {
+      setClearingPlans(null);
     }
   };
 
@@ -271,6 +296,20 @@ export function UserManagement() {
               )}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleClearPlans(item.id, item.name || item.email || "User")}
+            disabled={clearingPlans === item.id}
+            title="Clear all plans/subscriptions"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            {clearingPlans === item.id ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </Button>
         </div>
       ),
     },

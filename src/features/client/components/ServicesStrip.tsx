@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
-import Image from "next/image";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import GetInTouchModal from "./GetInTouchModal";
 import ServiceImageGallery from "./ServiceImageGallery";
 import ServiceDetailOverlay, {
@@ -209,12 +209,13 @@ export function ServicesStrip() {
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100">
                   {service.developer.photoUrl || service.developer.user.image ? (
-                    <Image
+                    <ImageWithShimmer
                       src={service.developer.photoUrl || service.developer.user.image || ''}
                       alt={service.developer.user.name || "Freelancer"}
                       width={24}
                       height={24}
-                      className="object-cover w-6 h-6"
+                      className="object-cover w-6 h-6 rounded-full"
+                      shimmerSize="thumbnail"
                     />
                   ) : (
                     <div className="w-6 h-6 bg-gray-200" />

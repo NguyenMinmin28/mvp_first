@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/ui/components/dialog";
 import { Textarea } from "@/ui/components/textarea";
-import { CheckCircle, XCircle, Clock, Eye, Search, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Eye, Search, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/ui/components/input";
 
@@ -85,6 +85,7 @@ export function DeveloperProfileManagement() {
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [resettingRole, setResettingRole] = useState<string | null>(null);
+  const [clearingPlans, setClearingPlans] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: "all",
     level: "all",
@@ -171,6 +172,30 @@ export function DeveloperProfileManagement() {
       toast.error("Failed to fetch developer profiles");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Clear all subscriptions/plans for the underlying user (client profile)
+  const handleClearPlans = async (userId: string, userName: string) => {
+    if (!confirm(`Xoá toàn bộ subscription/plan của ${userName}?`)) {
+      return;
+    }
+    try {
+      setClearingPlans(userId);
+      const response = await fetch(`/api/admin/users/${userId}/clear-subscriptions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to clear plans");
+      }
+      toast.success(`Đã xoá plans của ${userName}`);
+    } catch (e: any) {
+      console.error("clear plans error", e);
+      toast.error(e.message || "Failed to clear plans");
+    } finally {
+      setClearingPlans(null);
     }
   };
 
@@ -499,6 +524,20 @@ export function DeveloperProfileManagement() {
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
             ) : (
               <RotateCcw className="w-4 h-4" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleClearPlans(item.userId, item.name)}
+            disabled={clearingPlans === item.userId}
+            title="Clear all plans/subscriptions"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            {clearingPlans === item.userId ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+            ) : (
+              <Trash2 className="w-4 h-4" />
             )}
           </Button>
         </div>

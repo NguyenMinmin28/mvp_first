@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import { Button } from "@/ui/components/button";
 import { Zap, TrendingUp, Users, Lightbulb, LogIn } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -89,15 +89,14 @@ export function IdeaSparkHero() {
             <div className="relative">
               {/* Main image */}
               <div className="relative z-10">
-                <Image
+                <ImageWithShimmer
                   src="/images/spark/ideaholing.jpg"
                   alt="Woman holding IDEA bubble with thumbs up"
                   width={500}
                   height={600}
                   className="object-cover w-full max-w-sm sm:max-w-md lg:max-w-lg"
-                  style={{ 
-                    borderRadius: '4rem 0 0 0'
-                  }}
+                  containerClassName="w-full"
+                  shimmerSize="hero"
                   priority
                 />
               </div>

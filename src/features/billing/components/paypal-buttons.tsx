@@ -19,9 +19,15 @@ interface PayPalButtonsProps {
   planId: string;
   isCurrentPlan?: boolean;
   hasActiveSubscription?: boolean;
+  // Optional custom label for the trigger button
+  buttonLabel?: string;
+  // Optional custom class for the trigger button (to control visual state)
+  buttonClassName?: string;
+  // Optional variant for the trigger button (default|outline|secondary|ghost|link|destructive)
+  buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
-export function PayPalButtons({ packageId, packageName, price, planId, isCurrentPlan, hasActiveSubscription }: PayPalButtonsProps) {
+export function PayPalButtons({ packageId, packageName, price, planId, isCurrentPlan, hasActiveSubscription, buttonLabel, buttonClassName, buttonVariant }: PayPalButtonsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -216,12 +222,14 @@ export function PayPalButtons({ packageId, packageName, price, planId, isCurrent
     <>
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogTrigger asChild>
-          <Button className="w-full" disabled={isLoading}>
-            {isLoading ? "Processing..." : 
-              hasActiveSubscription 
-                ? (isCurrentPlan ? "Current Plan" : "Change Plan") 
-                : "Subscribe"
-            }
+          <Button className={buttonClassName ? buttonClassName : "w-full"} variant={buttonVariant} disabled={isLoading}>
+            {isLoading
+              ? "Processing..."
+              : buttonLabel
+                ? buttonLabel
+                : hasActiveSubscription
+                  ? (isCurrentPlan ? "Current Plan" : "Change Plan")
+                  : "Subscribe"}
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">

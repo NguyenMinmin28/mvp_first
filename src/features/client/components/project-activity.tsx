@@ -15,7 +15,7 @@ import {
   MoreHorizontal,
   Share
 } from "lucide-react";
-import Image from "next/image";
+import { ImgWithShimmer } from "@/ui/components/image-with-shimmer";
 import { useRouter } from "next/navigation";
 
 interface Project {
@@ -203,7 +203,7 @@ export default function ProjectActivity() {
                   <>
                     {/* Icon */}
                     <div className="flex h-10 w-10 items-center justify-center flex-shrink-0">
-                      <img src="/images/client/projecticon.png" alt="project" className="h-6 w-6 object-contain" />
+                      <ImgWithShimmer src="/images/client/projecticon.png" alt="project" className="h-6 w-6 object-contain" />
                     </div>
 
                     {/* Project Name */}
@@ -279,7 +279,7 @@ export default function ProjectActivity() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center">
-                          <img src="/images/client/projecticon.png" alt="project" className="h-8 w-8 object-contain" />
+                          <ImgWithShimmer src="/images/client/projecticon.png" alt="project" className="h-8 w-8 object-contain" />
                         </div>
                         <h3 className="font-semibold text-gray-900">{project.name}</h3>
                       </div>

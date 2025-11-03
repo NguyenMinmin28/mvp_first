@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { ImageWithShimmer } from '@/ui/components/image-with-shimmer';
 import Link from 'next/link';
 import { TrendingUp, Eye } from 'lucide-react';
 
@@ -45,16 +45,14 @@ export function PopularPostsSidebar({ posts, onTrackClick }: PopularPostsSidebar
             <article className="flex gap-3">
               <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden">
                 {post.coverUrl ? (
-                  <Image
+                  <ImageWithShimmer
                     src={post.coverUrl}
                     alt={post.title}
                     fill
+                    aspectRatio="1/1"
                     className="object-cover group-hover:scale-105 transition-transform duration-200"
                     sizes="64px"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
+                    shimmerSize="thumbnail"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">

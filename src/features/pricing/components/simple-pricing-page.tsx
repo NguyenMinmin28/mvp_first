@@ -92,19 +92,16 @@ export default function SimplePricingPage({
   };
 
   const renderPlanButton = (plan: Plan) => {
-    // Free Plan ($0) - always disabled for logged in users
+    // Free Plan ($0) - first-time users can explicitly select it and go to dashboard
     if (plan.id === "free" && session) {
       return (
-        <div className="h-16 flex flex-col justify-center">
+        <div className="h-16 flex items-center">
           <Button
-            disabled
-            className="w-full h-12 text-sm font-semibold bg-green-600 text-white"
+            className="w-full h-12 text-sm font-semibold"
+            onClick={() => { window.location.href = "/client-dashboard"; }}
           >
-            ✓ Included Free
+            Select Free Plan
           </Button>
-          <p className="text-xs text-muted-foreground text-center mt-1">
-            You already have Free Plan access
-          </p>
         </div>
       );
     }
@@ -124,6 +121,7 @@ export default function SimplePricingPage({
             planId={plan.providerPlanId}
             isCurrentPlan={isCurrentPlan}
             hasActiveSubscription={hasActiveSubscription}
+            buttonLabel="Select Plus Plan"
           />
         </div>
       );

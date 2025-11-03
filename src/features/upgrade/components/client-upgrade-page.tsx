@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
+import { PayPalButtons } from "@/features/billing/components/paypal-buttons";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,7 +47,7 @@ const freePlan: Plan = {
       ],
     },
   ],
-  buttonText: "Select plan",
+  buttonText: "Select Free Plan",
 };
 
 const proPlan: Plan = {
@@ -74,7 +75,7 @@ const proPlan: Plan = {
       ],
     },
   ],
-  buttonText: "PRO Upgrade to Pro",
+  buttonText: "Select Plus Plan",
 };
 
 export default function ClientUpgradePage() {
@@ -93,12 +94,8 @@ export default function ClientUpgradePage() {
           router.push("/client-dashboard");
         }, 1000);
       } else {
-        // Pro plan - handle payment (for now just redirect to dashboard)
-        // TODO: Integrate payment processing here
-        toast.success("Pro plan selected! Redirecting to payment...");
-        setTimeout(() => {
-          router.push("/client-dashboard");
-        }, 1000);
+        // Payment handled by PayPal modal button; no direct redirect here
+        toast.message("Proceed to payment to activate Plus plan.");
       }
     } catch (error) {
       console.error("Error selecting plan:", error);
@@ -170,7 +167,8 @@ export default function ClientUpgradePage() {
               <Button
                 onClick={() => handlePlanSelect("free")}
                 disabled={isLoading !== null}
-                className="w-full h-12 bg-gray-600 text-white hover:bg-gray-700 disabled:opacity-50"
+                variant="outline"
+                className="w-full h-12 text-sm font-semibold"
               >
                 {isLoading === "free" ? (
                   <span className="flex items-center gap-2">
@@ -226,23 +224,17 @@ export default function ClientUpgradePage() {
                 )}
               </div>
 
-              <Button
-                onClick={() => handlePlanSelect("pro")}
-                disabled={isLoading !== null}
-                className="w-full h-12 bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
-              >
-                {isLoading === "pro" ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  proPlan.buttonText
-                )}
-              </Button>
+              <PayPalButtons
+                packageId="plus"
+                packageName="Plus Plan"
+                price={29}
+                planId="P-2L869865T2585332XNC24EXA"
+                hasActiveSubscription={false}
+                isCurrentPlan={false}
+                buttonLabel={proPlan.buttonText}
+                buttonClassName="w-full h-12 text-sm font-semibold"
+                buttonVariant="outline"
+              />
 
               {proPlan.features.map((featureGroup, idx) => (
                 <div key={idx} className="space-y-3">

@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { ImageWithShimmer } from '@/ui/components/image-with-shimmer';
 import Link from 'next/link';
 import { Badge } from '@/ui/components/badge';
 import { Calendar, MapPin } from 'lucide-react';
@@ -54,16 +54,14 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
             <article className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
               <div className="relative aspect-[16/10] overflow-hidden">
                 {post.coverUrl && (
-                  <Image
+                  <ImageWithShimmer
                     src={post.coverUrl}
                     alt={post.title || 'Related post'}
                     fill
+                    aspectRatio="16/10"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
+                    shimmerSize="card"
                   />
                 )}
                 {post.category && (

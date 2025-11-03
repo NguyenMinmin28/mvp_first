@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { ImageWithShimmer } from '@/ui/components/image-with-shimmer';
 import Link from 'next/link';
 import { Badge } from '@/ui/components/badge';
 import { Button } from '@/ui/components/button';
@@ -41,17 +41,15 @@ export function BlogHero({ post }: BlogHeroProps) {
         {/* Left side - Featured Image */}
         <div className="relative h-80 lg:h-full min-h-[400px]">
           {post.coverUrl ? (
-            <Image
+            <ImageWithShimmer
               src={post.coverUrl}
               alt={post.title}
               fill
+              aspectRatio="16/9"
               className="object-cover"
               priority
               sizes="(max-width: 1024px) 100vw, 50vw"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
+              shimmerSize="hero"
             />
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -98,16 +96,13 @@ export function BlogHero({ post }: BlogHeroProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {post.author.avatar ? (
-                <Image
+                <ImageWithShimmer
                   src={post.author.avatar}
                   alt={post.author.name}
                   width={40}
                   height={40}
                   className="rounded-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
+                  shimmerSize="thumbnail"
                 />
               ) : (
                 <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">

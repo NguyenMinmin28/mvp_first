@@ -386,49 +386,35 @@
 /* Shimmer/Skeleton Loading Effects - Uber-style */
 .shimmer {
   position: relative;
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #e0e0e0 20%,
-    #f0f0f0 40%,
-    #f0f0f0 100%
-  );
+  /* Subtle Uber-like neutral base */
+  background: linear-gradient(90deg, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
   background-size: 200% 100%;
   overflow: hidden;
+  border-radius: inherit; /* match container rounding */
 }
 
 .shimmer::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #e8e8e8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg, #f6f7f8 0%, #eef0f2 50%, #f6f7f8 100%);
   background-size: 200% 100%;
-  animation: shimmer-base 2s ease-in-out infinite;
+  animation: shimmer-base 1.2s linear infinite;
   z-index: 0;
+  border-radius: inherit;
 }
 
 .shimmer::after {
   content: "";
   position: absolute;
   inset: 0;
-  transform: translateX(-100%) skewX(-15deg);
-  width: 50%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 20%,
-    rgba(255, 255, 255, 0.7) 50%,
-    rgba(255, 255, 255, 0.4) 80%,
-    transparent 100%
-  );
-  animation: shimmer-sweep 2s ease-in-out infinite;
+  transform: translateX(-100%) skewX(-12deg);
+  width: 40%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0.35) 75%, transparent 100%);
+  animation: shimmer-sweep 1.2s linear infinite;
   z-index: 0;
   pointer-events: none;
+  border-radius: inherit;
 }
 
 @keyframes shimmer-base {
@@ -442,8 +428,8 @@
 
 @keyframes shimmer-sweep {
   0% {
-    transform: translateX(-100%) skewX(-15deg);
-    opacity: 0;
+    transform: translateX(-100%) skewX(-12deg);
+    opacity: 0.05;
   }
   10% {
     opacity: 1;
@@ -452,8 +438,8 @@
     opacity: 1;
   }
   100% {
-    transform: translateX(300%) skewX(-15deg);
-    opacity: 0;
+    transform: translateX(300%) skewX(-12deg);
+    opacity: 0.05;
   }
 }
 

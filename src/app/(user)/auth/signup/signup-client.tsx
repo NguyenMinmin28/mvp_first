@@ -573,7 +573,7 @@ export default function SignUpClient() {
       {/* Centered form */}
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex flex-col max-w-md mx-auto justify-center py-16">
-          <div className="w-full max-w-sm mx-auto">
+          <div className="w-full max-w-md mx-auto">
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-semibold text-gray-900 mb-2">
@@ -750,13 +750,7 @@ export default function SignUpClient() {
                           <p className="text-sm">
                             Create a strong password with at least 8 characters.
                             <br />
-                            <span className="text-gray-300">
-                              • Use a mix of letters, numbers, and symbols
-                              <br />
-                              • Don't use common words or personal info
-                              <br />
-                              • Click the eye icon to see what you're typing
-                            </span>
+                           
                           </p>
                         </TooltipContent>
                       </Tooltip>
