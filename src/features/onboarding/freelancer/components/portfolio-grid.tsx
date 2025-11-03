@@ -12,7 +12,8 @@ interface PortfolioItem {
   title: string;
   description: string;
   projectUrl: string;
-  imageUrl: string;
+  imageUrl: string; // Main image (for backward compatibility)
+  images?: string[]; // Array of images: [mainImage, ...additionalImages] (max 5)
 }
 
 interface PortfolioGridProps {
@@ -32,6 +33,7 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
         description: "",
         projectUrl: "",
         imageUrl: "",
+        images: [],
       };
     });
     
@@ -65,23 +67,51 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
         // Create 6 slots, filling with existing data where available
         const slots = Array.from({ length: 6 }, (_, index) => {
           // Find portfolio at this index position
-          const existing = initialPortfolios.find((p, i) => i === index) || 
-                          initialPortfolios[index] || 
+          const existing = initialPortfolios[index] || 
+                          initialPortfolios.find((p, i) => i === index) || 
                           {
                             title: "",
                             description: "",
                             projectUrl: "",
                             imageUrl: "",
+                            images: ["", "", "", "", "", ""],
                           };
+          
+          // Ensure images array has correct structure
+          if (existing.images && Array.isArray(existing.images)) {
+            const normalizedImages = [...existing.images];
+            while (normalizedImages.length < 6) {
+              normalizedImages.push("");
+            }
+            existing.images = normalizedImages.slice(0, 6);
+          } else if (existing.imageUrl) {
+            existing.images = [existing.imageUrl, "", "", "", "", ""];
+          } else {
+            existing.images = ["", "", "", "", "", ""];
+          }
+          
           return existing;
         });
         
         console.log('📋 Created slots from initialPortfolios:', slots);
+        console.log('📋 First portfolio images:', slots[0]?.images);
         setPortfolios(slots);
         
         // Update ref to prevent future loops
         prevInitialPortfoliosRef.current = initialPortfolios;
       }
+    } else if (initialPortfolios && initialPortfolios.length === 0) {
+      // Reset to empty if no portfolios
+      console.log('🔄 Resetting portfolios - no initial portfolios');
+      const emptySlots = Array.from({ length: 6 }, () => ({
+        title: "",
+        description: "",
+        projectUrl: "",
+        imageUrl: "",
+        images: ["", "", "", "", "", ""],
+      }));
+      setPortfolios(emptySlots);
+      prevInitialPortfoliosRef.current = [];
     }
   }, [initialPortfolios]);
 
@@ -135,6 +165,7 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
       description: "",
       projectUrl: "",
       imageUrl: "",
+      images: [],
     };
 
     setPortfolios(prev => {
@@ -168,7 +199,7 @@ export function PortfolioGrid({ initialPortfolios = [], onPortfoliosChange }: Po
   };
 
   const activeSlotsCount = portfolios.filter(p => 
-    p.title || p.description || p.projectUrl || p.imageUrl
+    p.title || p.description || p.projectUrl || p.imageUrl || (p.images && p.images.length > 0)
   ).length;
 
   return (

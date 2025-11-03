@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Checkbox } from "@/ui/components/checkbox";
 import { Label } from "@/ui/components/label";
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -12,12 +13,11 @@ import { ArrowLeft } from "lucide-react";
 export default function AgreementAndSubmitStep() {
   const router = useRouter();
   const { update: updateSession } = useSession();
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [confirmOwnership, setConfirmOwnership] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(true); // Default to checked
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!agreeTerms || !confirmOwnership) return;
+    if (!agreeTerms) return;
     setSubmitting(true);
     try {
       // First, save any pending onboarding data
@@ -59,8 +59,8 @@ export default function AgreementAndSubmitStep() {
       // Wait a bit more to ensure session is fully updated
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Use window.location instead of router.push to avoid session issues
-      window.location.href = "/onboarding/freelancer/pending-approval";
+      // Redirect to dashboard/workspace page after successful submission
+      window.location.href = "/dashboard-user";
     } catch (error) {
       console.error("Error submitting:", error);
       alert(error instanceof Error ? error.message : "Failed to submit. Please try again.");
@@ -77,11 +77,26 @@ export default function AgreementAndSubmitStep() {
         <CardContent className="pt-6 space-y-6">
           <label className="flex items-center gap-3">
             <Checkbox checked={agreeTerms} onCheckedChange={(v) => setAgreeTerms(!!v)} />
-            <Label>I agree to Clevrs Terms & Privacy Policy</Label>
-          </label>
-          <label className="flex items-center gap-3">
-            <Checkbox checked={confirmOwnership} onCheckedChange={(v) => setConfirmOwnership(!!v)} />
-            <Label>I confirm the uploaded work is mine</Label>
+            <Label className="text-sm">
+              I agree to Clevrs{" "}
+              <Link 
+                href="/help/terms" 
+                target="_blank"
+                className="text-blue-600 hover:text-blue-700 underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Terms
+              </Link>
+              {" "}&{" "}
+              <Link 
+                href="/privacy-policy" 
+                target="_blank"
+                className="text-blue-600 hover:text-blue-700 underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Privacy Policy
+              </Link>
+            </Label>
           </label>
 
           <div className="pt-2 flex flex-col-reverse sm:flex-row gap-3">
@@ -96,7 +111,7 @@ export default function AgreementAndSubmitStep() {
             </Button>
             <Button 
               className="flex-1 sm:flex-initial min-w-28" 
-              disabled={!agreeTerms || !confirmOwnership || submitting} 
+              disabled={!agreeTerms || submitting} 
               onClick={handleSubmit}
             >
               {submitting ? "Submitting..." : "Finish"}

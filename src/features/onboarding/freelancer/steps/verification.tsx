@@ -15,6 +15,7 @@ export default function VerificationStep() {
   const [facebook, setFacebook] = useState("");
   const [instagram, setInstagram] = useState("");
   const [xUrl, setXUrl] = useState("");
+  const [linkedinError, setLinkedinError] = useState("");
 
   useEffect(() => {
     try {
@@ -42,8 +43,22 @@ export default function VerificationStep() {
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-1">
-            <Label>LinkedIn profile</Label>
-            <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://www.linkedin.com/in/username" />
+            <div className="flex items-center gap-2">
+              <Label>LinkedIn profile</Label>
+              <span className="text-red-500 text-sm">Required</span>
+            </div>
+            <Input 
+              value={linkedin} 
+              onChange={(e) => {
+                setLinkedin(e.target.value);
+                setLinkedinError("");
+              }} 
+              placeholder="https://www.linkedin.com/in/username"
+              className={linkedinError ? "border-red-500 focus:ring-red-500" : ""}
+            />
+            {linkedinError && (
+              <p className="text-sm text-red-500">{linkedinError}</p>
+            )}
           </div>
           <div className="space-y-1">
             <Label>Facebook profile</Label>
@@ -69,7 +84,24 @@ export default function VerificationStep() {
             </Button>
             <Button 
               className="flex-1 sm:flex-initial min-w-28" 
+              disabled={!linkedin.trim()}
               onClick={() => {
+                // Validate LinkedIn URL
+                const trimmedLinkedin = linkedin.trim();
+                if (!trimmedLinkedin) {
+                  setLinkedinError("LinkedIn profile is required");
+                  return;
+                }
+                
+                // Optional: Validate URL format
+                if (!trimmedLinkedin.match(/^(https?:\/\/)?(www\.)?linkedin\.com\/in\/.+$/i)) {
+                  setLinkedinError("Please enter a valid LinkedIn profile URL");
+                  return;
+                }
+                
+                // Clear error
+                setLinkedinError("");
+                
                 // Save to localStorage first
                 try {
                   localStorage.setItem("onboarding.verification", JSON.stringify({ linkedin, facebook, instagram, xUrl }));
@@ -77,7 +109,7 @@ export default function VerificationStep() {
                 
                 // Fire-and-forget server save (don't wait for response)
                 fireAndForget('/api/user/save-onboarding', {
-                  linkedinUrl: linkedin || undefined,
+                  linkedinUrl: trimmedLinkedin,
                   portfolioLinks: undefined,
                 });
                 

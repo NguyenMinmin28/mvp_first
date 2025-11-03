@@ -23,21 +23,56 @@ export async function GET() {
       return NextResponse.json({ error: "Developer profile not found" }, { status: 404 });
     }
 
-    // Create 5 slots array with saved portfolios in correct positions
-    const portfoliosArray = Array.from({ length: 5 }, (_, index) => {
+    // Create 6 slots array with saved portfolios in correct positions
+    const portfoliosArray = Array.from({ length: 6 }, (_, index) => {
       const saved = developerProfile.portfolios.find(p => p.sortOrder === index);
-      return saved ? {
-        id: saved.id,
-        title: saved.title,
-        description: saved.description,
-        projectUrl: saved.projectUrl,
-        imageUrl: saved.imageUrl
-      } : {
-        title: "",
-        description: "",
-        projectUrl: "",
-        imageUrl: ""
-      };
+      if (saved) {
+        // Try to parse images array from imageUrl if it's JSON, otherwise use as single image
+        let images: string[] = [];
+        let imageUrl = saved.imageUrl || "";
+        
+        try {
+          const parsed = JSON.parse(imageUrl);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Ensure structure [main, slot1, slot2, slot3, slot4, slot5] (6 slots total)
+            images = [...parsed];
+            while (images.length < 6) {
+              images.push("");
+            }
+            images = images.slice(0, 6);
+            imageUrl = images[0] || ""; // Main image for backward compatibility
+          } else if (imageUrl) {
+            // Single image: main image + 5 empty slots
+            images = [imageUrl, "", "", "", "", ""];
+          } else {
+            images = ["", "", "", "", "", ""];
+          }
+        } catch {
+          // Not JSON, treat as single image
+          if (imageUrl) {
+            images = [imageUrl, "", "", "", "", ""];
+          } else {
+            images = ["", "", "", "", "", ""];
+          }
+        }
+        
+        return {
+          id: saved.id,
+          title: saved.title,
+          description: saved.description,
+          projectUrl: saved.projectUrl,
+          imageUrl: imageUrl,
+          images: images
+        };
+      } else {
+        return {
+          title: "",
+          description: "",
+          projectUrl: "",
+          imageUrl: "",
+          images: ["", "", "", "", "", ""]
+        };
+      }
     });
 
     console.log('📋 GET: Returning portfolios array:', portfoliosArray);
@@ -83,15 +118,24 @@ export async function POST(request: NextRequest) {
       where: { developerId: developerProfile.id }
     });
 
-    // Create new portfolios - save all 5 slots, even empty ones
-    const portfolioData = portfolios.map((portfolio, index) => ({
-      developerId: developerProfile.id,
-      title: portfolio.title || "",
-      description: portfolio.description || "",
-      projectUrl: portfolio.projectUrl || "",
-      imageUrl: portfolio.imageUrl || "",
-      sortOrder: index
-    }));
+    // Create new portfolios - save all 6 slots, even empty ones
+    const portfolioData = portfolios.map((portfolio, index) => {
+      // Get images array or use imageUrl as fallback
+      const images = portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []);
+      const mainImage = images[0] || portfolio.imageUrl || "";
+      
+      // Store images array as JSON in imageUrl if multiple images, otherwise just the URL
+      const imageUrlToStore = images.length > 1 ? JSON.stringify(images) : mainImage;
+      
+      return {
+        developerId: developerProfile.id,
+        title: portfolio.title || "",
+        description: portfolio.description || "",
+        projectUrl: portfolio.projectUrl || "",
+        imageUrl: imageUrlToStore,
+        sortOrder: index
+      };
+    });
 
     console.log('📝 API: Portfolio data to create:', portfolioData);
 
@@ -109,27 +153,62 @@ export async function POST(request: NextRequest) {
       console.log('ℹ️ API: No portfolios with content to save');
     }
 
-    // Return updated portfolios in correct order (5 slots)
+    // Return updated portfolios in correct order (6 slots)
     const savedPortfolios = await prisma.portfolio.findMany({
       where: { developerId: developerProfile.id },
       orderBy: { sortOrder: "asc" }
     });
 
-    // Create 5 slots array with saved portfolios in correct positions
-    const portfoliosArray = Array.from({ length: 5 }, (_, index) => {
+    // Create 6 slots array with saved portfolios in correct positions
+    const portfoliosArray = Array.from({ length: 6 }, (_, index) => {
       const saved = savedPortfolios.find(p => p.sortOrder === index);
-      return saved ? {
-        id: saved.id,
-        title: saved.title,
-        description: saved.description,
-        projectUrl: saved.projectUrl,
-        imageUrl: saved.imageUrl
-      } : {
-        title: "",
-        description: "",
-        projectUrl: "",
-        imageUrl: ""
-      };
+      if (saved) {
+        // Try to parse images array from imageUrl if it's JSON, otherwise use as single image
+        let images: string[] = [];
+        let imageUrl = saved.imageUrl || "";
+        
+        try {
+          const parsed = JSON.parse(imageUrl);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Ensure structure [main, slot1, slot2, slot3, slot4, slot5] (6 slots total)
+            images = [...parsed];
+            while (images.length < 6) {
+              images.push("");
+            }
+            images = images.slice(0, 6);
+            imageUrl = images[0] || ""; // Main image for backward compatibility
+          } else if (imageUrl) {
+            // Single image: main image + 5 empty slots
+            images = [imageUrl, "", "", "", "", ""];
+          } else {
+            images = ["", "", "", "", "", ""];
+          }
+        } catch {
+          // Not JSON, treat as single image
+          if (imageUrl) {
+            images = [imageUrl, "", "", "", "", ""];
+          } else {
+            images = ["", "", "", "", "", ""];
+          }
+        }
+        
+        return {
+          id: saved.id,
+          title: saved.title,
+          description: saved.description,
+          projectUrl: saved.projectUrl,
+          imageUrl: imageUrl,
+          images: images
+        };
+      } else {
+        return {
+          title: "",
+          description: "",
+          projectUrl: "",
+          imageUrl: "",
+          images: ["", "", "", "", "", ""]
+        };
+      }
     });
 
     console.log('📋 API: Returning portfolios array:', portfoliosArray);
