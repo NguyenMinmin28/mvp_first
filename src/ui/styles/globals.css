@@ -5,6 +5,9 @@
 /* Import layout fixes */
 @import './layout-fixes.css';
 
+/* Import animations */
+@import './animations.css';
+
 /* Custom Font Variables */
 :root {
   --font-body: "GT Standard M", Arial, sans-serif;

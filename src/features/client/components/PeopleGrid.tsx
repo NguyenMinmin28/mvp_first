@@ -1003,6 +1003,7 @@ export function PeopleGrid({
   };
 
   const handleDeveloperClick = (developer: Developer, e?: React.MouseEvent) => {
+    // Allow opening sidebar even without authentication - show public view
     // Open the developer profile slide bar
     setSelectedDeveloper({
       id: developer.id,
@@ -1207,8 +1208,9 @@ export function PeopleGrid({
             }`}
             onMouseEnter={() => router.prefetch(`/developer/${developer.id}`)}
             style={{
-              animationDelay: `${devIndex * 150}ms`,
-              animation: 'fadeInUp 0.8s ease-out forwards'
+              animationDelay: `${Math.min(devIndex * 100, 800)}ms`, // Max delay 800ms để các developer mới vẫn có animation
+              animation: 'fadeInUp 0.6s ease-out forwards',
+              opacity: 0 // Start hidden, animation will make it visible
             }}
           >
             {/* Freelancer Header Row */}
@@ -1514,7 +1516,11 @@ export function PeopleGrid({
                       ...item,
                       developer: {
                         id: developer.id,
-                        user: { name: developer.user.name, image: developer.user.image },
+                        user: { 
+                          name: developer.user.name, 
+                          image: developer.user.image 
+                        },
+                        photoUrl: developer.photoUrl,
                         location: developer.location,
                       }
                     });

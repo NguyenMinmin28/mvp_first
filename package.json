@@ -79,6 +79,7 @@
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-easy-crop": "^5.5.3",
     "react-hook-form": "^7.62.0",
     "react-remove-scroll-bar": "^2.3.8",
     "react-style-singleton": "^2.2.3",

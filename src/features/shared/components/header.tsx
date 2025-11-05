@@ -432,102 +432,110 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
                 <Link 
                   href="/client-dashboard"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/client-dashboard")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <Briefcase className="h-4 w-4" />
                     My Workspace
                   </Button>
-                  {pathname?.startsWith("/client-dashboard") && (
+                  {pathname?.startsWith("/client-dashboard") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 <Link 
                   href="/my-projects"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/my-projects")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <FolderOpen className="h-4 w-4" />
                     My Projects
                   </Button>
-                  {pathname?.startsWith("/my-projects") && (
+                  {pathname?.startsWith("/my-projects") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 <Link 
                   href="/services?tab=people"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/services")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <Briefcase className="h-4 w-4" />
                     Services
                   </Button>
-                  {pathname?.startsWith("/services") && (
+                  {pathname?.startsWith("/services") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 {/* Removed Post Project link as requested */}
                 <Link 
                   href="/pricing"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/pricing")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <DollarSign className="h-4 w-4" />
                     Pricing
                   </Button>
-                  {pathname?.startsWith("/pricing") && (
+                  {pathname?.startsWith("/pricing") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 <DropdownMenu>
-                  <div className="relative">
+                  <div className="relative group">
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`flex items-center gap-2 ${
+                        className={`flex items-center gap-2 text-black hover:text-black ${
                           pathname?.startsWith("/about") || 
                           pathname?.startsWith("/how-clevrs-work") ||
                           pathname?.startsWith("/newsroom") ||
                           pathname?.startsWith("/investors") ||
                           pathname?.startsWith("/blog")
-                            ? "text-black hover:text-black"
-                            : "text-black hover:bg-black hover:text-white"
+                            ? ""
+                            : ""
                         }`}
                         onClick={(e) => {
                           if (isNavigationDisabled) {
@@ -543,8 +551,10 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
                       pathname?.startsWith("/how-clevrs-work") ||
                       pathname?.startsWith("/newsroom") ||
                       pathname?.startsWith("/investors") ||
-                      pathname?.startsWith("/blog")) && (
+                      pathname?.startsWith("/blog")) ? (
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                    ) : (
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                     )}
                   </div>
                   <DropdownMenuContent align="start" className="w-56">
@@ -568,22 +578,24 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
                 <Link 
                   href="/ideas"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/ideas")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <Zap className="h-4 w-4" />
                     Idea Spark
                   </Button>
-                  {pathname?.startsWith("/ideas") && (
+                  {pathname?.startsWith("/ideas") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
               </nav>
@@ -594,80 +606,86 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
                 <Link 
                   href="/dashboard-user"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/dashboard-user")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <Briefcase className="h-4 w-4" />
                     Workspace
                   </Button>
-                  {pathname?.startsWith("/dashboard-user") && (
+                  {pathname?.startsWith("/dashboard-user") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 <Link 
                   href="/services"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/services")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <FolderOpen className="h-4 w-4" />
                     Services
                   </Button>
-                  {pathname?.startsWith("/services") && (
+                  {pathname?.startsWith("/services") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 <Link 
                   href="/ideas"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
-                  className="relative h-full"
+                  className="relative h-full group"
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex items-center gap-2 ${
+                    className={`flex items-center gap-2 text-black ${
                       pathname?.startsWith("/ideas")
-                        ? "text-black hover:text-black"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "hover:text-black"
+                        : "hover:text-black"
                     }`}
                   >
                     <Zap className="h-4 w-4" />
                     IdeaSpark
                   </Button>
-                  {pathname?.startsWith("/ideas") && (
+                  {pathname?.startsWith("/ideas") ? (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  ) : (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                   )}
                 </Link>
                 <DropdownMenu>
-                  <div className="relative">
+                  <div className="relative group">
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`flex items-center gap-2 ${
+                        className={`flex items-center gap-2 text-black hover:text-black ${
                           pathname?.startsWith("/about") || 
                           pathname?.startsWith("/how-clevrs-work") ||
                           pathname?.startsWith("/newsroom") ||
                           pathname?.startsWith("/investors") ||
                           pathname?.startsWith("/blog")
-                            ? "text-black hover:text-black"
-                            : "text-black hover:bg-black hover:text-white"
+                            ? ""
+                            : ""
                         }`}
                         onClick={(e) => {
                           if (isNavigationDisabled) {
@@ -683,8 +701,10 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
                       pathname?.startsWith("/how-clevrs-work") ||
                       pathname?.startsWith("/newsroom") ||
                       pathname?.startsWith("/investors") ||
-                      pathname?.startsWith("/blog")) && (
+                      pathname?.startsWith("/blog")) ? (
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                    ) : (
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-blue-600 w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
                     )}
                   </div>
                   <DropdownMenuContent align="start" className="w-56">

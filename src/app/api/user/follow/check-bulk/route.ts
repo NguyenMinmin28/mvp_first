@@ -4,15 +4,20 @@ import { prisma } from "@/core/database/db";
 
 export async function POST(request: NextRequest) {
   try {
+    // Allow public access - if user is not authenticated, return empty map
     const sessionUser = await getServerSessionUser();
-    if (!sessionUser || sessionUser.role !== "CLIENT") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    
     const body = await request.json().catch(() => ({}));
     const userIds: string[] = Array.isArray(body?.userIds) ? body.userIds : [];
     if (userIds.length === 0) {
       return NextResponse.json({ map: {} });
+    }
+
+    // If user is not authenticated or not a client, return empty map (all false)
+    if (!sessionUser || sessionUser.role !== "CLIENT") {
+      const map: Record<string, boolean> = {};
+      for (const id of userIds) map[id] = false;
+      return NextResponse.json({ map });
     }
 
     // Using prisma any to avoid strict type coupling to optional Follow model

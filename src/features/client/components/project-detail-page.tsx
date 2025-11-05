@@ -188,7 +188,10 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       const controller = new AbortController();
       fetchAbortRef.current = controller;
       
-      setIsLoading(true);
+      // Chỉ set isLoading = true khi chưa có candidates nào (lần đầu load)
+      if (freelancersRef.current.length === 0) {
+        setIsLoading(true);
+      }
       
       setError(null);
       
@@ -255,10 +258,36 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           })));
         }
         
-        // Update state
-        setFreelancers(candidatesWithFavorites);
+        // INCREMENTAL UPDATE: Detect và append chỉ các developer mới
+        const currentDeveloperIds = new Set(freelancersRef.current.map((f: Freelancer) => f.developer.id));
+        const newCandidates = candidatesWithFavorites.filter((c: Freelancer) => 
+          !currentDeveloperIds.has(c.developer.id)
+        );
+        
+        // Update existing candidates với data mới nhất (để sync status changes)
+        const updatedExisting = freelancersRef.current.map((existing: Freelancer) => {
+          const updated = candidatesWithFavorites.find((c: Freelancer) => c.developer.id === existing.developer.id);
+          return updated || existing;
+        });
+        
+        // Merge: existing (updated) + new candidates
+        const mergedCandidates = [...updatedExisting, ...newCandidates];
+        
+        // Log new developers found
+        if (newCandidates.length > 0) {
+          console.log(`✨ Found ${newCandidates.length} new developer(s):`, 
+            newCandidates.map((c: Freelancer) => c.developer.user.name));
+        }
+        
+        // Update state với merged list
+        setFreelancers(mergedCandidates);
         setProjectData(data.project);
         setLastRefreshTime(new Date());
+        
+        // Tắt loading ngay khi có ít nhất 1 candidate
+        if (mergedCandidates.length > 0) {
+          setIsLoading(false);
+        }
         
         if (Array.isArray(data.skills)) {
           setProjectSkills(data.skills.map((s: any) => s.name).filter(Boolean));
@@ -289,16 +318,18 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         const needsInitialBatch = !hasBatch && hasNoCandidates && !autoGenerateBatchAttemptedRef.current && !isLocked;
         
         // Auto-generate first batch if project doesn't have one yet
+        // Use refresh API instead of generate API - it uses optimized logic and will auto-generate if no batch exists
         if (needsInitialBatch) {
-          console.log('🔄 Project has no batch yet, auto-generating first batch...');
+          console.log('🔄 Project has no batch yet, using refresh API (same optimized logic as refresh batch)...');
           autoGenerateBatchAttemptedRef.current = true;
           isSearchingRef.current = true;
           setIsSearching(true);
           
-          // Generate batch in background, then poll for results
+          // Use refresh API - it will automatically generate new batch if no batch exists
+          // This uses the same optimized/fast logic as refresh batch, not the slower generate logic
           (async () => {
             try {
-              const generateResponse = await fetch(`/api/projects/${project.id}/batches/generate`, {
+              const refreshResponse = await fetch(`/api/projects/${project.id}/batches/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -309,23 +340,27 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 signal: controller.signal,
               });
               
-              if (generateResponse.ok) {
-                console.log('✅ Auto-generated batch successfully, fetching candidates...');
+              if (refreshResponse.ok) {
+                console.log('✅ Batch generated via refresh API successfully, starting fast polling...');
                 // Reset polling counter since we're starting fresh
                 pollingAttemptsRef.current = 0;
-                // Wait a bit for batch to be fully processed, then fetch
-                setTimeout(() => {
+                // Start fast polling immediately (500ms interval) - same as refresh batch
+                isSearchingRef.current = true;
+                setIsSearching(true);
+                if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+                pollingTimeoutRef.current = setTimeout(() => {
+                  pollingAttemptsRef.current += 1;
                   fetchFreelancers();
-                }, 1000);
+                }, 500); // Fast polling: 500ms - same as refresh batch
               } else {
-                console.error('❌ Failed to auto-generate batch');
+                console.error('❌ Failed to generate batch via refresh API');
                 autoGenerateBatchAttemptedRef.current = false; // Allow retry
                 isSearchingRef.current = false;
                 setIsSearching(false);
               }
             } catch (error: any) {
               if (error?.name !== 'AbortError') {
-                console.error('❌ Error auto-generating batch:', error);
+                console.error('❌ Error generating batch via refresh API:', error);
                 autoGenerateBatchAttemptedRef.current = false; // Allow retry
                 isSearchingRef.current = false;
                 setIsSearching(false);
@@ -335,19 +370,34 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           return; // Exit early, will fetch again after batch is generated
         }
         
-        // If we have a batch now (after auto-generation), start polling if needed
+        // If we have a batch now (after auto-generation), start fast polling if needed
         if (hasBatch && hasNoCandidates) {
-          // Check if batch might still be processing - poll a few times
-          if (pollingAttemptsRef.current < 10) {
+          // Check if batch might still be processing - poll với interval ngắn hơn
+          if (pollingAttemptsRef.current < 30) {
             isSearchingRef.current = true;
             setIsSearching(true);
             if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+            // Fast polling: 600ms khi đang search, chậm dần sau mỗi 5 lần
+            const pollInterval = pollingAttemptsRef.current < 20 ? 600 : 1000;
             pollingTimeoutRef.current = setTimeout(() => {
               pollingAttemptsRef.current += 1;
               fetchFreelancers();
-            }, 2000);
+            }, pollInterval);
             return;
           }
+        }
+        
+        // Nếu có candidates mới, tiếp tục polling với interval ngắn để tìm thêm
+        if (hasBatch && newCandidates.length > 0 && pollingAttemptsRef.current < 30) {
+          // Có developer mới xuất hiện, tiếp tục polling nhanh để tìm thêm
+          isSearchingRef.current = true;
+          setIsSearching(true);
+          if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+          pollingTimeoutRef.current = setTimeout(() => {
+            pollingAttemptsRef.current += 1;
+            fetchFreelancers();
+          }, 600); // Fast polling khi có developer mới
+          return;
         }
         
         // Stop polling if we've reached max attempts
@@ -368,10 +418,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           isSearchingRef.current = true;
           setIsSearching(true);
           if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+          // Fast polling khi đang search nhưng chưa có candidates
+          const pollInterval = pollingAttemptsRef.current < 20 ? 600 : 1000;
           pollingTimeoutRef.current = setTimeout(() => {
             pollingAttemptsRef.current += 1;
             fetchFreelancers();
-          }, 2000);
+          }, pollInterval);
         } else {
           // Search completed, candidates found - stop polling
           isSearchingRef.current = false;
@@ -395,7 +447,10 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       console.error("Error fetching freelancers:", error);
       setError("An error occurred while fetching freelancers");
     } finally {
-      setIsLoading(false);
+      // Chỉ tắt loading khi đã có candidates hoặc không còn polling
+      if (freelancersRef.current.length > 0 || pollingAttemptsRef.current >= 30) {
+        setIsLoading(false);
+      }
     }
   }, [project.id]); // Only depend on project.id to prevent infinite loops
 
@@ -425,15 +480,36 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
 
   const generateNewBatch = async () => {
     try {
-      console.log("🔄 Starting refresh batch for project:", project.id);
+      console.log("🔄 Starting NEW batch generation for project:", project.id);
+      
+      // Check if project has accepted candidates BEFORE clearing
+      const hasAccepted = freelancersRef.current.some((f: Freelancer) => f.responseStatus === "accepted");
+      
+      // Clear existing freelancers list để hiển thị batch mới
+      setFreelancers([]);
+      freelancersRef.current = [];
+      
+      // Set loading state ngay lập tức để hiển thị loading message
       setIsLoading(true);
+      
+      // Set searching state để hiển thị indicator
+      isSearchingRef.current = true;
+      setIsSearching(true);
       setError(null);
       
-      // Use refresh batch API instead of generate to preserve accepted candidates
-      const refreshUrl = `/api/projects/${project.id}/batches/refresh`;
-      console.log(`🔄 Calling refresh batch API: ${refreshUrl}`);
+      let apiUrl: string;
       
-      const response = await fetch(refreshUrl, {
+      if (hasAccepted) {
+        // Có accepted candidates, dùng refresh để preserve
+        apiUrl = `/api/projects/${project.id}/batches/refresh`;
+        console.log("🔄 Has accepted candidates, using refresh API");
+      } else {
+        // Không có accepted, generate batch mới hoàn toàn
+        apiUrl = `/api/projects/${project.id}/batches/generate`;
+        console.log("🔄 No accepted candidates, generating completely new batch");
+      }
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -445,29 +521,60 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         })
       });
       
-      console.log("🔄 Refresh batch API response:", response.status, response.ok);
+      console.log("🔄 Batch API response:", response.status, response.ok);
       
       if (response.ok) {
         const responseData = await response.json();
-        console.log("🔄 Refresh batch API success:", responseData);
-        // Refresh the freelancers list after refreshing batch
-        await fetchFreelancers();
+        console.log("🔄 Batch API success:", responseData);
+        
+        // Reset polling counter và start fast polling để hiển thị candidates ngay
+        pollingAttemptsRef.current = 0;
+        autoGenerateBatchAttemptedRef.current = false; // Reset flag để có thể auto-generate lại nếu cần
+        
+        // Start fast polling immediately để fetch candidates mới - không delay
+        fetchFreelancers();
       } else {
         const errorData = await response.json();
-        console.error("🔄 Refresh batch API error:", errorData);
+        console.error("🔄 Batch API error:", errorData);
+        isSearchingRef.current = false;
+        setIsSearching(false);
+        setIsLoading(false);
+        
         if (errorData.error?.includes("No eligible candidates")) {
           setError("All candidates have been assigned to this project");
         } else if (errorData.error?.includes("exhausted available developers")) {
           setError("This project has exhausted all available developers. Please try manual assignment or contact support.");
+        } else if (errorData.error?.includes("already has accepted candidates")) {
+          // Nếu không thể generate vì có accepted, thử refresh
+          console.log("🔄 Cannot generate new batch, trying refresh instead...");
+          const refreshResponse = await fetch(`/api/projects/${project.id}/batches/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fresherCount: 2,
+              midCount: 2,
+              expertCount: 1
+            })
+          });
+          
+          if (refreshResponse.ok) {
+            pollingAttemptsRef.current = 0;
+            fetchFreelancers();
+          } else {
+            setError(errorData.error || "Failed to generate new batch");
+          }
         } else {
-          setError(errorData.error || "Failed to refresh batch");
+          setError(errorData.error || "Failed to generate new batch");
         }
       }
     } catch (error) {
-      console.error("🔄 Error refreshing batch:", error);
-      setError("An error occurred while refreshing batch");
-    } finally {
+      console.error("🔄 Error generating new batch:", error);
+      isSearchingRef.current = false;
+      setIsSearching(false);
       setIsLoading(false);
+      setError("An error occurred while generating new batch");
     }
   };
 
@@ -882,9 +989,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-white">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-white">
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 w-full">
         {/* Project Name and Budget */}
         <div className="p-4 lg:p-6 pb-0">
           <div className="flex items-center justify-between px-4 py-3">
@@ -938,14 +1045,11 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
        
 
           {/* Freelancer Cards */}
-          {isLoading || (isSearching && freelancers.length === 0) ? (
+          {/* Chỉ hiển thị loading screen khi THỰC SỰ chưa có candidate nào và đang load lần đầu */}
+          {isLoading && freelancers.length === 0 && !error ? (
             <LoadingMessage 
               title="Finding the Perfect Developers"
-              message={
-                freelancers.length > 0
-                  ? `${freelancers.length} freelancer${freelancers.length > 1 ? 's' : ''} found so far...`
-                  : "We're searching through our network of skilled developers. Please be patient..."
-              }
+              message="We're searching through our network of skilled developers. Please be patient..."
               size="lg"
             />
           ) : error ? (
@@ -956,14 +1060,24 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
               </Button>
             </div>
           ) : (
-                <PeopleGrid 
-                  overrideDevelopers={isLoading ? [] : overrideDevelopers} 
-                  freelancerResponseStatuses={freelancerResponseStatuses}
-                  freelancerDeadlines={freelancerDeadlines}
-                  onGenerateNewBatch={isLocked ? undefined : generateNewBatch}
-                  locked={isLocked}
-                  projectId={project.id}
-                />
+            <>
+              {/* Hiển thị ngay khi có ít nhất 1 candidate */}
+              <PeopleGrid 
+                overrideDevelopers={overrideDevelopers} 
+                freelancerResponseStatuses={freelancerResponseStatuses}
+                freelancerDeadlines={freelancerDeadlines}
+                onGenerateNewBatch={isLocked ? undefined : generateNewBatch}
+                locked={isLocked}
+                projectId={project.id}
+              />
+              {/* Indicator nhỏ khi đang search thêm candidates */}
+              {isSearching && freelancers.length > 0 && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  <span>Searching for more developers...</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

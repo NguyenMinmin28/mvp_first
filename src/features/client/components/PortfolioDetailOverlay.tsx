@@ -82,8 +82,34 @@ export default function PortfolioDetailOverlay({ isOpen, item, onClose }: Portfo
     }
   };
 
+  // Prefer highest quality display using Cloudinary transformations when possible
+  const getOptimizedImageUrl = (url?: string, width?: number, height?: number) => {
+    if (!url) return "";
+    try {
+      const u = new URL(url);
+      if (!u.hostname.includes("res.cloudinary.com")) return url; // only transform cloudinary
+      const parts = u.pathname.split("/upload/");
+      if (parts.length !== 2) return url;
+      const transform = ["f_auto", "q_auto" ];
+      if (width) transform.push(`w_${width}`);
+      if (height) transform.push(`h_${height}`);
+      // crop fill to cover
+      if (width || height) transform.push("c_fill");
+      u.pathname = `${parts[0]}/upload/${transform.join(',')}/${parts[1]}`;
+      return u.toString();
+    } catch {
+      return url;
+    }
+  };
+
+  const bestPortfolioImage = (() => {
+    const imgs: string[] = Array.isArray(item?.images) ? item.images : [];
+    const nonEmpty = imgs.filter((s) => s && typeof s === 'string' && s.trim() !== "");
+    return nonEmpty[0] || item?.imageUrl || "";
+  })();
+
   return (
-    <div className={`fixed inset-0 z-[60] pointer-events-${isOpen ? "auto" : "none"}`} aria-hidden={!isOpen}>
+    <div className={`fixed inset-0 z-[100] pointer-events-${isOpen ? "auto" : "none"}`} aria-hidden={!isOpen}>
       <div className={`fixed inset-0 bg-black/40 transition-opacity duration-300 lg:hidden ${isOpen ? "opacity-100" : "opacity-0"}`} onClick={onClose} />
       <div className={`fixed inset-y-0 left-0 w-1/3 bg-black/40 transition-opacity duration-300 hidden lg:block ${isOpen ? "opacity-100" : "opacity-0"}`} onClick={onClose} />
       <div className={`fixed inset-y-0 left-1/3 right-2/3 bg-transparent hidden lg:block ${isOpen ? "block" : "hidden"}`} onClick={onClose} />
@@ -100,8 +126,15 @@ export default function PortfolioDetailOverlay({ isOpen, item, onClose }: Portfo
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {item?.developer?.user?.image ? (
-                  <img src={item.developer.user.image} alt={item.developer.user.name || ""} className="w-full h-full object-cover" />
+                {(item?.developer?.photoUrl || item?.developer?.user?.image) ? (
+                  <img 
+                    src={item?.developer?.photoUrl || item?.developer?.user?.image || '/images/avata/default.jpeg'} 
+                    alt={item?.developer?.user?.name || ""} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                    }}
+                  />
                 ) : (
                   <div className="w-full h-full bg-gray-200" />
                 )}
@@ -173,9 +206,9 @@ export default function PortfolioDetailOverlay({ isOpen, item, onClose }: Portfo
             <div className="z-0 mt-10 sm:mt-14 px-0.5 sm:px-1">
               <div className="relative mx-auto w-full max-w-[95%]" style={{ paddingTop: "56.25%" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {item?.imageUrl ? (
+                {bestPortfolioImage ? (
                   <img
-                    src={item.imageUrl}
+                    src={getOptimizedImageUrl(bestPortfolioImage, 1600, 900)}
                     alt={item.title || "Portfolio"}
                     className="absolute inset-0 w-full h-full object-cover rounded-md"
                     loading="lazy"
@@ -270,8 +303,15 @@ export default function PortfolioDetailOverlay({ isOpen, item, onClose }: Portfo
                   <div className="flex flex-col items-center text-center">
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {item?.developer?.user?.image ? (
-                        <img src={item.developer.user.image} alt={item.developer.user.name || "Freelancer"} className="w-full h-full object-cover" />
+                      {(item?.developer?.photoUrl || item?.developer?.user?.image) ? (
+                        <img 
+                          src={item?.developer?.photoUrl || item?.developer?.user?.image || '/images/avata/default.jpeg'} 
+                          alt={item?.developer?.user?.name || "Freelancer"} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                          }}
+                        />
                       ) : (
                         <div className="w-full h-full bg-gray-200" />
                       )}

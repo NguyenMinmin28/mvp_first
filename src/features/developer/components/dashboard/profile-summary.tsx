@@ -8,7 +8,7 @@ import {
   ActionDropdown,
 } from "@/ui/components/modern-dropdown";
 import { Button } from "@/ui/components/button";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -23,6 +23,15 @@ import { Checkbox } from "@/ui/components/checkbox";
 import DeveloperReviewModal from "@/features/client/components/developer-review-modal";
 import { toast } from "sonner";
 import DeveloperReviewsModal from "@/features/client/components/developer-reviews-modal";
+import { AvatarCropModal } from "@/features/profile/components/avatar-crop-modal";
+import { useImageUpload, useUpload } from "@/core/hooks/use-upload";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/ui/components/tooltip";
+import { X } from "lucide-react";
 
 interface ProfileSummaryProps {
   profile: any;
@@ -91,6 +100,60 @@ export default function ProfileSummary({
   );
   const [showReviewsOverlay, setShowReviewsOverlay] = useState(false);
   const [showResumeViewer, setShowResumeViewer] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const { uploadImage, isUploading: isUploadingAvatar } = useImageUpload({
+    onSuccess: async (result) => {
+      setPhotoUrl(result.url);
+      // Update profile photoUrl
+      try {
+        await fetch("/api/user/update-profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: result.url }),
+        });
+        toast.success("Avatar updated successfully");
+        // Reload profile data
+        const me = await fetch("/api/user/me", { cache: "no-store" });
+        if (me.ok) {
+          const data = await me.json();
+          setPhotoUrl(data.user?.photoUrl || photoUrl);
+        }
+        // Dispatch event to update header avatar
+        window.dispatchEvent(new CustomEvent('profile-updated'));
+      } catch (error) {
+        console.error("Failed to save avatar:", error);
+      }
+    },
+    onError: (error) => {
+      console.error('Avatar upload error:', error);
+    }
+  });
+
+  const { deleteFile } = useUpload({
+    onSuccess: () => {
+      console.log('Old avatar deleted successfully');
+    },
+    onError: (error) => {
+      console.warn('Failed to delete old avatar:', error);
+    },
+    showToast: false
+  });
+
+  const extractPublicId = (url: string | undefined) => {
+    if (!url) return undefined;
+    try {
+      const parts = url.split("/upload/")[1];
+      if (!parts) return undefined;
+      const path = parts.replace(/^v\d+\//, "");
+      const last = path.split(".")[0];
+      return last;
+    } catch {
+      return undefined;
+    }
+  };
 
   // Map internal statuses to display labels
   const getDisplayStatus = (value: string) => {
@@ -299,53 +362,187 @@ export default function ProfileSummary({
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
             {/* Left: Avatar */}
             <div className="lg:w-[200px] w-full lg:max-w-[200px] relative z-10">
-              <div className="relative inline-block">
-                <Avatar className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full shrink-0 relative">
-                  <AvatarImage
-                    src={
-                      photoUrl ||
-                      profile?.photoUrl ||
-                      profile?.image ||
-                      "/images/avata/default.jpeg"
+              <TooltipProvider>
+                <div className="relative inline-block group">
+                  {!developerId ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={isUploadingAvatar}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative cursor-pointer"
+                        >
+                          <Avatar className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full shrink-0 relative">
+                            <AvatarImage
+                              src={
+                                photoUrl ||
+                                profile?.photoUrl ||
+                                profile?.image ||
+                                "/images/avata/default.jpeg"
+                              }
+                              className="object-cover w-full h-full rounded-full"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                              }}
+                            />
+                            <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center rounded-full">
+                              <img 
+                                src="/images/avata/default.jpeg" 
+                                alt="Default Avatar"
+                                className="w-full h-full object-cover rounded-full"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </AvatarFallback>
+                          </Avatar>
+                          {/* Delete button on hover - top left corner */}
+                          {photoUrl && !isUploadingAvatar && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const oldPublicId = extractPublicId(photoUrl);
+                                if (oldPublicId) {
+                                  deleteFile(oldPublicId).catch(console.warn);
+                                }
+                                setPhotoUrl("");
+                                fetch("/api/user/update-profile", {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ photoUrl: "" }),
+                                }).catch(console.error);
+                              }}
+                              className="absolute -top-2 -left-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                              title="Remove photo"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Click to upload a photo. For best results, use a square image (1:1).</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Avatar className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full shrink-0 relative">
+                      <AvatarImage
+                        src={
+                          photoUrl ||
+                          profile?.photoUrl ||
+                          profile?.image ||
+                          "/images/avata/default.jpeg"
+                        }
+                        className="object-cover w-full h-full rounded-full"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                        }}
+                      />
+                      <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center rounded-full">
+                        <img 
+                          src="/images/avata/default.jpeg" 
+                          alt="Default Avatar"
+                          className="w-full h-full object-cover rounded-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  {/* Status dot positioned like in PeopleGrid */}
+                  <span
+                    className={`absolute right-1 top-1 inline-block w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white z-50 ${
+                      resolvedPresence === "available"
+                        ? "bg-green-500"
+                        : "bg-gray-400"
+                    }`}
+                    style={{ zIndex: 9999 }}
+                    aria-label={
+                      resolvedPresence === "available"
+                        ? "Available"
+                        : "Not Available"
                     }
-                    className="object-cover w-full h-full rounded-full"
-                    onError={(e) => {
-                      // Set to default image on error
-                      (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
-                    }}
+                    title={
+                      resolvedPresence === "available"
+                        ? "Available"
+                        : "Not Available"
+                    }
                   />
-                  <AvatarFallback className="bg-gray-200 w-full h-full flex items-center justify-center rounded-full">
-                    <img 
-                      src="/images/avata/default.jpeg" 
-                      alt="Default Avatar"
-                      className="w-full h-full object-cover rounded-full"
-                      onError={(e) => {
-                        // If default image also fails, show a simple placeholder
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </AvatarFallback>
-                </Avatar>
-                {/* Status dot positioned like in PeopleGrid */}
-                <span
-                  className={`absolute right-1 top-1 inline-block w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white z-50 ${
-                    resolvedPresence === "available"
-                      ? "bg-green-500"
-                      : "bg-gray-400"
-                  }`}
-                  style={{ zIndex: 9999 }}
-                  aria-label={
-                    resolvedPresence === "available"
-                      ? "Available"
-                      : "Not Available"
-                  }
-                  title={
-                    resolvedPresence === "available"
-                      ? "Available"
-                      : "Not Available"
-                  }
-                />
-              </div>
+                  {/* Hidden file input */}
+                  {!developerId && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          if (!file.type.startsWith("image/")) {
+                            toast.error("Please select an image file");
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                            return;
+                          }
+                          
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error("Image size must be less than 5MB");
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                            return;
+                          }
+                          
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setImageToCrop(reader.result as string);
+                            setCropModalOpen(true);
+                          };
+                          reader.onerror = () => {
+                            toast.error("Failed to read image file");
+                          };
+                          reader.readAsDataURL(file);
+                          
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                      />
+                      <AvatarCropModal
+                        open={cropModalOpen}
+                        onClose={() => {
+                          setCropModalOpen(false);
+                          setImageToCrop("");
+                        }}
+                        imageSrc={imageToCrop}
+                        onCropComplete={async (croppedImageBlob) => {
+                          try {
+                            const file = new File(
+                              [croppedImageBlob],
+                              `avatar-${Date.now()}.png`,
+                              { type: "image/png" }
+                            );
+                            
+                            const oldPublicId = extractPublicId(photoUrl);
+                            if (oldPublicId) {
+                              await deleteFile(oldPublicId);
+                            }
+
+                            await uploadImage(file, "avatars", 5);
+                            
+                            setCropModalOpen(false);
+                            setImageToCrop("");
+                          } catch (err: any) {
+                            console.error("Upload error:", err);
+                            toast.error(err?.message || "Failed to upload avatar");
+                          }
+                        }}
+                        isUploading={isUploadingAvatar}
+                      />
+                    </>
+                  )}
+                </div>
+              </TooltipProvider>
             </div>
 
             {/* Right: Personal info */}

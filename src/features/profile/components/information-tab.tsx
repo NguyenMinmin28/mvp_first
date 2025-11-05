@@ -167,6 +167,37 @@ export default function InformationTab({ userRole }: InformationTabProps) {
     loadProfileData(); // Reset to original data
   };
 
+  const handleSaveAvatar = async (photoUrl: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/user/update-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl }),
+      });
+
+      if (response.ok) {
+        toast.success("Avatar updated successfully");
+        // Update local state
+        setProfileData((prev) => ({
+          ...prev,
+          photoUrl,
+        }));
+        await updateSession();
+        // Dispatch event to update header avatar
+        window.dispatchEvent(new CustomEvent('profile-updated'));
+      } else {
+        throw new Error("Failed to update avatar");
+      }
+    } catch (error) {
+      console.error("Error updating avatar:", error);
+      toast.error("Failed to update avatar");
+      throw error; // Re-throw so AvatarUpload can handle it
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleWhatsAppVerification = async () => {
     if (!profileData.whatsappNumber) {
       toast.error("Please enter a WhatsApp number first");
@@ -353,6 +384,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
             profileData={profileData}
             isEditing={isEditing}
             onInputChange={handleInputChange}
+            onSaveAvatar={handleSaveAvatar}
           />
 
           {/* Developer section moved to its own tab to avoid duplication */}

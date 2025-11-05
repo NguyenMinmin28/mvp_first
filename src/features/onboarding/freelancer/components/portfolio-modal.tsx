@@ -341,9 +341,10 @@ export function PortfolioModal({
 
     // Ensure we only save up to 6 images (1 main + 5 additional)
     // Keep structure: [main, slot1, slot2, slot3, slot4, slot5]
-    const savedImages: string[] = [images[0] || ""]; // Main image (required)
-    for (let i = 1; i <= 5; i++) {
-      savedImages.push(images[i] || ""); // Additional slots (can be empty)
+    // Normalize: ensure exactly 6 slots
+    const normalizedImages: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      normalizedImages.push(images[i] || "");
     }
     
     const updatedPortfolio: PortfolioItem = {
@@ -351,8 +352,8 @@ export function PortfolioModal({
       title: title.trim(),
       description: description.trim(),
       projectUrl: projectUrl.trim(),
-      imageUrl: images[0] || "", // Main image for backward compatibility
-      images: savedImages, // Array with structure: [main, slot1, slot2, slot3, slot4, slot5]
+      imageUrl: normalizedImages[0] || "", // Main image for backward compatibility
+      images: normalizedImages, // Array with structure: [main, slot1, slot2, slot3, slot4, slot5]
     };
     
     onSave(updatedPortfolio);

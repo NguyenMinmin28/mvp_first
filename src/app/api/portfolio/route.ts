@@ -2,6 +2,58 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSessionUser } from "@/features/auth/auth-server";
 import { prisma } from "@/core/database/db";
 
+// Helper function to parse imageUrl and return normalized images array
+function parsePortfolioImages(imageUrl: string | null | undefined): { imageUrl: string; images: string[] } {
+  const url = imageUrl || "";
+  let images: string[] = [];
+  let mainImageUrl = "";
+  
+  // Check if imageUrl looks like JSON (starts with [)
+  const isJsonLike = url.trim().startsWith("[");
+  
+  if (isJsonLike) {
+    try {
+      const parsed = JSON.parse(url);
+      if (Array.isArray(parsed)) {
+        // Ensure structure [main, slot1, slot2, slot3, slot4, slot5] (6 slots total)
+        images = [...parsed];
+        while (images.length < 6) {
+          images.push("");
+        }
+        images = images.slice(0, 6);
+        // Get first non-empty image as main image
+        const nonEmptyImages = images.filter(img => img && img.trim() !== "");
+        mainImageUrl = nonEmptyImages[0] || "";
+      } else {
+        // Parsed but not an array, treat as invalid
+        images = ["", "", "", "", "", ""];
+        mainImageUrl = "";
+      }
+    } catch {
+      // Failed to parse JSON, treat as invalid if it looks like JSON
+      if (url.trim().startsWith("[")) {
+        images = ["", "", "", "", "", ""];
+        mainImageUrl = "";
+      } else {
+        // Doesn't look like JSON, treat as single image URL
+        images = [url, "", "", "", "", ""];
+        mainImageUrl = url;
+      }
+    }
+  } else {
+    // Not JSON-like, treat as single image URL
+    if (url) {
+      images = [url, "", "", "", "", ""];
+      mainImageUrl = url;
+    } else {
+      images = ["", "", "", "", "", ""];
+      mainImageUrl = "";
+    }
+  }
+  
+  return { imageUrl: mainImageUrl, images };
+}
+
 export async function GET() {
   try {
     const user = await getServerSessionUser();
@@ -27,34 +79,7 @@ export async function GET() {
     const portfoliosArray = Array.from({ length: 6 }, (_, index) => {
       const saved = developerProfile.portfolios.find(p => p.sortOrder === index);
       if (saved) {
-        // Try to parse images array from imageUrl if it's JSON, otherwise use as single image
-        let images: string[] = [];
-        let imageUrl = saved.imageUrl || "";
-        
-        try {
-          const parsed = JSON.parse(imageUrl);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // Ensure structure [main, slot1, slot2, slot3, slot4, slot5] (6 slots total)
-            images = [...parsed];
-            while (images.length < 6) {
-              images.push("");
-            }
-            images = images.slice(0, 6);
-            imageUrl = images[0] || ""; // Main image for backward compatibility
-          } else if (imageUrl) {
-            // Single image: main image + 5 empty slots
-            images = [imageUrl, "", "", "", "", ""];
-          } else {
-            images = ["", "", "", "", "", ""];
-          }
-        } catch {
-          // Not JSON, treat as single image
-          if (imageUrl) {
-            images = [imageUrl, "", "", "", "", ""];
-          } else {
-            images = ["", "", "", "", "", ""];
-          }
-        }
+        const { imageUrl, images } = parsePortfolioImages(saved.imageUrl);
         
         return {
           id: saved.id,
@@ -122,10 +147,21 @@ export async function POST(request: NextRequest) {
     const portfolioData = portfolios.map((portfolio, index) => {
       // Get images array or use imageUrl as fallback
       const images = portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []);
-      const mainImage = images[0] || portfolio.imageUrl || "";
+      // Normalize: ensure we have exactly 6 slots (main + 5 additional)
+      const normalizedImages: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        normalizedImages.push(images[i] || "");
+      }
       
-      // Store images array as JSON in imageUrl if multiple images, otherwise just the URL
-      const imageUrlToStore = images.length > 1 ? JSON.stringify(images) : mainImage;
+      // Count non-empty images (excluding empty strings)
+      const nonEmptyImages = normalizedImages.filter(img => img && img.trim() !== "");
+      const mainImage = normalizedImages[0] || "";
+      
+      // Only store as JSON if there are 2+ non-empty images, otherwise store as single URL
+      // This ensures backward compatibility and avoids JSON parsing issues
+      const imageUrlToStore = nonEmptyImages.length > 1 
+        ? JSON.stringify(normalizedImages) 
+        : mainImage;
       
       return {
         developerId: developerProfile.id,
@@ -163,34 +199,7 @@ export async function POST(request: NextRequest) {
     const portfoliosArray = Array.from({ length: 6 }, (_, index) => {
       const saved = savedPortfolios.find(p => p.sortOrder === index);
       if (saved) {
-        // Try to parse images array from imageUrl if it's JSON, otherwise use as single image
-        let images: string[] = [];
-        let imageUrl = saved.imageUrl || "";
-        
-        try {
-          const parsed = JSON.parse(imageUrl);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // Ensure structure [main, slot1, slot2, slot3, slot4, slot5] (6 slots total)
-            images = [...parsed];
-            while (images.length < 6) {
-              images.push("");
-            }
-            images = images.slice(0, 6);
-            imageUrl = images[0] || ""; // Main image for backward compatibility
-          } else if (imageUrl) {
-            // Single image: main image + 5 empty slots
-            images = [imageUrl, "", "", "", "", ""];
-          } else {
-            images = ["", "", "", "", "", ""];
-          }
-        } catch {
-          // Not JSON, treat as single image
-          if (imageUrl) {
-            images = [imageUrl, "", "", "", "", ""];
-          } else {
-            images = ["", "", "", "", "", ""];
-          }
-        }
+        const { imageUrl, images } = parsePortfolioImages(saved.imageUrl);
         
         return {
           id: saved.id,

@@ -19,14 +19,49 @@ export async function GET(
       take: limit,
     });
 
-    const items = portfolios.map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      description: p.description,
-      url: p.projectUrl,
-      imageUrl: p.imageUrl,
-      createdAt: p.createdAt,
-    }));
+    const items = portfolios.map((p: any) => {
+      // Normalize images: support both single URL and JSON array
+      const raw = p.imageUrl || "";
+      let images: string[] = [];
+      let imageUrl = "";
+
+      const looksJson = raw.trim().startsWith("[");
+      if (looksJson) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            images = [...parsed].slice(0, 6);
+            while (images.length < 6) images.push("");
+            const nonEmpty = images.filter((u) => u && u.trim() !== "");
+            imageUrl = nonEmpty[0] || "";
+          } else {
+            images = ["", "", "", "", "", ""];
+            imageUrl = "";
+          }
+        } catch {
+          images = ["", "", "", "", "", ""];
+          imageUrl = "";
+        }
+      } else {
+        if (raw) {
+          images = [raw, "", "", "", "", ""];
+          imageUrl = raw;
+        } else {
+          images = ["", "", "", "", "", ""];
+          imageUrl = "";
+        }
+      }
+
+      return {
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        url: p.projectUrl,
+        imageUrl,
+        images,
+        createdAt: p.createdAt,
+      };
+    });
 
     return NextResponse.json({ items });
   } catch (error) {

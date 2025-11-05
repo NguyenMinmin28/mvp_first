@@ -276,27 +276,59 @@ export class RotationService {
         }, {
           timeout: 30000, // 30 seconds timeout
         });
+        
+        // Find and create candidates incrementally after transaction commit
+        // This allows frontend to poll and display each candidate as it's found and created
+        const resultWithMeta = result as any;
+        if (resultWithMeta.project && resultWithMeta.availableSkills) {
+          // Don't await - run in background so API can return immediately
+          this.findAndCreateCandidatesIncrementally(
+            result.batchId,
+            projectId,
+            resultWithMeta.project,
+            result.selection,
+            resultWithMeta.excludeDeveloperIds || [],
+            resultWithMeta.existingBatchesCount || 0
+          ).then(() => {
+            // Send notifications after all candidates are created
+            try {
+              NotificationService.sendBatchNotifications(result.batchId).catch(error => {
+                console.error("Failed to send notifications:", error);
+              });
+            } catch (error) {
+              console.error("Failed to send notifications:", error);
+            }
+          }).catch(error => {
+            console.error("Error finding/creating candidates incrementally:", error);
+          });
+        } else if (result.candidates.length > 0) {
+          // Fallback: if candidates were already found, create them incrementally
+          this.createCandidatesIncrementally(
+            result.batchId,
+            projectId,
+            result.candidates
+          ).catch(error => {
+            console.error("Error creating candidates incrementally:", error);
+          });
+        }
+        
         // Post-commit tasks: run in background to return earlier
         (async () => {
           try {
-            const skillsRequired = Array.from(
-              new Set(result.candidates.flatMap((c: any) => c.skillIds))
-            );
-            if (skillsRequired.length > 0) {
-              await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
-            }
+            // Cursor updates will happen after candidates are created
+            // We'll update cursors based on actual created candidates
           } catch (_) {}
-          try {
-            await NotificationService.sendBatchNotifications(result.batchId);
-          } catch (error) {
-            console.error("Failed to send batch notifications:", error);
-          }
         })();
 
         // Clear cache for this project since we created a new batch
         this.clearRotationCache(projectId);
 
-        return result;
+        // Return immediately with batch ID - candidates will be found and created incrementally
+        return {
+          batchId: result.batchId,
+          candidates: [], // Empty initially - will be populated incrementally
+          selection: result.selection,
+        };
       } catch (err: any) {
         const message: string = err?.message || '';
         const isTransient = /deadlock|write conflict|Transaction API error: Transaction .* has been aborted/i.test(message);
@@ -432,52 +464,8 @@ export class RotationService {
         availableSkills.push(...availableSkillsNoWhatsApp);
       }
 
-      // 3. Generate candidates using rotation algorithm with available skills
-      const candidates = await this.selectCandidates(
-        tx,
-        availableSkills, // Use only available skills
-        project.client.userId,
-        projectId,
-        selection,
-        excludeDeveloperIds,
-        existingBatchesCount
-      );
-
-      // Handle case where no candidates found: create an empty batch to stop infinite searching on UI
-      if (candidates.length === 0) {
-        // Only mark as exhausted if we've tried many times with many exclusions
-        const isExhausted = existingBatchesCount >= 6 && excludeDeveloperIds.length > 20;
-        
-        console.log(`No candidates found for project ${projectId} (${existingBatchesCount} batches, ${excludeDeveloperIds.length} excluded). Creating ${isExhausted ? 'exhausted' : 'empty'} batch.`);
-        
-        // Create an empty, completed batch and mark it as current for the project
-        const emptyBatch = await tx.assignmentBatch.create({
-          data: {
-            projectId,
-            batchNumber: await this.getNextBatchNumber(tx, projectId),
-            status: "completed",
-            selection: selection as any,
-            createdAt: new Date(),
-          },
-        });
-
-        await tx.project.update({
-          where: { id: projectId },
-          data: { 
-            currentBatchId: emptyBatch.id,
-            // Keep project status as submitted so client can manually assign
-            status: "submitted"
-          },
-        });
-
-        return {
-          batchId: emptyBatch.id,
-          candidates: [],
-          selection,
-        };
-      }
-
-      // 3. Create AssignmentBatch
+      // 3. Create AssignmentBatch FIRST
+      // This allows frontend to start polling immediately
       const batch = await tx.assignmentBatch.create({
         data: {
           projectId,
@@ -488,34 +476,8 @@ export class RotationService {
         },
       });
 
-      // 4. Create AssignmentCandidates
-      const acceptanceDeadline = new Date(
-        Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000
-      );
-      const assignedAt = new Date();
-
-      // Use individual creates instead of createMany to ensure Date fields are saved correctly with MongoDB
-      for (const candidate of candidates) {
-        await tx.assignmentCandidate.create({
-          data: {
-            batchId: batch.id,
-            projectId,
-            developerId: candidate.developerId,
-            level: candidate.level,
-            assignedAt,
-            acceptanceDeadline,
-            responseStatus: "pending",
-            usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
-            statusTextForClient: "developer is checking",
-            isFirstAccepted: false,
-            source: "AUTO_ROTATION",
-          },
-        });
-      }
-
-      // 5. Update project currentBatchId and status
-      // Only update status to "assigning" if project is still in "submitted" status
-      // Don't change status if project already has accepted candidates
+      // 4. Update project currentBatchId and status BEFORE finding/creating candidates
+      // This allows frontend to start polling immediately
       const updateData: any = { 
         currentBatchId: batch.id,
       };
@@ -529,13 +491,140 @@ export class RotationService {
         data: updateData,
       });
 
-      // 6. Cursor updates are performed post-commit in generateBatch
-
+      // Return batch ID immediately - candidates will be found and created incrementally after transaction
       return {
         batchId: batch.id,
-        candidates,
+        candidates: [], // Empty initially - will be populated incrementally
         selection,
+        project, // Pass project for incremental finding
+        excludeDeveloperIds, // Pass exclusions for incremental finding
+        existingBatchesCount, // Pass for incremental finding
+        availableSkills, // Pass available skills for incremental finding
       };
+  }
+
+  /**
+   * Create candidates incrementally - one at a time
+   * This allows frontend to display candidates as they are found
+   */
+  private static async createCandidatesIncrementally(
+    batchId: string,
+    projectId: string,
+    candidates: DeveloperCandidate[]
+  ): Promise<void> {
+    const acceptanceDeadline = new Date(
+      Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000
+    );
+    const assignedAt = new Date();
+
+    // Create candidates one at a time and commit immediately
+    // This allows frontend to poll and display each candidate as it's created
+    for (const candidate of candidates) {
+      try {
+        await prisma.assignmentCandidate.create({
+          data: {
+            batchId,
+            projectId,
+            developerId: candidate.developerId,
+            level: candidate.level,
+            assignedAt,
+            acceptanceDeadline,
+            responseStatus: "pending",
+            usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
+            statusTextForClient: "developer is checking",
+            isFirstAccepted: false,
+            source: "AUTO_ROTATION",
+          },
+        });
+        
+        // Small delay to allow frontend to poll and display
+        // This creates the incremental display effect
+        await new Promise(resolve => setTimeout(resolve, 150));
+      } catch (error) {
+        console.error(`Error creating candidate ${candidate.developerId}:`, error);
+        // Continue with next candidate even if one fails
+      }
+    }
+  }
+
+  /**
+   * Find and create candidates incrementally - one at a time
+   * This allows frontend to display candidates as soon as they are found
+   */
+  private static async findAndCreateCandidatesIncrementally(
+    batchId: string,
+    projectId: string,
+    project: any,
+    selection: BatchSelectionCriteria,
+    excludeDeveloperIds: string[],
+    existingBatchesCount: number
+  ): Promise<void> {
+    const acceptanceDeadline = new Date(
+      Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000
+    );
+    const assignedAt = new Date();
+    
+    const levels: Array<{ level: DevLevel; count: number }> = [
+      { level: "EXPERT", count: selection.expertCount },
+      { level: "MID", count: selection.midCount },
+      { level: "FRESHER", count: selection.fresherCount },
+    ];
+
+    const createdDeveloperIds = new Set<string>();
+    const skillsRequired = project.skillsRequired || [];
+
+    // Find and create candidates one at a time, prioritizing by level
+    for (const { level, count } of levels) {
+      for (let i = 0; i < count; i++) {
+        // Try each skill until we find a candidate
+        let candidateFound = false;
+        for (const skillId of skillsRequired) {
+          if (candidateFound) break;
+          
+          try {
+            // Find one candidate for this skill and level
+            const candidates = await this.getCandidatesForSkillLevel(
+              prisma as any,
+              skillId,
+              level,
+              project.client.userId,
+              projectId,
+              1, // Only need 1 candidate
+              [...excludeDeveloperIds, ...Array.from(createdDeveloperIds)]
+            );
+
+            if (candidates.length > 0) {
+              const candidate = candidates[0];
+              
+              // Create candidate immediately
+              await prisma.assignmentCandidate.create({
+                data: {
+                  batchId,
+                  projectId,
+                  developerId: candidate.developerId,
+                  level: candidate.level,
+                  assignedAt,
+                  acceptanceDeadline,
+                  responseStatus: "pending",
+                  usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
+                  statusTextForClient: "developer is checking",
+                  isFirstAccepted: false,
+                  source: "AUTO_ROTATION",
+                },
+              });
+
+              createdDeveloperIds.add(candidate.developerId);
+              candidateFound = true;
+              
+              // Small delay to allow frontend to poll and display
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          } catch (error) {
+            console.error(`Error finding/creating candidate for ${skillId}-${level}:`, error);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1193,205 +1282,230 @@ export class RotationService {
 
   /**
    * Refresh batch - replace individual pending candidates while preserving accepted ones
+   * With retry logic for transaction conflicts
    */
   static async refreshBatch(
     projectId: string,
     customSelection?: Partial<BatchSelectionCriteria>
   ): Promise<BatchGenerationResult> {
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Get current batch with candidates
-      const project = await tx.project.findUnique({
-        where: { id: projectId },
-        select: { 
-          currentBatchId: true,
-          currentBatch: {
-            include: {
-              candidates: {
-                select: {
-                  id: true,
-                  responseStatus: true,
-                  developerId: true,
-                  level: true,
-                  usualResponseTimeMsSnapshot: true,
-                  acceptanceDeadline: true,
-                  assignedAt: true,
-                  respondedAt: true
-                }
-              }
-            }
-          }
-        },
-      });
-
-      if (project?.currentBatchId) {
-        // Get accepted candidates to preserve them
-        const acceptedCandidates = project.currentBatch?.candidates?.filter(
-          (candidate: any) => candidate.responseStatus === "accepted"
-        ) || [];
-
-        // Get all non-accepted candidates to replace them (pending, rejected, expired, invalidated)
-        const nonAcceptedCandidates = project.currentBatch?.candidates?.filter(
-          (candidate: any) => candidate.responseStatus !== "accepted"
-        ) || [];
-
-        console.log(`Refreshing batch: ${acceptedCandidates.length} accepted, ${nonAcceptedCandidates.length} non-accepted to replace`);
-
-        // Calculate how many new candidates we need to add to reach target batch size (15)
-        const targetBatchSize = 15;
-        const currentAcceptedCount = acceptedCandidates.length;
-        const neededNewCandidates = Math.max(0, targetBatchSize - currentAcceptedCount);
-        
-        console.log(`Target batch size: ${targetBatchSize}, current accepted: ${currentAcceptedCount}, need ${neededNewCandidates} new candidates`);
-
-        // Invalidate all non-accepted candidates
-        const invalidateResult = await tx.assignmentCandidate.updateMany({
-          where: {
-            batchId: project.currentBatchId,
-            responseStatus: { not: "accepted" },
-          },
-          data: {
-            responseStatus: "invalidated",
-            invalidatedAt: new Date(),
-          },
-        });
-        
-        console.log(`🔄 Invalidated ${invalidateResult.count} non-accepted candidates in batch ${project.currentBatchId}`);
-
-        // If we need new candidates, generate them with relaxed partial-match selection
-        const replacementCandidates: DeveloperCandidate[] = [];
-        if (neededNewCandidates > 0) {
-          const projectDetails = await tx.project.findUnique({
-            where: { id: projectId },
-            include: { client: { include: { user: true } } },
-          });
-          if (projectDetails) {
-            const selection = { ...this.DEFAULT_SELECTION, ...customSelection };
-            const totalNeed = selection.expertCount + selection.midCount + selection.fresherCount;
-            const excludeDeveloperIds = acceptedCandidates.map(c => c.developerId);
-            const existingBatchesCount = await tx.assignmentBatch.count({ where: { projectId } });
-
-            // Primary selection (WhatsApp required)
-            let newCandidates = await RotationCore.selectCandidates(
-              tx,
-              projectDetails.skillsRequired,
-              projectDetails.client.userId,
-                    projectId,
-              selection,
-              excludeDeveloperIds,
-              existingBatchesCount,
-              {
-                requireWhatsApp: true,
-                minSkillOverlap: 1,
-                preferFullMatch: true,
-                maxPendingInvitesPerDev: 3,
-                useRotationCursor: true,
-                avoidRepeatBatches: 2,
-                minNewPerBatch: Math.max(1, Math.ceil(totalNeed * 0.3)),
-              }
-            );
-
-            // Fallback (WhatsApp relaxed)
-            if (newCandidates.length < neededNewCandidates) {
-              const remainingSelection = {
-                fresherCount: Math.max(0, selection.fresherCount - newCandidates.filter(c => c.level === 'FRESHER').length),
-                midCount: Math.max(0, selection.midCount - newCandidates.filter(c => c.level === 'MID').length),
-                expertCount: Math.max(0, selection.expertCount - newCandidates.filter(c => c.level === 'EXPERT').length),
-              } as any;
-              const more = await RotationCore.selectCandidates(
-              tx,
-              projectDetails.skillsRequired,
-              projectDetails.client.userId,
-              projectId,
-                remainingSelection,
-                [...excludeDeveloperIds, ...newCandidates.map(c => c.developerId)],
-                existingBatchesCount,
-                {
-                  requireWhatsApp: false,
-                  minSkillOverlap: 1,
-                  preferFullMatch: true,
-                  maxPendingInvitesPerDev: 3,
-                  useRotationCursor: true,
-                  avoidRepeatBatches: 2,
-                  minNewPerBatch: 0,
-                }
-              );
-              const seen = new Set(newCandidates.map(c => c.developerId));
-              for (const m of more) if (!seen.has(m.developerId)) newCandidates.push(m);
-            }
-
-            // Create new candidates in the same batch
-            const acceptanceDeadline = new Date(Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000);
-            for (const candidate of newCandidates.slice(0, neededNewCandidates)) {
-              try {
-                await tx.assignmentCandidate.create({
-                  data: {
-                    batchId: project.currentBatchId,
-                    projectId: projectId,
-                    developerId: candidate.developerId,
-                    level: candidate.level,
-                    assignedAt: new Date(),
-                    acceptanceDeadline,
-                    responseStatus: "pending" as const,
-                    usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
-                    statusTextForClient: "developer is checking",
-                    isFirstAccepted: false,
-                    source: "AUTO_ROTATION",
-                  },
-                });
-                replacementCandidates.push(candidate);
-              } catch (error) {
-                console.error(`Error creating new candidate ${candidate.developerId}:`, error);
-              }
-            }
-          }
-        }
-
-        // If we found some replacements, send notifications
-        if (replacementCandidates.length > 0) {
-          try {
-            await NotificationService.sendBatchNotifications(project.currentBatchId);
-          } catch (error) {
-            console.error("Failed to send notifications for replacement candidates:", error);
-          }
-        }
-
-        // Return the updated batch
-        const allCandidates = [
-          ...acceptedCandidates.map((candidate: any) => ({
-            developerId: candidate.developerId,
-            level: candidate.level,
-            skillIds: [], // Will be populated from developer skills
-            usualResponseTimeMs: candidate.usualResponseTimeMsSnapshot,
-          })),
-          ...replacementCandidates
-        ];
-
-        console.log(`🔄 Refresh batch completed: ${acceptedCandidates.length} accepted + ${replacementCandidates.length} new candidates = ${allCandidates.length} total (target: ${targetBatchSize})`);
-
-        return {
-          batchId: project.currentBatchId,
-          candidates: allCandidates,
-          selection: customSelection || this.DEFAULT_SELECTION,
-        };
-      }
-
-      // Generate new batch using internal method to avoid nested transaction
-      return await this._generateBatchWithTx(tx, projectId, customSelection);
-    }, {
-      timeout: 30000, // 30 seconds timeout
-    });
-
-    // Post-commit cursor updates (non-blocking)
-    (async () => {
+    // Retry logic for transaction conflicts
+    let attempt = 0;
+    const maxAttempts = 3;
+    
+    while (attempt < maxAttempts) {
       try {
-        const skillsRequired = Array.from(new Set(result.candidates.flatMap((c: any) => c.skillIds)));
-        if (skillsRequired.length > 0) {
-          await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
-        }
-      } catch (_) {}
-    })();
+        const result = await prisma.$transaction(async (tx: any) => {
+          // Get current batch with candidates
+          const project = await tx.project.findUnique({
+            where: { id: projectId },
+            select: { 
+              currentBatchId: true,
+              currentBatch: {
+                include: {
+                  candidates: {
+                    select: {
+                      id: true,
+                      responseStatus: true,
+                      developerId: true,
+                      level: true,
+                      usualResponseTimeMsSnapshot: true,
+                      acceptanceDeadline: true,
+                      assignedAt: true,
+                      respondedAt: true
+                    }
+                  }
+                }
+              }
+            },
+          });
 
-    return result;
+          if (project?.currentBatchId) {
+            // Get accepted candidates to preserve them
+            const acceptedCandidates = project.currentBatch?.candidates?.filter(
+              (candidate: any) => candidate.responseStatus === "accepted"
+            ) || [];
+
+            // Get all non-accepted candidates to replace them (pending, rejected, expired, invalidated)
+            const nonAcceptedCandidates = project.currentBatch?.candidates?.filter(
+              (candidate: any) => candidate.responseStatus !== "accepted"
+            ) || [];
+
+            console.log(`Refreshing batch: ${acceptedCandidates.length} accepted, ${nonAcceptedCandidates.length} non-accepted to replace`);
+
+            // Calculate how many new candidates we need to add to reach target batch size (15)
+            const targetBatchSize = 15;
+            const currentAcceptedCount = acceptedCandidates.length;
+            const neededNewCandidates = Math.max(0, targetBatchSize - currentAcceptedCount);
+            
+            console.log(`Target batch size: ${targetBatchSize}, current accepted: ${currentAcceptedCount}, need ${neededNewCandidates} new candidates`);
+
+            // Invalidate all non-accepted candidates
+            const invalidateResult = await tx.assignmentCandidate.updateMany({
+              where: {
+                batchId: project.currentBatchId,
+                responseStatus: { not: "accepted" },
+              },
+              data: {
+                responseStatus: "invalidated",
+                invalidatedAt: new Date(),
+              },
+            });
+            
+            console.log(`🔄 Invalidated ${invalidateResult.count} non-accepted candidates in batch ${project.currentBatchId}`);
+
+            // If we need new candidates, generate them with relaxed partial-match selection
+            const replacementCandidates: DeveloperCandidate[] = [];
+            if (neededNewCandidates > 0) {
+              const projectDetails = await tx.project.findUnique({
+                where: { id: projectId },
+                include: { client: { include: { user: true } } },
+              });
+              if (projectDetails) {
+                const selection = { ...this.DEFAULT_SELECTION, ...customSelection };
+                const totalNeed = selection.expertCount + selection.midCount + selection.fresherCount;
+                const excludeDeveloperIds = acceptedCandidates.map(c => c.developerId);
+                const existingBatchesCount = await tx.assignmentBatch.count({ where: { projectId } });
+
+                // Primary selection (WhatsApp required)
+                let newCandidates = await RotationCore.selectCandidates(
+                  tx,
+                  projectDetails.skillsRequired,
+                  projectDetails.client.userId,
+                  projectId,
+                  selection,
+                  excludeDeveloperIds,
+                  existingBatchesCount,
+                  {
+                    requireWhatsApp: true,
+                    minSkillOverlap: 1,
+                    preferFullMatch: true,
+                    maxPendingInvitesPerDev: 3,
+                    useRotationCursor: true,
+                    avoidRepeatBatches: 2,
+                    minNewPerBatch: Math.max(1, Math.ceil(totalNeed * 0.3)),
+                  }
+                );
+
+                // Fallback (WhatsApp relaxed)
+                if (newCandidates.length < neededNewCandidates) {
+                  const remainingSelection = {
+                    fresherCount: Math.max(0, selection.fresherCount - newCandidates.filter(c => c.level === 'FRESHER').length),
+                    midCount: Math.max(0, selection.midCount - newCandidates.filter(c => c.level === 'MID').length),
+                    expertCount: Math.max(0, selection.expertCount - newCandidates.filter(c => c.level === 'EXPERT').length),
+                  } as any;
+                  const more = await RotationCore.selectCandidates(
+                    tx,
+                    projectDetails.skillsRequired,
+                    projectDetails.client.userId,
+                    projectId,
+                    remainingSelection,
+                    [...excludeDeveloperIds, ...newCandidates.map(c => c.developerId)],
+                    existingBatchesCount,
+                    {
+                      requireWhatsApp: false,
+                      minSkillOverlap: 1,
+                      preferFullMatch: true,
+                      maxPendingInvitesPerDev: 3,
+                      useRotationCursor: true,
+                      avoidRepeatBatches: 2,
+                      minNewPerBatch: 0,
+                    }
+                  );
+                  const seen = new Set(newCandidates.map(c => c.developerId));
+                  for (const m of more) if (!seen.has(m.developerId)) newCandidates.push(m);
+                }
+
+                // Store candidates to be created incrementally after transaction commit
+                // Don't create in transaction - will create one by one after commit
+                replacementCandidates.push(...newCandidates.slice(0, neededNewCandidates));
+              }
+            }
+
+            // Return with candidates to be created incrementally
+            // Accepted candidates are already in DB, new ones will be created after transaction
+            const allCandidates = [
+              ...acceptedCandidates.map((candidate: any) => ({
+                developerId: candidate.developerId,
+                level: candidate.level,
+                skillIds: [], // Will be populated from developer skills
+                usualResponseTimeMs: candidate.usualResponseTimeMsSnapshot,
+              })),
+              ...replacementCandidates
+            ];
+
+            console.log(`🔄 Refresh batch: ${acceptedCandidates.length} accepted (preserved) + ${replacementCandidates.length} new candidates to create incrementally`);
+
+            return {
+              batchId: project.currentBatchId,
+              candidates: allCandidates, // Include accepted + new candidates to create
+              replacementCandidates: replacementCandidates, // New candidates to create incrementally
+              selection: customSelection || this.DEFAULT_SELECTION,
+            };
+          }
+
+          // Generate new batch using internal method to avoid nested transaction
+          return await this._generateBatchWithTx(tx, projectId, customSelection);
+        }, {
+          timeout: 30000, // 30 seconds timeout
+        });
+
+        // Create replacement candidates incrementally after transaction commit
+        // This allows frontend to poll and display each candidate as it's created
+        const resultWithReplacements = result as any;
+        if (resultWithReplacements.replacementCandidates && resultWithReplacements.replacementCandidates.length > 0) {
+          // Don't await - run in background so API can return immediately
+          this.createCandidatesIncrementally(
+            result.batchId,
+            projectId,
+            resultWithReplacements.replacementCandidates
+          ).then(() => {
+            // Send notifications after all candidates are created
+            try {
+              NotificationService.sendBatchNotifications(result.batchId).catch(error => {
+                console.error("Failed to send notifications:", error);
+              });
+            } catch (error) {
+              console.error("Failed to send notifications:", error);
+            }
+          }).catch(error => {
+            console.error("Error creating candidates incrementally:", error);
+          });
+        }
+
+        // Post-commit cursor updates (non-blocking)
+        (async () => {
+          try {
+            const skillsRequired = Array.from(new Set(result.candidates.flatMap((c: any) => c.skillIds)));
+            if (skillsRequired.length > 0) {
+              await this.updateRotationCursors(prisma as any, skillsRequired, result.candidates);
+            }
+          } catch (_) {}
+        })();
+
+        // Return immediately - replacement candidates will be created incrementally
+        // Return all candidates (accepted + to be created) so frontend knows what to expect
+        return {
+          batchId: result.batchId,
+          candidates: result.candidates, // All candidates (accepted + to be created)
+          selection: result.selection,
+        };
+      } catch (error: any) {
+        const isTransient = error?.code === 'P2034' || 
+          /Transaction failed due to a write conflict|deadlock/i.test(error?.message || '');
+        
+        attempt += 1;
+        
+        if (!isTransient || attempt >= maxAttempts) {
+          console.error(`❌ Refresh batch failed after ${attempt} attempts:`, error);
+          throw error;
+        }
+        
+        // Wait before retry (exponential backoff)
+        const delay = Math.min(100 * Math.pow(2, attempt - 1), 1000);
+        console.log(`⚠️ Transaction conflict (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
   }
 
   /**

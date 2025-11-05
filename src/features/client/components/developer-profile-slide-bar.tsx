@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 import { Badge } from "@/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
-import { X, Star, MapPin, Clock, DollarSign, MessageCircle, Heart, ExternalLink, User, Briefcase, GraduationCap, Code, Award, Calendar, Globe } from "lucide-react";
+import { X, Star, MapPin, Clock, DollarSign, MessageCircle, Heart, ExternalLink, User, Briefcase, GraduationCap, Code, Award, Calendar, Globe, Lock } from "lucide-react";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
+import { AuthRequiredModal } from "@/features/shared/components/auth-required-modal";
 
 interface DeveloperProfileSlideBarProps {
   isOpen: boolean;
@@ -21,6 +23,7 @@ interface DeveloperProfile {
   id: string;
   name: string;
   image?: string;
+  photoUrl?: string;
   location?: string;
   bio?: string;
   hourlyRateUsd?: number;
@@ -77,8 +80,12 @@ export function DeveloperProfileSlideBar({
   developerName,
   useOriginalDesign = false
 }: DeveloperProfileSlideBarProps) {
+  const { data: session } = useSession();
   const [profile, setProfile] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  const isAuthenticated = !!session?.user;
 
   const fetchDeveloperProfile = useCallback(async () => {
     try {
@@ -189,7 +196,7 @@ export function DeveloperProfileSlideBar({
                   <div className="relative inline-block mb-4">
                     <Avatar className="w-24 h-24">
                       <AvatarImage 
-                        src={profile.image || '/images/avata/default.jpeg'} 
+                        src={profile.photoUrl || profile.image || '/images/avata/default.jpeg'} 
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
                         }}
@@ -252,21 +259,35 @@ export function DeveloperProfileSlideBar({
 
                   {/* Action Buttons */}
                   <div className="flex gap-3 justify-center">
-                    <GetInTouchButton
-                      developerId={profile.id}
-                      developerName={profile.name || 'Unknown Developer'}
-                      className="flex-1 max-w-32"
-                      variant="default"
-                    />
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(`/developer/${profile.id}`, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Full Profile
-                    </Button>
+                    {isAuthenticated ? (
+                      <>
+                        <GetInTouchButton
+                          developerId={profile.id}
+                          developerName={profile.name || 'Unknown Developer'}
+                          className="flex-1 max-w-32"
+                          variant="default"
+                        />
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.open(`/developer/${profile.id}`, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Full Profile
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        className="flex-1 max-w-48"
+                        onClick={() => setShowAuthModal(true)}
+                      >
+                        <Lock className="h-4 w-4 mr-2" />
+                        Sign in to Contact
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -558,6 +579,13 @@ export function DeveloperProfileSlideBar({
           </div>
         </div>
       </div>
+      
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        action="contact this developer"
+      />
     </div>
   );
 }

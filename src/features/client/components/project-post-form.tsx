@@ -204,8 +204,19 @@ export function ProjectPostForm({
     const selected = new Set(skills);
     // Đảm bảo availableSkills là array
     if (!Array.isArray(availableSkills)) return [];
-    return availableSkills.filter((s) => !selected.has(s.id));
-  }, [availableSkills, skills]);
+    
+    // Filter by query (case-insensitive search)
+    const query = skillQuery.trim().toLowerCase();
+    let filtered = availableSkills.filter((s) => !selected.has(s.id));
+    
+    if (query) {
+      filtered = filtered.filter((s) => 
+        s.name.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [availableSkills, skills, skillQuery]);
 
   const selectedSkills = useMemo(() => {
     const selected = new Set(skills);

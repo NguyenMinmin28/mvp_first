@@ -9,12 +9,14 @@ interface BasicInfoTabProps {
   profileData: any;
   isEditing: boolean;
   onInputChange: (field: string, value: string | number | boolean | string[]) => void;
+  onSaveAvatar?: (photoUrl: string) => Promise<void>;
 }
 
 export default function BasicInfoTab({
   profileData,
   isEditing,
   onInputChange,
+  onSaveAvatar,
 }: BasicInfoTabProps) {
   return (
     <Card>
@@ -29,6 +31,8 @@ export default function BasicInfoTab({
           disabled={!isEditing}
           name={profileData.name}
           size="md"
+          onSave={onSaveAvatar}
+          allowDirectUpload={true}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

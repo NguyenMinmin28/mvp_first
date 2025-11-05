@@ -10,15 +10,9 @@ export async function GET(
   try {
     const developerId = params.id;
 
-    // Check authentication
+    // Allow public access - no authentication required for viewing developer profiles
+    // Authentication is optional - if user is logged in, we can show additional info
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
 
     // Get developer profile with complete data
     const developer = await prisma.developerProfile.findUnique({
@@ -70,10 +64,17 @@ export async function GET(
       take: 10,
     });
 
+    // Only show email if user is authenticated and viewing their own profile or is connected
+    const showEmail = session?.user?.id && (
+      session.user.id === developer.userId ||
+      // Add other conditions for showing email (e.g., connected clients)
+      false
+    );
+
     return NextResponse.json({
       id: developer.id,
       name: developer.user.name,
-      email: developer.user.email,
+      email: showEmail ? developer.user.email : null, // Hide email for public access
       photoUrl: developer.photoUrl,
       image: developer.user.image,
       location: developer.location,
@@ -89,13 +90,29 @@ export async function GET(
         totalReviews: developer.reviewsSummary?.totalReviews || 0,
       },
       skills: developer.skills?.map(s => s.skill.name) || [],
-      portfolioLinks: portfolios.map(p => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        url: p.projectUrl,
-        imageUrl: p.imageUrl,
-      })) || [],
+      portfolioLinks: portfolios.map(p => {
+        // Parse imageUrl if it's JSON string, otherwise use as-is
+        let imageUrl = p.imageUrl || "";
+        
+        try {
+          const parsed = JSON.parse(imageUrl);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Get first image from array
+            imageUrl = parsed[0] || "";
+          }
+        } catch {
+          // Not JSON, use as-is (single image URL)
+          imageUrl = imageUrl;
+        }
+        
+        return {
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          url: p.projectUrl,
+          imageUrl: imageUrl,
+        };
+      }) || [],
       workHistory: [],
       education: [],
       certifications: [],

@@ -34,6 +34,24 @@ export default function PortfolioGrid({
 }: PortfolioGridProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  const getOptimizedImageUrl = (url?: string, width?: number, height?: number) => {
+    if (!url) return "";
+    try {
+      const u = new URL(url);
+      if (!u.hostname.includes("res.cloudinary.com")) return url;
+      const parts = u.pathname.split("/upload/");
+      if (parts.length !== 2) return url;
+      const transform = ["f_auto", "q_auto" ];
+      if (width) transform.push(`w_${width}`);
+      if (height) transform.push(`h_${height}`);
+      if (width || height) transform.push("c_fill");
+      u.pathname = `${parts[0]}/upload/${transform.join(',')}/${parts[1]}`;
+      return u.toString();
+    } catch {
+      return url;
+    }
+  };
+
   // When public view and no portfolio at all, show branded letter placeholders
   const isAllEmpty = variant === "public" && (portfolioLinks?.length || 0) === 0;
   const brandedLetters = isAllEmpty ? ["C", "L", "E", "V", "R", "S"] : null;
@@ -79,7 +97,7 @@ export default function PortfolioGrid({
                     <div className="absolute inset-0">
                       {portfolio.imageUrl ? (
                         <ImgWithShimmer
-                          src={portfolio.imageUrl}
+                          src={getOptimizedImageUrl(portfolio.imageUrl, 600, 600)}
                           alt={portfolio.title || 'Portfolio'}
                           aspectRatio="1/1"
                           className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
@@ -118,7 +136,7 @@ export default function PortfolioGrid({
                       <div className="h-3/4 bg-gradient-to-br from-blue-50 to-purple-50 relative">
                         {portfolio.imageUrl ? (
                           <ImgWithShimmer
-                            src={portfolio.imageUrl}
+                            src={getOptimizedImageUrl(portfolio.imageUrl, 800, 600)}
                             alt={portfolio.title || 'Portfolio'}
                             aspectRatio="4/3"
                             className="w-full h-full object-cover"
