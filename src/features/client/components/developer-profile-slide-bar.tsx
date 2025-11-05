@@ -86,6 +86,8 @@ export function DeveloperProfileSlideBar({
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   const isAuthenticated = !!session?.user;
+  // Header height: 64px (h-16) when not authenticated, 96px (h-24) when authenticated (includes welcome bar)
+  const headerHeight = isAuthenticated ? '6rem' : '4rem';
 
   const fetchDeveloperProfile = useCallback(async () => {
     try {
@@ -123,7 +125,7 @@ export function DeveloperProfileSlideBar({
 
   return (
     <div
-      className={`fixed inset-0 z-[60] pointer-events-${isOpen ? "auto" : "none"}`}
+      className={`fixed inset-0 z-[110] pointer-events-${isOpen ? "auto" : "none"}`}
       aria-hidden={!isOpen}
     >
       {/* Mobile backdrop: darken entire screen */}
@@ -148,9 +150,13 @@ export function DeveloperProfileSlideBar({
 
       {/* Sliding panel (responsive width) */}
       <div
-        className={`fixed right-0 top-0 h-full w-full sm:w-5/6 lg:w-2/3 bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-500 ease-out ${
+        className={`fixed right-0 w-full sm:w-5/6 lg:w-2/3 bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-500 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
+        style={{
+          top: headerHeight,
+          height: `calc(100vh - ${headerHeight})`
+        }}
         role="dialog"
         aria-modal="true"
       >
