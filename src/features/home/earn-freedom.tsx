@@ -5,7 +5,7 @@ import { ImgWithShimmer } from "@/ui/components/image-with-shimmer";
 
 export default function EarnFreedom() {
   return (
-    <section className="w-full py-2 md:py-3">
+    <section className="w-full py-2 md:py-3 mb-8 sm:mb-12 lg:mb-16">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-center">
           <div>

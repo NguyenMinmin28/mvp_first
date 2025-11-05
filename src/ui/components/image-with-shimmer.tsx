@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image, { ImageProps } from "next/image";
-import { shimmerDataURL, SHIMMER_SIZES } from "@/core/utils/shimmer";
+import { SHIMMER_SIZES } from "@/core/utils/shimmer";
 import { cn } from "@/core/utils/utils";
 
 interface ImageWithShimmerProps extends Omit<ImageProps, "placeholder"> {
@@ -25,6 +25,10 @@ interface ImageWithShimmerProps extends Omit<ImageProps, "placeholder"> {
    */
   showShimmerOverlay?: boolean;
   /**
+   * Custom background color for shimmer overlay (default: bg-gray-200)
+   */
+  shimmerBgColor?: string;
+  /**
    * Container className
    */
   containerClassName?: string;
@@ -45,6 +49,7 @@ export function ImageWithShimmer({
   shimmerWidth,
   shimmerHeight,
   showShimmerOverlay = true,
+  shimmerBgColor = "bg-gray-200",
   className,
   containerClassName,
   sizes,
@@ -96,8 +101,7 @@ export function ImageWithShimmer({
     return SHIMMER_SIZES.card;
   };
 
-  const { w: shimmerW, h: shimmerH } = getShimmerDimensions();
-  const blurDataURL = shimmerDataURL(shimmerW, shimmerH);
+  // We no longer use Next/Image blur placeholder; keep a solid gray block until fully loaded
 
   // Handle image load - Next.js Image wraps in span, so we need to check the actual img
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -143,7 +147,6 @@ export function ImageWithShimmer({
 
   const containerClasses = cn(
     "image-aspect-container",
-    showShimmer && !isLoaded && showShimmerOverlay && "shimmer",
     isLoaded && "image-loaded",
     containerClassName
   );
@@ -159,6 +162,9 @@ export function ImageWithShimmer({
       className={containerClasses}
       style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}
     >
+      {!isLoaded && !hasError && (
+        <div className={`absolute inset-0 ${shimmerBgColor} z-0`} />
+      )}
       <Image
         src={src}
         alt={alt}
@@ -168,14 +174,18 @@ export function ImageWithShimmer({
         className={imageClasses}
         sizes={sizes}
         priority={priority}
-        placeholder="blur"
-        blurDataURL={blurDataURL}
+        loading={priority ? undefined : "lazy"}
+        decoding="sync"
+        style={{ 
+          opacity: isLoaded ? 1 : 0,
+          visibility: isLoaded ? 'visible' : 'hidden'
+        }}
         onLoad={handleLoad}
         onError={handleError}
         {...props}
       />
       {hasError && (
-        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+        <div className={`absolute inset-0 ${shimmerBgColor} flex items-center justify-center`}>
           <span className="text-gray-400 text-xs">Image unavailable</span>
         </div>
       )}
@@ -190,6 +200,7 @@ export function ImageWithShimmer({
 interface ImgWithShimmerProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   aspectRatio?: string;
   showShimmerOverlay?: boolean;
+  shimmerBgColor?: string;
   containerClassName?: string;
 }
 
@@ -198,6 +209,7 @@ export function ImgWithShimmer({
   alt,
   aspectRatio,
   showShimmerOverlay = true,
+  shimmerBgColor = "bg-gray-200",
   className,
   containerClassName,
   onLoad,
@@ -258,19 +270,26 @@ export function ImgWithShimmer({
   return (
     <div ref={containerRef} className={containerClasses} style={containerStyle}>
       {!isLoaded && !hasError && (
-        <div className="absolute inset-0 bg-gray-200 z-0" />
+        <div className={`absolute inset-0 ${shimmerBgColor} z-0`} />
       )}
       <img
         src={src}
         alt={alt}
         className={imageClasses}
-        style={{ position: 'relative', zIndex: 1 }}
+        loading="lazy"
+        decoding="sync"
+        style={{ 
+          position: 'relative', 
+          zIndex: 1,
+          opacity: isLoaded ? 1 : 0,
+          visibility: isLoaded ? 'visible' : 'hidden'
+        }}
         onLoad={handleLoad}
         onError={handleError}
         {...props}
       />
       {hasError && (
-        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+        <div className={`absolute inset-0 ${shimmerBgColor} flex items-center justify-center`}>
           <span className="text-gray-400 text-xs">Image unavailable</span>
         </div>
       )}

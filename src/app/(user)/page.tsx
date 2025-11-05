@@ -24,13 +24,15 @@ export default async function Home() {
 
   return (
     <UserLayout user={user}>
-      <HeroProject />
-      <Description />
-      <Workspace />
-      <Subscription />
-      <ContactDirect />
-      <AiMatch />
-      <EarnFreedom />
+      <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+        <HeroProject />
+        <Description />
+        <Workspace />
+        <Subscription />
+        <ContactDirect />
+        <AiMatch />
+        <EarnFreedom />
+      </div>
     </UserLayout>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,7 +29,6 @@ import {
   DialogTitle,
 } from "@/ui/components/dialog";
 import { useFormSubmit } from "@/core/hooks/use-api";
-import SendVerificationEmail from "@/features/auth/components/send-verification-email";
 import VerifyOTP from "@/features/auth/components/verify-otp";
 import { cn } from "@/core/utils/utils";
 
@@ -46,7 +45,7 @@ export default function SignUpClient() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<
-    "signup" | "send-verification" | "verify-otp" | "google-password"
+    "signup" | "verify-otp" | "google-password"
   >("signup");
   const [userEmail, setUserEmail] = useState<string>("");
   const [userPassword, setUserPassword] = useState<string>("");
@@ -61,17 +60,77 @@ export default function SignUpClient() {
   const [openTermsModal, setOpenTermsModal] = useState<string | null>(null); // 'terms' | 'user-agreement' | 'privacy-policy'
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showTermsValidation, setShowTermsValidation] = useState(false);
+  const [emailExistsError, setEmailExistsError] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailCheckCompleted, setEmailCheckCompleted] = useState(false);
 
   const router = useRouter();
+
+  // Debounced email check function
+  const checkEmailExists = async (email: string) => {
+    if (!email || !email.includes('@')) {
+      setEmailExistsError(false);
+      setEmailCheckCompleted(false);
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    setEmailCheckCompleted(false);
+    try {
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmailExistsError(data.exists);
+        setEmailCheckCompleted(true); // Mark as completed regardless of result
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+      setEmailCheckCompleted(false); // Failed to check
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isValid },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     mode: "onChange",
   });
+
+  const emailValue = watch("email");
+  const emailCheckTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Debounced email check
+  useEffect(() => {
+    if (emailCheckTimeoutRef.current) {
+      clearTimeout(emailCheckTimeoutRef.current);
+    }
+
+    if (emailValue && emailValue.includes('@') && !errors.email) {
+      emailCheckTimeoutRef.current = setTimeout(() => {
+        checkEmailExists(emailValue);
+      }, 1000); // Check after 1 second of no typing
+    } else {
+      setEmailExistsError(false);
+      setEmailCheckCompleted(false);
+    }
+
+    return () => {
+      if (emailCheckTimeoutRef.current) {
+        clearTimeout(emailCheckTimeoutRef.current);
+      }
+    };
+  }, [emailValue, errors.email]);
 
   const {
     submit,
@@ -116,6 +175,7 @@ export default function SignUpClient() {
 
     // Check if user agreed to terms
     if (!agreeToTerms) {
+      setShowTermsValidation(true);
       toast.error("Please agree to the Terms of Service to continue");
       return;
     }
@@ -133,8 +193,63 @@ export default function SignUpClient() {
       setUserEmail(formData.email);
       setUserPassword(formData.password);
 
-      // Move to email verification step instead of directly creating account
-      setCurrentStep("send-verification");
+      // First, check if email already exists
+      try {
+        const checkEmailResponse = await fetch("/api/auth/check-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: formData.email }),
+        });
+
+        if (checkEmailResponse.ok) {
+          const emailData = await checkEmailResponse.json();
+          if (emailData.exists) {
+            setEmailExistsError(true);
+            toast.error("This email is already registered. Please use a different email or try signing in.");
+            return; // Stop here - don't proceed to OTP
+          }
+        }
+      } catch (emailCheckError) {
+        console.error("Error checking email:", emailCheckError);
+        toast.error("Unable to verify email. Please try again.");
+        return; // Stop here if email check fails
+      }
+
+      // Clear email exists error if we get here
+      setEmailExistsError(false);
+
+      // If email doesn't exist, send OTP and go to verify-otp step
+      try {
+        const response = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            email: formData.email,
+            type: "signup"
+          }),
+        });
+
+        if (response.ok) {
+          // Go directly to OTP verification step
+          setCurrentStep("verify-otp");
+          toast.success("Verification code sent to your email!");
+        } else {
+          // For testing flow, go to OTP page even if send fails
+          setCurrentStep("verify-otp");
+          
+          // Try to parse error message safely
+          try {
+            const errorData = await response.json();
+            toast.error(errorData.message || "Failed to send verification code, but you can still proceed to test");
+          } catch (parseError) {
+            toast.error("Failed to send verification code, but you can still proceed to test");
+          }
+        }
+      } catch (fetchError) {
+        // For testing flow, go to OTP page even if API call fails
+        setCurrentStep("verify-otp");
+        toast.error("Network error, but you can still proceed to test the flow");
+      }
     } catch (error) {
       console.error("Error in handleEmailSignUp:", error);
       toast.error("An error occurred. Please try again.");
@@ -143,9 +258,6 @@ export default function SignUpClient() {
     }
   };
 
-  const handleVerificationCodeSent = () => {
-    setCurrentStep("verify-otp");
-  };
 
   const handleEmailVerified = async () => {
     // Now create the account after email verification
@@ -248,6 +360,7 @@ export default function SignUpClient() {
 
     // Check if user agreed to terms
     if (!agreeToTerms) {
+      setShowTermsValidation(true);
       toast.error("Please agree to the Terms of Service to continue");
       return;
     }
@@ -581,18 +694,14 @@ export default function SignUpClient() {
                   ? "Create account"
                   : currentStep === "google-password"
                     ? "Set up password"
-                    : currentStep === "send-verification"
-                      ? "Verify your email"
-                      : "Enter verification code"}
+                    : "Enter verification code"}
               </h1>
               <p className="text-sm text-gray-600">
                 {currentStep === "signup"
                   ? "Join the Clevrs community today. Create your free account to get started."
                   : currentStep === "google-password"
                     ? `Welcome ${googleEmail}! Please create a password to complete your registration.`
-                    : currentStep === "send-verification"
-                      ? "We'll send a verification code to your email"
-                      : "Enter the 6-digit code we sent to your email"}
+                    : "Enter the 6-digit code we sent to your email"}
               </p>
             </div>
           </div>
@@ -726,9 +835,31 @@ export default function SignUpClient() {
                           handleSubmit(handleEmailSignUp)();
                         }
                       }}
-                      className={cn("h-12 transition-all hover:border-gray-400", errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20")}
+                      className={cn("h-12 transition-all hover:border-gray-400", (errors.email || emailExistsError) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20")}
                     />
                     <FieldError error={errors.email?.message} />
+                    {isCheckingEmail && (
+                      <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Checking email...
+                      </p>
+                    )}
+                    {emailExistsError && !isCheckingEmail && (
+                      <p className="text-sm text-red-600 mt-1">
+                        This email is already registered. Please use a different email or try signing in.
+                      </p>
+                    )}
+                    {emailCheckCompleted && !emailExistsError && !isCheckingEmail && emailValue && (
+                      <p className="text-sm text-green-600 mt-1 flex items-center gap-2">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Email is available
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -820,7 +951,10 @@ export default function SignUpClient() {
                       <Checkbox
                         id="terms-agreement"
                         checked={agreeToTerms}
-                        onCheckedChange={(checked) => setAgreeToTerms(checked ?? false)}
+                        onCheckedChange={(checked) => {
+                          setAgreeToTerms(checked ?? false);
+                          if (checked) setShowTermsValidation(false);
+                        }}
                         tabIndex={3}
                         className="mt-0.5"
                       />
@@ -867,7 +1001,7 @@ export default function SignUpClient() {
                         .
                       </Label>
                     </div>
-                    {!agreeToTerms && (
+                    {showTermsValidation && !agreeToTerms && (
                       <p className="text-sm text-red-600 ml-7 -mt-2">
                         You must agree to the Terms of Service to continue
                       </p>
@@ -876,7 +1010,15 @@ export default function SignUpClient() {
 
                   <Button
                     type="submit"
-                    disabled={isEmailLoading || isGoogleLoading}
+                    disabled={
+                      isEmailLoading || 
+                      isGoogleLoading || 
+                      emailExistsError || 
+                      isCheckingEmail || 
+                      !emailCheckCompleted || 
+                      !agreeToTerms ||
+                      !isValid
+                    }
                     tabIndex={4}
                     className="w-full h-12 mt-2 bg-black text-white hover:bg-black/90 active:scale-[0.98] active:bg-black/95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
                   >
@@ -1059,7 +1201,10 @@ export default function SignUpClient() {
                   <Checkbox
                     id="google-terms-agreement"
                     checked={agreeToTerms}
-                    onCheckedChange={(checked) => setAgreeToTerms(checked ?? false)}
+                    onCheckedChange={(checked) => {
+                      setAgreeToTerms(checked ?? false);
+                      if (checked) setShowTermsValidation(false);
+                    }}
                     tabIndex={3}
                     className="mt-0.5"
                   />
@@ -1097,7 +1242,7 @@ export default function SignUpClient() {
                     .
                   </Label>
                 </div>
-                {!agreeToTerms && (
+                {showTermsValidation && !agreeToTerms && (
                   <p className="text-sm text-red-600 ml-7 -mt-2">
                     You must agree to the Terms of Service to continue
                   </p>
@@ -1130,19 +1275,12 @@ export default function SignUpClient() {
             </div>
           )}
 
-          {currentStep === "send-verification" && (
-            <SendVerificationEmail
-              email={userEmail}
-              onCodeSent={handleVerificationCodeSent}
-              onBack={handleBackToSignup}
-            />
-          )}
 
           {currentStep === "verify-otp" && (
             <VerifyOTP
               email={userEmail}
               onVerified={handleEmailVerified}
-              onBack={() => setCurrentStep("send-verification")}
+              onBack={() => setCurrentStep("signup")}
             />
           )}
         </div>

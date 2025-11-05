@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { ImageWithShimmer } from "@/ui/components/image-with-shimmer";
 import { Button } from "@/ui/components/button";
 import { useSession } from "next-auth/react";
@@ -317,7 +316,7 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                         shimmerSize="card"
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent z-10" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
 
                   {/* Content */}
@@ -410,8 +409,7 @@ export function IdeaSparkGrid({ initialIdeas = [], initialCursor }: IdeaSparkGri
                             alt={idea.author.name}
                             width={32}
                             height={32}
-                            aspectRatio="1/1"
-                            className="object-cover rounded-full"
+                            className="object-cover"
                             sizes="32px"
                             shimmerSize="thumbnail"
                           />
