@@ -31,7 +31,13 @@ import {
 } from "@/ui/components/tooltip";
 
 const signInSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .min(1, "Please enter your email address")
+    .refine((email) => email.includes("@"), {
+      message: "Invalid email address",
+    })
+    .email("Invalid email address"),
   password: z.string().min(1, "Please enter your password"),
 });
 
@@ -147,11 +153,29 @@ export default function SignInClient() {
   const {
     register,
     handleSubmit,
+    watch,
+    clearErrors,
     formState: { errors, isValid },
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     mode: "onChange",
   });
+
+  const emailValue = watch("email");
+  const passwordValue = watch("password");
+
+  // Clear errors when user starts typing
+  useEffect(() => {
+    if (emailValue && errors.email) {
+      clearErrors("email");
+    }
+  }, [emailValue, errors.email, clearErrors]);
+
+  useEffect(() => {
+    if (passwordValue && errors.password) {
+      clearErrors("password");
+    }
+  }, [passwordValue, errors.password, clearErrors]);
 
   const handleEmailSignIn = async (data: SignInFormData) => {
     setIsLoading(true);

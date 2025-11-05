@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/features/auth/auth";
 import { prisma } from "@/core/database/db";
 
 export async function GET(
@@ -8,16 +6,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get("limit") || "5"), 5);
 
+    // Allow public access - no authentication required
+    // Portfolio is public by default for viewing on services/people page
     const portfolios = await prisma.portfolio.findMany({
-      where: { developerId: params.id },
+      where: {
+        developerId: params.id,
+      },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       take: limit,
     });

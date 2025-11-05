@@ -101,6 +101,7 @@ export default function SignUpClient() {
     register,
     handleSubmit,
     watch,
+    clearErrors,
     formState: { errors, isValid },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -108,7 +109,25 @@ export default function SignUpClient() {
   });
 
   const emailValue = watch("email");
+  const passwordValue = watch("password");
   const emailCheckTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Clear errors when user starts typing
+  useEffect(() => {
+    if (emailValue && errors.email) {
+      clearErrors("email");
+    }
+    // Clear emailExistsError when user starts typing new email
+    if (emailValue && emailExistsError) {
+      setEmailExistsError(false);
+    }
+  }, [emailValue, errors.email, emailExistsError, clearErrors]);
+
+  useEffect(() => {
+    if (passwordValue && errors.password) {
+      clearErrors("password");
+    }
+  }, [passwordValue, errors.password, clearErrors]);
 
   // Debounced email check
   useEffect(() => {

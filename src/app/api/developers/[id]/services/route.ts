@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/core/database/db";
-import { getServerSessionUser } from "@/features/auth/auth-server";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSessionUser();
-    if (!session) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
+    // Allow public access - no authentication required for viewing services
+    // Services are already filtered by PUBLIC visibility
     const developerId = params.id;
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get("limit") || "4"), 10);
