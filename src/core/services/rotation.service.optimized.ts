@@ -248,7 +248,7 @@ export class RotationServiceOptimized {
       {
         $match: {
           adminApprovalStatus: "approved",
-          currentStatus: { $in: ["available", "checking", "busy", "away"] }
+          currentStatus: { $in: ["available", "online"] } // Only include available and online developers
           // No whatsappVerified requirement
         }
       },

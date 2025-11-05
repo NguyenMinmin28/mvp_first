@@ -151,11 +151,27 @@ export function FreelancersStrip() {
                       </div>
                       <span
                         className={`absolute right-0.5 top-0.5 inline-block w-3 h-3 rounded-full border-2 border-white ${
-                          freelancer.currentStatus === 'available' ? 'bg-green-500' : 'bg-gray-400'
+                          freelancer.currentStatus === 'online' || freelancer.currentStatus === 'available' 
+                            ? 'bg-green-500' 
+                            : freelancer.currentStatus === 'offline' 
+                              ? 'bg-gray-400' 
+                              : 'bg-gray-400'
                         }`}
                         style={{ zIndex: 10 }}
-                        aria-label={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
-                        title={freelancer.currentStatus === 'available' ? 'Available' : 'Not Available'}
+                        aria-label={
+                          freelancer.currentStatus === 'online' || freelancer.currentStatus === 'available' 
+                            ? 'Online' 
+                            : freelancer.currentStatus === 'offline' 
+                              ? 'Offline' 
+                              : 'Not Available'
+                        }
+                        title={
+                          freelancer.currentStatus === 'online' || freelancer.currentStatus === 'available' 
+                            ? 'Online' 
+                            : freelancer.currentStatus === 'offline' 
+                              ? 'Offline' 
+                              : 'Not Available'
+                        }
                       />
                     </div>
                     <div className="flex-1">

@@ -7,7 +7,7 @@ export class DeveloperStatusService {
    */
   static async updateDeveloperStatus(
     userId: string,
-    newStatus: "available" | "busy" | "checking" | "away"
+    newStatus: "available" | "not_available" | "online" | "offline"
   ): Promise<void> {
     try {
       console.log(`🔄 Updating developer status for user ${userId} to ${newStatus}`);
@@ -93,21 +93,35 @@ export class DeveloperStatusService {
   }
 
   /**
-   * Set developer status to busy (for logout)
+   * Set developer status to offline (for logout)
+   */
+  static async setDeveloperOffline(userId: string): Promise<void> {
+    await this.updateDeveloperStatus(userId, "offline");
+  }
+
+  /**
+   * Set developer status to online (for login)
+   */
+  static async setDeveloperOnline(userId: string): Promise<void> {
+    await this.updateDeveloperStatus(userId, "online");
+  }
+
+  /**
+   * Set developer status to busy (for logout) - DEPRECATED: use setDeveloperOffline
    */
   static async setDeveloperBusy(userId: string): Promise<void> {
-    await this.updateDeveloperStatus(userId, "busy");
+    await this.updateDeveloperStatus(userId, "offline");
   }
 
   /**
-   * Set developer status to available (for login)
+   * Set developer status to available (for login) - DEPRECATED: use setDeveloperOnline
    */
   static async setDeveloperAvailable(userId: string): Promise<void> {
-    await this.updateDeveloperStatus(userId, "available");
+    await this.updateDeveloperStatus(userId, "online");
   }
 
   /**
-   * Record login activity
+   * Record login activity and set status to online
    */
   static async recordLoginActivity(userId: string): Promise<void> {
     try {
@@ -120,11 +134,14 @@ export class DeveloperStatusService {
         return;
       }
 
+      // Set status to online when logging in
+      await this.setDeveloperOnline(userId);
+
       // Record login activity
       await prisma.developerActivityLog.create({
         data: {
           developerId: developerProfile.id,
-          status: "available",
+          status: "online",
           action: "login",
           timestamp: new Date(),
         },
@@ -137,7 +154,7 @@ export class DeveloperStatusService {
   }
 
   /**
-   * Record logout activity
+   * Record logout activity and set status to offline
    */
   static async recordLogoutActivity(userId: string): Promise<void> {
     try {
@@ -150,11 +167,14 @@ export class DeveloperStatusService {
         return;
       }
 
+      // Set status to offline when logging out
+      await this.setDeveloperOffline(userId);
+
       // Record logout activity
       await prisma.developerActivityLog.create({
         data: {
           developerId: developerProfile.id,
-          status: "busy",
+          status: "offline",
           action: "logout",
           timestamp: new Date(),
         },

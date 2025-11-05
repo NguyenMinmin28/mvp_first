@@ -89,7 +89,11 @@ export async function GET(request: NextRequest) {
             });
             break;
           case "Ready to Work":
-            filterConditions.push({ currentStatus: "available" });
+            filterConditions.push({ 
+              currentStatus: { 
+                in: ["available", "online"] 
+              } 
+            });
             break;
           case "Others":
             // Others: only apply filtering when skills are selected

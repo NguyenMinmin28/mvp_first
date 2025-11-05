@@ -40,16 +40,18 @@ export async function GET(request: NextRequest) {
             });
             break;
           case "Ready to Work":
-            filterConditions.push({ currentStatus: "available" });
+            filterConditions.push({ 
+              currentStatus: { 
+                in: ["available", "online"] 
+              } 
+            });
             break;
           case "Others":
+            // Others: exclude "available" and "online" statuses
             filterConditions.push({
-              AND: [
-                { level: { not: "FRESHER" } },
-                { level: { not: "MID" } },
-                { level: { not: "EXPERT" } },
-                { currentStatus: { not: "available" } }
-              ]
+              currentStatus: { 
+                notIn: ["available", "online"] 
+              }
             });
             break;
         }

@@ -123,7 +123,7 @@ export class RotationService {
       const count = await tx.developerProfile.count({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
           whatsappVerified: true,
           skills: {
             some: { skillId }
@@ -155,7 +155,7 @@ export class RotationService {
       const count = await tx.developerProfile.count({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
           // No whatsappVerified requirement
           skills: {
             some: { skillId }
@@ -782,7 +782,7 @@ export class RotationService {
       eligibleDevs = await tx.developerProfile.findMany({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
           level,
           userId: { not: clientUserId },
           // whatsappVerified removed in fallback

@@ -11,12 +11,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // If user is a developer, set status to busy
+    // If user is a developer, set status to offline
     if (session.user.role === "DEVELOPER") {
       try {
-        console.log("🔄 Logout: Setting developer status to busy for user:", session.user.id);
-        await DeveloperStatusService.setDeveloperBusy(session.user.id);
-        console.log("✅ Developer status set to busy successfully");
+        console.log("🔄 Logout: Setting developer status to offline for user:", session.user.id);
+        await DeveloperStatusService.setDeveloperOffline(session.user.id);
+        console.log("✅ Developer status set to offline successfully");
       } catch (statusError) {
         console.error("❌ Failed to update developer status on logout:", statusError);
         // Don't fail the logout if status update fails

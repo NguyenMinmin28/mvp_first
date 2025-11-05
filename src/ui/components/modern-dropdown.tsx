@@ -178,11 +178,23 @@ export const StatusDropdown = ({
           color: "bg-green-600 hover:bg-green-700",
           icon: "🟢",
         };
-      case "busy":
+      case "not_available":
         return {
           label: "Not Available",
+          color: "bg-orange-600 hover:bg-orange-700",
+          icon: "🟠",
+        };
+      case "online":
+        return {
+          label: "Online",
+          color: "bg-blue-600 hover:bg-blue-700",
+          icon: "🔵",
+        };
+      case "offline":
+        return {
+          label: "Offline",
           color: "bg-gray-600 hover:bg-gray-700",
-          icon: "🔴",
+          icon: "⚪",
         };
       default:
         return {
@@ -220,11 +232,25 @@ export const StatusDropdown = ({
         Available
       </DropdownItem>
       <DropdownItem
-        onClick={() => onStatusChange("busy")}
-        icon="🔴"
-        variant={currentStatus === "busy" ? "default" : "default"}
+        onClick={() => onStatusChange("not_available")}
+        icon="🟠"
+        variant={currentStatus === "not_available" ? "default" : "default"}
       >
         Not Available
+      </DropdownItem>
+      <DropdownItem
+        onClick={() => onStatusChange("online")}
+        icon="🔵"
+        variant={currentStatus === "online" ? "default" : "default"}
+      >
+        Online
+      </DropdownItem>
+      <DropdownItem
+        onClick={() => onStatusChange("offline")}
+        icon="⚪"
+        variant={currentStatus === "offline" ? "default" : "default"}
+      >
+        Offline
       </DropdownItem>
     </ModernDropdown>
   );

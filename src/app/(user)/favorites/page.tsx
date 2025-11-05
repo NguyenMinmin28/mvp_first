@@ -30,7 +30,7 @@ interface FavoriteDeveloper {
   experienceYears: number;
   hourlyRateUsd?: number;
   level: "FRESHER" | "MID" | "EXPERT";
-  currentStatus: "available" | "busy" | "away" | "offline";
+  currentStatus: "available" | "not_available" | "online" | "offline";
   adminApprovalStatus: "draft" | "pending" | "approved" | "rejected";
   whatsappNumber?: string;
   skills: Array<{
@@ -110,15 +110,33 @@ export default function FavoritesPage() {
   }, []);
 
   const getStatusColor = (status: string) => {
-    // Only two visual states: Available (green) or Not Available (red)
-    return status === "available" 
-      ? "bg-green-100 text-green-800" 
-      : "bg-red-100 text-red-800";
+    switch (status) {
+      case "available":
+        return "bg-green-100 text-green-800";
+      case "not_available":
+        return "bg-orange-100 text-orange-800";
+      case "online":
+        return "bg-blue-100 text-blue-800";
+      case "offline":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   const getDisplayStatus = (status: string) => {
-    // Only show two labels to users
-    return status === "available" ? "Available" : "Not Available";
+    switch (status) {
+      case "available":
+        return "Available";
+      case "not_available":
+        return "Not Available";
+      case "online":
+        return "Online";
+      case "offline":
+        return "Offline";
+      default:
+        return status;
+    }
   };
 
   const getLevelColor = (level: string) => {
@@ -199,10 +217,26 @@ export default function FavoritesPage() {
                       </Avatar>
                       <span
                         className={`absolute -right-0 -top-0 inline-block w-5 h-5 rounded-full border-2 border-white transform translate-x-1/2 -translate-y-1/2 ${
-                          developer.currentStatus === "available" ? "bg-green-500" : "bg-gray-400"
+                          developer.currentStatus === "online" || developer.currentStatus === "available" 
+                            ? "bg-green-500" 
+                            : developer.currentStatus === "offline" 
+                              ? "bg-gray-400" 
+                              : "bg-gray-400"
                         }`}
-                        aria-label={developer.currentStatus === "available" ? "Available" : "Not Available"}
-                        title={developer.currentStatus === "available" ? "Available" : "Not Available"}
+                        aria-label={
+                          developer.currentStatus === "online" || developer.currentStatus === "available" 
+                            ? "Online" 
+                            : developer.currentStatus === "offline" 
+                              ? "Offline" 
+                              : "Not Available"
+                        }
+                        title={
+                          developer.currentStatus === "online" || developer.currentStatus === "available" 
+                            ? "Online" 
+                            : developer.currentStatus === "offline" 
+                              ? "Offline" 
+                              : "Not Available"
+                        }
                       />
                     </div>
                     <div>

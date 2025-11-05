@@ -163,9 +163,9 @@ enum AdminApprovalStatus {
 
 enum PresenceStatus {
   available
-  checking
-  busy
-  away
+  not_available
+  online
+  offline
 }
 
 /**

@@ -37,7 +37,7 @@ interface ProfileData {
   whatsappNumber?: string;
   whatsappVerified?: boolean;
   usualResponseTimeMs?: number;
-  currentStatus?: "available" | "checking" | "busy" | "away";
+  currentStatus?: "available" | "not_available" | "online" | "offline";
   adminApprovalStatus?: "draft" | "pending" | "approved" | "rejected";
   skills?: Array<{
     skillId: string;

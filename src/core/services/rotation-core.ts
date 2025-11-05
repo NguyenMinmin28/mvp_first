@@ -69,7 +69,7 @@ export class RotationCore {
       const count = await tx.developerProfile.count({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
           whatsappVerified: true,
           skills: {
             some: { skillId }
@@ -101,7 +101,7 @@ export class RotationCore {
       const count = await tx.developerProfile.count({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
           // No whatsappVerified requirement
           skills: {
             some: { skillId }
@@ -213,7 +213,7 @@ export class RotationCore {
     // Base filters
     const baseWhere: any = {
       adminApprovalStatus: "approved",
-      currentStatus: { in: ["available", "checking", "busy", "away"] },
+      currentStatus: { in: ["available", "online"] }, // Only include available and online developers (exclude not_available and offline)
       userId: { not: clientUserId },
       id: { notIn: allExcludeIds },
       // Do not re-invite devs currently pending/accepted in this project
@@ -462,28 +462,28 @@ export class RotationCore {
     // Build base query for eligible developers - optimized for performance
     console.log(`Querying eligible developers for ${skillId}-${level}...`);
     let eligibleDevs = await tx.developerProfile.findMany({
-      where: {
-        adminApprovalStatus: "approved",
-        currentStatus: { in: ["available", "checking", "busy", "away"] },
-        level,
-        userId: { not: clientUserId },
-        whatsappVerified: true, // Chỉ lấy những developer đã verify WhatsApp
-        skills: {
-          some: { skillId },
-        },
-        // Avoid developers who already reached the concurrent pending limit or are in additional exclude list
-        id: { notIn: allExcludeIds },
-        // Don't re-invite developers who are currently pending or accepted for this project
-        // Allow re-inviting developers who have rejected, expired, or invalidated
-        NOT: {
-          assignmentCandidates: {
-            some: {
-              projectId: projectId,
-              responseStatus: { in: ["pending", "accepted"] },
+        where: {
+          adminApprovalStatus: "approved",
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
+          level,
+          userId: { not: clientUserId },
+          whatsappVerified: true, // Chỉ lấy những developer đã verify WhatsApp
+          skills: {
+            some: { skillId },
+          },
+          // Avoid developers who already reached the concurrent pending limit or are in additional exclude list
+          id: { notIn: allExcludeIds },
+          // Don't re-invite developers who are currently pending or accepted for this project
+          // Allow re-inviting developers who have rejected, expired, or invalidated
+          NOT: {
+            assignmentCandidates: {
+              some: {
+                projectId: projectId,
+                responseStatus: { in: ["pending", "accepted"] },
+              },
             },
           },
         },
-      },
       select: {
         id: true,
         level: true,
@@ -509,7 +509,7 @@ export class RotationCore {
       eligibleDevs = await tx.developerProfile.findMany({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "checking", "busy", "away"] },
+          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
           level,
           userId: { not: clientUserId },
           // whatsappVerified removed in fallback

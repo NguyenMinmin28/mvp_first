@@ -27,7 +27,8 @@
     "prisma:update": "./scripts/update-prisma.sh",
     "cron:local": "tsx scripts/run-local-cron.ts",
     "seed:blog": "tsx scripts/seed-blog.ts",
-    "seed:blog:simple": "tsx scripts/seed-blog-simple.ts"
+    "seed:blog:simple": "tsx scripts/seed-blog-simple.ts",
+    "migrate:presence-status": "tsx scripts/migrate-presence-status.ts"
   },
   "prisma": {
     "schema": "./database/prisma/schema.prisma"

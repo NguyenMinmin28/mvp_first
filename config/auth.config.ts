@@ -271,7 +271,7 @@ export default {
           await prisma.user.update({ where: { id: existingUser.id }, data: { lastLoginAt: new Date() } });
         } catch {}
         try {
-          await DeveloperStatusService.setDeveloperAvailable(existingUser.id);
+          await DeveloperStatusService.setDeveloperOnline(existingUser.id);
         } catch {}
         // On successful Google sign in, mark active for developers later in jwt
         return true
@@ -287,7 +287,7 @@ export default {
         await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
       } catch {}
       try {
-        await DeveloperStatusService.setDeveloperAvailable(user.id);
+        await DeveloperStatusService.setDeveloperOnline(user.id);
       } catch {}
     }
 

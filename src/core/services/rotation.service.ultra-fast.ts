@@ -45,7 +45,7 @@ export class RotationServiceUltraFast {
       {
         $match: {
           adminApprovalStatus: "approved",
-          currentStatus: { $in: ["available", "checking", "busy", "away"] },
+          currentStatus: { $in: ["available", "online"] }, // Only include available and online developers
           userId: { $ne: clientUserId },
           whatsappVerified: true,
           ...(excludeDeveloperIds.length > 0 && { _id: { $nin: excludeDeveloperIds } })
