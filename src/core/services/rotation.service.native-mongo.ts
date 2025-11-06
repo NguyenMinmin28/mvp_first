@@ -64,7 +64,8 @@ export class RotationServiceNativeMongo {
       {
         $match: {
           adminApprovalStatus: "approved",
-          currentStatus: { $in: ["available", "online"] }, // Only include available and online developers
+          // Eligibility for batch is controlled strictly by Available/Not Available toggle
+          currentStatus: "available",
           userId: { $ne: new ObjectId(clientUserId) },
           whatsappVerified: true,
           ...(excludeDeveloperIds.length > 0 && { 

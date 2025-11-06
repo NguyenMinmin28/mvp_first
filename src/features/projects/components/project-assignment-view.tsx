@@ -386,7 +386,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
       <LoadingOverlay 
         isVisible={isFetching && project.status === "assigning" && candidatesCount === 0}
         title="Finding Developers"
-        message="We're searching through our network of skilled developers. Please be patient..."
+        message="AI matchmaking in progress — bringing you the smartest connections."
       />
 
       {/* Project Header */}

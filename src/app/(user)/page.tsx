@@ -13,6 +13,7 @@ import Subscription from "@/features/home/subscription";
 import ContactDirect from "@/features/home/contact-direct";
 import AiMatch from "@/features/home/ai-match";
 import EarnFreedom from "@/features/home/earn-freedom";
+import BeforeFooter from "@/features/home/before-footer";
 
 export const metadata: Metadata = {
   title: "Clevrs – Hire Freelancers Directly with 0% Commission",
@@ -32,6 +33,7 @@ export default async function Home() {
         <ContactDirect />
         <AiMatch />
         <EarnFreedom />
+        {!user && <BeforeFooter />}
       </div>
     </UserLayout>
   );

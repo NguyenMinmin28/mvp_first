@@ -62,8 +62,8 @@ export default function BasicInformationStep() {
   };
   
   const bioWordCount = countWords(bio);
-  const minWords = 100; // Minimum words if bio is provided
-  const maxWords = 300; // Maximum words allowed
+  const minWords = 50; // Minimum words required
+  const maxWords = 100; // Maximum words allowed
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -463,22 +463,19 @@ export default function BasicInformationStep() {
               className={`resize-none ${bioError ? "border-red-500" : ""}`}
             />
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">This will be displayed on your public profile</p>
+              <p className="text-xs text-gray-500">
+                Write at least 50 words about yourself to create a strong first impression.
+              </p>
               <p className={`text-xs ${
-                bioWordCount > 0 && (bioWordCount < minWords || bioWordCount > maxWords) 
+                (bioWordCount < minWords || bioWordCount > maxWords) 
                   ? "text-red-500" 
                   : "text-gray-500"
               }`}>
-                {bioWordCount}/{maxWords} words {bioWordCount > 0 && bioWordCount < minWords && `(min ${minWords})`}
+                {bioWordCount}/{maxWords} words {bioWordCount < minWords && `(min ${minWords})`}
               </p>
             </div>
             {bioError && (
               <p className="text-sm text-red-600 mt-1">{bioError}</p>
-            )}
-            {!bioError && bioWordCount > 0 && bioWordCount < minWords && (
-              <p className="text-sm text-amber-600 mt-1">
-                If you provide a bio, it must contain at least {minWords} words. You need {minWords - bioWordCount} more word{bioWordCount < minWords - 1 ? "s" : ""}.
-              </p>
             )}
             {!bioError && bioWordCount > maxWords && (
               <p className="text-sm text-red-600 mt-1">
@@ -564,7 +561,7 @@ export default function BasicInformationStep() {
           <div className="pt-2">
             <Button 
               className="min-w-28" 
-              disabled={(bioWordCount > 0 && bioWordCount < minWords) || bioWordCount > maxWords}
+              disabled={bioWordCount < minWords || bioWordCount > maxWords}
               onClick={async () => {
                 let hasErrors = false;
 
@@ -631,10 +628,10 @@ export default function BasicInformationStep() {
                   }
                 }
 
-                // Validate bio word count before proceeding (only if bio is provided)
-                if (bioWordCount > 0 && bioWordCount < minWords) {
-                  setBioError(`If you provide a bio, it must contain at least ${minWords} words. Currently you have ${bioWordCount} word${bioWordCount !== 1 ? "s" : ""}.`);
-                  toast.error(`Bio must contain at least ${minWords} words if provided`);
+                // Validate bio word count
+                if (bioWordCount < minWords) {
+                  setBioError(`Bio must contain at least ${minWords} words. Currently you have ${bioWordCount} word${bioWordCount !== 1 ? "s" : ""}.`);
+                  toast.error(`Bio must contain at least ${minWords} words`);
                   hasErrors = true;
                 } else if (bioWordCount > maxWords) {
                   setBioError(`Bio cannot exceed ${maxWords} words. Currently you have ${bioWordCount} words.`);

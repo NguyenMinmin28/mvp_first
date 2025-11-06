@@ -32,8 +32,13 @@ import { useFormSubmit } from "@/core/hooks/use-api";
 import VerifyOTP from "@/features/auth/components/verify-otp";
 import { cn } from "@/core/utils/utils";
 
+// Use the same email validation rule as async availability check
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+
 const signUpSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .regex(EMAIL_REGEX, "Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -64,36 +69,108 @@ export default function SignUpClient() {
   const [emailExistsError, setEmailExistsError] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [emailCheckCompleted, setEmailCheckCompleted] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState(false);
 
   const router = useRouter();
 
   // Debounced email check function
+  const lastCheckedEmailRef = useRef<string>("");
+  const checkedResultsRef = useRef<Map<string, { available: boolean; exists: boolean }>>(new Map());
+  const activeEmailCheckControllerRef = useRef<AbortController | null>(null);
+
+  // Stricter email format validator (require TLD letters, min length 2)
+  const isValidEmailFormat = (email: string) => /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(email);
+
   const checkEmailExists = async (email: string) => {
-    if (!email || !email.includes('@')) {
+    if (!email || !isValidEmailFormat(email)) {
       setEmailExistsError(false);
       setEmailCheckCompleted(false);
+      setEmailAvailable(false);
+      return;
+    }
+
+    // Normalize email (lowercase) for comparison
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // If this email has already been checked, reuse cached result
+    const cached = checkedResultsRef.current.get(normalizedEmail);
+    if (cached) {
+      console.log("✅ Using cached email check:", normalizedEmail, cached);
+      setEmailExistsError(cached.exists);
+      setEmailAvailable(cached.available);
+      setEmailCheckCompleted(true);
+      setIsCheckingEmail(false);
       return;
     }
 
     setIsCheckingEmail(true);
     setEmailCheckCompleted(false);
+    setEmailAvailable(false);
+    setEmailExistsError(false);
+    lastCheckedEmailRef.current = normalizedEmail;
+    
     try {
+      console.log("🔍 Checking email:", normalizedEmail);
+      
+      // Create AbortController for timeout (8 seconds)
+      const controller = new AbortController();
+      activeEmailCheckControllerRef.current = controller;
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, 8000);
+      
       const response = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+      if (activeEmailCheckControllerRef.current === controller) {
+        activeEmailCheckControllerRef.current = null;
+      }
+
+      // Guard against race conditions: only apply if this is the latest requested email
+      if (lastCheckedEmailRef.current !== normalizedEmail) {
+        console.log("⏭️ Skipping outdated email check result");
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
-        setEmailExistsError(data.exists);
-        setEmailCheckCompleted(true); // Mark as completed regardless of result
+        console.log("✅ Email check response:", data);
+        const exists = Boolean(data?.exists);
+        setEmailExistsError(exists);
+        setEmailAvailable(exists === false);
+        setEmailCheckCompleted(true);
+        setIsCheckingEmail(false);
+        // Cache the result
+        checkedResultsRef.current.set(normalizedEmail, { available: !exists, exists });
+      } else {
+        // Handle non-ok responses
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("❌ Email check failed:", response.status, errorData);
+        setEmailExistsError(false);
+        setEmailAvailable(false);
+        setEmailCheckCompleted(false);
+        setIsCheckingEmail(false);
       }
-    } catch (error) {
-      console.error("Error checking email:", error);
-      setEmailCheckCompleted(false); // Failed to check
-    } finally {
-      setIsCheckingEmail(false);
+    } catch (error: any) {
+      console.error("💥 Error checking email:", error);
+      // Only update state if this is still the latest email check
+      if (lastCheckedEmailRef.current === normalizedEmail) {
+        if (error.name === 'AbortError') {
+          console.error("⏱️ Request timeout after 8 seconds");
+        }
+        setEmailExistsError(false);
+        setEmailAvailable(false);
+        setEmailCheckCompleted(false);
+        setIsCheckingEmail(false);
+      }
+      if (activeEmailCheckControllerRef.current) {
+        activeEmailCheckControllerRef.current = null;
+      }
     }
   };
 
@@ -112,16 +189,53 @@ export default function SignUpClient() {
   const passwordValue = watch("password");
   const emailCheckTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Clear errors when user starts typing
+  // Track previous email to detect changes
+  const previousEmailRef = useRef<string>("");
+
+  // Clear errors when user starts typing (only when email value changes)
   useEffect(() => {
     if (emailValue && errors.email) {
       clearErrors("email");
     }
-    // Clear emailExistsError when user starts typing new email
-    if (emailValue && emailExistsError) {
+    
+    // Only reset states if email actually changed
+    const normalizedEmail = emailValue ? emailValue.toLowerCase().trim() : "";
+    if (normalizedEmail !== previousEmailRef.current) {
+      const oldEmail = previousEmailRef.current;
+      previousEmailRef.current = normalizedEmail;
+      
+      // Check if new email has cached result
+      const cached = normalizedEmail ? checkedResultsRef.current.get(normalizedEmail) : null;
+      
+      if (cached) {
+        // Email has cached result, apply immediately
+        console.log("✅ Email changed to cached email, applying immediately:", normalizedEmail, cached);
+        setEmailExistsError(cached.exists);
+        setEmailAvailable(cached.available);
+        setEmailCheckCompleted(true);
+        setIsCheckingEmail(false);
+      } else {
+        // Email changed to new email without cache, reset states
+        setEmailExistsError(false);
+        setEmailAvailable(false);
+        setEmailCheckCompleted(false);
+        setIsCheckingEmail(false);
+      }
+    }
+
+    // If email becomes empty or invalid, abort any in-flight request and stop spinner
+    const isValid = normalizedEmail && isValidEmailFormat(normalizedEmail);
+    if (!isValid) {
+      if (activeEmailCheckControllerRef.current) {
+        try { activeEmailCheckControllerRef.current.abort(); } catch {}
+        activeEmailCheckControllerRef.current = null;
+      }
+      setIsCheckingEmail(false);
+      setEmailCheckCompleted(false);
+      setEmailAvailable(false);
       setEmailExistsError(false);
     }
-  }, [emailValue, errors.email, emailExistsError, clearErrors]);
+  }, [emailValue, errors.email, clearErrors]);
 
   useEffect(() => {
     if (passwordValue && errors.password) {
@@ -129,27 +243,59 @@ export default function SignUpClient() {
     }
   }, [passwordValue, errors.password, clearErrors]);
 
-  // Debounced email check
+  // Debounced email check - only depends on emailValue to avoid re-checking when password changes
   useEffect(() => {
+    // Clear any pending timeout
     if (emailCheckTimeoutRef.current) {
       clearTimeout(emailCheckTimeoutRef.current);
+      emailCheckTimeoutRef.current = undefined;
     }
 
-    if (emailValue && emailValue.includes('@') && !errors.email) {
-      emailCheckTimeoutRef.current = setTimeout(() => {
-        checkEmailExists(emailValue);
-      }, 1000); // Check after 1 second of no typing
+    // Validate email format before checking
+    const normalizedEmail = emailValue ? emailValue.toLowerCase().trim() : "";
+    const isValidEmail = normalizedEmail && isValidEmailFormat(normalizedEmail);
+
+    if (isValidEmail) {
+      // If cached, use immediately; otherwise, schedule check
+      const cached = checkedResultsRef.current.get(normalizedEmail);
+      if (cached) {
+        console.log("✅ Email already checked, using cached result:", normalizedEmail, cached);
+        setEmailExistsError(cached.exists);
+        setEmailAvailable(cached.available);
+        setEmailCheckCompleted(true);
+        setIsCheckingEmail(false);
+      } else {
+        console.log("⏳ Scheduling email check for:", normalizedEmail);
+        emailCheckTimeoutRef.current = setTimeout(() => {
+          console.log("⏰ Executing email check for:", normalizedEmail);
+          checkEmailExists(normalizedEmail);
+        }, 300); // Faster debounce to handle rapid typing
+      }
     } else {
-      setEmailExistsError(false);
-      setEmailCheckCompleted(false);
+      // Reset states if email is invalid or empty
+      if (!normalizedEmail) {
+        setEmailExistsError(false);
+        setEmailCheckCompleted(false);
+        setEmailAvailable(false);
+        setIsCheckingEmail(false);
+      }
     }
 
     return () => {
       if (emailCheckTimeoutRef.current) {
         clearTimeout(emailCheckTimeoutRef.current);
+        emailCheckTimeoutRef.current = undefined;
       }
     };
-  }, [emailValue, errors.email]);
+  }, [emailValue]); // Only depend on emailValue, not errors.email
+
+  // Derived flag that mirrors UI rules without relying on RHF's isValid timing
+  const canSubmitBasic = (() => {
+    const normalizedEmail = emailValue ? emailValue.toLowerCase().trim() : "";
+    const emailOk = EMAIL_REGEX.test(normalizedEmail);
+    const passwordOk = (passwordValue?.length ?? 0) >= 8;
+    return emailOk && passwordOk;
+  })();
 
   const {
     submit,
@@ -848,6 +994,12 @@ export default function SignUpClient() {
                       autoComplete="email"
                       tabIndex={1}
                       {...register("email")}
+                      onBlur={() => {
+                        const normalizedEmail = emailValue ? emailValue.toLowerCase().trim() : "";
+                        if (EMAIL_REGEX.test(normalizedEmail) && !isCheckingEmail) {
+                          checkEmailExists(normalizedEmail);
+                        }
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !errors.email && !errors.password && isValid && agreeToTerms) {
                           e.preventDefault();
@@ -857,7 +1009,10 @@ export default function SignUpClient() {
                       className={cn("h-12 transition-all hover:border-gray-400", (errors.email || emailExistsError) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20")}
                     />
                     <FieldError error={errors.email?.message} />
-                    {isCheckingEmail && (
+                    {(
+                      isCheckingEmail ||
+                      (emailValue && EMAIL_REGEX.test(emailValue) && !emailCheckCompleted)
+                    ) && (
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
                         <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -871,7 +1026,7 @@ export default function SignUpClient() {
                         This email is already registered. Please use a different email or try signing in.
                       </p>
                     )}
-                    {emailCheckCompleted && !emailExistsError && !isCheckingEmail && emailValue && (
+                    {emailAvailable && emailCheckCompleted && !isCheckingEmail && emailValue && !errors.email && (
                       <p className="text-sm text-green-600 mt-1 flex items-center gap-2">
                         <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -1030,13 +1185,13 @@ export default function SignUpClient() {
                   <Button
                     type="submit"
                     disabled={
-                      isEmailLoading || 
-                      isGoogleLoading || 
-                      emailExistsError || 
-                      isCheckingEmail || 
-                      !emailCheckCompleted || 
+                      isEmailLoading ||
+                      isGoogleLoading ||
+                      emailExistsError ||
+                      isCheckingEmail ||
+                      !emailAvailable ||
                       !agreeToTerms ||
-                      !isValid
+                      !canSubmitBasic
                     }
                     tabIndex={4}
                     className="w-full h-12 mt-2 bg-black text-white hover:bg-black/90 active:scale-[0.98] active:bg-black/95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"

@@ -737,7 +737,8 @@ export class RotationService {
     let eligibleDevs = await tx.developerProfile.findMany({
       where: {
         adminApprovalStatus: "approved",
-        currentStatus: { in: ["available", "checking", "busy", "away"] },
+        // Eligibility for batch is controlled strictly by Available/Not Available toggle
+        currentStatus: { in: ["available"] },
         level,
         userId: { not: clientUserId },
         whatsappVerified: true, // Chỉ lấy những developer đã verify WhatsApp

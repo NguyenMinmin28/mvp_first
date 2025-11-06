@@ -19,7 +19,7 @@ export interface ProjectStatusFilterProps {
 }
 
 const statusItems: { key: ProjectStatus; label: string }[] = [
-  { key: "NEW", label: "New" },
+  { key: "NEW", label: "Invite" },
   { key: "IN_PROGRESS", label: "In Progress" },
   { key: "COMPLETED", label: "Completed" },
   { key: "APPROVED", label: "Approved" },

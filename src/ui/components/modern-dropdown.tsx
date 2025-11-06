@@ -171,36 +171,30 @@ export const StatusDropdown = ({
   className,
 }: StatusDropdownProps) => {
   const getStatusConfig = (status: string) => {
-    switch (status) {
+    // Normalize online/offline to available/not_available for display
+    const normalizedStatus = status === "online" ? "available" 
+      : status === "offline" ? "not_available" 
+      : status;
+    
+    switch (normalizedStatus) {
       case "available":
         return {
           label: "Available",
           color: "bg-green-600 hover:bg-green-700",
           icon: "🟢",
         };
+      case "busy": // legacy value, normalize to not_available
       case "not_available":
         return {
           label: "Not Available",
           color: "bg-orange-600 hover:bg-orange-700",
           icon: "🟠",
         };
-      case "online":
-        return {
-          label: "Online",
-          color: "bg-blue-600 hover:bg-blue-700",
-          icon: "🔵",
-        };
-      case "offline":
-        return {
-          label: "Offline",
-          color: "bg-gray-600 hover:bg-gray-700",
-          icon: "⚪",
-        };
       default:
         return {
-          label: status,
-          color: "bg-gray-600 hover:bg-gray-700",
-          icon: "⚪",
+          label: "Available", // Default to Available if unknown status
+          color: "bg-green-600 hover:bg-green-700",
+          icon: "🟢",
         };
     }
   };
@@ -234,23 +228,9 @@ export const StatusDropdown = ({
       <DropdownItem
         onClick={() => onStatusChange("not_available")}
         icon="🟠"
-        variant={currentStatus === "not_available" ? "default" : "default"}
+        variant={currentStatus === "not_available" || currentStatus === "busy" ? "default" : "default"}
       >
         Not Available
-      </DropdownItem>
-      <DropdownItem
-        onClick={() => onStatusChange("online")}
-        icon="🔵"
-        variant={currentStatus === "online" ? "default" : "default"}
-      >
-        Online
-      </DropdownItem>
-      <DropdownItem
-        onClick={() => onStatusChange("offline")}
-        icon="⚪"
-        variant={currentStatus === "offline" ? "default" : "default"}
-      >
-        Offline
       </DropdownItem>
     </ModernDropdown>
   );

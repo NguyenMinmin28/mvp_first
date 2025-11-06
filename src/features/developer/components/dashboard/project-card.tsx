@@ -39,17 +39,17 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
   const getStatusColor = (status: string) => {
     switch (status) {
       case "in_progress":
-        return "bg-green-600 text-white";
+        return "bg-green-100 text-green-800 border-green-300";
       case "completed":
-        return "bg-purple-600 text-white";
+        return "bg-purple-100 text-purple-800 border-purple-300";
       case "recent":
-        return "bg-blue-600 text-white";
+        return "bg-blue-100 text-blue-800 border-blue-300";
       case "approved":
-        return "bg-green-600 text-white";
+        return "bg-green-100 text-green-800 border-green-300";
       case "rejected":
-        return "bg-red-600 text-white";
+        return "bg-red-100 text-red-800 border-red-300";
       default:
-        return "bg-gray-200 text-gray-800";
+        return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
 
@@ -61,10 +61,10 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md",
+        "cursor-pointer transition-all duration-300 border-2",
         isSelected 
-          ? "ring-2 ring-blue-500 shadow-md" 
-          : "hover:shadow-sm"
+          ? "ring-2 ring-blue-500 border-blue-400 shadow-lg bg-blue-50" 
+          : "border-gray-200 hover:border-blue-300 hover:shadow-md hover:bg-blue-50/50"
       )}
       onClick={onClick}
       data-project-card
@@ -73,12 +73,15 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
         <div className="space-y-2 sm:space-y-3">
           {/* Header with title and status */}
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
+            <h3 className={cn(
+              "font-semibold text-sm sm:text-base line-clamp-2 leading-tight transition-colors",
+              isSelected ? "text-blue-900" : "text-gray-900"
+            )}>
               {project.name}
             </h3>
-            <Badge className={cn("text-xs shrink-0", getStatusColor(project.status))}>
+            <span className={cn("text-xs shrink-0 px-2 py-1 rounded-md border font-medium", getStatusColor(project.status))}>
               {project.status.replace("_", " ")}
-            </Badge>
+            </span>
           </div>
 
           {/* Description */}
@@ -88,27 +91,27 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
             </p>
           )}
 
-
           {/* Budget */}
-          {formatBudget(project.budget, project.currency) && (
-            <div className="text-sm sm:text-base font-medium text-green-600">
+          {project.budget && project.currency && (
+            <div className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-green-600">
+              <span className="text-green-500">$</span>
               {formatBudget(project.budget, project.currency)}
             </div>
           )}
 
           {/* Skills */}
           {Array.isArray(project.skills) && project.skills.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {project.skills.slice(0, 3).map((skillId, index) => (
                 <span 
                   key={index}
-                  className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                  className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors duration-200"
                 >
                   {getSkillName(skillId)}
                 </span>
               ))}
               {project.skills.length > 3 && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 px-2 py-1">
                   +{project.skills.length - 3} more
                 </span>
               )}
@@ -117,7 +120,7 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
 
           {/* Date */}
           <div className="text-xs sm:text-sm text-gray-500">
-            {project.date}
+            {new Date(project.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
         </div>
       </CardContent>

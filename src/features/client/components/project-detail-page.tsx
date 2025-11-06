@@ -1049,7 +1049,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           {isLoading && freelancers.length === 0 && !error ? (
             <LoadingMessage 
               title="Finding the Perfect Developers"
-              message="We're searching through our network of skilled developers. Please be patient..."
+              message="AI matchmaking in progress — bringing you the smartest connections."
               size="lg"
             />
           ) : error ? (

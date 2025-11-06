@@ -9,6 +9,7 @@ import {
 } from "@/ui/components/modern-dropdown";
 import { Button } from "@/ui/components/button";
 import { useEffect, useMemo, useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -18,7 +19,7 @@ import {
   DialogFooter,
 } from "@/ui/components/dialog";
 import { Input } from "@/ui/components/input";
-import { ChevronDown, Star, MessageSquare, MessageCircle } from "lucide-react";
+import { ChevronDown, MessageSquare, MessageCircle } from "lucide-react";
 import { Checkbox } from "@/ui/components/checkbox";
 import DeveloperReviewModal from "@/features/client/components/developer-review-modal";
 import { toast } from "sonner";
@@ -31,7 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/ui/components/tooltip";
-import { X } from "lucide-react";
+import { X, Activity, Clock, CheckCircle, FileText, Star, TrendingUp } from "lucide-react";
 
 interface ProfileSummaryProps {
   profile: any;
@@ -61,8 +62,19 @@ export default function ProfileSummary({
   const [photoUrl, setPhotoUrl] = useState<string>(
     profile?.photoUrl || profile?.image || ""
   );
+  // Normalize status for dropdown display: online/offline -> available/not_available
+  const normalizeStatusForDisplay = (rawStatus: string): "available" | "not_available" => {
+    if (rawStatus === "online" || rawStatus === "available") {
+      return "available";
+    }
+    if (rawStatus === "offline" || rawStatus === "not_available" || rawStatus === "busy") {
+      return "not_available";
+    }
+    return rawStatus === "available" ? "available" : "not_available";
+  };
+
   const [status, setStatus] = useState<string>(
-    profile?.currentStatus || "available"
+    normalizeStatusForDisplay(profile?.currentStatus || "available")
   );
   const [isSaving, setIsSaving] = useState(false);
   const [age, setAge] = useState<string>((profile as any)?.age || "");
@@ -103,6 +115,8 @@ export default function ProfileSummary({
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
 
   const { uploadImage, isUploading: isUploadingAvatar } = useImageUpload({
     onSuccess: async (result) => {
@@ -168,11 +182,12 @@ export default function ProfileSummary({
   };
 
   // Resolve current presence for dot indicator
-  const resolvedPresence: "available" | "busy" = (() => {
-    const raw =
-      (developerId ? (profile?.currentStatus as string) : status) || "busy";
-    return raw === "available" ? "available" : "busy";
-  })();
+  // - For own dashboard (no developerId): reflect login/logout via NextAuth session
+  // - For viewing other developer (has developerId): reflect that profile's online/offline
+  const { status: authStatus } = useSession();
+  const isOnline = developerId
+    ? ((profile?.currentStatus as string) || "offline") === "online"
+    : authStatus === "authenticated";
 
   // Sync local state with profile prop changes
   useEffect(() => {
@@ -236,13 +251,24 @@ export default function ProfileSummary({
     }
   };
 
-  const submitStatus = async (newStatus: "available" | "busy") => {
+  const submitStatus = async (newStatus: "available" | "not_available") => {
     try {
+      // Update local state for display
       setStatus(newStatus);
+      
+      // Check if user is currently logged in (online)
+      // If profile.currentStatus is "online", we should preserve that when submitting
+      // But since we only have one status field, we'll just submit the new status
+      // The backend/login system will handle setting it back to "online" if user is logged in
+      const currentRawStatus = profile?.currentStatus || status;
+      const statusToSubmit = currentRawStatus === "online" 
+        ? newStatus // If was online, submit the new available/not_available status
+        : newStatus; // Otherwise just submit the new status
+      
       await fetch("/api/user/update-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentStatus: newStatus }),
+        body: JSON.stringify({ currentStatus: statusToSubmit }),
       });
       try {
         const logsRaw = localStorage.getItem("presenceLogs");
@@ -305,6 +331,32 @@ export default function ProfileSummary({
   useEffect(() => {
     fetchReviewStats();
   }, [developerId]);
+
+  // Fetch recent activities
+  useEffect(() => {
+    const fetchActivities = async () => {
+      const userId = developerId || profile?.id;
+      if (!userId) {
+        setActivitiesLoading(false);
+        return;
+      }
+
+      try {
+        setActivitiesLoading(true);
+        const response = await fetch(`/api/developer/${userId}/activity?limit=5`, { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          setRecentActivities(data.activities || []);
+        }
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, [developerId, profile?.id]);
 
   useEffect(() => {
     if (!openEdit) return;
@@ -452,23 +504,23 @@ export default function ProfileSummary({
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  {/* Status dot positioned like in PeopleGrid */}
+                  {/* Status dot positioned like in PeopleGrid - shows online/offline (login/logout status) */}
                   <span
                     className={`absolute right-1 top-1 inline-block w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white z-50 ${
-                      resolvedPresence === "available"
+                      isOnline
                         ? "bg-green-500"
                         : "bg-gray-400"
                     }`}
                     style={{ zIndex: 9999 }}
                     aria-label={
-                      resolvedPresence === "available"
-                        ? "Available"
-                        : "Not Available"
+                      isOnline
+                        ? "Online"
+                        : "Offline"
                     }
                     title={
-                      resolvedPresence === "available"
-                        ? "Available"
-                        : "Not Available"
+                      isOnline
+                        ? "Online"
+                        : "Offline"
                     }
                   />
                   {/* Hidden file input */}
@@ -573,9 +625,9 @@ export default function ProfileSummary({
                           <div className="flex items-center gap-2 relative z-50">
                             <div className="relative z-50">
                               <StatusDropdown
-                                currentStatus={status || "available"}
+                                currentStatus={normalizeStatusForDisplay(status || profile?.currentStatus || "available")}
                                 onStatusChange={(newStatus) =>
-                                  submitStatus(newStatus as "available" | "busy")
+                                  submitStatus(newStatus as "available" | "not_available")
                                 }
                                 className="relative z-50"
                               />
@@ -884,6 +936,80 @@ export default function ProfileSummary({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Recent Activities Section */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 bg-blue-500 rounded-lg">
+                <Activity className="h-4 w-4 text-white" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900">Recent Activities</h3>
+            </div>
+            
+            {activitiesLoading ? (
+              <div className="text-sm text-gray-500 py-4">Loading activities...</div>
+            ) : recentActivities.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivities.map((activity, index) => {
+                  const getActivityIcon = () => {
+                    if (activity.type?.includes('project') || activity.type?.includes('assignment')) {
+                      return <FileText className="h-4 w-4 text-blue-600" />;
+                    }
+                    if (activity.type?.includes('review') || activity.type?.includes('rating')) {
+                      return <Star className="h-4 w-4 text-yellow-600" />;
+                    }
+                    if (activity.type?.includes('complete') || activity.type?.includes('approved')) {
+                      return <CheckCircle className="h-4 w-4 text-green-600" />;
+                    }
+                    return <Activity className="h-4 w-4 text-gray-600" />;
+                  };
+
+                  const getActivityColor = () => {
+                    if (activity.type?.includes('project') || activity.type?.includes('assignment')) {
+                      return 'bg-blue-50 border-blue-200';
+                    }
+                    if (activity.type?.includes('review') || activity.type?.includes('rating')) {
+                      return 'bg-yellow-50 border-yellow-200';
+                    }
+                    if (activity.type?.includes('complete') || activity.type?.includes('approved')) {
+                      return 'bg-green-50 border-green-200';
+                    }
+                    return 'bg-gray-50 border-gray-200';
+                  };
+
+                  return (
+                    <div
+                      key={index}
+                      className={`border rounded-lg p-3 hover:shadow-md transition-all duration-200 ${getActivityColor()}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-1.5 bg-white rounded-md border">
+                          {getActivityIcon()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                            {activity.description || activity.message || activity.type || 'Activity'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <Clock className="h-3 w-3 text-gray-400" />
+                            <span className="text-xs text-gray-500">
+                              {activity.timeAgo || activity.timestamp || 'Recently'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6 border border-gray-200 rounded-lg bg-gray-50">
+                <Activity className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm text-gray-600">No recent activities</p>
+                <p className="text-xs text-gray-500 mt-1">Your activities will appear here</p>
+              </div>
+            )}
           </div>
         </CardContent>
         {/* Reviews overlay modal */}

@@ -13,7 +13,7 @@ interface LoadingMessageProps {
 
 export function LoadingMessage({
   title = "Finding Developers",
-  message = "We're searching through our network of skilled developers. Please be patient...",
+  message = "AI matchmaking in progress — bringing you the smartest connections.",
   size = "md",
   className,
   showSpinner = true,
@@ -52,7 +52,7 @@ interface LoadingOverlayProps extends LoadingMessageProps {
 export function LoadingOverlay({
   isVisible,
   title = "Finding Developers",
-  message = "We're searching through our network of skilled developers. Please be patient...",
+  message = "AI matchmaking in progress — bringing you the smartest connections.",
   size = "md",
   className,
 }: LoadingOverlayProps) {

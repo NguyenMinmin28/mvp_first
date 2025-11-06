@@ -12,12 +12,12 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ProfileSummary from "@/features/developer/components/dashboard/profile-summary";
-import IdeaSparkList from "@/features/developer/components/dashboard/ideaspark-list";
 import ProjectStatusFilter, {
   type ProjectStatus as PS,
 } from "@/features/developer/components/project-status-filter";
+import { useSkills } from "@/features/developer/components/dashboard/use-skills";
 import { Button } from "@/ui/components/button";
-import { ChevronLeft, ChevronRight, BarChart3, FileText, Lightbulb, Settings, FolderOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart3, FileText, FolderOpen, Briefcase, CheckCircle2, Clock, AlertCircle, Calendar, DollarSign, Tag } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 
 const ProjectsSidebar = dynamic(
@@ -86,6 +86,7 @@ export default function DashboardClient({
   initialProjects: { projects: AssignedProjectItem[] } | null;
 }) {
   const session = initialSession;
+  const { getSkillName } = useSkills();
 
   const [profile, setProfile] = useState<any>(initialMe?.user ?? null);
 
@@ -152,7 +153,7 @@ export default function DashboardClient({
     } else {
       setSelectedProjectId(null);
     }
-  }, [filteredProjects.length]);
+  }, [filteredProjects]);
 
   const safeFetch = useCallback(
     async (input: RequestInfo, init?: RequestInit) => {
@@ -176,7 +177,9 @@ export default function DashboardClient({
       if (ideasRes.ok) setIdeas((await ideasRes.json()).ideas ?? []);
       if (projectsRes.ok)
         setProjects((await projectsRes.json()).projects ?? []);
-    } catch {}
+    } catch (error) {
+      console.error("Error reloading data:", error);
+    }
   }, [safeFetch]);
 
   const previousProject = () => {
@@ -325,223 +328,262 @@ export default function DashboardClient({
 
   return (
     <UserLayout user={session.user}>
-      <section className="w-full py-8 flex-1 flex flex-col">
-        <div className="container dashboard-container mx-auto px-4 flex-1 flex flex-col">
+      <section className="w-full py-4 flex-1 flex flex-col">
+        <div className="w-full max-w-full mx-auto px-4 flex-1 flex flex-col">
           {isApprovalPending && (
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
-              <h2 className="text-2xl font-bold text-blue-900 mb-2">Profile Submitted</h2>
-              <p className="text-blue-800 mb-2">
-                Your developer profile has been submitted and is awaiting admin approval. We'll notify you once it's approved.
+            <div className="mb-4 border p-4 text-center">
+              <h2 className="text-xl font-bold mb-2">Profile Submitted</h2>
+              <p className="mb-2">
+                Your developer profile has been submitted and is awaiting admin approval. We&apos;ll notify you once it&apos;s approved.
               </p>
             </div>
           )}
 
-          <div className="grid grid-cols-1 xl:grid-cols-6 gap-4 sm:gap-6">
-            <div className="xl:col-span-4">
-              <ProfileSummary profile={profile} />
+          <div className="w-full">
+            <ProfileSummary profile={profile} />
 
-              {/* Dashboard Tabs - Responsive Design */}
-              <div className="mt-6 sm:mt-8 relative z-30 -mx-4 sm:-mx-6 lg:-mx-8 flex-1 flex flex-col">
-                <Tabs defaultValue="overview" className="w-full px-4 sm:px-6 lg:px-8 flex-1 flex flex-col">
-                  {/* Mobile: Grid Layout */}
-                  <div className="block sm:hidden">
-                    <TabsList className="min-h-10 items-center bg-muted p-1 text-muted-foreground grid grid-cols-3 gap-2 px-4 py-3 rounded-xl border border-gray-200 shadow-md h-auto relative z-40 w-full">
-                      <TabsTrigger
-                        value="overview"
-                        className="rounded-lg px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-900 data-[state=active]:to-black data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-gray-400 whitespace-nowrap"
-                      >
-                        <span className="flex items-center gap-1">
-                          <BarChart3 className="w-3 h-3" />
-                          Overview
-                        </span>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="projects"
-                        className="rounded-lg px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-900 data-[state=active]:to-black data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-gray-400 whitespace-nowrap"
-                      >
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          Projects
-                        </span>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="portfolio"
-                        className="rounded-lg px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-900 data-[state=active]:to-black data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-gray-400 whitespace-nowrap"
-                      >
-                        <span className="flex items-center gap-1">
-                          <FolderOpen className="w-3 h-3" />
-                          Portfolio
-                        </span>
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
+            {/* Dashboard Tabs */}
+            <div className="mt-4 flex-1 flex flex-col">
+                <Tabs defaultValue="overview" className="w-full flex-1 flex flex-col">
+                  <TabsList className="flex gap-1 border-b mb-4 w-full bg-transparent">
+                    <TabsTrigger
+                      value="overview"
+                      className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    >
+                      <span className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        Overview
+                      </span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="projects"
+                      className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Projects
+                      </span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="portfolio"
+                      className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FolderOpen className="w-4 h-4" />
+                        Portfolio
+                      </span>
+                    </TabsTrigger>
+                  </TabsList>
 
-                  {/* Desktop: Horizontal Layout */}
-                  <div className="hidden sm:block">
-                    <div className="relative w-full">
-                      <div className="py-2" style={{scrollbarWidth: 'thin'}}>
-                        <TabsList className="min-h-10 items-center bg-muted p-1 text-muted-foreground flex gap-2 justify-start px-4 py-3 rounded-xl border border-gray-200 shadow-md h-auto relative z-40 w-full" style={{minWidth: '100%'}}>
-                          <TabsTrigger
-                            value="overview"
-                            className="relative group rounded-lg px-4 py-2.5 font-semibold text-sm transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-900 data-[state=active]:to-black data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-gray-400 data-[state=inactive]:hover:shadow-sm whitespace-nowrap flex-shrink-0"
-                          >
-                            <span className="flex items-center gap-2">
-                              <BarChart3 className="w-4 h-4" />
-                              Overview
-                            </span>
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="projects"
-                            className="relative group rounded-lg px-4 py-2.5 font-semibold text-sm transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-900 data-[state=active]:to-black data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-gray-400 data-[state=inactive]:hover:shadow-sm whitespace-nowrap flex-shrink-0"
-                          >
-                            <span className="flex items-center gap-2">
-                              <FileText className="w-4 h-4" />
-                              Projects
-                            </span>
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="portfolio"
-                            className="relative group rounded-lg px-4 py-2.5 font-semibold text-sm transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-900 data-[state=active]:to-black data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-gray-400 data-[state=inactive]:hover:shadow-sm whitespace-nowrap flex-shrink-0"
-                          >
-                            <span className="flex items-center gap-2">
-                              <FolderOpen className="w-4 h-4" />
-                              Portfolio
-                            </span>
-                          </TabsTrigger>
-                        </TabsList>
-                      </div>
-                    </div>
-                  </div>
-
-                  <TabsContent value="overview" className="mt-8 py-6 flex-1">
-                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                      <div className="space-y-6">
+                  <TabsContent value="overview" className="mt-4 py-4 flex-1">
+                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto w-full">
+                      <div className="space-y-4 w-full">
+                        {/* Stats Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div className="bg-white rounded-lg border p-6">
-                            <h3 className="text-lg font-semibold mb-2">Total Projects</h3>
-                            <p className="text-3xl font-bold text-blue-600">{projects.length}</p>
-                            <p className="text-sm text-gray-500 mt-1">All assignments</p>
+                          <div className="border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-blue-500 rounded-lg">
+                                <Briefcase className="h-5 w-5 text-white" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-blue-900">Total Projects</h3>
+                            </div>
+                            <p className="text-3xl font-bold text-blue-700 mb-1">{projects.length}</p>
+                            <p className="text-xs text-blue-600">All assignments</p>
                           </div>
-                          <div className="bg-white rounded-lg border p-6">
-                            <h3 className="text-lg font-semibold mb-2">Active Projects</h3>
-                            <p className="text-3xl font-bold text-green-600">
+
+                          <div className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-green-500 rounded-lg">
+                                <CheckCircle2 className="h-5 w-5 text-white" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-green-900">Active Projects</h3>
+                            </div>
+                            <p className="text-3xl font-bold text-green-700 mb-1">
                               {projects.filter(p => p.assignment?.responseStatus === "accepted" && p.status !== "completed").length}
                             </p>
-                            <p className="text-sm text-gray-500 mt-1">Currently working</p>
+                            <p className="text-xs text-green-600">Currently working</p>
                           </div>
-                          <div className="bg-white rounded-lg border p-6">
-                            <h3 className="text-lg font-semibold mb-2">Completed</h3>
-                            <p className="text-3xl font-bold text-purple-600">
+
+                          <div className="border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-purple-500 rounded-lg">
+                                <CheckCircle2 className="h-5 w-5 text-white" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-purple-900">Completed</h3>
+                            </div>
+                            <p className="text-3xl font-bold text-purple-700 mb-1">
                               {projects.filter(p => p.status === "completed").length}
                             </p>
-                            <p className="text-sm text-gray-500 mt-1">Successfully finished</p>
+                            <p className="text-xs text-purple-600">Successfully finished</p>
                           </div>
-                          <div className="bg-white rounded-lg border p-6">
-                            <h3 className="text-lg font-semibold mb-2">Pending</h3>
-                            <p className="text-3xl font-bold text-orange-600">
+
+                          <div className="border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-orange-500 rounded-lg">
+                                <Clock className="h-5 w-5 text-white" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-orange-900">Pending</h3>
+                            </div>
+                            <p className="text-3xl font-bold text-orange-700 mb-1">
                               {projects.filter(p => p.assignment?.responseStatus === "pending").length}
                             </p>
-                            <p className="text-sm text-gray-500 mt-1">Awaiting response</p>
+                            <p className="text-xs text-orange-600">Awaiting response</p>
                           </div>
                         </div>
                         
-                        <div className="bg-white rounded-lg border p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold">All Activities</h3>
-                            <span className="text-sm text-gray-500">{projects.length} total activities</span>
-                          </div>
-                          <div className="space-y-3 max-h-80 overflow-y-auto">
-                            {projects.length > 0 ? (
-                              projects.map((project) => (
-                                <div key={project.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-medium text-gray-900">{project.name}</p>
-                                      <span className={`px-2 py-1 text-xs rounded-full ${
-                                        project.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                        project.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                                        project.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                        project.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-gray-100 text-gray-800'
-                                      }`}>
-                                        {project.status}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                                      <span>Assigned: {new Date(project.date).toLocaleDateString()}</span>
-                                      {project.assignment?.responseStatus && (
-                                        <span className={`px-2 py-1 text-xs rounded ${
-                                          project.assignment.responseStatus === 'accepted' ? 'bg-green-100 text-green-700' :
-                                          project.assignment.responseStatus === 'rejected' ? 'bg-red-100 text-red-700' :
-                                          project.assignment.responseStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                          'bg-gray-100 text-gray-700'
-                                        }`}>
-                                          {project.assignment.responseStatus}
-                                        </span>
-                                      )}
-                                      {project.budget && (
-                                        <span className="text-green-600 font-medium">
-                                          {project.currency || '$'}{project.budget}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {project.skills && project.skills.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mb-2">
-                                        {project.skills.slice(0, 3).map((skill, index) => (
-                                          <span key={index} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                                            {skill}
-                                          </span>
-                                        ))}
-                                        {project.skills.length > 3 && (
-                                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-                                            +{project.skills.length - 3} more
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {project.assignment?.clientMessage && (
-                                      <p className="text-xs text-gray-500 mt-1 italic">
-                                        "{project.assignment.clientMessage}"
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="text-sm text-gray-500">
-                                      {project.assignment?.assignedAt && (
-                                        <div>Assigned: {new Date(project.assignment.assignedAt).toLocaleDateString()}</div>
-                                      )}
-                                      {project.assignment?.acceptanceDeadline && (
-                                        <div className="text-xs text-orange-600">
-                                          Deadline: {new Date(project.assignment.acceptanceDeadline).toLocaleDateString()}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
+                        {/* Activities Section */}
+                        <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
+                          <div className="px-4 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-blue-500 rounded-lg">
+                                  <BarChart3 className="h-5 w-5 text-white" />
                                 </div>
-                              ))
-                            ) : (
-                              <div className="text-center py-8 text-gray-500">
-                                <p>No activities recorded yet</p>
-                                <p className="text-sm">Your project activities will appear here</p>
+                                <h3 className="text-base font-semibold text-gray-900">All Activities</h3>
                               </div>
-                            )}
+                              <div className="px-3 py-1 border border-blue-200 bg-blue-50 rounded-md">
+                                <span className="text-sm font-semibold text-blue-700">{projects.length}</span>
+                                <span className="text-xs text-blue-600 ml-1">total</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-gray-50">
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                              {projects.length > 0 ? (
+                                projects.map((project) => {
+                                  const statusColors: Record<string, string> = {
+                                    completed: 'bg-green-100 text-green-800 border-green-300',
+                                    approved: 'bg-blue-100 text-blue-800 border-blue-300',
+                                    rejected: 'bg-red-100 text-red-800 border-red-300',
+                                    in_progress: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+                                    recent: 'bg-gray-100 text-gray-800 border-gray-300'
+                                  };
+                                  const responseColors: Record<string, string> = {
+                                    accepted: 'bg-green-100 text-green-700 border-green-300',
+                                    rejected: 'bg-red-100 text-red-700 border-red-300',
+                                    pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                                    expired: 'bg-gray-100 text-gray-700 border-gray-300',
+                                  };
+                                  return (
+                                    <div key={project.id} className="border border-gray-200 bg-white p-4 rounded-lg hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer">
+                                      <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-3 mb-2">
+                                            <div className="p-1.5 bg-blue-100 rounded-md">
+                                              <FileText className="h-4 w-4 text-blue-600" />
+                                            </div>
+                                            <h4 className="font-semibold flex-1 text-gray-900">{project.name}</h4>
+                                            <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${statusColors[project.status] || statusColors.recent}`}>
+                                              {project.status}
+                                            </span>
+                                          </div>
+
+                                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                                            <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                              <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                                              <span>{new Date(project.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                            </div>
+                                            {project.assignment?.responseStatus && (
+                                              <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${responseColors[project.assignment.responseStatus] || responseColors.expired}`}>
+                                                {project.assignment.responseStatus}
+                                              </span>
+                                            )}
+                                            {project.budget && (
+                                              <div className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                                                <DollarSign className="h-3.5 w-3.5" />
+                                                <span>{project.currency || '$'}{project.budget}</span>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {project.skills && project.skills.length > 0 && (
+                                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                                              <Tag className="h-3.5 w-3.5 text-gray-400" />
+                                              {project.skills.slice(0, 3).map((skill, index) => {
+                                                // skill can be either ID (string) or name (string)
+                                                // getSkillName will return the name if found, or the ID if not found
+                                                // If skill looks like an ID (long string), try to get name
+                                                // Otherwise, assume it's already a name
+                                                const skillIdOrName = String(skill || '');
+                                                const skillName = skillIdOrName.length > 20 || skillIdOrName.match(/^[a-f0-9]{24}$/i)
+                                                  ? getSkillName(skillIdOrName)
+                                                  : skillIdOrName;
+                                                return (
+                                                  <span key={index} className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-200">
+                                                    {skillName}
+                                                  </span>
+                                                );
+                                              })}
+                                              {project.skills.length > 3 && (
+                                                <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-md border border-gray-200">
+                                                  +{project.skills.length - 3} more
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {project.assignment?.clientMessage && (
+                                            <div className="mt-2 p-2 border-l-4 border-blue-400 bg-blue-50 rounded-r">
+                                              <p className="text-xs italic line-clamp-2 text-gray-700">
+                                                &quot;{project.assignment.clientMessage}&quot;
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div className="flex-shrink-0 text-right">
+                                          {project.assignment?.assignedAt && (
+                                            <div className="mb-2 p-2 border border-gray-200 bg-gray-50 rounded-md">
+                                              <div className="text-xs text-gray-600 mb-1">Assigned</div>
+                                              <div className="text-sm font-medium text-gray-900">
+                                                {new Date(project.assignment.assignedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                              </div>
+                                            </div>
+                                          )}
+                                          {project.assignment?.acceptanceDeadline && (
+                                            <div className="p-2 border border-orange-200 bg-orange-50 rounded-md">
+                                              <div className="flex items-center gap-1 text-xs text-orange-600 mb-1">
+                                                <AlertCircle className="h-3 w-3" />
+                                                <span>Deadline</span>
+                                              </div>
+                                              <div className="text-sm font-semibold text-orange-700">
+                                                {new Date(project.assignment.acceptanceDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="text-center py-12">
+                                  <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                  <p className="text-gray-600 font-medium mb-1">No activities recorded yet</p>
+                                  <p className="text-sm text-gray-500">Your project activities will appear here</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="projects" className="mt-8 py-6 flex-1">
-                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                      <div className="space-y-6">
-                        <ProjectStatusFilter
-                          value={projectStatus}
-                          onChange={(v) => startTransition(() => setProjectStatus(v))}
-                        />
+                  <TabsContent value="projects" className="mt-4 py-4 flex-1">
+                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto w-full">
+                      <div className="space-y-4 w-full">
+                        {/* Filter Bar */}
+                        <div className="w-full pb-4 border-b">
+                          <ProjectStatusFilter
+                            value={projectStatus}
+                            onChange={(v) => startTransition(() => setProjectStatus(v))}
+                          />
+                        </div>
 
                         {filteredProjects.length > 0 && (
-                          <div className="xl:hidden mb-4">
-                            <div className="flex items-center justify-between bg-white rounded-lg border p-3">
+                          <div className="lg:hidden mb-4">
+                            <div className="flex items-center justify-between border p-3">
                               <div className="flex items-center gap-3">
                                 <Button
                                   variant="outline"
@@ -572,8 +614,9 @@ export default function DashboardClient({
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 flex-1 min-h-[500px]">
-                          <div className="xl:col-span-1">
+                        {/* Projects Layout - Full Width */}
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-[500px] w-full">
+                          <div className="lg:col-span-1">
                             <ProjectsSidebar
                               filter={projectStatus}
                               selectedProjectId={selectedProjectId}
@@ -597,7 +640,7 @@ export default function DashboardClient({
                             />
                           </div>
 
-                          <div className="xl:col-span-2" ref={projectDetailRef}>
+                          <div className="lg:col-span-3" ref={projectDetailRef}>
                             {projectStatus === "MANUAL_INVITATIONS" ? (
                               <ManualInvitationDetail
                                 invitation={selectedInvitation}
@@ -674,9 +717,8 @@ export default function DashboardClient({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="portfolio" className="mt-8 py-6 flex-1">
-                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                      {/** Use onboarding PortfolioGrid to enable per-slot add/edit with autosave */}
+                  <TabsContent value="portfolio" className="mt-4 py-4 flex-1">
+                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto w-full">
                       <OnboardingPortfolioGrid
                         initialPortfolios={
                           Array.isArray(profile?.portfolioLinks)
@@ -712,10 +754,6 @@ export default function DashboardClient({
                   </TabsContent>
                 </Tabs>
               </div>
-            </div>
-            <div className="xl:col-span-2">
-              <IdeaSparkList profile={profile} developerId={profile?.id} />
-            </div>
           </div>
         </div>
       </section>

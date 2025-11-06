@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
-import { Badge } from "@/ui/components/badge";
 import { Pagination } from "@/ui/components/pagination";
 import { cn } from "@/core/utils/utils";
 import ProjectCard from "./project-card";
@@ -126,38 +124,34 @@ export default function ProjectsSidebar({
 
   if (loading) {
     return (
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle className="text-lg">Projects</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 text-sm text-gray-600">
-          Loading projects...
-        </CardContent>
-      </Card>
+      <div className="h-full border p-4">
+        <h3 className="text-base font-semibold mb-2">Projects</h3>
+        <div className="text-sm">Loading projects...</div>
+      </div>
     );
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="border-b p-3 sm:p-6">
+    <div className="h-full flex flex-col border border-gray-200 rounded-lg bg-white shadow-sm">
+      <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base sm:text-lg">{getFilterLabel(filter)}</CardTitle>
-          <Badge variant="secondary" className="text-xs">
+          <h3 className="text-base font-semibold text-gray-900">{getFilterLabel(filter)}</h3>
+          <span className="text-xs border border-blue-200 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md font-medium">
             {filtered.length} project{filtered.length !== 1 ? 's' : ''}
-          </Badge>
+          </span>
         </div>
-      </CardHeader>
+      </div>
       
-      <CardContent className="flex-1 p-3 sm:p-4 overflow-y-auto">
+      <div className="flex-1 p-3 overflow-y-auto bg-gray-50">
         {filtered.length === 0 ? (
-          <div className="text-center text-gray-500 py-6 sm:py-8">
-            <div className="text-sm">No projects found.</div>
-            <div className="text-xs text-gray-400 mt-1">
+          <div className="text-center py-6">
+            <div className="text-sm text-gray-600">No projects found.</div>
+            <div className="text-xs mt-1 text-gray-500">
               Projects will appear here when assigned to you.
             </div>
           </div>
         ) : (
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-2">
             {paginatedProjects.map((project) => (
               <ProjectCard
                 key={project.id}
@@ -168,11 +162,10 @@ export default function ProjectsSidebar({
             ))}
           </div>
         )}
-      </CardContent>
+      </div>
       
-      {/* Pagination Controls */}
       {filtered.length > itemsPerPage && (
-        <div className="border-t p-3 sm:p-4">
+        <div className="border-t border-gray-200 p-3 bg-white">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -180,6 +173,6 @@ export default function ProjectsSidebar({
           />
         </div>
       )}
-    </Card>
+    </div>
   );
 }

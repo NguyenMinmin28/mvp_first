@@ -385,6 +385,7 @@ export default function InformationTab({ userRole }: InformationTabProps) {
             isEditing={isEditing}
             onInputChange={handleInputChange}
             onSaveAvatar={handleSaveAvatar}
+            userRole={userRole}
           />
 
           {/* Developer section moved to its own tab to avoid duplication */}
