@@ -367,3 +367,39 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
+/* Faded/Blurred Scrollbar - Very light gray, almost matching white background */
+.faded-scrollbar::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.faded-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.faded-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(243, 244, 246, 0.3) !important;
+  border-radius: 10px !important;
+  transition: background 0.3s ease-out !important;
+}
+
+.faded-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(229, 231, 235, 0.4) !important;
+}
+
+/* Slightly more visible when scrolling */
+.faded-scrollbar.scrolling::-webkit-scrollbar-thumb {
+  background: rgba(243, 244, 246, 0.35) !important;
+}
+
+/* Firefox - always visible but very subtle */
+.faded-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(243, 244, 246, 0.3) transparent !important;
+}
+
+/* Firefox - slightly more visible on hover or scrolling */
+.faded-scrollbar:hover,
+.faded-scrollbar.scrolling {
+  scrollbar-color: rgba(229, 231, 235, 0.4) transparent !important;
+}

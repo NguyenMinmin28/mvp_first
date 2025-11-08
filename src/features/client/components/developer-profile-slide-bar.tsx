@@ -131,6 +131,9 @@ export function DeveloperProfileSlideBar({
   const [servicesLoading, setServicesLoading] = useState(false);
   const [totalServicesCount, setTotalServicesCount] = useState(0);
   const [serviceImageIndices, setServiceImageIndices] = useState<Record<string, number>>({});
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const isAuthenticated = !!session?.user;
   const isDeveloper = session?.user?.role === "DEVELOPER";
@@ -538,6 +541,35 @@ export function DeveloperProfileSlideBar({
     }
   };
 
+  // Handle scroll detection for scrollbar visibility
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer || !isOpen) return;
+
+    const handleScroll = () => {
+      setIsScrolling(true);
+      
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Hide scrollbar after scrolling stops (300ms)
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 300);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [isOpen]);
+
   // Handle ESC key and body scroll lock
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -569,10 +601,38 @@ export function DeveloperProfileSlideBar({
   }, [isOpen, onClose]);
 
   return (
-    <div
-      className={`fixed inset-0 z-[110] pointer-events-${isOpen ? "auto" : "none"}`}
-      aria-hidden={!isOpen}
-    >
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        .faded-scrollbar::-webkit-scrollbar {
+          width: 8px !important;
+        }
+        .faded-scrollbar::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .faded-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(229, 231, 235, 0.4) !important;
+          border-radius: 10px !important;
+          transition: background 0.3s ease-out !important;
+        }
+        .faded-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(209, 213, 219, 0.5) !important;
+        }
+        .faded-scrollbar.scrolling::-webkit-scrollbar-thumb {
+          background: rgba(229, 231, 235, 0.45) !important;
+        }
+        .faded-scrollbar {
+          scrollbar-width: thin !important;
+          scrollbar-color: rgba(229, 231, 235, 0.4) transparent !important;
+        }
+        .faded-scrollbar:hover,
+        .faded-scrollbar.scrolling {
+          scrollbar-color: rgba(209, 213, 219, 0.5) transparent !important;
+        }
+      `}} />
+      <div
+        className={`fixed inset-0 z-[110] pointer-events-${isOpen ? "auto" : "none"}`}
+        aria-hidden={!isOpen}
+      >
       {/* Mobile backdrop: darken entire screen */}
       <div
         className={`fixed inset-0 bg-black/40 transition-opacity duration-300 lg:hidden ${
@@ -627,7 +687,10 @@ export function DeveloperProfileSlideBar({
           </div>
 
           {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto">
+          <div 
+            ref={scrollContainerRef}
+            className={`flex-1 overflow-y-auto faded-scrollbar ${isScrolling ? 'scrolling' : ''}`}
+          >
             {loading ? (
               <div className="p-4 space-y-4">
                 <div className="flex items-center space-x-4">
@@ -1276,5 +1339,6 @@ export function DeveloperProfileSlideBar({
         action="contact this developer"
       />
     </div>
+    </>
   );
 }
