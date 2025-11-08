@@ -10,15 +10,9 @@ export async function GET(
   try {
     const developerId = params.id;
 
-    // Check authentication
+    // Allow public access - no authentication required for viewing review statistics
+    // Review stats are public information that anyone can view
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
 
     // Get developer profile to find the user ID
     const developerProfile = await prisma.developerProfile.findUnique({

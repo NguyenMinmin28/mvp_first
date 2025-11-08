@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Custom hook to automatically refresh session when navigating between pages
@@ -10,28 +10,12 @@ import { useEffect, useRef, useState } from "react";
  */
 export function useSessionRefresh() {
   const { data: session, update } = useSession();
-  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname(); // Must be called at top level (Rules of Hooks)
   const lastPathname = useRef<string | null>(null);
   const isRefreshingRef = useRef(false);
 
-  // Safely get pathname with mounted check
-  let pathname: string | null = null;
-  try {
-    if (mounted) {
-      pathname = usePathname();
-    }
-  } catch (error) {
-    // Ignore pathname errors during unmount
-    console.warn("Pathname access error (likely during unmount):", error);
-  }
-
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || !pathname) return;
+    if (!pathname) return;
     if (lastPathname.current === pathname) return;
     if (isRefreshingRef.current) return;
 
@@ -48,7 +32,7 @@ export function useSessionRefresh() {
           isRefreshingRef.current = false;
         }, 500);
       });
-  }, [pathname, update, mounted]);
+  }, [pathname, update]);
 
   return { session, update, isRefreshing: isRefreshingRef.current };
 }

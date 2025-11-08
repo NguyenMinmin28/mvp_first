@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import {
   BasicInfoTab,
   CompanyInfoTab,
-  PortfolioTab,
   WhatsAppTab,
   VerificationTab,
   DeveloperProfileTab,
@@ -367,7 +366,6 @@ export default function InformationTab({ userRole }: InformationTabProps) {
           {userRole === "DEVELOPER" && (
             <>
               <TabsTrigger value="developer">Developer</TabsTrigger>
-              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
               <TabsTrigger value="verification">Verification</TabsTrigger>
             </>
@@ -411,16 +409,6 @@ export default function InformationTab({ userRole }: InformationTabProps) {
                 profileData={profileData}
                 isEditing={isEditing}
                 onInputChange={handleInputChange}
-              />
-            </TabsContent>
-            {/* Portfolio Links Tab */}
-            <TabsContent value="portfolio" className="space-y-6">
-              <PortfolioTab
-                profileData={profileData}
-                isEditing={isEditing}
-                onArrayFieldChange={handleArrayFieldChange}
-                onAddArrayField={addArrayField}
-                onRemoveArrayField={removeArrayField}
               />
             </TabsContent>
 

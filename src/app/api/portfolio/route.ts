@@ -75,32 +75,77 @@ export async function GET() {
       return NextResponse.json({ error: "Developer profile not found" }, { status: 404 });
     }
 
+    // Log all portfolios for debugging
+    console.log('📋 GET: All portfolios from DB:', {
+      total: developerProfile.portfolios.length,
+      portfolios: developerProfile.portfolios.map(p => ({
+        id: p.id,
+        sortOrder: p.sortOrder,
+        title: p.title,
+        hasImageUrl: !!p.imageUrl,
+      })),
+    });
+
     // Create 6 slots array with saved portfolios in correct positions
-    const portfoliosArray = Array.from({ length: 6 }, (_, index) => {
-      const saved = developerProfile.portfolios.find(p => p.sortOrder === index);
-      if (saved) {
-        const { imageUrl, images } = parsePortfolioImages(saved.imageUrl);
-        
-        return {
-          id: saved.id,
-          title: saved.title,
-          description: saved.description,
-          projectUrl: saved.projectUrl,
-          imageUrl: imageUrl,
-          images: images
-        };
-      } else {
-        return {
-          title: "",
-          description: "",
-          projectUrl: "",
-          imageUrl: "",
-          images: ["", "", "", "", "", ""]
-        };
+    // Map portfolios by sortOrder first
+    const portfoliosBySortOrder = new Map<number, typeof developerProfile.portfolios[0]>();
+    developerProfile.portfolios.forEach(p => {
+      // Only include portfolios with sortOrder 0-5 (valid slot range)
+      if (p.sortOrder >= 0 && p.sortOrder < 6) {
+        portfoliosBySortOrder.set(p.sortOrder, p);
       }
     });
 
-    console.log('📋 GET: Returning portfolios array:', portfoliosArray);
+    const portfoliosArray = Array.from({ length: 6 }, (_, index) => {
+      const saved = portfoliosBySortOrder.get(index);
+      if (saved) {
+        const { imageUrl, images } = parsePortfolioImages(saved.imageUrl);
+        
+        // Check if portfolio has actual content
+        const hasContent = (saved.title && saved.title.trim() !== '') ||
+                          (imageUrl && imageUrl.trim() !== '') ||
+                          (images && images.some(img => img && img.trim() !== ''));
+        
+        if (hasContent) {
+          return {
+            id: saved.id,
+            title: saved.title || '',
+            description: saved.description || '',
+            projectUrl: saved.projectUrl || '',
+            imageUrl: imageUrl || '',
+            images: images || []
+          };
+        }
+      }
+      
+      // Return empty slot
+      return {
+        title: "",
+        description: "",
+        projectUrl: "",
+        imageUrl: "",
+        images: ["", "", "", "", "", ""]
+      };
+    });
+
+    // Count portfolios with content
+    const portfoliosWithContent = portfoliosArray.filter(p => 
+      (p.title && p.title.trim() !== '') ||
+      (p.imageUrl && p.imageUrl.trim() !== '') ||
+      (p.images && p.images.some(img => img && img.trim() !== ''))
+    ).length;
+
+    console.log('📋 GET: Returning portfolios array:', {
+      totalSlots: portfoliosArray.length,
+      portfoliosWithContent,
+      portfolios: portfoliosArray.map((p, idx) => ({
+        index: idx,
+        id: p.id,
+        title: p.title,
+        hasImageUrl: !!p.imageUrl,
+        imagesCount: p.images?.filter(img => img && img.trim() !== '').length || 0,
+      })),
+    });
 
     return NextResponse.json({ portfolios: portfoliosArray });
   } catch (error) {

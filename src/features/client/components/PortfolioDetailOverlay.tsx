@@ -163,22 +163,6 @@ export default function PortfolioDetailOverlay({ isOpen, item, onClose }: Portfo
 
           {/* Content (banner + actions + overview) */}
           <div className="flex-1 overflow-y-auto pt-0 relative z-0">
-            {/* Action pills: Details / Share */}
-            <div className="px-4 sm:px-6 mb-6 flex items-center justify-center gap-4 relative z-20">
-              <button onClick={() => setIsDetailsOpen(true)} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
-                <Info className="w-5 h-5" />
-                <span className="font-medium">Details</span>
-              </button>
-              <div className="relative">
-                <button onClick={handleShare} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">
-                  <Share className="w-5 h-5" />
-                  <span className="font-medium">Share</span>
-                </button>
-                {copied && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-md bg-black text-white text-xs shadow-md whitespace-nowrap pointer-events-none">link copied!</div>
-                )}
-              </div>
-            </div>
 
             {/* Chips (fallback) */}
             {(() => {

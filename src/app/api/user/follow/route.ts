@@ -12,32 +12,42 @@ const followSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const sessionUser = await getServerSessionUser();
-    if (!sessionUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const developerId = searchParams.get("developerId");
 
     if (developerId) {
-      // Check if current user follows this developer
-      const [follow, followersCount] = await Promise.all([
-        prisma.follow.findUnique({
+      // Get followers count (public, no auth required)
+      const followersCount = await prisma.follow.count({ 
+        where: { followingId: developerId } 
+      });
+
+      // Only check follow status if user is authenticated
+      if (sessionUser) {
+        const follow = await prisma.follow.findUnique({
           where: {
             followerId_followingId: {
               followerId: sessionUser.id,
               followingId: developerId,
             },
           },
-        }),
-        prisma.follow.count({ where: { followingId: developerId } }),
-      ]);
+        });
 
+        return NextResponse.json({ 
+          isFollowing: !!follow,
+          followId: follow?.id || null,
+          followersCount,
+        });
+      }
+
+      // Return only followers count for unauthenticated users
       return NextResponse.json({ 
-        isFollowing: !!follow,
-        followId: follow?.id || null,
         followersCount,
       });
+    }
+
+    // Rest of the endpoint requires authentication
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get user's follow relationships
@@ -161,6 +171,13 @@ export async function POST(request: NextRequest) {
 
     if (!developer || !developer.developerProfile) {
       return NextResponse.json({ error: "Developer not found" }, { status: 404 });
+    }
+
+    // Prevent self-follow
+    if (sessionUser.id === developerId) {
+      return NextResponse.json({ 
+        error: "You cannot follow yourself" 
+      }, { status: 400 });
     }
 
     // Check if already following

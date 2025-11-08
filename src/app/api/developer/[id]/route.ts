@@ -73,6 +73,7 @@ export async function GET(
 
     return NextResponse.json({
       id: developer.id,
+      userId: developer.userId, // Add userId for follow functionality
       name: developer.user.name,
       email: showEmail ? developer.user.email : null, // Hide email for public access
       photoUrl: developer.photoUrl,

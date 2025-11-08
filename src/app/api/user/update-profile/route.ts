@@ -65,8 +65,22 @@ export async function PUT(request: NextRequest) {
         developerUpdateData.usualResponseTimeMs = body.usualResponseTimeMs;
       if (body.currentStatus !== undefined)
         developerUpdateData.currentStatus = body.currentStatus;
-      if (body.portfolioLinks !== undefined)
-        developerUpdateData.portfolioLinks = body.portfolioLinks;
+      // Note: portfolioLinks is deprecated - portfolios are now managed via Portfolio table
+      // If portfolioLinks is provided as array of objects, ignore it
+      // If it's provided as String[], we can still update it for backward compatibility
+      if (body.portfolioLinks !== undefined) {
+        // Only update if it's an array of strings (String[])
+        if (Array.isArray(body.portfolioLinks) && body.portfolioLinks.length > 0) {
+          // Check if first element is a string (String[]) or object (Portfolio objects)
+          if (typeof body.portfolioLinks[0] === 'string') {
+            developerUpdateData.portfolioLinks = body.portfolioLinks;
+          }
+          // If it's objects, ignore it - portfolios should be managed via /api/portfolio
+        } else if (Array.isArray(body.portfolioLinks) && body.portfolioLinks.length === 0) {
+          // Empty array is valid
+          developerUpdateData.portfolioLinks = [];
+        }
+      }
       if (body.photoUrl !== undefined)
         developerUpdateData.photoUrl = body.photoUrl;
       if (body.location !== undefined)
@@ -85,8 +99,11 @@ export async function PUT(request: NextRequest) {
       if (Object.keys(developerUpdateData).length > 0) {
         const existing = await db.developerProfile.findUnique({ where: { userId } });
         if (existing) {
-          // Check if portfolio was updated
-          const portfolioUpdated = developerUpdateData.portfolioLinks !== undefined || 
+          // Check if portfolio was updated (only if portfolioLinks is actually being updated as String[])
+          const portfolioLinksUpdated = developerUpdateData.portfolioLinks !== undefined && 
+                                       Array.isArray(developerUpdateData.portfolioLinks) &&
+                                       (developerUpdateData.portfolioLinks.length === 0 || typeof developerUpdateData.portfolioLinks[0] === 'string');
+          const portfolioUpdated = portfolioLinksUpdated || 
                                   developerUpdateData.bio !== undefined ||
                                   developerUpdateData.linkedinUrl !== undefined;
           

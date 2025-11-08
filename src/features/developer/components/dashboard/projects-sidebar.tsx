@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Pagination } from "@/ui/components/pagination";
 import { cn } from "@/core/utils/utils";
 import ProjectCard from "./project-card";
 import ManualInvitationsSidebar from "./manual-invitations-sidebar";
 import type { ProjectStatus } from "../project-status-filter";
+import { PortfolioModal } from "@/features/onboarding/freelancer/components/portfolio-modal";
+import { Edit2, Upload } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 interface AssignedProjectItem {
   id: string;
@@ -45,6 +49,16 @@ interface ProjectsSidebarProps {
   }>;
 }
 
+interface PortfolioSlot {
+  id?: string;
+  title: string;
+  description: string;
+  projectUrl: string;
+  imageUrl: string;
+  images?: string[];
+  sortOrder: number;
+}
+
 export default function ProjectsSidebar({ 
   filter, 
   selectedProjectId, 
@@ -54,9 +68,16 @@ export default function ProjectsSidebar({
   onInvitationSelect,
   portfolioLinks = []
 }: ProjectsSidebarProps) {
+  const { data: session } = useSession();
+  const isDeveloper = session?.user?.role === "DEVELOPER";
   const [loading, setLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 5; // Show 5 projects per page
+  const [portfolios, setPortfolios] = useState<PortfolioSlot[]>([]);
+  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
+  const [hoveredSlotIndex, setHoveredSlotIndex] = useState<number | null>(null);
+  const [isLoadingPortfolios, setIsLoadingPortfolios] = useState(false);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -101,6 +122,94 @@ export default function ProjectsSidebar({
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
+
+  // Fetch portfolios for developer
+  const fetchPortfolios = useCallback(async () => {
+    if (!isDeveloper) return;
+    
+    try {
+      setIsLoadingPortfolios(true);
+      const response = await fetch('/api/portfolio', { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        setPortfolios(data.portfolios || []);
+      }
+    } catch (error) {
+      console.error('Error fetching portfolios:', error);
+    } finally {
+      setIsLoadingPortfolios(false);
+    }
+  }, [isDeveloper]);
+
+  useEffect(() => {
+    if (isDeveloper) {
+      fetchPortfolios();
+    }
+  }, [isDeveloper, fetchPortfolios]);
+
+  // Handle portfolio save
+  const handlePortfolioSave = useCallback(async (portfolio: {
+    id?: string;
+    title: string;
+    description: string;
+    projectUrl: string;
+    imageUrl: string;
+    images?: string[];
+  }) => {
+    if (editingSlotIndex === null) return;
+
+    try {
+      // Create full portfolios array with 6 slots
+      const updatedPortfolios = Array.from({ length: 6 }, (_, index) => {
+        if (index === editingSlotIndex) {
+          return {
+            id: portfolio.id,
+            title: portfolio.title || '',
+            description: portfolio.description || '',
+            projectUrl: portfolio.projectUrl || '',
+            imageUrl: portfolio.imageUrl || '',
+            images: portfolio.images || [],
+          };
+        }
+        // Keep existing portfolio or create empty slot
+        return portfolios[index] || {
+          title: '',
+          description: '',
+          projectUrl: '',
+          imageUrl: '',
+          images: [],
+        };
+      });
+
+      const response = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portfolios: updatedPortfolios }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPortfolios(data.portfolios || []);
+        toast.success('Portfolio updated successfully');
+        setIsPortfolioModalOpen(false);
+        setEditingSlotIndex(null);
+        // Refresh portfolios
+        await fetchPortfolios();
+      } else {
+        throw new Error('Failed to save portfolio');
+      }
+    } catch (error) {
+      console.error('Error saving portfolio:', error);
+      toast.error('Failed to save portfolio');
+    }
+  }, [portfolios, editingSlotIndex, fetchPortfolios]);
+
+  // Handle portfolio slot click
+  const handlePortfolioSlotClick = (index: number) => {
+    if (!isDeveloper) return;
+    setEditingSlotIndex(index);
+    setIsPortfolioModalOpen(true);
+  };
 
   const getFilterLabel = (filter: ProjectStatus) => {
     switch (filter) {
@@ -185,64 +294,171 @@ export default function ProjectsSidebar({
       <div className="border-t border-gray-200 p-4 bg-white">
         <h4 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">Portfolio</h4>
         {(() => {
-          // Get all portfolio images (from all portfolios, including all images)
-          const allImages: string[] = [];
-          portfolioLinks.forEach((portfolio) => {
-            if (portfolio.images && Array.isArray(portfolio.images)) {
-              // Get all non-empty images (including main image)
-              const nonEmptyImages = portfolio.images.filter(img => img && img.trim() !== "");
-              allImages.push(...nonEmptyImages);
-            } else if (portfolio.imageUrl) {
-              // Fallback: if no images array, use imageUrl
-              allImages.push(portfolio.imageUrl);
-            }
-          });
+          // Use portfolios from API if available (for developers), otherwise use portfolioLinks
+          const displayPortfolios = isDeveloper && portfolios.length > 0 
+            ? portfolios 
+            : portfolioLinks.map((p, idx) => ({
+                id: p.id,
+                title: p.title || '',
+                description: '',
+                projectUrl: '',
+                imageUrl: p.imageUrl || '',
+                images: p.images || [],
+                sortOrder: idx,
+              }));
 
-          // Take first 6 images
-          const displayImages = allImages.slice(0, 6);
+          // Debug logging
+          if (isDeveloper) {
+            console.log('📊 ProjectsSidebar - Portfolios data:', {
+              portfoliosCount: portfolios.length,
+              displayPortfoliosCount: displayPortfolios.length,
+              portfolios: portfolios.map((p, idx) => ({
+                index: idx,
+                id: p.id,
+                title: p.title,
+                hasImageUrl: !!p.imageUrl,
+                imagesCount: p.images?.filter(img => img && img.trim() !== '').length || 0,
+                images: p.images,
+              })),
+            });
+          }
+
+          // Get first image from each portfolio for display
           const brandedLetters = ["C", "L", "E", "R", "V", "S"];
-
-          // Fill remaining slots with branded letters if needed
+          
+          // Create 6 slots - ensure we check all portfolios properly
           const slots = Array.from({ length: 6 }, (_, index) => {
-            if (index < displayImages.length) {
-              return { type: 'image' as const, url: displayImages[index] };
+            const portfolio = displayPortfolios[index];
+            
+            // Improved content check: portfolio has content if it has title, imageUrl, or any non-empty image
+            const hasImageUrl = portfolio?.imageUrl && portfolio.imageUrl.trim() !== '';
+            const hasImages = portfolio?.images && portfolio.images.some(img => img && img && img.trim() !== '');
+            const hasTitle = portfolio?.title && portfolio.title.trim() !== '';
+            const hasContent = portfolio && (hasImageUrl || hasImages || hasTitle);
+            
+            // Get first image: check images array first, then fallback to imageUrl
+            let firstImage = '';
+            if (portfolio?.images && Array.isArray(portfolio.images)) {
+              const nonEmptyImage = portfolio.images.find(img => img && img.trim() !== '');
+              if (nonEmptyImage) {
+                firstImage = nonEmptyImage;
+              }
             }
-            return { type: 'letter' as const, letter: brandedLetters[index] };
+            if (!firstImage && portfolio?.imageUrl && portfolio.imageUrl.trim() !== '') {
+              firstImage = portfolio.imageUrl;
+            }
+            
+            return {
+              portfolio,
+              hasContent,
+              imageUrl: firstImage,
+              letter: brandedLetters[index],
+              isEmpty: !hasContent,
+            };
           });
+
+          // Debug: count portfolios with content
+          const portfoliosWithContent = slots.filter(s => s.hasContent).length;
+          if (isDeveloper && portfoliosWithContent > 0) {
+            console.log(`✅ ProjectsSidebar - Displaying ${portfoliosWithContent} portfolios with content`);
+          }
 
           return (
             <div className="grid grid-cols-3 gap-2">
-              {slots.map((slot, index) => (
-                <div
-                  key={index}
-                  className="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50"
-                >
-                  {slot.type === 'image' ? (
-                    <img
-                      src={slot.url}
-                      alt={`Portfolio ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // On error, show letter instead
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><span class="text-lg font-bold text-gray-400">${brandedLetters[index]}</span></div>`;
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-lg font-bold text-gray-400">{slot.letter}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {slots.map((slot, index) => {
+                const isEmpty = slot.isEmpty;
+                const isHovered = hoveredSlotIndex === index;
+                
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50 relative group cursor-pointer transition-all duration-200",
+                      isEmpty && isDeveloper && "hover:border-blue-400 hover:shadow-md"
+                    )}
+                    onMouseEnter={() => setHoveredSlotIndex(index)}
+                    onMouseLeave={() => setHoveredSlotIndex(null)}
+                    onClick={() => isDeveloper && handlePortfolioSlotClick(index)}
+                  >
+                    {slot.hasContent && slot.imageUrl ? (
+                      <>
+                        <img
+                          src={slot.imageUrl}
+                          alt={slot.portfolio?.title || `Portfolio ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent && !parent.querySelector('.fallback-letter')) {
+                              const fallback = document.createElement('div');
+                              fallback.className = 'w-full h-full flex items-center justify-center fallback-letter';
+                              fallback.innerHTML = `<span class="text-lg font-bold text-gray-400">${slot.letter}</span>`;
+                              parent.appendChild(fallback);
+                            }
+                          }}
+                        />
+                        {/* Edit icon on hover for filled slots */}
+                        {isDeveloper && isHovered && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-200">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                              <Edit2 className="h-4 w-4 text-gray-700" />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-lg font-bold text-gray-400">{slot.letter}</span>
+                        </div>
+                        {/* Upload icon on hover for empty slots */}
+                        {isDeveloper && isHovered && (
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center transition-opacity duration-200">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2.5 shadow-lg">
+                              <Upload className="h-5 w-5 text-gray-700" />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
       </div>
+
+      {/* Portfolio Modal */}
+      {isDeveloper && (
+        <PortfolioModal
+          isOpen={isPortfolioModalOpen}
+          onClose={() => {
+            setIsPortfolioModalOpen(false);
+            setEditingSlotIndex(null);
+          }}
+          portfolio={editingSlotIndex !== null && portfolios[editingSlotIndex] 
+            ? {
+                id: portfolios[editingSlotIndex].id,
+                title: portfolios[editingSlotIndex].title || '',
+                description: portfolios[editingSlotIndex].description || '',
+                projectUrl: portfolios[editingSlotIndex].projectUrl || '',
+                imageUrl: portfolios[editingSlotIndex].imageUrl || '',
+                images: portfolios[editingSlotIndex].images || [],
+              }
+            : {
+                title: '',
+                description: '',
+                projectUrl: '',
+                imageUrl: '',
+                images: [],
+              }
+          }
+          onSave={handlePortfolioSave}
+          slotIndex={editingSlotIndex || 0}
+        />
+      )}
     </div>
   );
 }

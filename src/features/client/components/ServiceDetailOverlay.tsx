@@ -307,7 +307,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
 
   return (
     <div
-      className={`fixed inset-0 z-[60] pointer-events-${isOpen ? "auto" : "none"}`}
+      className={`fixed inset-0 z-[110] pointer-events-${isOpen ? "auto" : "none"}`}
       aria-hidden={!isOpen}
     >
       {/* Mobile backdrop: darken entire screen */}
@@ -330,13 +330,14 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
         onClick={onClose}
       />
 
-      {/* Sliding panel (responsive width) */}
+      {/* Sliding panel (full-screen from top to bottom, like portfolio sidebar) */}
       <div
         className={`fixed right-0 top-0 h-full w-full sm:w-5/6 lg:w-2/3 bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
         aria-modal="true"
+        style={{ zIndex: 111 }}
       >
         <div className="h-full flex flex-col">
           {/* Mobile Close Button */}

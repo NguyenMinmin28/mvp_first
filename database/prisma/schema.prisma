@@ -268,6 +268,10 @@ model User {
   serviceLeads     ServiceLead[]      @relation("ClientLeads")
   serviceFavorites ServiceFavorite[]
   serviceLikes     ServiceLike[]
+  
+  // Portfolio Relations
+  portfolioLikes   PortfolioLike[]
+  
   notifications    NotificationUser[]
 
   // Follow Relations
@@ -1568,10 +1572,25 @@ model Portfolio {
   imageUrl    String?
   sortOrder   Int     @default(0) // For ordering portfolios (0-4 for 5 slots)
 
+  likes      PortfolioLike[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([developerId, sortOrder]) // Ensure only one portfolio per slot per developer
   @@index([developerId])
   @@index([sortOrder])
+}
+
+model PortfolioLike {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  portfolioId String   @db.ObjectId
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolio  Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, portfolioId])
+  @@index([userId])
+  @@index([portfolioId])
 }
