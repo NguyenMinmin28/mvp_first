@@ -168,6 +168,18 @@ enum PresenceStatus {
   offline
 }
 
+// Trạng thái tài khoản (đăng nhập/đăng xuất)
+enum AccountStatus {
+  online
+  offline
+}
+
+// Trạng thái nhận dự án (sẵn sàng nhận dự án hay không)
+enum AvailabilityStatus {
+  available
+  not_available
+}
+
 /**
  * ===== IdeaSpark Enums =====
  */
@@ -579,7 +591,9 @@ model DeveloperProfile {
   whatsappNumber      String? // E.164
   whatsappVerified    Boolean        @default(false)
   usualResponseTimeMs Int            @default(0)
-  currentStatus       PresenceStatus @default(available)
+  currentStatus       PresenceStatus @default(available) // DEPRECATED: Sẽ được migrate sang accountStatus và availabilityStatus
+  accountStatus       AccountStatus  @default(offline) // Trạng thái tài khoản: online/offline
+  availabilityStatus  AvailabilityStatus @default(available) // Trạng thái nhận dự án: available/not_available
 
   reviewsSummaryId String?           @unique @db.ObjectId
   reviewsSummary   ReviewsAggregate? @relation("DevProfileToReviews", fields: [reviewsSummaryId], references: [id])
@@ -600,8 +614,10 @@ model DeveloperProfile {
 
   @@index([level])
   @@index([adminApprovalStatus])
-  @@index([currentStatus])
-  @@index([adminApprovalStatus, currentStatus, level, whatsappVerified], map: "idx_devprofile_eligibility")
+  @@index([currentStatus]) // DEPRECATED: Sẽ được xóa sau khi migration
+  @@index([accountStatus])
+  @@index([availabilityStatus])
+  @@index([adminApprovalStatus, availabilityStatus, level, whatsappVerified], map: "idx_devprofile_eligibility")
 }
 
 model DeveloperActivityLog {

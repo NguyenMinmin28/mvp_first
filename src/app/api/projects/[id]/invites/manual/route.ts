@@ -101,6 +101,14 @@ export async function POST(
       );
     }
 
+    // Check if developer is available (not in "not_available" status)
+    if (developer.availabilityStatus === "not_available") {
+      return NextResponse.json(
+        { error: "Developer is not available for new projects" },
+        { status: 400 }
+      );
+    }
+
     // Check if there's already a pending manual invite for this developer and project
     const existingInvite = await (prisma as any).assignmentCandidate.findFirst({
       where: {

@@ -69,7 +69,8 @@ export class RotationCore {
       const count = await tx.developerProfile.count({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
+          // Eligibility for batch is controlled strictly by Available/Not Available toggle
+          availabilityStatus: "available", // Only include available developers (exclude not_available)
           whatsappVerified: true,
           skills: {
             some: { skillId }
@@ -101,7 +102,8 @@ export class RotationCore {
       const count = await tx.developerProfile.count({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
+          // Eligibility for batch is controlled strictly by Available/Not Available toggle
+          availabilityStatus: "available", // Only include available developers (exclude not_available)
           // No whatsappVerified requirement
           skills: {
             some: { skillId }
@@ -213,7 +215,8 @@ export class RotationCore {
     // Base filters
     const baseWhere: any = {
       adminApprovalStatus: "approved",
-      currentStatus: { in: ["available", "online"] }, // Only include available and online developers (exclude not_available and offline)
+      // Eligibility for batch is controlled strictly by Available/Not Available toggle
+      availabilityStatus: "available", // Only include available developers (exclude not_available)
       userId: { not: clientUserId },
       id: { notIn: allExcludeIds },
       // Do not re-invite devs currently pending/accepted in this project
@@ -464,7 +467,8 @@ export class RotationCore {
     let eligibleDevs = await tx.developerProfile.findMany({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
+          // Eligibility for batch is controlled strictly by Available/Not Available toggle
+          availabilityStatus: "available", // Only include available developers (exclude not_available)
           level,
           userId: { not: clientUserId },
           whatsappVerified: true, // Chỉ lấy những developer đã verify WhatsApp
@@ -509,7 +513,8 @@ export class RotationCore {
       eligibleDevs = await tx.developerProfile.findMany({
         where: {
           adminApprovalStatus: "approved",
-          currentStatus: { in: ["available", "online"] }, // Only include available and online developers
+          // Eligibility for batch is controlled strictly by Available/Not Available toggle
+          availabilityStatus: "available", // Only include available developers (exclude not_available)
           level,
           userId: { not: clientUserId },
           // whatsappVerified removed in fallback

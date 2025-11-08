@@ -3,25 +3,17 @@ import { FollowNotificationService } from "./follow-notification.service";
 
 export class DeveloperStatusService {
   /**
-   * Update developer status and notify followers if status changes to available
+   * Update developer account status (online/offline) - for login/logout
    */
-  static async updateDeveloperStatus(
+  static async updateAccountStatus(
     userId: string,
-    newStatus: "available" | "not_available" | "online" | "offline"
+    newAccountStatus: "online" | "offline"
   ): Promise<void> {
     try {
-      console.log(`🔄 Updating developer status for user ${userId} to ${newStatus}`);
+      console.log(`🔄 Updating developer account status for user ${userId} to ${newAccountStatus}`);
 
-      // Get current developer profile
       const developerProfile = await prisma.developerProfile.findUnique({
         where: { userId },
-        include: {
-          user: {
-            select: {
-              name: true,
-            }
-          }
-        }
       });
 
       if (!developerProfile) {
@@ -29,14 +21,16 @@ export class DeveloperStatusService {
         return;
       }
 
-      const oldStatus = developerProfile.currentStatus;
-      console.log(`📊 Status change: ${oldStatus} → ${newStatus}`);
+      const oldAccountStatus = developerProfile.accountStatus;
+      console.log(`📊 Account status change: ${oldAccountStatus} → ${newAccountStatus}`);
 
-      // Update the status
+      // Update account status
       await prisma.developerProfile.update({
         where: { userId },
         data: {
-          currentStatus: newStatus,
+          accountStatus: newAccountStatus,
+          // Keep currentStatus for backward compatibility during migration
+          currentStatus: newAccountStatus === "online" ? "online" : "offline",
         }
       });
 
@@ -55,8 +49,8 @@ export class DeveloperStatusService {
         await prisma.developerActivityLog.create({
           data: {
             developerId: developerProfile.id,
-            status: newStatus,
-            action: oldStatus !== newStatus ? "status_change" : "status_update",
+            status: newAccountStatus,
+            action: oldAccountStatus !== newAccountStatus ? "account_status_change" : "account_status_update",
             timestamp: new Date(),
           },
         });
@@ -65,17 +59,78 @@ export class DeveloperStatusService {
         console.warn("⚠️ Could not record activity log", e);
       }
 
-      console.log(`✅ Developer status updated successfully`);
+      console.log(`✅ Developer account status updated successfully`);
+    } catch (error) {
+      console.error("Error updating developer account status:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update developer availability status (available/not_available) - for project availability
+   */
+  static async updateAvailabilityStatus(
+    userId: string,
+    newAvailabilityStatus: "available" | "not_available"
+  ): Promise<void> {
+    try {
+      console.log(`🔄 Updating developer availability status for user ${userId} to ${newAvailabilityStatus}`);
+
+      const developerProfile = await prisma.developerProfile.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              name: true,
+            }
+          }
+        }
+      });
+
+      if (!developerProfile) {
+        console.log(`❌ No developer profile found for user ${userId}`);
+        return;
+      }
+
+      const oldAvailabilityStatus = developerProfile.availabilityStatus;
+      console.log(`📊 Availability status change: ${oldAvailabilityStatus} → ${newAvailabilityStatus}`);
+
+      // Update availability status
+      await prisma.developerProfile.update({
+        where: { userId },
+        data: {
+          availabilityStatus: newAvailabilityStatus,
+          // Keep currentStatus for backward compatibility during migration
+          currentStatus: newAvailabilityStatus === "available" ? "available" : "not_available",
+        }
+      });
+
+      // Record activity log
+      try {
+        await prisma.developerActivityLog.create({
+          data: {
+            developerId: developerProfile.id,
+            status: newAvailabilityStatus,
+            action: oldAvailabilityStatus !== newAvailabilityStatus ? "availability_status_change" : "availability_status_update",
+            timestamp: new Date(),
+          },
+        });
+        console.log(`📝 Activity log recorded for developer ${developerProfile.id}`);
+      } catch (e) {
+        console.warn("⚠️ Could not record activity log", e);
+      }
+
+      console.log(`✅ Developer availability status updated successfully`);
 
       // Only notify followers if status changed TO "available"
-      if (oldStatus !== "available" && newStatus === "available") {
-        console.log(`🔔 Status changed to available, notifying followers...`);
+      if (oldAvailabilityStatus !== "available" && newAvailabilityStatus === "available") {
+        console.log(`🔔 Availability status changed to available, notifying followers...`);
         
         try {
           await FollowNotificationService.notifyAvailabilityChange(
-            developerProfile.id, // Use developer profile ID
+            developerProfile.id,
             developerProfile.user.name || "Developer",
-            newStatus
+            newAvailabilityStatus
           );
           console.log(`📢 Availability change notifications sent successfully`);
         } catch (notificationError) {
@@ -83,9 +138,33 @@ export class DeveloperStatusService {
           // Don't throw error to avoid breaking the main flow
         }
       } else {
-        console.log(`ℹ️ No notification needed (status: ${oldStatus} → ${newStatus})`);
+        console.log(`ℹ️ No notification needed (availability: ${oldAvailabilityStatus} → ${newAvailabilityStatus})`);
       }
+    } catch (error) {
+      console.error("Error updating developer availability status:", error);
+      throw error;
+    }
+  }
 
+  /**
+   * DEPRECATED: Update developer status (legacy method for backward compatibility)
+   * Use updateAccountStatus() or updateAvailabilityStatus() instead
+   */
+  static async updateDeveloperStatus(
+    userId: string,
+    newStatus: "available" | "not_available" | "online" | "offline"
+  ): Promise<void> {
+    try {
+      console.log(`🔄 [DEPRECATED] Updating developer status for user ${userId} to ${newStatus}`);
+
+      // Determine which status type this is
+      if (newStatus === "online" || newStatus === "offline") {
+        await this.updateAccountStatus(userId, newStatus);
+      } else if (newStatus === "available" || newStatus === "not_available") {
+        await this.updateAvailabilityStatus(userId, newStatus);
+      } else {
+        throw new Error(`Invalid status: ${newStatus}`);
+      }
     } catch (error) {
       console.error("Error updating developer status:", error);
       throw error;
@@ -93,31 +172,38 @@ export class DeveloperStatusService {
   }
 
   /**
-   * Set developer status to offline (for logout)
+   * Set developer account status to offline (for logout)
    */
   static async setDeveloperOffline(userId: string): Promise<void> {
-    await this.updateDeveloperStatus(userId, "offline");
+    await this.updateAccountStatus(userId, "offline");
   }
 
   /**
-   * Set developer status to online (for login)
+   * Set developer account status to online (for login)
    */
   static async setDeveloperOnline(userId: string): Promise<void> {
-    await this.updateDeveloperStatus(userId, "online");
+    await this.updateAccountStatus(userId, "online");
   }
 
   /**
-   * Set developer status to busy (for logout) - DEPRECATED: use setDeveloperOffline
-   */
-  static async setDeveloperBusy(userId: string): Promise<void> {
-    await this.updateDeveloperStatus(userId, "offline");
-  }
-
-  /**
-   * Set developer status to available (for login) - DEPRECATED: use setDeveloperOnline
+   * Set developer availability status to available (ready to accept projects)
    */
   static async setDeveloperAvailable(userId: string): Promise<void> {
-    await this.updateDeveloperStatus(userId, "online");
+    await this.updateAvailabilityStatus(userId, "available");
+  }
+
+  /**
+   * Set developer availability status to not_available (not ready to accept projects)
+   */
+  static async setDeveloperNotAvailable(userId: string): Promise<void> {
+    await this.updateAvailabilityStatus(userId, "not_available");
+  }
+
+  /**
+   * DEPRECATED: Set developer status to busy (for logout) - use setDeveloperOffline
+   */
+  static async setDeveloperBusy(userId: string): Promise<void> {
+    await this.setDeveloperOffline(userId);
   }
 
   /**
@@ -134,7 +220,7 @@ export class DeveloperStatusService {
         return;
       }
 
-      // Set status to online when logging in
+      // Set account status to online when logging in
       await this.setDeveloperOnline(userId);
 
       // Record login activity
@@ -167,7 +253,7 @@ export class DeveloperStatusService {
         return;
       }
 
-      // Set status to offline when logging out
+      // Set account status to offline when logging out
       await this.setDeveloperOffline(userId);
 
       // Record logout activity
