@@ -128,7 +128,7 @@ export function GetInTouchModal({
   if (isOpen && currentStep === "choice") {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="fixed left-[50%] top-[50%] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg sm:max-w-md z-[70] [&>div]:z-[70]">
+      <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{`Contact ${developerName || "Developer"}`}</DialogTitle>
           </DialogHeader>
@@ -194,7 +194,7 @@ export function GetInTouchModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md z-[70] [&>div]:z-[70]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{headerTitle}</DialogTitle>
         </DialogHeader>

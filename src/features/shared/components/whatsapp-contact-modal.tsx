@@ -48,7 +48,7 @@ export function WhatsAppContactModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md animate-in slide-in-from-bottom-4 duration-300 z-[70] [&>div]:z-[70]">
+      <DialogContent className="sm:max-w-md animate-in slide-in-from-bottom-4 duration-300">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Button

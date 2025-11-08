@@ -243,6 +243,71 @@ export default function PortfolioDetailOverlay({ isOpen, item, onClose }: Portfo
               </div>
             </div>
 
+            {/* Optional Portfolio Images Section */}
+            <div className="px-4 sm:px-6 mb-10">
+              <div className="mx-auto max-w-5xl">
+                {(() => {
+                  // Get all images from portfolio (skip first/main image which is already shown)
+                  const allImages: string[] = [];
+                  if (item?.images && Array.isArray(item.images)) {
+                    // Skip first image (main), get additional images (slots 1-5)
+                    const additionalImages = item.images.slice(1, 6).filter((img: string) => img && img.trim() !== "");
+                    allImages.push(...additionalImages);
+                  }
+
+                  // Take first 6 images
+                  const displayImages = allImages.slice(0, 6);
+                  const brandedLetters = ["C", "L", "E", "R", "V", "S"];
+
+                  // Fill remaining slots with branded letters if needed
+                  const slots = Array.from({ length: 6 }, (_, index) => {
+                    if (index < displayImages.length) {
+                      return { type: 'image' as const, url: displayImages[index] };
+                    }
+                    return { type: 'letter' as const, letter: brandedLetters[index] };
+                  });
+
+                  return (
+                    <div className="mt-8">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Additional Images</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        {slots.map((slot, index) => (
+                          <div
+                            key={index}
+                            className="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50"
+                          >
+                            {slot.type === 'image' ? (
+                              <img
+                                src={getOptimizedImageUrl(slot.url, 800, 800)}
+                                alt={`Portfolio image ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // On error, show letter instead
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    const letterDiv = document.createElement('div');
+                                    letterDiv.className = 'w-full h-full flex items-center justify-center';
+                                    letterDiv.innerHTML = `<span class="text-lg font-bold text-gray-400">${brandedLetters[index]}</span>`;
+                                    parent.appendChild(letterDiv);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <span className="text-lg font-bold text-gray-400">{slot.letter}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
             {/* Add-on metadata section (likes/views/timeline/tags) */}
             <div className="px-4 sm:px-6 mb-16">
               <div className="mx-auto max-w-5xl">

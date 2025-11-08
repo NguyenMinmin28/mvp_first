@@ -164,7 +164,7 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md z-[70] [&>div]:z-[70]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send Message to Developer</DialogTitle>
         </DialogHeader>
@@ -190,7 +190,7 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder={loadingProjects ? "Loading projects..." : "Choose a project to reference"} />
                 </SelectTrigger>
-                <SelectContent className="z-[100]" position="popper">
+              <SelectContent className="z-[150]" position="popper">
                   <SelectItem value="none">No project reference</SelectItem>
                   <SelectItem value="test1">Test Project 1</SelectItem>
                   <SelectItem value="test2">Test Project 2</SelectItem>

@@ -17,8 +17,8 @@ import ProjectStatusFilter, {
 } from "@/features/developer/components/project-status-filter";
 import { useSkills } from "@/features/developer/components/dashboard/use-skills";
 import { Button } from "@/ui/components/button";
+import { Pagination } from "@/ui/components/pagination";
 import { ChevronLeft, ChevronRight, BarChart3, FileText, FolderOpen, Briefcase, CheckCircle2, Clock, AlertCircle, Calendar, DollarSign, Tag } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 
 const ProjectsSidebar = dynamic(
   () => import("@/features/developer/components/dashboard/projects-sidebar"),
@@ -105,6 +105,8 @@ export default function DashboardClient({
   >(null);
   const [selectedInvitation, setSelectedInvitation] = useState<any>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [overviewPage, setOverviewPage] = useState<number>(1);
+  const overviewItemsPerPage = 10; // Show 10 projects per page in overview
 
   const projectDetailRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -328,12 +330,12 @@ export default function DashboardClient({
 
   return (
     <UserLayout user={session.user}>
-      <section className="w-full py-4 flex-1 flex flex-col">
-        <div className="w-full max-w-full mx-auto px-4 flex-1 flex flex-col">
+      <section className="w-full py-6 flex-1 flex flex-col min-h-screen bg-white">
+        <div className="w-full max-w-full mx-auto px-4 sm:px-6 flex-1 flex flex-col">
           {isApprovalPending && (
-            <div className="mb-4 border p-4 text-center">
-              <h2 className="text-xl font-bold mb-2">Profile Submitted</h2>
-              <p className="mb-2">
+            <div className="mb-6 border border-blue-200 bg-blue-50 p-6 text-center rounded-xl shadow-lg">
+              <h2 className="text-xl font-bold mb-2 text-blue-900">Profile Submitted</h2>
+              <p className="mb-2 text-blue-800">
                 Your developer profile has been submitted and is awaiting admin approval. We&apos;ll notify you once it&apos;s approved.
               </p>
             </div>
@@ -342,259 +344,35 @@ export default function DashboardClient({
           <div className="w-full">
             <ProfileSummary profile={profile} />
 
-            {/* Dashboard Tabs */}
-            <div className="mt-4 flex-1 flex flex-col">
-                <Tabs defaultValue="overview" className="w-full flex-1 flex flex-col">
-                  <TabsList className="flex gap-1 border-b mb-4 w-full bg-transparent">
-                    <TabsTrigger
-                      value="overview"
-                      className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 text-gray-600 hover:text-gray-900 transition-colors duration-200"
-                    >
-                      <span className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4" />
-                        Overview
-                      </span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="projects"
-                      className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 text-gray-600 hover:text-gray-900 transition-colors duration-200"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Projects
-                      </span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="portfolio"
-                      className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 text-gray-600 hover:text-gray-900 transition-colors duration-200"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FolderOpen className="w-4 h-4" />
-                        Portfolio
-                      </span>
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="overview" className="mt-4 py-4 flex-1">
-                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto w-full">
-                      <div className="space-y-4 w-full">
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div className="border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="p-2 bg-blue-500 rounded-lg">
-                                <Briefcase className="h-5 w-5 text-white" />
-                              </div>
-                              <h3 className="text-sm font-semibold text-blue-900">Total Projects</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-blue-700 mb-1">{projects.length}</p>
-                            <p className="text-xs text-blue-600">All assignments</p>
-                          </div>
-
-                          <div className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="p-2 bg-green-500 rounded-lg">
-                                <CheckCircle2 className="h-5 w-5 text-white" />
-                              </div>
-                              <h3 className="text-sm font-semibold text-green-900">Active Projects</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-green-700 mb-1">
-                              {projects.filter(p => p.assignment?.responseStatus === "accepted" && p.status !== "completed").length}
-                            </p>
-                            <p className="text-xs text-green-600">Currently working</p>
-                          </div>
-
-                          <div className="border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="p-2 bg-purple-500 rounded-lg">
-                                <CheckCircle2 className="h-5 w-5 text-white" />
-                              </div>
-                              <h3 className="text-sm font-semibold text-purple-900">Completed</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-purple-700 mb-1">
-                              {projects.filter(p => p.status === "completed").length}
-                            </p>
-                            <p className="text-xs text-purple-600">Successfully finished</p>
-                          </div>
-
-                          <div className="border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-100 p-5 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="p-2 bg-orange-500 rounded-lg">
-                                <Clock className="h-5 w-5 text-white" />
-                              </div>
-                              <h3 className="text-sm font-semibold text-orange-900">Pending</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-orange-700 mb-1">
-                              {projects.filter(p => p.assignment?.responseStatus === "pending").length}
-                            </p>
-                            <p className="text-xs text-orange-600">Awaiting response</p>
-                          </div>
-                        </div>
-                        
-                        {/* Activities Section */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
-                          <div className="px-4 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-blue-500 rounded-lg">
-                                  <BarChart3 className="h-5 w-5 text-white" />
-                                </div>
-                                <h3 className="text-base font-semibold text-gray-900">All Activities</h3>
-                              </div>
-                              <div className="px-3 py-1 border border-blue-200 bg-blue-50 rounded-md">
-                                <span className="text-sm font-semibold text-blue-700">{projects.length}</span>
-                                <span className="text-xs text-blue-600 ml-1">total</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="p-4 bg-gray-50">
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                              {projects.length > 0 ? (
-                                projects.map((project) => {
-                                  const statusColors: Record<string, string> = {
-                                    completed: 'bg-green-100 text-green-800 border-green-300',
-                                    approved: 'bg-blue-100 text-blue-800 border-blue-300',
-                                    rejected: 'bg-red-100 text-red-800 border-red-300',
-                                    in_progress: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-                                    recent: 'bg-gray-100 text-gray-800 border-gray-300'
-                                  };
-                                  const responseColors: Record<string, string> = {
-                                    accepted: 'bg-green-100 text-green-700 border-green-300',
-                                    rejected: 'bg-red-100 text-red-700 border-red-300',
-                                    pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-                                    expired: 'bg-gray-100 text-gray-700 border-gray-300',
-                                  };
-                                  return (
-                                    <div key={project.id} className="border border-gray-200 bg-white p-4 rounded-lg hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer">
-                                      <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-3 mb-2">
-                                            <div className="p-1.5 bg-blue-100 rounded-md">
-                                              <FileText className="h-4 w-4 text-blue-600" />
-                                            </div>
-                                            <h4 className="font-semibold flex-1 text-gray-900">{project.name}</h4>
-                                            <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${statusColors[project.status] || statusColors.recent}`}>
-                                              {project.status}
-                                            </span>
-                                          </div>
-
-                                          <div className="flex flex-wrap items-center gap-3 mb-2">
-                                            <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                                              <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                                              <span>{new Date(project.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                                            </div>
-                                            {project.assignment?.responseStatus && (
-                                              <span className={`px-2.5 py-1 text-xs font-medium rounded-md border ${responseColors[project.assignment.responseStatus] || responseColors.expired}`}>
-                                                {project.assignment.responseStatus}
-                                              </span>
-                                            )}
-                                            {project.budget && (
-                                              <div className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
-                                                <DollarSign className="h-3.5 w-3.5" />
-                                                <span>{project.currency || '$'}{project.budget}</span>
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          {project.skills && project.skills.length > 0 && (
-                                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                                              <Tag className="h-3.5 w-3.5 text-gray-400" />
-                                              {project.skills.slice(0, 3).map((skill, index) => {
-                                                // skill can be either ID (string) or name (string)
-                                                // getSkillName will return the name if found, or the ID if not found
-                                                // If skill looks like an ID (long string), try to get name
-                                                // Otherwise, assume it's already a name
-                                                const skillIdOrName = String(skill || '');
-                                                const skillName = skillIdOrName.length > 20 || skillIdOrName.match(/^[a-f0-9]{24}$/i)
-                                                  ? getSkillName(skillIdOrName)
-                                                  : skillIdOrName;
-                                                return (
-                                                  <span key={index} className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-200">
-                                                    {skillName}
-                                                  </span>
-                                                );
-                                              })}
-                                              {project.skills.length > 3 && (
-                                                <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-md border border-gray-200">
-                                                  +{project.skills.length - 3} more
-                                                </span>
-                                              )}
-                                            </div>
-                                          )}
-
-                                          {project.assignment?.clientMessage && (
-                                            <div className="mt-2 p-2 border-l-4 border-blue-400 bg-blue-50 rounded-r">
-                                              <p className="text-xs italic line-clamp-2 text-gray-700">
-                                                &quot;{project.assignment.clientMessage}&quot;
-                                              </p>
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        <div className="flex-shrink-0 text-right">
-                                          {project.assignment?.assignedAt && (
-                                            <div className="mb-2 p-2 border border-gray-200 bg-gray-50 rounded-md">
-                                              <div className="text-xs text-gray-600 mb-1">Assigned</div>
-                                              <div className="text-sm font-medium text-gray-900">
-                                                {new Date(project.assignment.assignedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                              </div>
-                                            </div>
-                                          )}
-                                          {project.assignment?.acceptanceDeadline && (
-                                            <div className="p-2 border border-orange-200 bg-orange-50 rounded-md">
-                                              <div className="flex items-center gap-1 text-xs text-orange-600 mb-1">
-                                                <AlertCircle className="h-3 w-3" />
-                                                <span>Deadline</span>
-                                              </div>
-                                              <div className="text-sm font-semibold text-orange-700">
-                                                {new Date(project.assignment.acceptanceDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                <div className="text-center py-12">
-                                  <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                  <p className="text-gray-600 font-medium mb-1">No activities recorded yet</p>
-                                  <p className="text-sm text-gray-500">Your project activities will appear here</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="projects" className="mt-4 py-4 flex-1">
-                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto w-full">
-                      <div className="space-y-4 w-full">
+            {/* Dashboard Content */}
+            <div className="mt-6 flex-1 flex flex-col">
+                <div className="w-full flex-1 flex flex-col">
                         {/* Filter Bar */}
-                        <div className="w-full pb-4 border-b">
+                  <div className="w-full pb-6 border-b border-gray-200 mb-6">
                           <ProjectStatusFilter
                             value={projectStatus}
                             onChange={(v) => startTransition(() => setProjectStatus(v))}
                           />
                         </div>
 
+                  {/* Projects Content */}
+                  <div className="mt-6 py-6 flex-1">
+                    <div className="min-h-[800px] w-full overflow-visible">
+                      <div className="space-y-6 w-full">
                         {filteredProjects.length > 0 && (
-                          <div className="lg:hidden mb-4">
-                            <div className="flex items-center justify-between border p-3">
+                          <div className="lg:hidden mb-6">
+                            <div className="flex items-center justify-between border border-gray-200 bg-white p-4 rounded-xl shadow-md">
                               <div className="flex items-center gap-3">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={previousProject}
                                   disabled={currentIndex === 0}
-                                  className="h-8 w-8 p-0"
+                                  className="h-8 w-8 p-0 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50"
                                 >
                                   <ChevronLeft className="h-4 w-4" />
                                 </Button>
-                                <div className="text-sm font-medium">
+                                <div className="text-sm font-medium text-gray-900">
                                   {currentIndex + 1} of {filteredProjects.length}
                                 </div>
                                 <Button
@@ -602,12 +380,12 @@ export default function DashboardClient({
                                   size="sm"
                                   onClick={nextProject}
                                   disabled={currentIndex === filteredProjects.length - 1}
-                                  className="h-8 w-8 p-0"
+                                  className="h-8 w-8 p-0 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50"
                                 >
                                   <ChevronRight className="h-4 w-4" />
                                 </Button>
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-gray-700">
                                 {selectedProject?.name ?? "No project selected"}
                               </div>
                             </div>
@@ -637,6 +415,7 @@ export default function DashboardClient({
                                 setSelectedInvitation(invitation);
                                 setSelectedProjectId(null);
                               }}
+                              portfolioLinks={profile?.portfolioLinks || profile?.portfolioItems || []}
                             />
                           </div>
 
@@ -715,44 +494,8 @@ export default function DashboardClient({
                         </div>
                       </div>
                     </div>
-                  </TabsContent>
-
-                  <TabsContent value="portfolio" className="mt-4 py-4 flex-1">
-                    <div className="min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto w-full">
-                      <OnboardingPortfolioGrid
-                        initialPortfolios={
-                          Array.isArray(profile?.portfolioLinks)
-                            ? profile.portfolioLinks.map((p: any) => ({
-                                id: p.id,
-                                title: p.title || "",
-                                description: p.description || "",
-                                projectUrl: p.url || "",
-                                imageUrl: p.imageUrl || "",
-                              }))
-                            : []
-                        }
-                        onPortfoliosChange={(updated: any[]) => {
-                          setProfile((prev: any) => ({
-                            ...(prev || {}),
-                            portfolioLinks: updated
-                              .map((p, index) => ({
-                                id: p.id,
-                                title: p.title,
-                                description: p.description,
-                                url: p.projectUrl,
-                                imageUrl: p.imageUrl,
-                                sortOrder: index,
-                              }))
-                              .filter(
-                                (p) =>
-                                  p.title || p.description || p.url || p.imageUrl
-                              ),
-                          }));
-                        }}
-                      />
+                  </div>
                     </div>
-                  </TabsContent>
-                </Tabs>
               </div>
           </div>
         </div>

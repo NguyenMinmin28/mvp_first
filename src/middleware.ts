@@ -81,8 +81,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated trying to access auth pages -> redirect to appropriate dashboard
-  if (token && (pathname.startsWith("/auth/signin") || pathname.startsWith("/auth/signup"))) {
+  if (token && pathname.startsWith("/auth/")) {
+    const needsSignupCompletion = !token?.role || token?.isProfileCompleted === false;
+
+    if (pathname.startsWith("/auth/signup")) {
+      if (needsSignupCompletion) {
+        console.log("🔍 New authenticated user allowed to complete signup flow");
+        return NextResponse.next();
+      }
+    }
+
+    if (pathname.startsWith("/auth/signin") && needsSignupCompletion) {
+      console.log("🔍 Authenticated user missing onboarding info, redirecting to signup");
+      return NextResponse.redirect(new URL("/auth/signup", request.url));
+    }
+
     console.log("🔍 Authenticated user on auth page, redirecting to appropriate dashboard");
     if (token.role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin", request.url));
@@ -123,20 +136,20 @@ export async function middleware(request: NextRequest) {
   if (token) {
     console.log("🔍 Authenticated user detected");
     
-    // If user has no role, redirect to role selection (except for allowed pages)
+    // If user has no role, force them through signup (except for allowed pages)
     if (!token?.role) {
       const allowedPagesWithoutRole = [
-        "/role-selection",
-        "/auth/signin",
         "/auth/signup",
+        "/auth/signin",
+        "/role-selection",
         "/services",
       ];
       const isAllowedPage = allowedPagesWithoutRole.some(
         (page) => pathname === page || pathname.startsWith(page + "/")
       );
       if (!isAllowedPage) {
-        console.log("🔍 User has no role, redirecting to role selection");
-        return NextResponse.redirect(new URL("/role-selection", request.url));
+        console.log("🔍 User has no role, redirecting to signup flow");
+        return NextResponse.redirect(new URL("/auth/signup", request.url));
       }
       return NextResponse.next();
     }

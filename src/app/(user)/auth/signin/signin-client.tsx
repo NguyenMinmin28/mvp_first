@@ -350,9 +350,9 @@ export default function SignInClient() {
               }
               return;
             }
-            // If no role or role is null, redirect to role selection
-            console.log("🔄 No role found, redirecting to /role-selection");
-            window.location.href = "/role-selection";
+            // If no role or role is null, redirect to signup flow
+            console.log("🔄 No role found, redirecting to /auth/signup");
+            window.location.href = "/auth/signup";
           } catch (error) {
             console.error("❌ Error fetching user data after Google signin:", error);
             console.log("🔄 Fallback redirect to /");

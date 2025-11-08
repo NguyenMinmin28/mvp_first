@@ -62,6 +62,19 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC_ROUTES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
+
+  // Force authenticated users without a password to complete setup
+  if (token && token.hasPassword === false) {
+    const allowedPasswordSetupPages = ["/auth/setup-password"];
+    const isPasswordSetupPage = allowedPasswordSetupPages.some(
+      (page) => pathname === page || pathname.startsWith(page + "/")
+    );
+
+    if (!isPasswordSetupPage) {
+      if (DEBUG_MW) console.log("🔍 Authenticated user without password, redirecting to setup-password");
+      return NextResponse.redirect(new URL("/auth/setup-password", request.url));
+    }
+  }
   
   // If user is authenticated but has no role, they must select role first
   // Block access to public pages (except role-selection, auth pages, and services)

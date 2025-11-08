@@ -63,14 +63,14 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
       className={cn(
         "cursor-pointer transition-all duration-300 border-2",
         isSelected 
-          ? "ring-2 ring-blue-500 border-blue-400 shadow-lg bg-blue-50" 
-          : "border-gray-200 hover:border-blue-300 hover:shadow-md hover:bg-blue-50/50"
+          ? "ring-2 ring-blue-500 border-blue-400 shadow-xl bg-blue-50" 
+          : "border-gray-200 hover:border-blue-300 hover:shadow-lg hover:bg-blue-50/50 bg-white"
       )}
       onClick={onClick}
       data-project-card
     >
-      <CardContent className="p-3 sm:p-4">
-        <div className="space-y-2 sm:space-y-3">
+      <CardContent className="p-4">
+        <div className="space-y-3">
           {/* Header with title and status */}
           <div className="flex items-start justify-between gap-2">
             <h3 className={cn(
@@ -79,7 +79,7 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
             )}>
               {project.name}
             </h3>
-            <span className={cn("text-xs shrink-0 px-2 py-1 rounded-md border font-medium", getStatusColor(project.status))}>
+            <span className={cn("text-xs shrink-0 px-3 py-1.5 rounded-lg border font-medium", getStatusColor(project.status))}>
               {project.status.replace("_", " ")}
             </span>
           </div>
@@ -102,16 +102,23 @@ export default function ProjectCard({ project, isSelected, onClick }: ProjectCar
           {/* Skills */}
           {Array.isArray(project.skills) && project.skills.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {project.skills.slice(0, 3).map((skillId, index) => (
-                <span 
-                  key={index}
-                  className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors duration-200"
-                >
-                  {getSkillName(skillId)}
-                </span>
-              ))}
+              {project.skills.slice(0, 3).map((skill, index) => {
+                const skillIdOrName = String(skill || '');
+                // Check if it's an ID (long hex string) or already a name
+                const skillName = skillIdOrName.length > 20 || skillIdOrName.match(/^[a-f0-9]{24}$/i)
+                  ? getSkillName(skillIdOrName)
+                  : skillIdOrName;
+                return (
+                  <span 
+                    key={index}
+                    className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-100 transition-all duration-200"
+                  >
+                    {skillName}
+                  </span>
+                );
+              })}
               {project.skills.length > 3 && (
-                <span className="text-xs text-gray-500 px-2 py-1">
+                <span className="text-xs text-gray-500 px-2.5 py-1">
                   +{project.skills.length - 3} more
                 </span>
               )}

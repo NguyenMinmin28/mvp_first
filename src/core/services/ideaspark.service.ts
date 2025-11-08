@@ -924,6 +924,9 @@ export class IdeaSparkService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        cover: {
+          select: { id: true, storageKey: true }
+        },
         _count: {
           select: { likes: true, comments: true, bookmarks: true, connects: true }
         }

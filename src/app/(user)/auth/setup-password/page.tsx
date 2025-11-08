@@ -18,7 +18,7 @@ import {
 } from "@/ui/components/card";
 
 export default function SetupPasswordPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -92,6 +92,11 @@ export default function SetupPasswordPage() {
 
       if (response.ok) {
         toast.success("Password added successfully!");
+        try {
+          await update();
+        } catch (err) {
+          console.error("Error refreshing session after password setup:", err);
+        }
         // Redirect based on saved form data or role selection
         setTimeout(() => {
           const savedFormData = sessionStorage.getItem("guestProjectForm");

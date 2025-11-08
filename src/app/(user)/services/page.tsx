@@ -108,7 +108,6 @@ export default function ServicesPage() {
             filters={selectedFilters}
             skills={selectedSkills}
             hideHeaderControls
-            isDeveloper={isDeveloper}
           />
         )}
       </div>

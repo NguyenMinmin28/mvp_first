@@ -182,9 +182,7 @@ export default function WhatsAppTab({
                   WhatsApp Number:
                 </span>
                 <span className="text-sm font-semibold text-gray-900">
-                  {profileData.whatsappNumber || (
-                    <span className="text-gray-500 italic">Not set</span>
-                  )}
+                  {profileData.whatsappNumber || "N/A"}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
+import { ReadOnlyField } from "../read-only-field";
 
 interface PortfolioTabProps {
   profileData: any;
@@ -75,9 +76,11 @@ export default function PortfolioTab({
               )
             )}
             {(profileData.portfolioLinks || []).length === 0 && (
-              <p className="text-sm text-gray-500 italic">
-                No portfolio links added yet
-              </p>
+              isEditing ? (
+                <p className="text-sm text-gray-500 italic">No portfolio links added yet</p>
+              ) : (
+                <ReadOnlyField value={undefined} />
+              )
             )}
           </div>
         </div>

@@ -325,6 +325,7 @@ export default {
           phoneE164?: string
           role?: string
           isProfileCompleted?: boolean
+          hasPassword?: boolean
         }
         // Use token.sub for user ID (this is NextAuth standard)
         user.id = token.sub!
@@ -341,6 +342,9 @@ export default {
         }
         if (token.adminApprovalStatus) {
           user.adminApprovalStatus = token.adminApprovalStatus
+        }
+        if (typeof token.hasPassword === "boolean") {
+          user.hasPassword = token.hasPassword
         }
         if (DEBUG_AUTH) console.log("🔍 Final session user:", user)
       }
@@ -381,6 +385,7 @@ export default {
               phoneE164: true,
               role: true,
               isProfileCompleted: true,
+              passwordHash: true,
               developerProfile: { select: { adminApprovalStatus: true } },
             },
           })
@@ -391,6 +396,7 @@ export default {
             token.role = dbUser.role
             token.isProfileCompleted = dbUser.isProfileCompleted
             token.adminApprovalStatus = dbUser.developerProfile?.adminApprovalStatus
+            token.hasPassword = !!dbUser.passwordHash
           }
           token.lastRefreshedAt = Date.now()
         } catch (error) {
@@ -411,6 +417,9 @@ export default {
         }
         if ("isProfileCompleted" in user) {
           token.isProfileCompleted = user.isProfileCompleted
+        }
+        if ("hasPassword" in user) {
+          token.hasPassword = user.hasPassword
         }
       }
 

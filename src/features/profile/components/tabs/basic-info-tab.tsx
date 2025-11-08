@@ -4,14 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
 import { Textarea } from "@/ui/components/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/ui/components/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/components/select";
 import AvatarUpload from "../avatar-upload";
+import { ReadOnlyField } from "../read-only-field";
 
 interface BasicInfoTabProps {
   profileData: any;
@@ -28,6 +23,19 @@ export default function BasicInfoTab({
   onSaveAvatar,
   userRole,
 }: BasicInfoTabProps) {
+  const experienceLevelLabels: Record<string, string> = {
+    FRESHER: "Fresher",
+    MID: "Mid-level",
+    EXPERT: "Expert",
+  };
+
+  const hourlyRateValue =
+    typeof profileData.hourlyRate === "number"
+      ? profileData.hourlyRate
+      : typeof profileData.hourlyRateUsd === "number"
+        ? profileData.hourlyRateUsd
+        : undefined;
+
   return (
     <Card>
       <CardHeader>
@@ -48,23 +56,20 @@ export default function BasicInfoTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              value={profileData.name || ""}
-              onChange={(e) => onInputChange("name", e.target.value)}
-              disabled={!isEditing}
-              placeholder="Enter your full name"
-            />
+            {isEditing ? (
+              <Input
+                id="name"
+                value={profileData.name || ""}
+                onChange={(e) => onInputChange("name", e.target.value)}
+                placeholder="Enter your full name"
+              />
+            ) : (
+              <ReadOnlyField value={profileData.name} />
+            )}
           </div>
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              value={profileData.email || ""}
-              disabled={true}
-              className="bg-gray-50"
-              placeholder="your@email.com"
-            />
+            <ReadOnlyField value={profileData.email} />
             <p className="text-xs text-gray-500 mt-1">
               Email cannot be changed
             </p>
@@ -74,23 +79,29 @@ export default function BasicInfoTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              value={profileData.phoneE164 || ""}
-              onChange={(e) => onInputChange("phoneE164", e.target.value)}
-              disabled={!isEditing}
-              placeholder="+1234567890"
-            />
+            {isEditing ? (
+              <Input
+                id="phone"
+                value={profileData.phoneE164 || ""}
+                onChange={(e) => onInputChange("phoneE164", e.target.value)}
+                placeholder="+1234567890"
+              />
+            ) : (
+              <ReadOnlyField value={profileData.phoneE164} />
+            )}
           </div>
           <div>
             <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={profileData.location || ""}
-              onChange={(e) => onInputChange("location", e.target.value)}
-              disabled={!isEditing}
-              placeholder="City, Country"
-            />
+            {isEditing ? (
+              <Input
+                id="location"
+                value={profileData.location || ""}
+                onChange={(e) => onInputChange("location", e.target.value)}
+                placeholder="City, Country"
+              />
+            ) : (
+              <ReadOnlyField value={profileData.location} />
+            )}
           </div>
         </div>
 
@@ -98,13 +109,16 @@ export default function BasicInfoTab({
         {userRole === "CLIENT" && (
           <div>
             <Label htmlFor="companyName">Company Name</Label>
-            <Input
-              id="companyName"
-              value={profileData.companyName || ""}
-              onChange={(e) => onInputChange("companyName", e.target.value)}
-              disabled={!isEditing}
-              placeholder="Enter your company name"
-            />
+            {isEditing ? (
+              <Input
+                id="companyName"
+                value={profileData.companyName || ""}
+                onChange={(e) => onInputChange("companyName", e.target.value)}
+                placeholder="Enter your company name"
+              />
+            ) : (
+              <ReadOnlyField value={profileData.companyName} />
+            )}
           </div>
         )}
 
@@ -113,96 +127,132 @@ export default function BasicInfoTab({
           <>
             <div>
               <Label htmlFor="bio">Bio / About Me</Label>
-              <Textarea
-                id="bio"
-                value={profileData.bio || ""}
-                onChange={(e) => onInputChange("bio", e.target.value)}
-                disabled={!isEditing}
-                placeholder="Tell us about yourself, your experience, and what makes you unique..."
-                rows={4}
-              />
+              {isEditing ? (
+                <Textarea
+                  id="bio"
+                  value={profileData.bio || ""}
+                  onChange={(e) => onInputChange("bio", e.target.value)}
+                  placeholder="Tell us about yourself, your experience, and what makes you unique..."
+                  rows={4}
+                />
+              ) : (
+                <ReadOnlyField value={profileData.bio} multiline />
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="age">Age</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  value={profileData.age || ""}
-                  onChange={(e) => {
-                    const value = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
-                    onInputChange("age", value || 0);
-                  }}
-                  disabled={!isEditing}
-                  placeholder="Age"
-                  min={18}
-                  max={100}
-                />
+                {isEditing ? (
+                  <Input
+                    id="age"
+                    type="number"
+                    value={profileData.age ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onInputChange("age", raw === "" ? "" : parseInt(raw, 10));
+                    }}
+                    placeholder="Age"
+                    min={18}
+                    max={100}
+                  />
+                ) : (
+                  <ReadOnlyField value={profileData.age} />
+                )}
               </div>
               <div>
                 <Label htmlFor="experienceYears">Years of Experience</Label>
-                <Input
-                  id="experienceYears"
-                  type="number"
-                  value={profileData.experienceYears || ""}
-                  onChange={(e) => {
-                    const value = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
-                    onInputChange("experienceYears", value || 0);
-                  }}
-                  disabled={!isEditing}
-                  placeholder="Years of experience"
-                  min={0}
-                  max={50}
-                />
+                {isEditing ? (
+                  <Input
+                    id="experienceYears"
+                    type="number"
+                    value={profileData.experienceYears ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onInputChange(
+                        "experienceYears",
+                        raw === "" ? "" : parseInt(raw, 10)
+                      );
+                    }}
+                    placeholder="Years of experience"
+                    min={0}
+                    max={50}
+                  />
+                ) : (
+                  <ReadOnlyField value={profileData.experienceYears} />
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="level">Experience Level</Label>
-                <Select
-                  value={profileData.level || "FRESHER"}
-                  onValueChange={(value) => onInputChange("level", value)}
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select experience level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FRESHER">Fresher</SelectItem>
-                    <SelectItem value="MID">Mid-level</SelectItem>
-                    <SelectItem value="EXPERT">Expert</SelectItem>
-                  </SelectContent>
-                </Select>
+                {isEditing ? (
+                  <Select
+                    value={profileData.level || "FRESHER"}
+                    onValueChange={(value) => onInputChange("level", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select experience level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FRESHER">Fresher</SelectItem>
+                      <SelectItem value="MID">Mid-level</SelectItem>
+                      <SelectItem value="EXPERT">Expert</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <ReadOnlyField
+                    value={experienceLevelLabels[profileData.level as string] || profileData.level}
+                  />
+                )}
               </div>
               <div>
                 <Label htmlFor="hourlyRate">Hourly Rate (USD)</Label>
-                <Input
-                  id="hourlyRate"
-                  type="number"
-                  value={profileData.hourlyRate || profileData.hourlyRateUsd || ""}
-                  onChange={(e) => {
-                    const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
-                    onInputChange("hourlyRateUsd", value || 0);
-                  }}
-                  disabled={!isEditing}
-                  placeholder="Hourly rate in USD"
-                  min={0}
-                />
+                {isEditing ? (
+                  <Input
+                    id="hourlyRate"
+                    type="number"
+                    value={
+                      profileData.hourlyRate ??
+                      profileData.hourlyRateUsd ??
+                      ""
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onInputChange(
+                        "hourlyRateUsd",
+                        raw === "" ? "" : parseFloat(raw)
+                      );
+                    }}
+                    placeholder="Hourly rate in USD"
+                    min={0}
+                  />
+                ) : (
+                  <ReadOnlyField
+                    value={
+                      hourlyRateValue === 0 || hourlyRateValue
+                        ? `$${hourlyRateValue}`
+                        : undefined
+                    }
+                  />
+                )}
               </div>
             </div>
 
             <div>
               <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-              <Input
-                id="linkedinUrl"
-                type="url"
-                value={profileData.linkedinUrl || ""}
-                onChange={(e) => onInputChange("linkedinUrl", e.target.value)}
-                disabled={!isEditing}
-                placeholder="https://linkedin.com/in/yourprofile"
-              />
+              {isEditing ? (
+                <Input
+                  id="linkedinUrl"
+                  type="url"
+                  value={profileData.linkedinUrl || ""}
+                  onChange={(e) => onInputChange("linkedinUrl", e.target.value)}
+                  placeholder="https://linkedin.com/in/yourprofile"
+                />
+              ) : (
+                <ReadOnlyField value={profileData.linkedinUrl} />
+              )}
             </div>
           </>
         )}
@@ -213,24 +263,16 @@ export default function BasicInfoTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
-                value={profileData.role || ""}
-                disabled={true}
-                className="bg-gray-50"
-              />
+              <ReadOnlyField value={profileData.role} />
             </div>
             <div>
               <Label htmlFor="createdAt">Member Since</Label>
-              <Input
-                id="createdAt"
+              <ReadOnlyField
                 value={
                   profileData.createdAt
                     ? new Date(profileData.createdAt).toLocaleDateString()
-                    : ""
+                    : undefined
                 }
-                disabled={true}
-                className="bg-gray-50"
               />
             </div>
           </div>

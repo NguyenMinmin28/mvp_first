@@ -10,10 +10,9 @@ import { Badge } from "@/ui/components/badge";
 import { Tabs, TabsContent } from "@/ui/components/tabs";
 
 import InformationTab from "@/features/profile/components/information-tab";
-import BillingTab from "@/features/profile/components/billing-tab";
 import { LoadingSpinner } from "@/ui/components/loading-spinner";
 import { UserLayout } from "@/features/shared/components/user-layout";
-import { User, CreditCard } from "lucide-react";
+import { User } from "lucide-react";
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -84,7 +83,7 @@ export default function ProfilePage() {
                 Profile Settings
               </h1>
               <p className="text-gray-600  mt-2">
-                Manage your account information and billing details
+                Manage your account information
               </p>
             </div>
           </div>
@@ -111,17 +110,6 @@ export default function ProfilePage() {
                     <User className="w-4 h-4 mr-3" />
                     Information
                   </button>
-                  <button
-                    onClick={() => setActiveTab("billing")}
-                    className={`w-full justify-start h-12 px-4 flex items-center text-left transition-colors ${
-                      activeTab === "billing"
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4 mr-3" />
-                    Billing
-                  </button>
                 </div>
               </CardContent>
             </Card>
@@ -136,9 +124,6 @@ export default function ProfilePage() {
             >
               <TabsContent value="information" className="mt-0">
                 <InformationTab userRole={userRole} />
-              </TabsContent>
-              <TabsContent value="billing" className="mt-0">
-                <BillingTab userRole={userRole} />
               </TabsContent>
             </Tabs>
           </div>

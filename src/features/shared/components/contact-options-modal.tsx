@@ -36,7 +36,7 @@ export function ContactOptionsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md z-[70] [&>div]:z-[70]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Contact {developer.name || "Developer"}</DialogTitle>
         </DialogHeader>

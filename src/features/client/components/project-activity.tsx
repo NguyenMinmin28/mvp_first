@@ -238,7 +238,7 @@ export default function ProjectActivity() {
                         variant={isDraft ? "default" : "outline"}
                         onClick={() => router.push(`/projects/${project.id}`)}
                       >
-                        Fill in Draft
+                        Edit Draft
                       </Button>
                     </div>
 
@@ -336,7 +336,7 @@ export default function ProjectActivity() {
                         variant={isDraft ? "default" : "outline"}
                         onClick={() => router.push(`/projects/${project.id}`)}
                       >
-                        Fill in Draft
+                        Edit Draft
                       </Button>
                     </div>
                   </>

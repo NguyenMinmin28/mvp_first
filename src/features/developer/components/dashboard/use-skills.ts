@@ -38,7 +38,17 @@ export function useSkills(): UseSkillsResult {
   }, []);
 
   const getSkillName = (skillId: string): string => {
-    const skill = skills.find(s => s.id === skillId);
+    if (!skillId || typeof skillId !== 'string') {
+      return String(skillId || '');
+    }
+    
+    // If it's already a short name (not an ID), return as is
+    if (skillId.length <= 20 && !skillId.match(/^[a-f0-9]{24}$/i)) {
+      return skillId;
+    }
+    
+    // Try to find skill by ID
+    const skill = skills.find(s => s.id === skillId || String(s.id) === String(skillId));
     return skill ? skill.name : skillId; // Fallback to ID if name not found
   };
 

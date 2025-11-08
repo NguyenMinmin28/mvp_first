@@ -57,6 +57,7 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [resettingRole, setResettingRole] = useState<string | null>(null);
   const [clearingPlans, setClearingPlans] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     role: "all",
     status: "all",
@@ -88,6 +89,31 @@ export function UserManagement() {
       toast.error("Failed to fetch users");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle delete user (hard delete + all related data)
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Bạn chắc chắn muốn xoá vĩnh viễn ${userName}?\nHành động này sẽ xoá cả user và TẤT CẢ dữ liệu liên quan.`)) {
+      return;
+    }
+    try {
+      setDeletingUser(userId);
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete user");
+      }
+      toast.success(`Đã xoá user ${userName}`);
+      fetchUsers(pagination.currentPage);
+    } catch (e: any) {
+      console.error("delete user error", e);
+      toast.error(e.message || "Failed to delete user");
+    } finally {
+      setDeletingUser(null);
     }
   };
 
@@ -306,6 +332,19 @@ export function UserManagement() {
           >
             {clearingPlans === item.id ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => handleDeleteUser(item.id, item.name || item.email || "User")}
+            disabled={deletingUser === item.id}
+            title="Xoá user và toàn bộ dữ liệu liên quan"
+          >
+            {deletingUser === item.id ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
             ) : (
               <Trash2 className="w-4 h-4" />
             )}

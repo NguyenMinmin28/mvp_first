@@ -7,6 +7,29 @@ import DashboardClient from "./DashboardClient";
 
 const ideaSparkService = new IdeaSparkService();
 
+// Helper function to parse portfolio imageUrl (can be JSON string or single URL)
+function parsePortfolioImageUrl(imageUrl: string | null | undefined): string {
+  if (!imageUrl) return "";
+  
+  // Check if it looks like JSON (starts with [)
+  if (imageUrl.trim().startsWith("[")) {
+    try {
+      const parsed = JSON.parse(imageUrl);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Get first non-empty image as main image
+        const nonEmptyImages = parsed.filter((img: string) => img && img.trim() !== "");
+        return nonEmptyImages[0] || "";
+      }
+    } catch {
+      // Failed to parse, return empty
+      return "";
+    }
+  }
+  
+  // Not JSON, treat as single URL
+  return imageUrl;
+}
+
 export default async function DashboardUserPage() {
   const session = await getServerSession(authOptions);
 
@@ -76,7 +99,25 @@ export default async function DashboardUserPage() {
             title: p.title,
             description: p.description,
             url: p.projectUrl,
-            imageUrl: p.imageUrl,
+            imageUrl: parsePortfolioImageUrl(p.imageUrl),
+            images: (() => {
+              // Parse images array from imageUrl if it's JSON
+              if (!p.imageUrl) return [];
+              if (p.imageUrl.trim().startsWith("[")) {
+                try {
+                  const parsed = JSON.parse(p.imageUrl);
+                  if (Array.isArray(parsed)) {
+                    const normalized = [...parsed];
+                    while (normalized.length < 6) normalized.push("");
+                    return normalized.slice(0, 6);
+                  }
+                } catch {
+                  return [];
+                }
+              }
+              // Single URL, put it in first slot
+              return p.imageUrl ? [p.imageUrl, "", "", "", "", ""] : ["", "", "", "", "", ""];
+            })(),
             createdAt: p.createdAt.toISOString(),
           })) || [],
           location: user.developerProfile.location,

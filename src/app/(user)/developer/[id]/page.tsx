@@ -20,10 +20,41 @@ export default async function DeveloperPublicProfilePage({
     redirect("/");
   }
 
+  // Validate and decode the ID parameter
+  let developerId = params.id;
+  
+  // Handle URL encoded values - decode if needed
+  try {
+    // Check if it's URL encoded
+    if (developerId.includes('%')) {
+      developerId = decodeURIComponent(developerId);
+    }
+    
+    // Validate ObjectID format (24 hex characters)
+    // MongoDB ObjectID must be exactly 24 hex characters
+    if (!/^[0-9a-fA-F]{24}$/.test(developerId)) {
+      console.error('Invalid developer ID format:', developerId);
+      return (
+        <div className="container mx-auto px-4 py-12">
+          <h1 className="text-2xl font-bold mb-4">Developer not found</h1>
+          <p className="text-gray-600">The developer ID is invalid.</p>
+        </div>
+      );
+    }
+  } catch (error) {
+    console.error('Error processing developer ID:', error);
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <h1 className="text-2xl font-bold mb-4">Developer not found</h1>
+        <p className="text-gray-600">Invalid developer ID format.</p>
+      </div>
+    );
+  }
+
   // Fetch developer profile by developerId (DeveloperProfile.id or Developer userId?)
   // In assignment we used developer.id for DeveloperProfile id
   const developer = await prisma.developerProfile.findFirst({
-    where: { id: params.id },
+    where: { id: developerId },
     include: {
       user: {
         select: { id: true, name: true, email: true, image: true, lastLoginAt: true },
@@ -49,7 +80,6 @@ export default async function DeveloperPublicProfilePage({
 
   // Check if client is connected to this developer (only for clients)
   const clientId = session.user.id;
-  const developerId = params.id;
   const isClient = session.user.role === "CLIENT";
 
   let isConnected = false;
@@ -130,14 +160,49 @@ export default async function DeveloperPublicProfilePage({
       ? (developer as any).portfolios
           .slice()
           .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-          .map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            url: p.projectUrl,
-            imageUrl: p.imageUrl,
-            createdAt: p.createdAt,
-          }))
+          .map((p: any) => {
+            // Parse imageUrl and images array
+            const raw = p.imageUrl || "";
+            let images: string[] = [];
+            let imageUrl = "";
+            
+            const looksJson = raw.trim().startsWith("[");
+            if (looksJson) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                  images = [...parsed].slice(0, 6);
+                  while (images.length < 6) images.push("");
+                  const nonEmpty = images.filter((u) => u && u.trim() !== "");
+                  imageUrl = nonEmpty[0] || "";
+                } else {
+                  images = ["", "", "", "", "", ""];
+                  imageUrl = "";
+                }
+              } catch {
+                images = ["", "", "", "", "", ""];
+                imageUrl = "";
+              }
+            } else {
+              if (raw) {
+                images = [raw, "", "", "", "", ""];
+                imageUrl = raw;
+              } else {
+                images = ["", "", "", "", "", ""];
+                imageUrl = "";
+              }
+            }
+            
+            return {
+              id: p.id,
+              title: p.title,
+              description: p.description,
+              url: p.projectUrl,
+              imageUrl: imageUrl,
+              images: images,
+              createdAt: p.createdAt,
+            };
+          })
       : [],
     resumeUrl: (developer as any).resumeUrl || null,
     isConnected, // Pass connection status to components
@@ -152,7 +217,7 @@ export default async function DeveloperPublicProfilePage({
   return (
     <DeveloperProfileClient
       profile={profile}
-      developerId={params.id}
+      developerId={developerId}
       user={session?.user}
     />
   );

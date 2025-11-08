@@ -91,18 +91,36 @@ export async function GET(
       },
       skills: developer.skills?.map(s => s.skill.name) || [],
       portfolioLinks: portfolios.map(p => {
-        // Parse imageUrl if it's JSON string, otherwise use as-is
-        let imageUrl = p.imageUrl || "";
+        // Parse imageUrl and images array
+        const raw = p.imageUrl || "";
+        let images: string[] = [];
+        let imageUrl = "";
         
-        try {
-          const parsed = JSON.parse(imageUrl);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // Get first image from array
-            imageUrl = parsed[0] || "";
+        const looksJson = raw.trim().startsWith("[");
+        if (looksJson) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              images = [...parsed].slice(0, 6);
+              while (images.length < 6) images.push("");
+              const nonEmpty = images.filter((u) => u && u.trim() !== "");
+              imageUrl = nonEmpty[0] || "";
+            } else {
+              images = ["", "", "", "", "", ""];
+              imageUrl = "";
+            }
+          } catch {
+            images = ["", "", "", "", "", ""];
+            imageUrl = "";
           }
-        } catch {
-          // Not JSON, use as-is (single image URL)
-          imageUrl = imageUrl;
+        } else {
+          if (raw) {
+            images = [raw, "", "", "", "", ""];
+            imageUrl = raw;
+          } else {
+            images = ["", "", "", "", "", ""];
+            imageUrl = "";
+          }
         }
         
         return {
@@ -111,6 +129,7 @@ export async function GET(
           description: p.description,
           url: p.projectUrl,
           imageUrl: imageUrl,
+          images: images,
         };
       }) || [],
       workHistory: [],

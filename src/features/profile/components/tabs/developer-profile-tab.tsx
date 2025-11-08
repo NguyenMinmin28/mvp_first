@@ -6,6 +6,7 @@ import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
 import { Textarea } from "@/ui/components/textarea";
 import AvatarUpload from "../avatar-upload";
+import { ReadOnlyField } from "../read-only-field";
 import { Button } from "@/ui/components/button";
 import { toast } from "sonner";
 import { useFileUpload } from "@/core/hooks/use-upload";
@@ -99,6 +100,15 @@ export default function DeveloperProfileTab({
     onInputChange("skillIds", next);
   };
 
+  const availabilityLabels: Record<string, string> = {
+    available: "Available",
+    checking: "Checking",
+    busy: "Busy",
+    away: "Away",
+    online: "Online",
+    offline: "Offline",
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -116,78 +126,113 @@ export default function DeveloperProfileTab({
 
         <div>
           <Label htmlFor="bio">Bio</Label>
-          <Textarea
-            id="bio"
-            value={profileData.bio || ""}
-            onChange={(e) => onInputChange("bio", e.target.value)}
-            disabled={!isEditing}
-            placeholder="Tell us about yourself and your expertise..."
-            rows={4}
-          />
+          {isEditing ? (
+            <Textarea
+              id="bio"
+              value={profileData.bio || ""}
+              onChange={(e) => onInputChange("bio", e.target.value)}
+              placeholder="Tell us about yourself and your expertise..."
+              rows={4}
+            />
+          ) : (
+            <ReadOnlyField value={profileData.bio} multiline />
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="experienceYears">Years of Experience</Label>
-            <Input
-              id="experienceYears"
-              type="number"
-              value={profileData.experienceYears || 0}
-              onChange={(e) =>
-                onInputChange("experienceYears", parseInt(e.target.value))
-              }
-              disabled={!isEditing}
-              min="0"
-              max="50"
-            />
+            {isEditing ? (
+              <Input
+                id="experienceYears"
+                type="number"
+                value={profileData.experienceYears ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  onInputChange(
+                    "experienceYears",
+                    raw === "" ? "" : parseInt(raw, 10)
+                  );
+                }}
+                min="0"
+                max="50"
+              />
+            ) : (
+              <ReadOnlyField value={profileData.experienceYears} />
+            )}
           </div>
           <div>
             <Label htmlFor="level">Experience Level</Label>
-            <Select
-              value={profileData.level || "FRESHER"}
-              onValueChange={(value) => onInputChange("level", value)}
-              disabled={!isEditing}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="FRESHER">Fresher (0-2 years)</SelectItem>
-                <SelectItem value="MID">Mid-level (3-5 years)</SelectItem>
-                <SelectItem value="EXPERT">Expert (5+ years)</SelectItem>
-              </SelectContent>
-            </Select>
+            {isEditing ? (
+              <Select
+                value={profileData.level || "FRESHER"}
+                onValueChange={(value) => onInputChange("level", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FRESHER">Fresher (0-2 years)</SelectItem>
+                  <SelectItem value="MID">Mid-level (3-5 years)</SelectItem>
+                  <SelectItem value="EXPERT">Expert (5+ years)</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <ReadOnlyField
+                value={
+                  profileData.level
+                    ? profileData.level === "FRESHER"
+                      ? "Fresher (0-2 years)"
+                      : profileData.level === "MID"
+                        ? "Mid-level (3-5 years)"
+                        : "Expert (5+ years)"
+                    : undefined
+                }
+              />
+            )}
           </div>
         </div>
 
         <div>
           <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-          <Input
-            id="linkedinUrl"
-            value={profileData.linkedinUrl || ""}
-            onChange={(e) => onInputChange("linkedinUrl", e.target.value)}
-            disabled={!isEditing}
-            placeholder="https://linkedin.com/in/username"
-          />
+          {isEditing ? (
+            <Input
+              id="linkedinUrl"
+              value={profileData.linkedinUrl || ""}
+              onChange={(e) => onInputChange("linkedinUrl", e.target.value)}
+              placeholder="https://linkedin.com/in/username"
+            />
+          ) : (
+            <ReadOnlyField value={profileData.linkedinUrl} />
+          )}
         </div>
 
         <div>
           <Label htmlFor="currentStatus">Current Status</Label>
-          <Select
-            value={profileData.currentStatus || "available"}
-            onValueChange={(value) => onInputChange("currentStatus", value)}
-            disabled={!isEditing}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="checking">Checking</SelectItem>
-              <SelectItem value="busy">Busy</SelectItem>
-              <SelectItem value="away">Away</SelectItem>
-            </SelectContent>
-          </Select>
+          {isEditing ? (
+            <Select
+              value={profileData.currentStatus || "available"}
+              onValueChange={(value) => onInputChange("currentStatus", value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="checking">Checking</SelectItem>
+                <SelectItem value="busy">Busy</SelectItem>
+                <SelectItem value="away">Away</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <ReadOnlyField
+              value={
+                profileData.currentStatus
+                  ? availabilityLabels[profileData.currentStatus] || profileData.currentStatus
+                  : undefined
+              }
+            />
+          )}
         </div>
 
         {/* Skills Selection */}
@@ -204,6 +249,9 @@ export default function DeveloperProfileTab({
                   </span>
                 ))}
             </div>
+          )}
+          {selectedSkillIds.length === 0 && !isEditing && (
+            <ReadOnlyField value={undefined} />
           )}
           {isEditing && (
             <>
@@ -284,6 +332,9 @@ export default function DeveloperProfileTab({
                 <a className="ml-2 text-blue-600 underline" href={profileData.resumeUrl} target="_blank" rel="noreferrer">View</a>
               </div>
             </div>
+          )}
+          {!profileData?.resumeUrl && !isEditing && (
+            <ReadOnlyField value={undefined} />
           )}
         </div>
       </CardContent>
