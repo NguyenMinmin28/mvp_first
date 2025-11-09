@@ -57,6 +57,35 @@ html > body > #__next {
   width: 100%;
 }
 
+/* Ensure only hero banners are full-width, not content sections */
+.main-content.dashboard-main > section.hero-banner-full-width {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  position: relative;
+}
+
+.main-content.dashboard-main > section.hero-banner-full-width > div {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.main-content.dashboard-main > section.hero-banner-full-width > div > img {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 /* Specific fixes for problematic components - less aggressive */
 .client-dashboard:not(.dashboard-container),
 .project-post-form:not(.dashboard-container),

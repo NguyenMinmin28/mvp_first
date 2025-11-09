@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/ui/components/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/ui/components/dialog";
 import { toast } from "sonner";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, AlertCircle } from "lucide-react";
 import { useCanViewContact } from "../hooks/use-can-view-contact";
 import { useManualInvite } from "../hooks/use-manual-invite";
 import { ContactCard } from "./contact-card";
@@ -42,6 +43,7 @@ export function GetInTouchButton({
   const [showContactOptions, setShowContactOptions] = useState(false);
   const [showWhatsAppContact, setShowWhatsAppContact] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   const { data: session } = useSession();
   const router = useRouter();
@@ -85,7 +87,17 @@ export function GetInTouchButton({
       return;
     }
 
+    // Show warning modal if developer hasn't reviewed/approved yet (for project context)
+    if (projectId && responseStatus && responseStatus !== "accepted") {
+      setShowWarningModal(true);
+      return;
+    }
+
     // Always show contact options modal first (Message vs WhatsApp)
+    proceedToContact();
+  };
+
+  const proceedToContact = () => {
     console.log("Showing contact options modal", { 
       developerId, 
       developerName, 
@@ -158,10 +170,9 @@ export function GetInTouchButton({
     return "Get in Touch";
   };
 
-  // Disable if explicitly disabled, loading, or response status is not "accepted"
-  // If responseStatus is provided (project context), only enable for "accepted"
-  // If responseStatus is not provided (service context), allow normal behavior
-  const isDisabled = disabled || contactLoading || inviteLoading || (responseStatus !== undefined && responseStatus !== "accepted");
+  // Always allow Get in Touch - no restrictions based on response status
+  // Only disable if explicitly disabled or loading
+  const isDisabled = disabled || contactLoading || inviteLoading;
 
   return (
     <>
@@ -242,6 +253,41 @@ export function GetInTouchButton({
         onClose={() => setShowAuthModal(false)}
         action="contact developers"
       />
+
+      {/* Warning Modal - Developer hasn't reviewed yet */}
+      <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </div>
+              <DialogTitle className="text-left">Developer Not Yet Reviewed</DialogTitle>
+            </div>
+            <DialogDescription className="text-left pt-2">
+              This developer has not yet reviewed the project details or given approval. Do you still want to connect?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowWarningModal(false)}
+              className="flex-1 sm:flex-none"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowWarningModal(false);
+                proceedToContact();
+              }}
+              className="flex-1 sm:flex-none bg-black text-white hover:bg-gray-800"
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

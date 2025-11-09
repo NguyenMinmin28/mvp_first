@@ -26,7 +26,7 @@ export default function PortfolioTab({
       <CardHeader>
         <CardTitle>Portfolio Links</CardTitle>
         <p className="text-sm text-gray-600">
-          Add links to your projects, GitHub, or other portfolio materials
+          Add links to your live or staging project URLs
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

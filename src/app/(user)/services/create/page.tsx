@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/ui/components/button";
@@ -11,6 +11,8 @@ import { Badge } from "@/ui/components/badge";
 import { X, Plus, Upload, Image as ImageIcon, DollarSign, Clock, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { UserLayout } from "@/features/shared/components/user-layout";
+import { CountryCitySelect, countriesWithCities } from "@/ui/components/country-city-select";
+import { useImageUpload } from "@/core/hooks/use-upload";
 
 interface ServiceFormData {
   title: string;
@@ -33,8 +35,17 @@ export default function CreateServicePage() {
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newSkill, setNewSkill] = useState("");
+  const [skillQuery, setSkillQuery] = useState("");
+  const [skillOpen, setSkillOpen] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState<{ id: string; name: string }[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(true);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [currentImageSection, setCurrentImageSection] = useState<'main' | 'gallery' | 'showcase'>('main');
+  const [locationCountry, setLocationCountry] = useState<string>("");
+  const [locationCity, setLocationCity] = useState<string>("");
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const { uploadImage, isUploading } = useImageUpload();
+  const skillDropdownRef = useRef<HTMLDivElement>(null);
   
   const [formData, setFormData] = useState<ServiceFormData>({
     title: "",
@@ -50,6 +61,180 @@ export default function CreateServicePage() {
     galleryImages: [],
     showcaseImages: []
   });
+
+  // Load developer profile location on mount
+  useEffect(() => {
+    const loadDeveloperLocation = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        const response = await fetch('/api/user/me');
+        if (response.ok) {
+          const data = await response.json();
+          // Location is returned directly in the user data object, not in developerProfile
+          const developerLocation = data?.location;
+          
+          if (developerLocation && !locationCountry && !locationCity) {
+            // Parse existing location format (e.g., "San Francisco, United States")
+            const parts = developerLocation.split(",").map((p: string) => p.trim());
+            if (parts.length >= 2) {
+              // Try to find country from the last part
+              const countryName = parts[parts.length - 1];
+              const countryData = countriesWithCities.find(
+                (c) => c.name.toLowerCase() === countryName.toLowerCase()
+              );
+              if (countryData) {
+                setLocationCountry(countryData.code);
+                // Try to match city
+                const cityPart = parts.slice(0, -1).join(", ");
+                const cityMatch = countryData.cities.find((c) =>
+                  c.toLowerCase().includes(cityPart.toLowerCase())
+                );
+                if (cityMatch) {
+                  setLocationCity(cityMatch);
+                } else {
+                  // If exact match not found, use the city part as is
+                  setLocationCity(cityPart);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading developer location:", error);
+      }
+    };
+
+    loadDeveloperLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]); // Only run once on mount
+
+  // Parse existing location if it's in the old format (only on initial load)
+  useEffect(() => {
+    if (formData.location && !locationCountry && !locationCity && typeof window !== 'undefined') {
+      // Try to parse existing location format (e.g., "San Francisco, CA, United States")
+      const parts = formData.location.split(",").map((p) => p.trim());
+      if (parts.length >= 2) {
+        // Try to find country from the last part
+        const countryName = parts[parts.length - 1];
+        const countryData = countriesWithCities.find(
+          (c) => c.name.toLowerCase() === countryName.toLowerCase()
+        );
+        if (countryData) {
+          setLocationCountry(countryData.code);
+          // Try to match city
+          const cityPart = parts.slice(0, -1).join(", ");
+          const cityMatch = countryData.cities.find((c) =>
+            c.toLowerCase().includes(cityPart.toLowerCase())
+          );
+          if (cityMatch) {
+            setLocationCity(cityMatch);
+          } else {
+            // If exact match not found, use the city part as is
+            setLocationCity(cityPart);
+          }
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Update location string when country/city changes
+  useEffect(() => {
+    if (locationCountry && locationCity) {
+      const countryData = countriesWithCities.find((c) => c.code === locationCountry);
+      if (countryData) {
+        const newLocation = `${locationCity}, ${countryData.name}`;
+        setFormData(prev => ({
+          ...prev,
+          location: newLocation
+        }));
+      }
+    } else if (!locationCountry && !locationCity) {
+      // Clear location if both are cleared
+      setFormData(prev => ({
+        ...prev,
+        location: ""
+      }));
+    }
+  }, [locationCountry, locationCity]);
+
+  // Fetch skills from database
+  useEffect(() => {
+    const fetchSkills = async () => {
+      setSkillsLoading(true);
+      try {
+        const res = await fetch("/api/skills?limit=200", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.skills)) {
+            setAvailableSkills(data.skills.map((s: any) => ({ 
+              id: s.id || s._id || s.name, 
+              name: s.name 
+            })));
+          } else {
+            console.error("Skills API returned invalid data:", data);
+            setAvailableSkills([]);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching skills:", error);
+        setAvailableSkills([]);
+      } finally {
+        setSkillsLoading(false);
+      }
+    };
+    fetchSkills();
+  }, []);
+
+  // Filter skills based on query
+  const filteredSkills = useMemo(() => {
+    const selected = new Set(formData.skills);
+    if (!Array.isArray(availableSkills)) return [];
+    
+    const query = skillQuery.trim().toLowerCase();
+    let filtered = availableSkills.filter((s) => !selected.has(s.name));
+    
+    if (query) {
+      filtered = filtered.filter((s) => 
+        s.name.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [availableSkills, formData.skills, skillQuery]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        skillDropdownRef.current &&
+        !skillDropdownRef.current.contains(event.target as Node)
+      ) {
+        setSkillOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      setSkillOpen(false);
+    };
+
+    const handleResize = () => {
+      setSkillOpen(false);
+    };
+
+    if (skillOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("scroll", handleScroll);
+      window.addEventListener("resize", handleResize);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [skillOpen]);
 
   const handleInputChange = (field: keyof ServiceFormData, value: any) => {
     setFormData(prev => ({
@@ -68,13 +253,22 @@ export default function CreateServicePage() {
     }));
   };
 
-  const addSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
+  const addSkill = (skillName: string) => {
+    if (!formData.skills.includes(skillName)) {
       setFormData(prev => ({
         ...prev,
-        skills: [...prev.skills, newSkill.trim()]
+        skills: [...prev.skills, skillName]
       }));
       setNewSkill("");
+      setSkillQuery("");
+      setSkillOpen(false);
+    }
+  };
+
+  const addSkillFromInput = () => {
+    const trimmed = newSkill.trim();
+    if (trimmed && !formData.skills.includes(trimmed)) {
+      addSkill(trimmed);
     }
   };
 
@@ -83,6 +277,79 @@ export default function CreateServicePage() {
       ...prev,
       skills: prev.skills.filter(skill => skill !== skillToRemove)
     }));
+  };
+
+  const handleFileUpload = async (files: FileList | null, section: 'main' | 'gallery' | 'showcase', index?: number) => {
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File is too large (max 10MB)");
+      return;
+    }
+
+    // Check limits based on current section
+    if (section === 'main') {
+      setUploadingIndex(null);
+    } else if (section === 'gallery') {
+      if (formData.galleryImages.length >= 9 && index === undefined) {
+        toast.error("Maximum 9 gallery images allowed");
+        return;
+      }
+      setUploadingIndex(index ?? formData.galleryImages.length);
+    } else if (section === 'showcase') {
+      if (formData.showcaseImages.length >= 2 && index === undefined) {
+        toast.error("Maximum 2 showcase images allowed");
+        return;
+      }
+      setUploadingIndex(index ?? formData.showcaseImages.length);
+    }
+
+    try {
+      const result = await uploadImage(file, 'services');
+      if (result?.url) {
+        if (section === 'main') {
+          setFormData(prev => ({
+            ...prev,
+            mainImage: result.url
+          }));
+        } else if (section === 'gallery') {
+          if (index !== undefined) {
+            // Replace existing image
+            setFormData(prev => ({
+              ...prev,
+              galleryImages: prev.galleryImages.map((img, i) => i === index ? result.url : img)
+            }));
+          } else {
+            // Add new image
+            setFormData(prev => ({
+              ...prev,
+              galleryImages: [...prev.galleryImages, result.url]
+            }));
+          }
+        } else if (section === 'showcase') {
+          if (index !== undefined) {
+            // Replace existing image
+            setFormData(prev => ({
+              ...prev,
+              showcaseImages: prev.showcaseImages.map((img, i) => i === index ? result.url : img)
+            }));
+          } else {
+            // Add new image
+            setFormData(prev => ({
+              ...prev,
+              showcaseImages: [...prev.showcaseImages, result.url]
+            }));
+          }
+        }
+        toast.success("Image uploaded successfully");
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploadingIndex(null);
+    }
   };
 
   const addImage = () => {
@@ -218,22 +485,33 @@ export default function CreateServicePage() {
     setIsSubmitting(true);
     
     try {
+      const requestBody = {
+        title: formData.title,
+        description: formData.description,
+        skills: formData.skills,
+        pricing: formData.pricing,
+        timeline: formData.timeline,
+        location: formData.location,
+        mainImage: formData.mainImage,
+        galleryImages: formData.galleryImages,
+        showcaseImages: formData.showcaseImages
+      };
+
+      // Debug: Log skills before sending
+      console.log('🔍 Form submit - Skills data:', {
+        skills: formData.skills,
+        skillsType: typeof formData.skills,
+        isArray: Array.isArray(formData.skills),
+        skillsLength: Array.isArray(formData.skills) ? formData.skills.length : 0,
+        requestBody
+      });
+
       const response = await fetch('/api/services', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          skills: formData.skills,
-          pricing: formData.pricing,
-          timeline: formData.timeline,
-          location: formData.location,
-          mainImage: formData.mainImage,
-          galleryImages: formData.galleryImages,
-          showcaseImages: formData.showcaseImages
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       console.log('API response status:', response.status);
@@ -329,11 +607,16 @@ export default function CreateServicePage() {
                     <MapPin className="h-4 w-4 inline mr-1" />
                     Location
                   </label>
-                  <Input
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    placeholder="e.g., Remote, New York, NY"
-                    className="w-full"
+                  <CountryCitySelect
+                    country={locationCountry}
+                    city={locationCity}
+                    onCountryChange={(value) => {
+                      setLocationCountry(value);
+                    }}
+                    onCityChange={(value) => {
+                      setLocationCity(value);
+                    }}
+                    placeholder="Select country and city"
                   />
                 </div>
               </div>
@@ -346,19 +629,7 @@ export default function CreateServicePage() {
               <CardTitle>Skills & Technologies</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  placeholder="Add a skill or technology"
-                  className="flex-1"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                />
-                <Button type="button" onClick={addSkill} variant="outline">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              
+              {/* Selected Skills */}
               {formData.skills.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {formData.skills.map((skill) => (
@@ -375,6 +646,75 @@ export default function CreateServicePage() {
                   ))}
                 </div>
               )}
+
+              {/* Skill Search Dropdown */}
+              <div className="relative" ref={skillDropdownRef}>
+                <div className="flex gap-2">
+                  <Input
+                    value={newSkill}
+                    onChange={(e) => {
+                      setNewSkill(e.target.value);
+                      setSkillQuery(e.target.value);
+                      setSkillOpen(true);
+                    }}
+                    onFocus={() => {
+                      if (skillQuery || filteredSkills.length > 0) {
+                        setSkillOpen(true);
+                      }
+                    }}
+                    placeholder="Search and add skills..."
+                    className="flex-1"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Try to add from filtered results first
+                        if (filteredSkills.length > 0) {
+                          addSkill(filteredSkills[0].name);
+                        } else {
+                          addSkillFromInput();
+                        }
+                      }
+                    }}
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={addSkillFromInput} 
+                    variant="outline"
+                    disabled={!newSkill.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Dropdown */}
+                {skillOpen && (
+                  <div className="absolute z-[9999] top-full left-0 right-0 mt-1 max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-xl">
+                    {skillsLoading ? (
+                      <div className="p-4 text-sm text-gray-500 text-center">
+                        Loading skills...
+                      </div>
+                    ) : !Array.isArray(filteredSkills) || filteredSkills.length === 0 ? (
+                      <div className="p-4 text-sm text-gray-500 text-center">
+                        {skillQuery ? "No skills found. Press Enter to add as new skill." : "Start typing to search skills"}
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto">
+                        {filteredSkills.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => addSkill(s.name)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center justify-between"
+                          >
+                            <span>{s.name}</span>
+                            <Plus className="h-4 w-4 text-gray-400" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -456,10 +796,30 @@ export default function CreateServicePage() {
                     setCurrentImageSection('main');
                     setNewImageUrl(e.target.value);
                   }}
-                  placeholder="Paste main image URL here"
+                  placeholder="Paste image URL or upload file"
                   className="flex-1"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
                 />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="main-image-upload"
+                  onChange={(e) => {
+                    setCurrentImageSection('main');
+                    handleFileUpload(e.target.files, 'main');
+                    e.target.value = ''; // Reset input
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  onClick={() => document.getElementById('main-image-upload')?.click()}
+                  variant="outline"
+                  disabled={isUploading && uploadingIndex === null}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  {isUploading && uploadingIndex === null ? 'Uploading...' : 'Upload'}
+                </Button>
                 <Button 
                   type="button" 
                   onClick={() => {
@@ -521,10 +881,30 @@ export default function CreateServicePage() {
                     setCurrentImageSection('gallery');
                     setNewImageUrl(e.target.value);
                   }}
-                  placeholder="Paste gallery image URL here"
+                  placeholder="Paste image URL or upload file"
                   className="flex-1"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
                 />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="gallery-image-upload"
+                  onChange={(e) => {
+                    setCurrentImageSection('gallery');
+                    handleFileUpload(e.target.files, 'gallery');
+                    e.target.value = ''; // Reset input
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  onClick={() => document.getElementById('gallery-image-upload')?.click()}
+                  variant="outline"
+                  disabled={(isUploading && uploadingIndex !== null && uploadingIndex >= 0 && uploadingIndex < formData.galleryImages.length) || formData.galleryImages.length >= 9}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  {isUploading && uploadingIndex !== null && uploadingIndex >= 0 && uploadingIndex < formData.galleryImages.length ? 'Uploading...' : 'Upload'}
+                </Button>
                 <Button 
                   type="button" 
                   onClick={() => {
@@ -542,7 +922,32 @@ export default function CreateServicePage() {
                 {formData.galleryImages.length}/9 gallery images added
               </div>
 
-              {formData.galleryImages.length > 0 && (
+              {formData.galleryImages.length === 0 ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 mb-2">No gallery images yet</p>
+                  <p className="text-sm text-gray-500 mb-4">Upload images or paste URLs to get started</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="gallery-first-upload"
+                    onChange={(e) => {
+                      handleFileUpload(e.target.files, 'gallery');
+                      e.target.value = ''; // Reset input
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => document.getElementById('gallery-first-upload')?.click()}
+                    variant="outline"
+                    disabled={isUploading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload First Image
+                  </Button>
+                </div>
+              ) : (
                 <div className="grid grid-cols-3 gap-3">
                   {formData.galleryImages.map((imageUrl, index) => (
                     <div key={index} className="relative group">
@@ -558,6 +963,24 @@ export default function CreateServicePage() {
                         <div className="absolute top-1 left-1 bg-black/50 text-white text-xs px-1 py-0.5 rounded">
                           {index + 1}
                         </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id={`gallery-replace-${index}`}
+                          onChange={(e) => {
+                            handleFileUpload(e.target.files, 'gallery', index);
+                            e.target.value = ''; // Reset input
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`gallery-replace-${index}`)?.click()}
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          disabled={isUploading && uploadingIndex === index}
+                        >
+                          <Upload className="h-6 w-6 text-white" />
+                        </button>
                       </div>
                       
                       <button
@@ -569,6 +992,31 @@ export default function CreateServicePage() {
                       </button>
                     </div>
                   ))}
+                  {/* Add empty slots for upload */}
+                  {formData.galleryImages.length < 9 && (
+                    <div className="relative">
+                      <div className="relative w-full aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="gallery-add-slot"
+                          onChange={(e) => {
+                            handleFileUpload(e.target.files, 'gallery');
+                            e.target.value = ''; // Reset input
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('gallery-add-slot')?.click()}
+                          className="p-4 text-gray-400 hover:text-gray-600"
+                          disabled={isUploading}
+                        >
+                          <Upload className="h-8 w-8" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -594,10 +1042,30 @@ export default function CreateServicePage() {
                     setCurrentImageSection('showcase');
                     setNewImageUrl(e.target.value);
                   }}
-                  placeholder="Paste showcase image URL here"
+                  placeholder="Paste image URL or upload file"
                   className="flex-1"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
                 />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="showcase-image-upload"
+                  onChange={(e) => {
+                    setCurrentImageSection('showcase');
+                    handleFileUpload(e.target.files, 'showcase');
+                    e.target.value = ''; // Reset input
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  onClick={() => document.getElementById('showcase-image-upload')?.click()}
+                  variant="outline"
+                  disabled={(isUploading && uploadingIndex !== null && uploadingIndex >= formData.galleryImages.length) || formData.showcaseImages.length >= 2}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  {isUploading && uploadingIndex !== null && uploadingIndex >= formData.galleryImages.length ? 'Uploading...' : 'Upload'}
+                </Button>
                 <Button 
                   type="button" 
                   onClick={() => {

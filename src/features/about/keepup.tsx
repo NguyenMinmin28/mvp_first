@@ -1,6 +1,6 @@
 export default function KeepUp() {
   return (
-    <section className="w-full py-12 md:py-16">
+    <section className="w-full py-12 md:py-16 m-0">
       <div className="container mx-auto max-w-6xl px-4 sm:px-6">
         <h2 className="text-3xl md:text-4xl font-extrabold mb-10">Keep up with the latest</h2>
 

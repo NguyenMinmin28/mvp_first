@@ -26,6 +26,14 @@ export async function POST(request: NextRequest) {
       images // fallback for combined images
     } = body;
 
+    // Debug: Log received skills
+    console.log('🔍 Service POST - Received skills:', {
+      skills,
+      skillsType: typeof skills,
+      isArray: Array.isArray(skills),
+      skillsLength: Array.isArray(skills) ? skills.length : 0
+    });
+
     // Validation
     if (!title || !description || !mainImage || !galleryImages || galleryImages.length === 0) {
       return NextResponse.json(
@@ -102,6 +110,66 @@ export async function POST(request: NextRequest) {
           sortOrder
         }))
       });
+    }
+
+    // Handle skills - create ServiceSkillOnService records
+    if (skills && Array.isArray(skills) && skills.length > 0) {
+      // Helper function to slugify skill names
+      const slugify = (text: string) => {
+        return text
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      };
+
+      // Clear existing skills for this service
+      await prisma.serviceSkillOnService.deleteMany({
+        where: { serviceId: service.id }
+      });
+
+      // Process each skill
+      console.log('🔍 Processing skills:', { skills, serviceId: service.id });
+      
+      for (const skillName of skills) {
+        if (!skillName || typeof skillName !== 'string' || !skillName.trim()) {
+          console.log('⚠️ Skipping invalid skill:', skillName);
+          continue;
+        }
+
+        const trimmedName = skillName.trim();
+        const slug = slugify(trimmedName);
+
+        console.log('🔍 Processing skill:', { trimmedName, slug });
+
+        // Find or create skill
+        const skill = await prisma.skill.upsert({
+          where: { name: trimmedName },
+          create: {
+            name: trimmedName,
+            slug,
+            category: "General",
+            keywords: [trimmedName.toLowerCase()],
+          },
+          update: {},
+        });
+
+        console.log('✅ Skill found/created:', { skillId: skill.id, skillName: skill.name });
+
+        // Link skill to service
+        await prisma.serviceSkillOnService.create({
+          data: {
+            serviceId: service.id,
+            skillId: skill.id,
+          },
+        });
+
+        console.log('✅ ServiceSkillOnService created:', { serviceId: service.id, skillId: skill.id });
+      }
+      
+      console.log('✅ All skills processed successfully for service:', service.id);
+    } else {
+      console.log('⚠️ No skills provided or skills array is empty');
     }
 
     // Notify followers (fire-and-forget)
@@ -211,6 +279,26 @@ export async function GET(request: NextRequest) {
               user: true
             }
           },
+          skills: {
+            include: {
+              skill: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          categories: {
+            include: {
+              category: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
           media: {
             orderBy: {
               sortOrder: 'asc'
@@ -229,7 +317,7 @@ export async function GET(request: NextRequest) {
     console.log('Query results:', { servicesCount: services.length, total });
 
     // Process services to include galleryImages and showcaseImages
-    const processedServices = services.map(service => {
+    const processedServices = services.map((service: any) => {
       const galleryImages = service.media
         .filter((media: any) => media.sortOrder >= 1 && media.sortOrder <= 9)
         .map((media: any) => media.url);
@@ -240,6 +328,12 @@ export async function GET(request: NextRequest) {
 
       return {
         ...service,
+        skills: service.skills && Array.isArray(service.skills)
+          ? service.skills.map((s: any) => s.skill?.name).filter((name: string) => name)
+          : [],
+        categories: service.categories && Array.isArray(service.categories)
+          ? service.categories.map((c: any) => c.category?.name).filter((name: string) => name)
+          : [],
         galleryImages,
         showcaseImages,
         developer: {

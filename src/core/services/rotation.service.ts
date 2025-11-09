@@ -279,12 +279,11 @@ export class RotationService {
           timeout: 30000, // 30 seconds timeout
         });
         
-        // Find and create candidates incrementally after transaction commit
-        // This allows frontend to poll and display each candidate as it's found and created
+        // Use fast batch generation: find and create all candidates immediately
         const resultWithMeta = result as any;
         if (resultWithMeta.project && resultWithMeta.availableSkills) {
-          // Don't await - run in background so API can return immediately
-          this.findAndCreateCandidatesIncrementally(
+          // Use fast method to create all candidates immediately
+          this.findAndCreateCandidatesFast(
             result.batchId,
             projectId,
             resultWithMeta.project,
@@ -301,16 +300,27 @@ export class RotationService {
               console.error("Failed to send notifications:", error);
             }
           }).catch(error => {
-            console.error("Error finding/creating candidates incrementally:", error);
+            console.error("Error in fast batch generation:", error);
+            // Fallback to incremental if fast method fails
+            this.findAndCreateCandidatesIncrementally(
+              result.batchId,
+              projectId,
+              resultWithMeta.project,
+              result.selection,
+              resultWithMeta.excludeDeveloperIds || [],
+              resultWithMeta.existingBatchesCount || 0
+            ).catch(err => {
+              console.error("Error in incremental fallback:", err);
+            });
           });
         } else if (result.candidates.length > 0) {
-          // Fallback: if candidates were already found, create them incrementally
+          // Fallback: if candidates were already found, create them immediately
           this.createCandidatesIncrementally(
             result.batchId,
             projectId,
             result.candidates
           ).catch(error => {
-            console.error("Error creating candidates incrementally:", error);
+            console.error("Error creating candidates:", error);
           });
         }
         
@@ -547,6 +557,257 @@ export class RotationService {
         // Continue with next candidate even if one fails
       }
     }
+  }
+
+  /**
+   * Fast batch generation: Find and create all candidates immediately
+   * Returns developers with at least one skill match quickly (20 starter, 20 mid, 20 expert)
+   */
+  private static async findAndCreateCandidatesFast(
+    batchId: string,
+    projectId: string,
+    project: any,
+    selection: BatchSelectionCriteria,
+    excludeDeveloperIds: string[],
+    existingBatchesCount: number
+  ): Promise<void> {
+    const acceptanceDeadline = new Date(
+      Date.now() + this.ACCEPTANCE_DEADLINE_MINUTES * 60 * 1000
+    );
+    const assignedAt = new Date();
+    
+    // Use larger counts for immediate display: 20 starter, 20 mid, 20 expert
+    const fastSelection: BatchSelectionCriteria = {
+      fresherCount: Math.max(selection.fresherCount, 20),
+      midCount: Math.max(selection.midCount, 20),
+      expertCount: Math.max(selection.expertCount, 20),
+    };
+
+    const skillsRequired = project.skillsRequired || [];
+    
+    try {
+      // Find all candidates at once using optimized query
+      const allCandidates = await this.selectCandidatesFast(
+        prisma as any,
+        skillsRequired,
+        project.client.userId,
+        projectId,
+        fastSelection,
+        excludeDeveloperIds,
+        existingBatchesCount
+      );
+
+      console.log(`🚀 Fast batch: Found ${allCandidates.length} candidates, creating them immediately...`);
+
+      // Create all candidates in parallel batches for better performance
+      const batchSize = 10;
+      for (let i = 0; i < allCandidates.length; i += batchSize) {
+        const batch = allCandidates.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(candidate =>
+            prisma.assignmentCandidate.create({
+              data: {
+                batchId,
+                projectId,
+                developerId: candidate.developerId,
+                level: candidate.level,
+                assignedAt,
+                acceptanceDeadline,
+                responseStatus: "pending",
+                usualResponseTimeMsSnapshot: candidate.usualResponseTimeMs,
+                statusTextForClient: "developer is checking",
+                isFirstAccepted: false,
+                source: "AUTO_ROTATION",
+              },
+            }).catch(error => {
+              console.error(`Error creating candidate ${candidate.developerId}:`, error);
+              return null;
+            })
+          )
+        );
+      }
+
+      console.log(`✅ Fast batch: Created ${allCandidates.length} candidates immediately`);
+    } catch (error) {
+      console.error("Error in fast batch generation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fast candidate selection: Find developers with at least one skill match immediately
+   * Optimized for speed - returns results quickly
+   */
+  private static async selectCandidatesFast(
+    tx: any,
+    skillsRequired: string[],
+    clientUserId: string,
+    projectId: string,
+    selection: BatchSelectionCriteria,
+    excludeDeveloperIds: string[] = [],
+    existingBatchesCount: number = 0
+  ): Promise<DeveloperCandidate[]> {
+    console.time("selectCandidatesFast");
+    
+    // Get blocked developers (use prisma directly since we're outside transaction)
+    const dynamicLimit = this.getDynamicPendingLimit(existingBatchesCount);
+    const [blockedRows, overLimitRows] = await Promise.all([
+      prisma.assignmentCandidate.findMany({
+        where: { 
+          projectId, 
+          responseStatus: { in: ["pending", "accepted"] }
+        },
+        select: { developerId: true },
+      }),
+      prisma.assignmentCandidate.groupBy({
+        by: ["developerId"],
+        where: { 
+          responseStatus: "pending", 
+          batch: { status: "active" }, 
+          source: "AUTO_ROTATION"
+        },
+        _count: { developerId: true },
+        having: { developerId: { _count: { gte: dynamicLimit } } },
+      }),
+    ]);
+    const blockedIds = blockedRows.map((r: any) => r.developerId);
+    const overLimitIds = overLimitRows.map((r: any) => r.developerId);
+    const allExcludeIds = Array.from(new Set([...excludeDeveloperIds, ...blockedIds, ...overLimitIds]));
+
+    // Build optimized query: find developers with at least ONE matching skill
+    const baseWhere: any = {
+      adminApprovalStatus: "approved",
+      availabilityStatus: "available",
+      userId: { not: clientUserId },
+      id: { notIn: allExcludeIds },
+      // At least one skill match
+      skills: {
+        some: { skillId: { in: skillsRequired } },
+      },
+      // Don't re-invite developers currently pending/accepted in this project
+      NOT: {
+        assignmentCandidates: {
+          some: {
+            projectId: projectId,
+            responseStatus: { in: ["pending", "accepted"] },
+          },
+        },
+      },
+    };
+
+    // Try with WhatsApp first (use prisma directly since we're outside transaction)
+    let eligibleDevs = await prisma.developerProfile.findMany({
+      where: {
+        ...baseWhere,
+        whatsappVerified: true,
+      },
+      select: {
+        id: true,
+        level: true,
+        skills: {
+          where: { skillId: { in: skillsRequired } },
+          select: { skillId: true },
+        },
+        assignmentCandidates: {
+          where: { responseStatus: { in: ["accepted", "rejected"] } },
+          select: { respondedAt: true },
+          orderBy: { respondedAt: "desc" },
+          take: 5,
+        },
+      },
+      orderBy: [{ level: "desc" }, { id: "asc" }],
+      take: 100, // Get more candidates for better selection
+    });
+
+    // Fallback: if not enough WhatsApp verified, relax requirement
+    if (eligibleDevs.length < (selection.fresherCount + selection.midCount + selection.expertCount)) {
+      const moreDevs = await prisma.developerProfile.findMany({
+        where: {
+          ...baseWhere,
+          // No whatsappVerified requirement
+          id: { notIn: [...allExcludeIds, ...eligibleDevs.map((d: any) => d.id)] },
+        },
+        select: {
+          id: true,
+          level: true,
+          skills: {
+            where: { skillId: { in: skillsRequired } },
+            select: { skillId: true },
+          },
+          assignmentCandidates: {
+            where: { responseStatus: { in: ["accepted", "rejected"] } },
+            select: { respondedAt: true },
+            orderBy: { respondedAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: [{ level: "desc" }, { id: "asc" }],
+        take: 100 - eligibleDevs.length,
+      });
+      eligibleDevs = [...eligibleDevs, ...moreDevs];
+    }
+
+    // Group by level
+    const byLevel: Record<DevLevel, any[]> = {
+      FRESHER: [],
+      MID: [],
+      EXPERT: [],
+    };
+
+    for (const dev of eligibleDevs) {
+      byLevel[dev.level].push(dev);
+    }
+
+    // Select candidates by level quotas
+    const result: DeveloperCandidate[] = [];
+    const seenIds = new Set<string>();
+
+    // Expert first
+    for (let i = 0; i < Math.min(selection.expertCount, byLevel.EXPERT.length); i++) {
+      const dev = byLevel.EXPERT[i];
+      if (!seenIds.has(dev.id)) {
+        result.push({
+          developerId: dev.id,
+          level: dev.level,
+          skillIds: dev.skills.map((s: any) => s.skillId),
+          usualResponseTimeMs: this.calculateResponseTime(dev.assignmentCandidates),
+        });
+        seenIds.add(dev.id);
+      }
+    }
+
+    // Mid
+    for (let i = 0; i < Math.min(selection.midCount, byLevel.MID.length); i++) {
+      const dev = byLevel.MID[i];
+      if (!seenIds.has(dev.id)) {
+        result.push({
+          developerId: dev.id,
+          level: dev.level,
+          skillIds: dev.skills.map((s: any) => s.skillId),
+          usualResponseTimeMs: this.calculateResponseTime(dev.assignmentCandidates),
+        });
+        seenIds.add(dev.id);
+      }
+    }
+
+    // Fresher
+    for (let i = 0; i < Math.min(selection.fresherCount, byLevel.FRESHER.length); i++) {
+      const dev = byLevel.FRESHER[i];
+      if (!seenIds.has(dev.id)) {
+        result.push({
+          developerId: dev.id,
+          level: dev.level,
+          skillIds: dev.skills.map((s: any) => s.skillId),
+          usualResponseTimeMs: this.calculateResponseTime(dev.assignmentCandidates),
+        });
+        seenIds.add(dev.id);
+      }
+    }
+
+    console.timeEnd("selectCandidatesFast");
+    console.log(`Fast selection: Found ${result.length} candidates (EXPERT: ${result.filter(c => c.level === 'EXPERT').length}, MID: ${result.filter(c => c.level === 'MID').length}, FRESHER: ${result.filter(c => c.level === 'FRESHER').length})`);
+    
+    return result;
   }
 
   /**

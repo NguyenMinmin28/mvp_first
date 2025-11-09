@@ -1306,21 +1306,18 @@ export function PeopleGrid({
                             {/* Second row: Status and Countdown - show on mobile only; desktop shows at right column */}
                             <div className="flex items-center justify-between sm:justify-start sm:gap-2 sm:hidden">
                               {/* Freelancer Response Status Badge */}
-                              {computedStatuses?.[developer.id] && (
+                              {computedStatuses?.[developer.id] && computedStatuses[developer.id] !== 'expired' && (
                                 <Badge 
                                   className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                                     computedStatuses[developer.id] === 'accepted' 
                                       ? 'bg-green-500 text-white' 
                                       : computedStatuses[developer.id] === 'rejected'
                                       ? 'bg-red-500 text-white'
-                                      : computedStatuses[developer.id] === 'expired'
-                                      ? 'bg-gray-500 text-white'
                                       : 'bg-yellow-500 text-white'
                                   }`}
                                 >
-                                  {computedStatuses[developer.id] === 'accepted' && '✅ Approved'}
+                                  {computedStatuses[developer.id] === 'accepted' && '✅ Agreed to Start'}
                                   {computedStatuses[developer.id] === 'rejected' && '❌ Rejected'}
-                                  {computedStatuses[developer.id] === 'expired' && '⏰ Expired'}
                                   {computedStatuses[developer.id] === 'pending' && '⏳ Pending'}
                                 </Badge>
                               )}
@@ -1404,21 +1401,18 @@ export function PeopleGrid({
                 <div className="flex flex-col sm:flex-col items-stretch sm:items-end space-y-2 sm:space-y-3 w-full sm:w-auto">
                   {/* Desktop/laptop: Pending badge and countdown placed neatly at top right */}
                   <div className="hidden sm:flex items-center gap-2">
-                    {computedStatuses?.[developer.id] && (
+                    {computedStatuses?.[developer.id] && computedStatuses[developer.id] !== 'expired' && (
                       <Badge 
                         className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           computedStatuses[developer.id] === 'accepted' 
                             ? 'bg-green-500 text-white' 
                             : computedStatuses[developer.id] === 'rejected'
                             ? 'bg-red-500 text-white'
-                            : computedStatuses[developer.id] === 'expired'
-                            ? 'bg-gray-500 text-white'
                             : 'bg-yellow-500 text-white'
                         }`}
                       >
-                        {computedStatuses[developer.id] === 'accepted' && '✅ Approved'}
+                        {computedStatuses[developer.id] === 'accepted' && '✅ Agreed to Start'}
                         {computedStatuses[developer.id] === 'rejected' && '❌ Rejected'}
-                        {computedStatuses[developer.id] === 'expired' && '⏰ Expired'}
                         {computedStatuses[developer.id] === 'pending' && '⏳ Pending'}
                       </Badge>
                     )}

@@ -1,6 +1,6 @@
 export default function Principles() {
   return (
-    <section className="w-full py-12 md:py-16">
+    <section className="w-full py-12 md:py-16 m-0">
       <div className="container mx-auto max-w-6xl px-4 sm:px-6 space-y-16">
         {/* Freedom First */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">

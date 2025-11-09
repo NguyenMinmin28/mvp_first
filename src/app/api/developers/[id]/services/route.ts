@@ -100,7 +100,9 @@ export async function GET(
         },
         location: service.developer.location,
       },
-      skills: service.skills.map(s => s.skill.name),
+      skills: service.skills && Array.isArray(service.skills)
+        ? service.skills.map((s: any) => s.skill?.name).filter((name: string) => name)
+        : [],
       categories: service.categories.map(c => c.category.name),
       leadsCount: service.leads.length,
       galleryImages: service.media.slice(0, 9).map(m => m.url), // First 9 images for gallery

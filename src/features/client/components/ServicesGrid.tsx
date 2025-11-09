@@ -410,17 +410,25 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
               <div className="p-5 flex-1 flex flex-col">
                 {/* Developer Info */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                     {service.developer.photoUrl || service.developer.user.image ? (
-                      <Image 
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
                         src={service.developer.photoUrl || service.developer.user.image || ''} 
                         alt={service.developer.user.name || "Developer"} 
-                        width={48} 
-                        height={48} 
-                        className="object-cover w-12 h-12" 
+                        className="object-cover w-full h-full"
+                        onError={(e) => {
+                          // Fallback to default avatar on error
+                          (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                        }}
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gray-200" />
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
+                        src="/images/avata/default.jpeg" 
+                        alt="Default Avatar"
+                        className="object-cover w-full h-full"
+                      />
                     )}
                   </div>
                   <div className="flex-1">

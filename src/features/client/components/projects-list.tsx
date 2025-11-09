@@ -117,10 +117,22 @@ export default function ProjectsList() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "completed": return "Completed";
-      case "in_progress": return "In Progress";
-      case "assigning": return "Finding Developers";
-      default: return status;
+      case "draft":
+        return "Draft";
+      case "submitted":
+        return "Pending Review";
+      case "assigning":
+        return "Searching Developers";
+      case "accepted":
+        return "Developer Assigned";
+      case "in_progress":
+        return "Work in Progress";
+      case "completed":
+        return "Completed";
+      case "canceled":
+        return "Cancelled";
+      default:
+        return status;
     }
   };
 

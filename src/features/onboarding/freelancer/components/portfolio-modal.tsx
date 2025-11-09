@@ -680,12 +680,12 @@ export function PortfolioModal({
               <Input 
                 value={projectUrl} 
                 onChange={(e) => setProjectUrl(e.target.value)}
-                placeholder="https://your-project.com or GitHub repository"
+                placeholder="Live or staging project URL"
                 type="url"
                 className="text-base"
               />
               <p className="text-xs text-gray-500">
-                Link to live demo, GitHub repo, or project documentation
+                Link to live or staging project URL
               </p>
             </div>
           </div>

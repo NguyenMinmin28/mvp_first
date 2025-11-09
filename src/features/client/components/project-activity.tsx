@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { ImgWithShimmer } from "@/ui/components/image-with-shimmer";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface Project {
   id: string;
@@ -107,12 +108,12 @@ export default function ProjectActivity() {
   const formatStatus = (status: string) => {
     const statusMap: Record<string, string> = {
       'draft': 'Draft',
-      'submitted': 'Submitted',
-      'assigning': 'Pending job post',
-      'accepted': 'Accepted',
-      'in_progress': 'In Progress',
+      'submitted': 'Pending Review',
+      'assigning': 'Searching Developers',
+      'accepted': 'Developer Assigned',
+      'in_progress': 'Work in Progress',
       'completed': 'Completed',
-      'canceled': 'Canceled'
+      'canceled': 'Cancelled'
     };
     return statusMap[status] || status.replace('_', ' ').toUpperCase();
   };
@@ -229,17 +230,16 @@ export default function ProjectActivity() {
 
                     {/* Button */}
                     <div className="flex-1 min-w-0">
-                      <Button
-                        className={`${
+                      <Link 
+                        href={`/projects/${project.id}`}
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 w-full text-sm transition-colors ${
                           isDraft
                             ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
                             : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
-                        } h-8 w-full text-sm transition-colors`}
-                        variant={isDraft ? "default" : "outline"}
-                        onClick={() => router.push(`/projects/${project.id}`)}
+                        }`}
                       >
-                        Edit Draft
-                      </Button>
+                        {isDraft ? "Edit Draft" : "View Project"}
+                      </Link>
                     </div>
 
                     {/* More options */}
@@ -327,17 +327,16 @@ export default function ProjectActivity() {
                     </div>
 
                     <div>
-                      <Button
-                        className={`${
+                      <Link 
+                        href={`/projects/${project.id}`}
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-full h-10 transition-colors ${
                           isDraft
                             ? "bg-black text-white hover:bg-black/90 active:bg-black/90"
                             : "bg-white text-gray-900 border border-gray-300 hover:bg-black hover:text-white active:bg-black active:text-white"
-                        } w-full h-10 transition-colors`}
-                        variant={isDraft ? "default" : "outline"}
-                        onClick={() => router.push(`/projects/${project.id}`)}
+                        }`}
                       >
-                        Edit Draft
-                      </Button>
+                        {isDraft ? "Edit Draft" : "View Project"}
+                      </Link>
                     </div>
                   </>
                 )}

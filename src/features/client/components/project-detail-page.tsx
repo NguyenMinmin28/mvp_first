@@ -93,6 +93,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingAttemptsRef = useRef<number>(0);
   const autoGenerateBatchAttemptedRef = useRef<boolean>(false); // Track if we've tried to auto-generate batch
+  const searchStartTimeRef = useRef<number | null>(null); // Track when search started for 30-second timeout
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 30-second timeout
 
   const formatAmount = (amount: number, currency: string) => {
     try {
@@ -146,6 +148,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       clearTimeout(pollingTimeoutRef.current);
       pollingTimeoutRef.current = null;
     }
+    // Clear 30-second timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    searchStartTimeRef.current = null;
   }, [project.id]);
 
   // Move ticking clock to requestAnimationFrame to avoid setState storms
@@ -287,6 +295,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         // Tắt loading ngay khi có ít nhất 1 candidate
         if (mergedCandidates.length > 0) {
           setIsLoading(false);
+          // Clear timeout if candidates found
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+          }
+          searchStartTimeRef.current = null;
         }
         
         if (Array.isArray(data.skills)) {
@@ -324,6 +338,28 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           autoGenerateBatchAttemptedRef.current = true;
           isSearchingRef.current = true;
           setIsSearching(true);
+          
+          // Start 30-second timeout timer for auto-generation
+          searchStartTimeRef.current = Date.now();
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+          }
+          searchTimeoutRef.current = setTimeout(() => {
+            // Check if still searching and no candidates found after 30 seconds
+            if (isSearchingRef.current && freelancersRef.current.length === 0) {
+              console.log('⏱️ 30-second timeout reached during auto-generation, showing timeout message');
+              isSearchingRef.current = false;
+              setIsSearching(false);
+              setError("Sorry, we couldn't find the right match with your project. Please try adjusting your project requirements or contact support.");
+              // Stop polling
+              if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current);
+                pollingTimeoutRef.current = null;
+              }
+              pollingAttemptsRef.current = 30; // Prevent further polling
+            }
+            searchTimeoutRef.current = null;
+          }, 30000); // 30 seconds
           
           // Use refresh API - it will automatically generate new batch if no batch exists
           // This uses the same optimized/fast logic as refresh batch, not the slower generate logic
@@ -433,6 +469,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             clearTimeout(pollingTimeoutRef.current);
             pollingTimeoutRef.current = null;
           }
+          // Clear 30-second timeout
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+          }
+          searchStartTimeRef.current = null;
         }
 
       } else {
@@ -496,6 +538,28 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       isSearchingRef.current = true;
       setIsSearching(true);
       setError(null);
+      
+      // Start 30-second timeout timer
+      searchStartTimeRef.current = Date.now();
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        // Check if still searching and no candidates found after 30 seconds
+        if (isSearchingRef.current && freelancersRef.current.length === 0) {
+          console.log('⏱️ 30-second timeout reached, showing timeout message');
+          isSearchingRef.current = false;
+          setIsSearching(false);
+          setError("Sorry, we couldn't find the right match with your project. Please try adjusting your project requirements or contact support.");
+          // Stop polling
+          if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = null;
+          }
+          pollingAttemptsRef.current = 30; // Prevent further polling
+        }
+        searchTimeoutRef.current = null;
+      }, 30000); // 30 seconds
       
       let apiUrl: string;
       

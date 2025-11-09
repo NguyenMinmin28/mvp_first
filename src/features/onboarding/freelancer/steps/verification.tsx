@@ -84,7 +84,6 @@ export default function VerificationStep() {
             </Button>
             <Button 
               className="flex-1 sm:flex-initial min-w-28" 
-              disabled={!linkedin.trim()}
               onClick={() => {
                 // Validate LinkedIn URL
                 const trimmedLinkedin = linkedin.trim();

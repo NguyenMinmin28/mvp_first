@@ -2,8 +2,8 @@
 
 export default function HeroAbout() {
   return (
-    <section className="w-full">
-      <div className="relative w-full h-[46vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
+    <section className="w-full m-0 p-0 hero-banner-full-width">
+      <div className="relative w-full h-[46vh] md:h-[60vh] lg:h-[70vh] overflow-hidden m-0 p-0">
         <img
           src="/images/about/heroabout.jpg"
           alt="About us hero"

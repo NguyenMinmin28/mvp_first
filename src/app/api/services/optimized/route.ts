@@ -249,11 +249,32 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             location: true,
+            photoUrl: true,
             user: {
               select: {
                 id: true,
                 name: true,
                 image: true
+              }
+            }
+          }
+        },
+        skills: {
+          select: {
+            skill: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        categories: {
+          select: {
+            category: {
+              select: {
+                id: true,
+                name: true
               }
             }
           }
@@ -276,15 +297,20 @@ export async function GET(request: NextRequest) {
       : null;
 
     // Transform data for response
-    const transformedData = data.map(service => ({
+    const transformedData = data.map((service: any) => ({
       ...service,
       // Sử dụng coverUrl trực tiếp cho galleryImages (array of strings)
       galleryImages: service.coverUrl ? [service.coverUrl] : [],
       // Add leadsCount từ _count
       leadsCount: service._count.leads,
-      // Add empty arrays for compatibility
-      skills: [],
-      categories: []
+      // Map skills from relation
+      skills: service.skills && Array.isArray(service.skills)
+        ? service.skills.map((s: any) => s.skill?.name).filter((name: string) => name)
+        : [],
+      // Map categories from relation
+      categories: service.categories && Array.isArray(service.categories)
+        ? service.categories.map((c: any) => c.category?.name).filter((name: string) => name)
+        : []
     }));
 
     const response = {

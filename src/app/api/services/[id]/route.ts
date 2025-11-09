@@ -88,6 +88,14 @@ export async function GET(
       console.log('Service GET - userLiked check:', { userId: session.id, serviceId: service.id, like, userLiked });
     }
 
+    // Debug: Log skills data
+    console.log('Service GET - Skills data:', {
+      serviceId: service.id,
+      skillsRaw: service.skills,
+      skillsCount: service.skills?.length || 0,
+      skillsMapped: service.skills?.map((s: any) => s.skill?.name) || []
+    });
+
     // Categorize images based on sortOrder
     // sortOrder 0 = main image (coverUrl)
     // sortOrder 1-9 = gallery images (first 9)
@@ -129,7 +137,9 @@ export async function GET(
         image: service.developer.user.image,
         location: service.developer.location,
       },
-      skills: service.skills.map((s: any) => s.skill.name),
+      skills: service.skills && Array.isArray(service.skills) 
+        ? service.skills.map((s: any) => s.skill?.name).filter((name: string) => name) 
+        : [],
       categories: service.categories.map((c: any) => c.category.name),
       leadsCount: service._count.leads,
       galleryImages,

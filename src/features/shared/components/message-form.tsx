@@ -37,14 +37,45 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("none");
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [projectDetails, setProjectDetails] = useState<{ title: string; budget: string; description: string } | null>(null);
+  const [loadingProjectDetails, setLoadingProjectDetails] = useState(false);
 
-  // Generate default message with project name and URL
-  const generateDefaultMessage = (projectName?: string) => {
-    const baseMessage = "Would you like to work on this project?";
-    if (projectName) {
-      return `${baseMessage} ${projectName}. Please check below project URL.`;
+  // Generate default message with project details
+  const generateDefaultMessage = (projectDetails?: { title: string; budget: string; description: string }) => {
+    if (projectDetails) {
+      const budgetText = projectDetails.budget ? `Budget: ${projectDetails.budget}` : '';
+      const descriptionText = projectDetails.description ? `\n\nProject Summary:\n${projectDetails.description.substring(0, 200)}${projectDetails.description.length > 200 ? '...' : ''}` : '';
+      return `Hi! I'd like to discuss this project with you:\n\nProject: ${projectDetails.title}${budgetText ? `\n${budgetText}` : ''}${descriptionText}\n\nWould you be interested in working on this project?`;
     }
-    return `${baseMessage} Please check below project URL.`;
+    return "Would you like to work on this project? Please check below project URL.";
+  };
+
+  // Fetch project details when projectId is provided
+  const fetchProjectDetails = async (projectId: string) => {
+    setLoadingProjectDetails(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, { cache: 'no-store' } as RequestInit);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.project) {
+          const budget = json.project.budgetMin 
+            ? `${json.project.currency || 'USD'} ${json.project.budgetMin.toLocaleString()}${json.project.budgetMax ? ` - ${json.project.budgetMax.toLocaleString()}` : ''}`
+            : json.project.budget 
+            ? `${json.project.currency || 'USD'} ${json.project.budget.toLocaleString()}`
+            : '';
+          
+          setProjectDetails({
+            title: json.project.title,
+            budget,
+            description: json.project.description || ''
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching project details:", error);
+    } finally {
+      setLoadingProjectDetails(false);
+    }
   };
 
   const fetchQuota = async () => {
@@ -120,10 +151,13 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
     setIsSubmitting(true);
     
     try {
-      // Call the onNext callback with simplified data
+      // Call the onNext callback with project details if available
       onNext({
         message: message.trim(),
-        selectedProjectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+        title: projectId && projectDetails ? projectDetails.title : undefined,
+        budget: projectId && projectDetails ? projectDetails.budget : undefined,
+        description: projectId && projectDetails ? projectDetails.description : undefined,
+        selectedProjectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : projectId,
       });
     } catch (error) {
       console.error("Error submitting message:", error);
@@ -145,8 +179,10 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
   useEffect(() => {
     if (isOpen) {
       if (projectId) {
-        // For project-specific messages, use project name
-        setMessage(generateDefaultMessage("this project"));
+        // Fetch project details and generate message with project info
+        fetchProjectDetails(projectId).then(() => {
+          // Message will be set after project details are loaded
+        });
       } else {
         // For direct messages, set default message
         setMessage(generateDefaultMessage());
@@ -161,6 +197,14 @@ export function MessageForm({ isOpen, onClose, onNext, onBack, developerName, pr
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, projectId]);
+
+  // Update message when project details are loaded
+  useEffect(() => {
+    if (projectId && projectDetails && isOpen) {
+      setMessage(generateDefaultMessage(projectDetails));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectDetails, projectId, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

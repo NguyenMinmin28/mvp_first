@@ -455,20 +455,19 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
             </div>
             {/* Skills chips */}
             {(() => {
-              const fallback = [
-                "Brand Designer",
-                "UI/UX Designer",
-                "Product Designer",
-                "Figma",
-                "Adobe Photoshop",
-                "Designer"
-              ];
-              const chipsBase = (service?.skills && service.skills.length > 0)
+              // Only use skills from database, never use fallback static skills
+              const chipsBase = (service?.skills && Array.isArray(service.skills) && service.skills.length > 0)
                 ? service.skills
-                : (service?.categories && service.categories.length > 0
+                : (service?.categories && Array.isArray(service.categories) && service.categories.length > 0
                     ? service.categories
-                    : fallback);
+                    : []); // Return empty array instead of fallback
               const chips = chipsBase.slice(0, 10);
+              
+              // Only render if there are actual skills/categories
+              if (chips.length === 0) {
+                return null;
+              }
+              
               return (
                 <div className="px-4 sm:px-6 mb-6 relative z-10">
                   <div className="mx-auto max-w-5xl flex flex-wrap items-center justify-center gap-3">
@@ -718,17 +717,12 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                   <div className="mb-3 text-sm text-gray-500">Tags</div>
                   <div className="flex flex-wrap gap-3">
                     {(() => {
-                      const fallback = [
-                        "Brand Designer",
-                        "UI/UX Designer",
-                        "Product Designer",
-                        "Figma",
-                        "Adobe Photoshop",
-                        "Designer"
-                      ];
-                      const tags = (service?.skills && service.skills.length)
+                      // Only use skills from database, never use fallback static skills
+                      const tags = (service?.skills && Array.isArray(service.skills) && service.skills.length > 0)
                         ? service.skills
-                        : (service?.categories && service.categories.length ? service.categories : fallback);
+                        : (service?.categories && Array.isArray(service.categories) && service.categories.length > 0 
+                            ? service.categories 
+                            : []);
                       return tags.map((tag) => (
                         <span key={tag} className="inline-flex items-center h-9 px-4  bg-[#F5F6F9] text-gray-700 text-sm font-medium">
                           {tag}
@@ -832,11 +826,11 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
         </div>
       </div>
 
-      {/* Centered Details Modal */}
+      {/* Centered Details Modal - Higher z-index to appear above service overlay */}
       {isDetailsOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setIsDetailsOpen(false)} />
-          <div className="relative z-10 w-[92vw] max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setIsDetailsOpen(false)} />
+          <div className="relative z-10 w-[92vw] max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Project Detail</h2>
               <button
@@ -895,17 +889,12 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                 <div className="mb-3 text-sm text-gray-500">Tags</div>
                 <div className="flex flex-wrap gap-3">
                   {(() => {
-                    const fallback = [
-                      "Brand Designer",
-                      "UI/UX Designer",
-                      "Product Designer",
-                      "Figma",
-                      "Adobe Photoshop",
-                      "Designer",
-                    ];
-                    const tags = (service?.skills && service.skills.length)
+                    // Only use skills from database, never use fallback static skills
+                    const tags = (service?.skills && Array.isArray(service.skills) && service.skills.length > 0)
                       ? service.skills
-                      : (service?.categories && service.categories.length ? service.categories : fallback);
+                      : (service?.categories && Array.isArray(service.categories) && service.categories.length > 0 
+                          ? service.categories 
+                          : []);
                     return tags.map((tag) => (
                       <span key={tag} className="inline-flex items-center h-9 px-4 rounded-xl bg-[#F5F6F9] text-gray-700 text-sm font-medium">{tag}</span>
                     ));

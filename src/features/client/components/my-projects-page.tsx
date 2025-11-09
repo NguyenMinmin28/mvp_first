@@ -339,20 +339,20 @@ export default function MyProjectsPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "completed":
-        return "Completed";
-      case "in_progress":
-        return "In Progress";
-      case "accepted":
-        return "Accepted";
-      case "submitted":
-        return "Submitted";
-      case "assigning":
-        return "Assigning";
       case "draft":
         return "Draft";
+      case "submitted":
+        return "Pending Review";
+      case "assigning":
+        return "Searching Developers";
+      case "accepted":
+        return "Developer Assigned";
+      case "in_progress":
+        return "Work in Progress";
+      case "completed":
+        return "Completed";
       case "canceled":
-        return "Canceled";
+        return "Cancelled";
       default:
         return status;
     }

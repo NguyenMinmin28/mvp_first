@@ -1,7 +1,7 @@
 export default function Together() {
   return (
-    <section className="w-full py-14 md:py-20">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6">
+    <section className="w-full py-12 md:py-16 m-0">
+      <div className="container mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-10 md:gap-16">
           <div>
             <h2 className="text-4xl md:text-6xl font-extrabold leading-tight">

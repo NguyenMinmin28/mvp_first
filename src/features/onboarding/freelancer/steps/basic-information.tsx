@@ -56,14 +56,14 @@ export default function BasicInformationStep() {
   const [hourlyRateError, setHourlyRateError] = useState<string | null>(null);
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   
-  // Count words in bio
-  const countWords = (text: string): number => {
-    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  // Count characters in bio
+  const countCharacters = (text: string): number => {
+    return text.length;
   };
   
-  const bioWordCount = countWords(bio);
-  const minWords = 50; // Minimum words required
-  const maxWords = 100; // Maximum words allowed
+  const bioCharCount = countCharacters(bio);
+  const minChars = 50; // Minimum characters required
+  const maxChars = 100; // Maximum characters allowed
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -464,22 +464,22 @@ export default function BasicInformationStep() {
             />
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-500">
-                Write at least 50 words about yourself to create a strong first impression.
+                Write at least {minChars} characters about yourself to create a strong first impression.
               </p>
               <p className={`text-xs ${
-                (bioWordCount < minWords || bioWordCount > maxWords) 
+                (bioCharCount < minChars || bioCharCount > maxChars) 
                   ? "text-red-500" 
                   : "text-gray-500"
               }`}>
-                {bioWordCount}/{maxWords} words {bioWordCount < minWords && `(min ${minWords})`}
+                {bioCharCount}/{maxChars} characters {bioCharCount < minChars && `(min ${minChars})`}
               </p>
             </div>
             {bioError && (
               <p className="text-sm text-red-600 mt-1">{bioError}</p>
             )}
-            {!bioError && bioWordCount > maxWords && (
+            {!bioError && bioCharCount > maxChars && (
               <p className="text-sm text-red-600 mt-1">
-                Bio cannot exceed {maxWords} words. Please reduce it by {bioWordCount - maxWords} word{(bioWordCount - maxWords) !== 1 ? "s" : ""}.
+                Bio cannot exceed {maxChars} characters. Please reduce it by {bioCharCount - maxChars} character{(bioCharCount - maxChars) !== 1 ? "s" : ""}.
               </p>
             )}
           </div>
@@ -510,7 +510,7 @@ export default function BasicInformationStep() {
                 type="number"
                 value={age} 
                 onChange={(e) => setAge(e.target.value)} 
-                placeholder="25" 
+                placeholder="Please enter your age" 
                 min="18"
                 max="100"
               />
@@ -528,7 +528,7 @@ export default function BasicInformationStep() {
                   setExperienceYears(e.target.value);
                   setExperienceError(null);
                 }} 
-                placeholder="3" 
+                placeholder="Please enter your years of experience" 
                 min="0"
                 max="50"
                 className={experienceError ? "border-red-500" : ""}
@@ -546,7 +546,7 @@ export default function BasicInformationStep() {
                   setHourlyRateUsd(e.target.value);
                   setHourlyRateError(null);
                 }} 
-                placeholder="50" 
+                placeholder="Please enter your hourly rate" 
                 min="5"
                 max="1000"
                 className={hourlyRateError ? "border-red-500" : ""}
@@ -561,7 +561,6 @@ export default function BasicInformationStep() {
           <div className="pt-2">
             <Button 
               className="min-w-28" 
-              disabled={bioWordCount < minWords || bioWordCount > maxWords}
               onClick={async () => {
                 let hasErrors = false;
 
@@ -628,14 +627,14 @@ export default function BasicInformationStep() {
                   }
                 }
 
-                // Validate bio word count
-                if (bioWordCount < minWords) {
-                  setBioError(`Bio must contain at least ${minWords} words. Currently you have ${bioWordCount} word${bioWordCount !== 1 ? "s" : ""}.`);
-                  toast.error(`Bio must contain at least ${minWords} words`);
+                // Validate bio character count
+                if (bioCharCount < minChars) {
+                  setBioError(`Bio must contain at least ${minChars} characters. Currently you have ${bioCharCount} character${bioCharCount !== 1 ? "s" : ""}.`);
+                  toast.error(`Bio must contain at least ${minChars} characters`);
                   hasErrors = true;
-                } else if (bioWordCount > maxWords) {
-                  setBioError(`Bio cannot exceed ${maxWords} words. Currently you have ${bioWordCount} words.`);
-                  toast.error(`Bio cannot exceed ${maxWords} words`);
+                } else if (bioCharCount > maxChars) {
+                  setBioError(`Bio cannot exceed ${maxChars} characters. Currently you have ${bioCharCount} characters.`);
+                  toast.error(`Bio cannot exceed ${maxChars} characters`);
                   hasErrors = true;
                 } else {
                   setBioError(null);

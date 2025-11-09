@@ -86,14 +86,16 @@ export function ProjectManagementPage({ projects }: ProjectManagementPageProps) 
 
   const getStatusText = (status: ProjectStatus) => {
     switch (status) {
+      case "draft":
+        return "Draft";
       case "submitted":
-        return "Submitted";
+        return "Pending Review";
       case "assigning":
-        return "Finding Developers";
+        return "Searching Developers";
       case "accepted":
         return "Developer Assigned";
       case "in_progress":
-        return "In Progress";
+        return "Work in Progress";
       case "completed":
         return "Completed";
       case "canceled":

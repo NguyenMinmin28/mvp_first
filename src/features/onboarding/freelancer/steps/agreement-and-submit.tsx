@@ -17,7 +17,10 @@ export default function AgreementAndSubmitStep() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!agreeTerms) return;
+    if (!agreeTerms) {
+      alert("Please agree to the Terms and Privacy Policy before submitting.");
+      return;
+    }
     setSubmitting(true);
     try {
       // First, save any pending onboarding data
@@ -111,7 +114,7 @@ export default function AgreementAndSubmitStep() {
             </Button>
             <Button 
               className="flex-1 sm:flex-initial min-w-28" 
-              disabled={!agreeTerms || submitting} 
+              disabled={submitting} 
               onClick={handleSubmit}
             >
               {submitting ? "Submitting..." : "Finish"}

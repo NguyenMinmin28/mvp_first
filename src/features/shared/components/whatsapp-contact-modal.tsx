@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/components/dialog";
 import { Button } from "@/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
@@ -29,6 +30,52 @@ export function WhatsAppContactModal({
   projectId,
   onWhatsAppClick
 }: WhatsAppContactModalProps) {
+  const [projectDetails, setProjectDetails] = useState<{ title: string; budget: string; description: string } | null>(null);
+  const [loadingProject, setLoadingProject] = useState(false);
+
+  // Fetch project details when projectId is provided
+  useEffect(() => {
+    if (isOpen && projectId) {
+      fetchProjectDetails(projectId);
+    }
+  }, [isOpen, projectId]);
+
+  const fetchProjectDetails = async (projectId: string) => {
+    setLoadingProject(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, { cache: 'no-store' } as RequestInit);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.project) {
+          const budget = json.project.budgetMin 
+            ? `${json.project.currency || 'USD'} ${json.project.budgetMin.toLocaleString()}${json.project.budgetMax ? ` - ${json.project.budgetMax.toLocaleString()}` : ''}`
+            : json.project.budget 
+            ? `${json.project.currency || 'USD'} ${json.project.budget.toLocaleString()}`
+            : '';
+          
+          setProjectDetails({
+            title: json.project.title,
+            budget,
+            description: json.project.description || ''
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching project details:", error);
+    } finally {
+      setLoadingProject(false);
+    }
+  };
+
+  const generateWhatsAppMessage = () => {
+    if (projectDetails) {
+      const budgetText = projectDetails.budget ? `Budget: ${projectDetails.budget}` : '';
+      const descriptionText = projectDetails.description ? `\n\nProject Summary:\n${projectDetails.description.substring(0, 200)}${projectDetails.description.length > 200 ? '...' : ''}` : '';
+      return `Hi! I'd like to discuss this project with you:\n\nProject: ${projectDetails.title}${budgetText ? `\n${budgetText}` : ''}${descriptionText}\n\nWould you be interested in working on this project?`;
+    }
+    return "Hi! I'd like to discuss a project with you. Would you be interested?";
+  };
+
   const handleClose = () => {
     onClose();
   };
@@ -48,7 +95,13 @@ export function WhatsAppContactModal({
       if (onWhatsAppClick) {
         onWhatsAppClick();
       }
-      window.open(`https://wa.me/${developer.whatsapp.replace("+", "")}`, "_blank");
+      
+      // Generate message with project details
+      const message = generateWhatsAppMessage();
+      const encodedMessage = encodeURIComponent(message);
+      const phoneNumber = developer.whatsapp.replace("+", "");
+      
+      window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, "_blank");
     }
   };
 
