@@ -70,6 +70,7 @@ export default function SignUpClient() {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [emailCheckCompleted, setEmailCheckCompleted] = useState(false);
   const [emailAvailable, setEmailAvailable] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const router = useRouter();
 
@@ -182,7 +183,7 @@ export default function SignUpClient() {
     formState: { errors, isValid },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
-    mode: "onChange",
+    mode: "onSubmit",
   });
 
   const emailValue = watch("email");
@@ -335,6 +336,7 @@ export default function SignUpClient() {
   });
 
   const handleEmailSignUp = async (formData: SignUpFormData) => {
+    setHasAttemptedSubmit(true);
     setServerError(null); // Reset error state
     setSuccessMessage(null); // Reset success message
 
@@ -440,6 +442,7 @@ export default function SignUpClient() {
     setUserPassword("");
     setAgreeToTerms(false);
     setEmailNotifications(true);
+    setHasAttemptedSubmit(false);
   };
 
   // Check if user just signed up with Google and needs to set password
@@ -1001,14 +1004,14 @@ export default function SignUpClient() {
                         }
                       }}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && !errors.email && !errors.password && isValid && agreeToTerms) {
+                        if (e.key === "Enter") {
                           e.preventDefault();
                           handleSubmit(handleEmailSignUp)();
                         }
                       }}
-                      className={cn("h-12 transition-all hover:border-gray-400", (errors.email || emailExistsError) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20")}
+                      className={cn("h-12 transition-all hover:border-gray-400", (hasAttemptedSubmit && (errors.email || emailExistsError)) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20")}
                     />
-                    <FieldError error={errors.email?.message} />
+                    {hasAttemptedSubmit && <FieldError error={errors.email?.message} />}
                     {(
                       isCheckingEmail ||
                       (emailValue && EMAIL_REGEX.test(emailValue) && !emailCheckCompleted)
@@ -1021,7 +1024,7 @@ export default function SignUpClient() {
                         Checking email...
                       </p>
                     )}
-                    {emailExistsError && !isCheckingEmail && (
+                    {hasAttemptedSubmit && emailExistsError && !isCheckingEmail && (
                       <p className="text-sm text-red-600 mt-1">
                         This email is already registered. Please use a different email or try signing in.
                       </p>
@@ -1069,14 +1072,14 @@ export default function SignUpClient() {
                         tabIndex={2}
                         {...register("password")}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" && !errors.email && !errors.password && isValid && agreeToTerms) {
+                          if (e.key === "Enter") {
                             e.preventDefault();
                             handleSubmit(handleEmailSignUp)();
                           }
                         }}
                         className={cn(
                           "h-12 pr-12 transition-all hover:border-gray-400",
-                          errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"
+                          (hasAttemptedSubmit && errors.password) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"
                         )}
                       />
                       <button
@@ -1093,8 +1096,8 @@ export default function SignUpClient() {
                         )}
                       </button>
                     </div>
-                    <FieldError error={errors.password?.message} />
-                    {!errors.password && (
+                    {hasAttemptedSubmit && <FieldError error={errors.password?.message} />}
+                    {(!hasAttemptedSubmit || !errors.password) && (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <span>Password must be at least 8 characters long</span>
                       </p>
@@ -1175,7 +1178,7 @@ export default function SignUpClient() {
                         .
                       </Label>
                     </div>
-                    {showTermsValidation && !agreeToTerms && (
+                    {hasAttemptedSubmit && showTermsValidation && !agreeToTerms && (
                       <p className="text-sm text-red-600 ml-7 -mt-2">
                         You must agree to the Terms of Service to continue
                       </p>
@@ -1184,15 +1187,7 @@ export default function SignUpClient() {
 
                   <Button
                     type="submit"
-                    disabled={
-                      isEmailLoading ||
-                      isGoogleLoading ||
-                      emailExistsError ||
-                      isCheckingEmail ||
-                      !emailAvailable ||
-                      !agreeToTerms ||
-                      !canSubmitBasic
-                    }
+                    disabled={isEmailLoading || isGoogleLoading}
                     tabIndex={4}
                     className="w-full h-12 mt-2 bg-black text-white hover:bg-black/90 active:scale-[0.98] active:bg-black/95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
                   >
