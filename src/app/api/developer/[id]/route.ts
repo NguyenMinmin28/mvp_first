@@ -82,7 +82,9 @@ export async function GET(
       bio: developer.bio,
       experienceYears: developer.experienceYears,
       level: developer.level,
-      currentStatus: developer.currentStatus,
+      currentStatus: developer.currentStatus, // Deprecated - kept for backward compatibility
+      accountStatus: developer.accountStatus, // Online/Offline status
+      availabilityStatus: developer.availabilityStatus, // Available/Not Available status
       hourlyRateUsd: developer.hourlyRateUsd,
       usualResponseTimeMs: developer.usualResponseTimeMs,
       jobsCount: developer._count?.assignmentCandidates || 0,

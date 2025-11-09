@@ -40,17 +40,16 @@ export async function GET(request: NextRequest) {
             });
             break;
           case "Ready to Work":
+            // Use availabilityStatus (independent from online/offline)
             filterConditions.push({ 
-              currentStatus: { 
-                in: ["available", "online"] 
-              } 
+              availabilityStatus: "available"
             });
             break;
           case "Others":
-            // Others: exclude "available" and "online" statuses
+            // Others: exclude "available" status
             filterConditions.push({
-              currentStatus: { 
-                notIn: ["available", "online"] 
+              availabilityStatus: { 
+                not: "available"
               }
             });
             break;
@@ -140,7 +139,9 @@ export async function GET(request: NextRequest) {
         location: true,
         hourlyRateUsd: true,
         level: true,
-        currentStatus: true,
+        currentStatus: true, // Deprecated - kept for backward compatibility
+        accountStatus: true, // Online/Offline status
+        availabilityStatus: true, // Available/Not Available status
         photoUrl: true,
         createdAt: true,
         user: {

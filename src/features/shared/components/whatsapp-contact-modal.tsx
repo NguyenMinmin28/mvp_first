@@ -18,6 +18,7 @@ interface WhatsAppContactModalProps {
     whatsapp: string | null;
   };
   projectId?: string;
+  onWhatsAppClick?: () => void; // Callback when WhatsApp is clicked
 }
 
 export function WhatsAppContactModal({
@@ -25,7 +26,8 @@ export function WhatsAppContactModal({
   onClose, 
   onBack,
   developer,
-  projectId 
+  projectId,
+  onWhatsAppClick
 }: WhatsAppContactModalProps) {
   const handleClose = () => {
     onClose();
@@ -42,6 +44,10 @@ export function WhatsAppContactModal({
 
   const handleWhatsAppClick = () => {
     if (developer.whatsapp) {
+      // Call callback to add to favorites
+      if (onWhatsAppClick) {
+        onWhatsAppClick();
+      }
       window.open(`https://wa.me/${developer.whatsapp.replace("+", "")}`, "_blank");
     }
   };

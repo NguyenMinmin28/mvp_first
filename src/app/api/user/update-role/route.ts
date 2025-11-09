@@ -156,7 +156,10 @@ export async function POST(request: NextRequest) {
             portfolioLinks: [], // Empty array by default
             whatsappVerified: false, // Default value
             usualResponseTimeMs: 0, // Default value
-            currentStatus: "available", // Default status
+            // Set both accountStatus and availabilityStatus explicitly
+            accountStatus: "offline", // New developer starts offline (will be set to online on first login)
+            availabilityStatus: "available", // New developer starts as available
+            currentStatus: "available", // Deprecated field - kept for backward compatibility
             adminApprovalStatus: "draft", // Default status
             reviewsSummaryId: reviewsSummary.id, // Link to the created reviews summary
           },

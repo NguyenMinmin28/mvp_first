@@ -24,13 +24,16 @@ export class DeveloperStatusService {
       const oldAccountStatus = developerProfile.accountStatus;
       console.log(`📊 Account status change: ${oldAccountStatus} → ${newAccountStatus}`);
 
-      // Update account status
+      // Update account status (online/offline) - does NOT affect availabilityStatus
+      // Preserve availabilityStatus when updating accountStatus
+      // IMPORTANT: Do NOT update currentStatus here - it's deprecated and should only be updated
+      // when availabilityStatus changes, not when accountStatus changes
       await prisma.developerProfile.update({
         where: { userId },
         data: {
           accountStatus: newAccountStatus,
-          // Keep currentStatus for backward compatibility during migration
-          currentStatus: newAccountStatus === "online" ? "online" : "offline",
+          // Do NOT update currentStatus - preserve it to maintain availability information
+          // currentStatus is deprecated and should only be updated via updateAvailabilityStatus
         }
       });
 
@@ -95,12 +98,13 @@ export class DeveloperStatusService {
       const oldAvailabilityStatus = developerProfile.availabilityStatus;
       console.log(`📊 Availability status change: ${oldAvailabilityStatus} → ${newAvailabilityStatus}`);
 
-      // Update availability status
+      // Update availability status (available/not_available) - does NOT affect accountStatus
       await prisma.developerProfile.update({
         where: { userId },
         data: {
           availabilityStatus: newAvailabilityStatus,
           // Keep currentStatus for backward compatibility during migration
+          // Only update currentStatus if it was available/not_available, preserve online/offline from accountStatus
           currentStatus: newAvailabilityStatus === "available" ? "available" : "not_available",
         }
       });

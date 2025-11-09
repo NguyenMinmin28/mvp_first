@@ -48,6 +48,29 @@ export function GetInTouchButton({
   const { contactInfo, loading: contactLoading } = useCanViewContact(developerId, projectId);
   const { sendInvite, loading: inviteLoading } = useManualInvite(projectId);
 
+  // Add developer to favorites
+  const addToFavorites = async (devId: string) => {
+    try {
+      // Only add if user is a client
+      if (session?.user?.role !== "CLIENT") return;
+      
+      const response = await fetch('/api/user/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          developerId: devId,
+          ensure: true // Idempotent: only add, don't toggle
+        }),
+      });
+      
+      if (response.ok) {
+        console.log('Developer added to favorites:', devId);
+      }
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      // Silently fail - don't interrupt user flow
+    }
+  };
 
   const handleGetInTouch = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent event bubbling to parent card
@@ -85,6 +108,8 @@ export function GetInTouchButton({
       if (result.success) {
         toast.dismiss(loadingToastId);
         toast.success("Message sent successfully! The developer will be notified.");
+        // Add developer to favorites when message is sent successfully
+        addToFavorites(developerId);
         // Keep the overlay open for a moment to show success
         setTimeout(() => {
           setShowFindingOverlay(false);
@@ -208,6 +233,7 @@ export function GetInTouchButton({
           whatsapp: contactInfo?.developer?.whatsapp || null
         }}
         projectId={projectId}
+        onWhatsAppClick={() => addToFavorites(developerId)}
       />
 
       {/* Auth Required Modal */}

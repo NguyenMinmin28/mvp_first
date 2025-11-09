@@ -63,8 +63,22 @@ export async function PUT(request: NextRequest) {
         developerUpdateData.whatsappVerified = body.whatsappVerified;
       if (body.usualResponseTimeMs !== undefined)
         developerUpdateData.usualResponseTimeMs = body.usualResponseTimeMs;
-      if (body.currentStatus !== undefined)
-        developerUpdateData.currentStatus = body.currentStatus;
+      // Handle availabilityStatus (available/not_available) - independent from login/logout
+      if (body.availabilityStatus !== undefined) {
+        developerUpdateData.availabilityStatus = body.availabilityStatus;
+        // Keep currentStatus for backward compatibility
+        developerUpdateData.currentStatus = body.availabilityStatus;
+      }
+      // DEPRECATED: currentStatus - kept for backward compatibility only
+      if (body.currentStatus !== undefined && body.availabilityStatus === undefined) {
+        // Only update if availabilityStatus is not provided
+        // This is for backward compatibility
+        const status = body.currentStatus;
+        if (status === "available" || status === "not_available") {
+          developerUpdateData.availabilityStatus = status;
+        }
+        developerUpdateData.currentStatus = status;
+      }
       // Note: portfolioLinks is deprecated - portfolios are now managed via Portfolio table
       // If portfolioLinks is provided as array of objects, ignore it
       // If it's provided as String[], we can still update it for backward compatibility
@@ -108,8 +122,11 @@ export async function PUT(request: NextRequest) {
                                   developerUpdateData.linkedinUrl !== undefined;
           
           // Check if availability status changed
-          const availabilityChanged = developerUpdateData.currentStatus !== undefined && 
-                                     developerUpdateData.currentStatus !== existing.currentStatus;
+          const availabilityChanged = (developerUpdateData.availabilityStatus !== undefined && 
+                                     developerUpdateData.availabilityStatus !== existing.availabilityStatus) ||
+                                     (developerUpdateData.currentStatus !== undefined && 
+                                     (developerUpdateData.currentStatus === "available" || developerUpdateData.currentStatus === "not_available") &&
+                                     developerUpdateData.currentStatus !== existing.availabilityStatus);
 
           await db.developerProfile.update({ where: { userId }, data: developerUpdateData });
           // Record activity time on user whenever availability/status changes or profile updates
@@ -123,10 +140,14 @@ export async function PUT(request: NextRequest) {
           }
           
           if (availabilityChanged) {
+            const newAvailabilityStatus = developerUpdateData.availabilityStatus || 
+                                        (developerUpdateData.currentStatus === "available" || developerUpdateData.currentStatus === "not_available" 
+                                          ? developerUpdateData.currentStatus 
+                                          : existing.availabilityStatus);
             await FollowNotificationService.notifyAvailabilityChange(
               existing.id, // developer profile ID
               session.user.name || "Developer", 
-              developerUpdateData.currentStatus
+              newAvailabilityStatus
             );
           }
         } else {
@@ -136,7 +157,10 @@ export async function PUT(request: NextRequest) {
               userId,
               level: "FRESHER",
               experienceYears: 0,
-              currentStatus: developerUpdateData.currentStatus ?? "available",
+              // Set both accountStatus and availabilityStatus explicitly
+              accountStatus: "offline", // New developer starts offline (will be set to online on first login)
+              availabilityStatus: developerUpdateData.availabilityStatus ?? "available", // Default to available
+              currentStatus: developerUpdateData.currentStatus ?? developerUpdateData.availabilityStatus ?? "available", // Deprecated field
               adminApprovalStatus: "draft",
               ...developerUpdateData,
             },

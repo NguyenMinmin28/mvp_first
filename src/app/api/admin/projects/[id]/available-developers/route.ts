@@ -69,7 +69,7 @@ export async function GET(
     const availableDevelopers = await prisma.developerProfile.findMany({
       where: {
         adminApprovalStatus: "approved",
-        currentStatus: "available",
+        availabilityStatus: "available", // Only include available developers (exclude not_available)
         whatsappVerified: true,
       },
       include: {

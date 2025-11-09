@@ -206,6 +206,41 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // If user is a CLIENT, also add developer to favorites
+      if (sessionUser.role === "CLIENT" && developer.developerProfile) {
+        try {
+          const clientProfile = await prisma.clientProfile.findUnique({
+            where: { userId: sessionUser.id },
+          });
+
+          if (clientProfile) {
+            // Check if already in favorites
+            const existingFavorite = await prisma.favoriteDeveloper.findUnique({
+              where: {
+                clientId_developerId: {
+                  clientId: clientProfile.id,
+                  developerId: developer.developerProfile.id,
+                },
+              },
+            });
+
+            // Only add if not already in favorites
+            if (!existingFavorite) {
+              await prisma.favoriteDeveloper.create({
+                data: {
+                  clientId: clientProfile.id,
+                  developerId: developer.developerProfile.id,
+                },
+              });
+              console.log(`Developer ${developer.developerProfile.id} added to favorites for client ${clientProfile.id}`);
+            }
+          }
+        } catch (error) {
+          // Silently fail - don't interrupt follow flow
+          console.error("Error adding to favorites on follow:", error);
+        }
+      }
+
       return NextResponse.json({ 
         isFollowing: true, 
         message: `Now following ${developer.name}`,

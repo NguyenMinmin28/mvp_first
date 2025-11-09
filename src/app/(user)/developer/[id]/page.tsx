@@ -148,7 +148,9 @@ export default async function DeveloperPublicProfilePage({
     age: (developer as any).age,
     hourlyRate: developer.hourlyRateUsd,
     level: developer.level,
-    currentStatus: developer.currentStatus,
+    currentStatus: developer.currentStatus, // Deprecated - kept for backward compatibility
+    accountStatus: developer.accountStatus, // Online/Offline status
+    availabilityStatus: developer.availabilityStatus, // Available/Not Available status
     lastLoginAt: developer.user.lastLoginAt,
     adminApprovalStatus: developer.adminApprovalStatus,
     skills: developer.skills.map((s: any) => ({

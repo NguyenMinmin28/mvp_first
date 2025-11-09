@@ -631,8 +631,8 @@ export function PeopleGrid({
             case "Professional":
               return dev.level === "MID" || dev.level === "EXPERT";
             case "Ready to Work":
-              // Ready to Work: developer has currentStatus = "available" or "online"
-              return dev.currentStatus === "available" || dev.currentStatus === "online";
+              // Ready to Work: developer has availabilityStatus = "available" (independent from online/offline)
+              return (dev as any)?.availabilityStatus === "available";
             case "Others":
               // Others: when skills are selected, API already filters the data
               // So we don't need client-side filtering for Others
@@ -1251,29 +1251,23 @@ export function PeopleGrid({
                               />
                             </AvatarFallback>
                           </Avatar>
-                          {/* Status dot outside avatar, overlaying on bottom */}
+                          {/* Status dot outside avatar, overlaying on bottom - shows online/offline (accountStatus) */}
                           <span
                             className={`absolute right-0 bottom-0 inline-block w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
-                              ((developer as any)?.currentStatus) === 'online' || ((developer as any)?.currentStatus) === 'available' 
+                              ((developer as any)?.accountStatus) === 'online'
                                 ? 'bg-green-500' 
-                                : ((developer as any)?.currentStatus) === 'offline' 
-                                  ? 'bg-gray-400' 
-                                  : 'bg-gray-400'
+                                : 'bg-gray-400'
                             }`}
                             style={{ zIndex: 9999 }}
                             aria-label={
-                              ((developer as any)?.currentStatus) === 'online' || ((developer as any)?.currentStatus) === 'available' 
+                              ((developer as any)?.accountStatus) === 'online'
                                 ? 'Online' 
-                                : ((developer as any)?.currentStatus) === 'offline' 
-                                  ? 'Offline' 
-                                  : 'Not Available'
+                                : 'Offline'
                             }
                             title={
-                              ((developer as any)?.currentStatus) === 'online' || ((developer as any)?.currentStatus) === 'available' 
+                              ((developer as any)?.accountStatus) === 'online'
                                 ? 'Online' 
-                                : ((developer as any)?.currentStatus) === 'offline' 
-                                  ? 'Offline' 
-                                  : 'Not Available'
+                                : 'Offline'
                             }
                           />
                         </div>

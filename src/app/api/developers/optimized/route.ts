@@ -89,10 +89,9 @@ export async function GET(request: NextRequest) {
             });
             break;
           case "Ready to Work":
+            // Use availabilityStatus (independent from online/offline)
             filterConditions.push({ 
-              currentStatus: { 
-                in: ["available", "online"] 
-              } 
+              availabilityStatus: "available"
             });
             break;
           case "Others":
@@ -152,11 +151,16 @@ export async function GET(request: NextRequest) {
 
     if (availability.length > 0) {
       where.AND = where.AND || [];
-      where.AND.push({
-        currentStatus: {
-          in: availability
-        }
-      });
+      // Map availability filter to availabilityStatus (not currentStatus)
+      // Filter out "online"/"offline" as those are accountStatus, not availabilityStatus
+      const availabilityStatuses = availability.filter(a => a === "available" || a === "not_available");
+      if (availabilityStatuses.length > 0) {
+        where.AND.push({
+          availabilityStatus: {
+            in: availabilityStatuses
+          }
+        });
+      }
     }
 
     // Add price range filtering (based on hourly rate or services)
@@ -237,7 +241,9 @@ export async function GET(request: NextRequest) {
           location: true,
           hourlyRateUsd: true,
           level: true,
-          currentStatus: true,
+          currentStatus: true, // Deprecated - kept for backward compatibility
+          accountStatus: true, // Online/Offline status
+          availabilityStatus: true, // Available/Not Available status
           photoUrl: true,
           createdAt: true,
         user: {

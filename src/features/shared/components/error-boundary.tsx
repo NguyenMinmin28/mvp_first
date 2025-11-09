@@ -33,10 +33,19 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       const FallbackComponent = this.props.fallback || DefaultErrorFallback;
+      // Don't render children when there's an error to avoid hook context issues
       return <FallbackComponent error={this.state.error} resetError={this.resetError} />;
     }
 
-    return this.props.children;
+    // Only render children if no error and component is still mounted
+    try {
+      return this.props.children;
+    } catch (error) {
+      // If rendering children causes error (e.g., during logout), show fallback
+      console.warn("ErrorBoundary: Error rendering children, showing fallback:", error);
+      const FallbackComponent = this.props.fallback || DefaultErrorFallback;
+      return <FallbackComponent error={error as Error} resetError={this.resetError} />;
+    }
   }
 }
 

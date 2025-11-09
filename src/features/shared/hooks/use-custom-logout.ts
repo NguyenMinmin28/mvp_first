@@ -38,6 +38,9 @@ export function useCustomLogout() {
       // Use window.location for logout to avoid React context issues
       const targetUrl = callbackUrl || "/";
       
+      // Small delay before redirect to allow React to cleanup components
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Try signOut first, but fallback to direct navigation if it fails
       try {
         await signOut({
@@ -45,12 +48,17 @@ export function useCustomLogout() {
           redirect: false, // Don't let NextAuth handle redirect
         });
         
+        // Additional delay before redirect to ensure React cleanup completes
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         // Manual redirect to avoid context issues
         if (typeof window !== "undefined") {
           window.location.href = targetUrl;
         }
       } catch (signOutError) {
         console.warn("SignOut failed, using direct navigation:", signOutError);
+        // Additional delay before redirect
+        await new Promise(resolve => setTimeout(resolve, 50));
         // Direct navigation fallback
         if (typeof window !== "undefined") {
           window.location.href = targetUrl;

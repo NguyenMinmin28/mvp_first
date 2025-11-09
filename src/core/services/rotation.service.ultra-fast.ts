@@ -46,7 +46,7 @@ export class RotationServiceUltraFast {
         $match: {
           adminApprovalStatus: "approved",
           // Eligibility for batch is controlled strictly by Available/Not Available toggle
-          currentStatus: "available",
+          availabilityStatus: "available", // Only include available developers (exclude not_available)
           userId: { $ne: clientUserId },
           whatsappVerified: true,
           ...(excludeDeveloperIds.length > 0 && { _id: { $nin: excludeDeveloperIds } })

@@ -728,11 +728,9 @@ export function DeveloperProfileSlideBar({
                     </Avatar>
                     <span
                           className={`absolute right-0 bottom-0 sm:right-2 sm:bottom-2 inline-block w-6 h-6 sm:w-7 sm:h-7 rounded-full border-4 border-white shadow-md ${
-                        profile.currentStatus === 'online' || profile.currentStatus === 'available' 
+                        (profile as any)?.accountStatus === 'online'
                           ? 'bg-green-500' 
-                          : profile.currentStatus === 'offline' 
-                            ? 'bg-gray-400' 
-                            : 'bg-gray-400'
+                          : 'bg-gray-400'
                       }`}
                     />
                   </div>

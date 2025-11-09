@@ -121,7 +121,7 @@ export class RotationDbOptimized {
       {
         $match: {
           adminApprovalStatus: "approved",
-          currentStatus: { $in: ["available", "online"] }, // Only include available and online developers
+          availabilityStatus: "available", // Only include available developers (exclude not_available)
           whatsappVerified: true
         }
       },
@@ -208,7 +208,7 @@ export class RotationDbOptimized {
         $match: {
           adminApprovalStatus: "approved",
           // Eligibility for batch is controlled strictly by Available/Not Available toggle
-          currentStatus: "available",
+          availabilityStatus: "available", // Use availabilityStatus, not currentStatus
           userId: { $ne: clientUserId },
           whatsappVerified: true,
           ...(excludeDeveloperIds.length > 0 && { _id: { $nin: excludeDeveloperIds } })

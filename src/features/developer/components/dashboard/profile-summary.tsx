@@ -65,19 +65,25 @@ export default function ProfileSummary({
   const [photoUrl, setPhotoUrl] = useState<string>(
     profile?.photoUrl || profile?.image || ""
   );
-  // Normalize status for dropdown display: online/offline -> available/not_available
-  const normalizeStatusForDisplay = (rawStatus: string): "available" | "not_available" => {
-    if (rawStatus === "online" || rawStatus === "available") {
-      return "available";
+  // Get availability status - independent from online/offline
+  // Read from availabilityStatus field, fallback to currentStatus for backward compatibility
+  const getAvailabilityStatus = (): "available" | "not_available" => {
+    // Priority: availabilityStatus > currentStatus (if it's available/not_available)
+    const availabilityStatus = (profile as any)?.availabilityStatus;
+    if (availabilityStatus === "available" || availabilityStatus === "not_available") {
+      return availabilityStatus;
     }
-    if (rawStatus === "offline" || rawStatus === "not_available" || rawStatus === "busy") {
-      return "not_available";
+    // Fallback: check currentStatus if it's available/not_available (not online/offline)
+    const currentStatus = profile?.currentStatus;
+    if (currentStatus === "available" || currentStatus === "not_available") {
+      return currentStatus;
     }
-    return rawStatus === "available" ? "available" : "not_available";
+    // Default to available
+    return "available";
   };
 
   const [status, setStatus] = useState<string>(
-    normalizeStatusForDisplay(profile?.currentStatus || "available")
+    getAvailabilityStatus()
   );
   const [isSaving, setIsSaving] = useState(false);
   const [age, setAge] = useState<string>((profile as any)?.age || "");
@@ -203,15 +209,20 @@ export default function ProfileSummary({
   // - For viewing other developer (has developerId): reflect that profile's online/offline
   const { status: authStatus } = useSession();
   const isOnline = developerId
-    ? ((profile?.currentStatus as string) || "offline") === "online"
+    ? ((profile as any)?.accountStatus as string) === "online"
     : authStatus === "authenticated";
 
   // Sync local state with profile prop changes
   useEffect(() => {
+    // Sync availability status from profile (independent from online/offline)
+    if (profile) {
+      const newAvailabilityStatus = getAvailabilityStatus();
+      setStatus(newAvailabilityStatus);
+    }
     setIsFollowingLocal(Boolean(profile?.isFollowing));
     setIsFavoritedLocal(Boolean(profile?.isFavorited));
     setFollowersCountLocal(Number(profile?.followersCount || 0));
-  }, [profile?.isFollowing, profile?.isFavorited, profile?.followersCount]);
+  }, [profile?.isFollowing, profile?.isFavorited, profile?.followersCount, (profile as any)?.availabilityStatus, profile?.currentStatus]);
 
   // Function to render star rating
   const renderStars = (rating: number) => {
@@ -273,19 +284,12 @@ export default function ProfileSummary({
       // Update local state for display
       setStatus(statusToPersist);
 
-      // Check if user is currently logged in (online)
-      // If profile.currentStatus is "online", we should preserve that when submitting
-      // But since we only have one status field, we'll just submit the new status
-      // The backend/login system will handle setting it back to "online" if user is logged in
-      const currentRawStatus = profile?.currentStatus || status;
-      const statusToSubmit = currentRawStatus === "online"
-        ? statusToPersist // If was online, submit the new available/not_available status
-        : statusToPersist; // Otherwise just submit the new status
-
+      // Update availabilityStatus (independent from login/logout)
+      // This only affects whether developer is available for projects, not online/offline status
       await fetch("/api/user/update-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentStatus: statusToSubmit }),
+        body: JSON.stringify({ availabilityStatus: statusToPersist }),
       });
       try {
         const logsRaw = localStorage.getItem("presenceLogs");
@@ -466,7 +470,9 @@ export default function ProfileSummary({
   };
 
   // Determine if available (for the green Available button)
-  const isAvailable = normalizeStatusForDisplay(status || profile?.currentStatus || "available") === "available" && isOnline;
+  // isAvailable should only depend on availabilityStatus, not on online/offline status
+  // Online/offline (accountStatus) and Available/Not Available (availabilityStatus) are independent
+  const isAvailable = (status || getAvailabilityStatus()) === "available";
 
 
   return (
@@ -707,20 +713,20 @@ export default function ProfileSummary({
                         <button
                           type="button"
                           onClick={() => {
-                            const currentStatus = normalizeStatusForDisplay(status || profile?.currentStatus || "available");
-                            const newStatus = currentStatus === "available" ? "not_available" : "available";
+                            const currentAvailability = status || getAvailabilityStatus();
+                            const newStatus = currentAvailability === "available" ? "not_available" : "available";
                             submitStatus(newStatus);
                           }}
                           className="group relative inline-flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-300"
                           role="switch"
-                          aria-checked={normalizeStatusForDisplay(status || profile?.currentStatus || "available") === "not_available"}
+                          aria-checked={(status || getAvailabilityStatus()) === "not_available"}
                         >
                           {/* Toggle Track */}
                           <div
                             className={cn(
                               "relative h-8 rounded-full transition-all duration-300 ease-in-out overflow-hidden",
                               "group-hover:scale-105",
-                              normalizeStatusForDisplay(status || profile?.currentStatus || "available") === "available"
+                              (status || getAvailabilityStatus()) === "available"
                                 ? "bg-green-500 group-hover:bg-green-600"
                                 : "bg-gray-400 group-hover:bg-gray-500"
                             )}
@@ -730,12 +736,12 @@ export default function ProfileSummary({
                             <span
                               className={cn(
                                 "absolute top-1/2 -translate-y-1/2 text-sm font-medium transition-all duration-300 whitespace-nowrap text-white",
-                                normalizeStatusForDisplay(status || profile?.currentStatus || "available") === "available"
+                                (status || getAvailabilityStatus()) === "available"
                                   ? "left-10"
                                   : "left-3"
                               )}
                             >
-                              {normalizeStatusForDisplay(status || profile?.currentStatus || "available") === "available"
+                              {(status || getAvailabilityStatus()) === "available"
                                 ? "Available"
                                 : "Not Available"}
                             </span>
@@ -745,7 +751,7 @@ export default function ProfileSummary({
                               className={cn(
                                 "absolute top-1 w-6 h-6 rounded-full transition-all duration-300 ease-in-out",
                                 "shadow-md transform bg-white group-hover:bg-gray-50",
-                                normalizeStatusForDisplay(status || profile?.currentStatus || "available") === "available"
+                                (status || getAvailabilityStatus()) === "available"
                                   ? "left-1"
                                   : "right-1"
                               )}
