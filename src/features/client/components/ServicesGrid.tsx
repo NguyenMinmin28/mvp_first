@@ -383,12 +383,12 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
         {services.map((service) => (
           <Card key={service.id} className="hover:shadow-md transition-shadow border border-gray-200 h-full cursor-pointer" onClick={() => handleOpenOverlay(service)}>
             <CardContent className="p-0 h-full flex flex-col">
               {/* Cover Image */}
-              <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+              <div className="relative h-40 sm:h-48 w-full overflow-hidden rounded-t-lg">
                 {service.coverUrl ? (
                   <ImageWithShimmer 
                     src={service.coverUrl} 
@@ -407,10 +407,10 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
               </div>
 
               {/* Content */}
-              <div className="p-5 flex-1 flex flex-col">
+              <div className="p-3 sm:p-4 md:p-5 flex-1 flex flex-col">
                 {/* Developer Info */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                     {service.developer.photoUrl || service.developer.user.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img 

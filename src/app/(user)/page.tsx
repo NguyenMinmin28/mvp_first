@@ -25,7 +25,7 @@ export default async function Home() {
 
   return (
     <UserLayout user={user}>
-      <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+      <div className="space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
         <HeroProject />
         <Description />
         <Workspace />

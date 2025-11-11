@@ -392,9 +392,9 @@ export default function DashboardClient({
                           </div>
                         )}
 
-                        {/* Projects Layout - Full Width */}
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-[500px] w-full">
-                          <div className="lg:col-span-1">
+                        {/* Projects Layout - Full Width - Mobile optimized */}
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 flex-1 min-h-[400px] sm:min-h-[500px] w-full">
+                          <div className="lg:col-span-1 order-2 lg:order-1">
                             <ProjectsSidebar
                               filter={projectStatus}
                               selectedProjectId={selectedProjectId}

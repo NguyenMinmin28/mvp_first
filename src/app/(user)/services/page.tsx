@@ -55,24 +55,25 @@ export default function ServicesPage() {
 
   return (
     <UserLayout user={session?.user}>
-      {/* Header Section */}
+      {/* Header Section - Mobile optimized */}
       <div className="border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 break-words">
                 Browse Talent, Contact Direct
               </h1>
             </div>
             
             {isDeveloper && (
-              <Link href="/services/create">
+              <Link href="/services/create" className="w-full sm:w-auto">
                 <Button 
                   variant="outline" 
-                  className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  className="w-full sm:w-auto border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900 text-sm sm:text-base"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Post Service
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Post Service</span>
+                  <span className="sm:hidden">Post</span>
                 </Button>
               </Link>
             )}
@@ -80,8 +81,8 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      {/* Search and Filter Section */}
-      <div className="container mx-auto px-4 py-6">
+      {/* Search and Filter Section - Mobile optimized */}
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <SearchAndFilter 
           onSearchChange={setSearchQuery}
           onTabChange={handleTabChange}
@@ -92,8 +93,8 @@ export default function ServicesPage() {
         />
       </div>
 
-      {/* Content Grid - Services or People */}
-      <div className="container mx-auto px-4 py-8">
+      {/* Content Grid - Services or People - Mobile optimized */}
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {activeTab === "service" ? (
           <ServicesGrid 
             searchQuery={searchQuery}

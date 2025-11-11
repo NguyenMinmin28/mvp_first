@@ -28,15 +28,22 @@ html > body > #__next {
   max-width: 100vw !important;
 }
 
-/* Container consistency fixes - less aggressive */
+/* Container consistency fixes - Mobile-first */
 .container:not(.dashboard-container) {
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 }
 
 @media (min-width: 640px) {
+  .container:not(.dashboard-container) {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
   .container:not(.dashboard-container) {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
@@ -105,16 +112,23 @@ body, html, #__next {
   padding-right: 0 !important;
 }
 
-/* Fix for mobile devices - less aggressive */
-@media (max-width: 768px) {
+/* Fix for mobile devices - Mobile-first approach */
+@media (max-width: 640px) {
   .container:not(.dashboard-container) {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
   
   .main-content:not(.dashboard-main) {
     padding-left: 0;
     margin-left: 0;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .container:not(.dashboard-container) {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 

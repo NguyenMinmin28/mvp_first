@@ -27,7 +27,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { User as UserType } from "next-auth";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePortal } from "@/features/shared/portal-context";
@@ -65,6 +65,7 @@ type UnifiedNotif = {
 export default function Header({ user, disableNavigation = false }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { logout } = useCustomLogout();
   const [mounted, setMounted] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -399,30 +400,42 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
             {/* Portal Switch (hidden when authenticated) */}
             {!isAuthenticated && (
               <div className="hidden md:flex items-center gap-2 text-sm">
-                <button
-                  className="px-3 py-1 rounded-full text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer"
-                  onClick={() => {
+                <Link
+                  href="/services?tab=people"
+                  onClick={(e) => {
                     if (isNavigationDisabled) {
+                      e.preventDefault();
                       setShowOnboardingAlert(true);
                     } else {
-                      router.push("/services?tab=people");
+                      handleNavigationClick(e);
                     }
                   }}
+                  className={`text-white hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer relative ${
+                    pathname === "/services" && searchParams?.get("tab") === "people" 
+                      ? "[&::after]:!w-full [&::after]:!bg-white" 
+                      : ""
+                  }`}
                 >
                   Experts
-                </button>
-                <button
-                  className="px-3 py-1 rounded-full text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 cursor-pointer"
-                  onClick={() => {
+                </Link>
+                <Link
+                  href="/services"
+                  onClick={(e) => {
                     if (isNavigationDisabled) {
+                      e.preventDefault();
                       setShowOnboardingAlert(true);
                     } else {
-                      router.push("/services");
+                      handleNavigationClick(e);
                     }
                   }}
+                  className={`text-white hover:opacity-80 underline-animated transition-all duration-200 cursor-pointer relative ${
+                    pathname === "/services" && searchParams?.get("tab") !== "people" 
+                      ? "[&::after]:!w-full [&::after]:!bg-white" 
+                      : ""
+                  }`}
                 >
                   Gigs
-                </button>
+                </Link>
               </div>
             )}
 
@@ -1423,10 +1436,10 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
           </div>
         )}
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Improved for mobile */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-200">
-            <div className="container px-4 py-4 space-y-4">
+          <div className="md:hidden bg-white border-t border-gray-200 max-h-[calc(100vh-96px)] overflow-y-auto safe-area-bottom">
+            <div className="container px-3 sm:px-4 py-4 space-y-3 sm:space-y-4">
               {/* Portal Switch Mobile (hidden when authenticated) */}
               {!isAuthenticated && (
                 <div className="flex items-center gap-2 text-sm">

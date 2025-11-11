@@ -14,6 +14,13 @@ export const metadata = {
     template: "%s | Clevrs",
   },
   description: "Connect directly with skilled freelancers worldwide. No middlemen, no commissions. Post your project and get matched with the perfect developer in minutes.",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: "cover",
+  },
 };
 
 export default function RootLayout({

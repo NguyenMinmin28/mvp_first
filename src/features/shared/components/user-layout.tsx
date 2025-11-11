@@ -45,7 +45,7 @@ export function UserLayout({
         {/* Footer */}
         {showFooter && (
           <footer className="bg-black text-white">
-          <div className="container mx-auto px-4 sm:px-6 py-12">
+          <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12">
             <div className="mb-10">
               <img
                 src="/images/home/clervelogo.png"
@@ -60,7 +60,7 @@ export function UserLayout({
               </a>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-gray-300 max-w-6xl">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-gray-300 max-w-6xl">
               <div>
                 <h4 className="font-semibold text-white mb-3">Company</h4>
                 <ul className="space-y-2 text-sm">

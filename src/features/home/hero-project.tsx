@@ -38,12 +38,12 @@ export function HeroProject() {
     };
   }, []);
   return (
-    <section className="w-full py-2 md:py-3">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.1fr] lg:grid-cols-[0.8fr_1.2fr] gap-3 md:gap-4 items-start">
+    <section className="w-full py-2 sm:py-3 md:py-4">
+      <div className="container mx-auto max-w-7xl px-3 sm:px-4 md:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.1fr] lg:grid-cols-[0.8fr_1.2fr] gap-3 sm:gap-4 items-start">
           {/* Left: Form column */}
           <div className="md:pr-3" ref={formContentRef}>
-            <div className="bg-[#FFFFFF] rounded-lg p-4 border-0">
+            <div className="bg-[#FFFFFF] rounded-lg p-3 sm:p-4 border-0">
               <ProjectPostForm
                 title="Post Project"
                 description=""
@@ -52,10 +52,10 @@ export function HeroProject() {
             </div>
           </div>
 
-          {/* Right: Image column */}
-          <div className="w-full">
+          {/* Right: Image column - Hidden on very small screens, shown on md+ */}
+          <div className="w-full hidden md:block">
             <div
-              className="bg-[#FFFAF3] overflow-hidden flex items-center justify-center p-4 md:p-6 mt-6 md:mt-8"
+              className="bg-[#FFFAF3] overflow-hidden flex items-center justify-center p-4 md:p-6 mt-0 md:mt-8"
               style={{
                 height: rightHeight ? `${rightHeight * 0.9}px` : "auto",
               }}

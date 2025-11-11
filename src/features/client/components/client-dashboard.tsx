@@ -191,8 +191,8 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {/* Content Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+        {/* Content Row - Mobile optimized */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-start">
           {/* Left Section - Project Post Form */}
           <ProjectPostForm
             title=""
@@ -201,9 +201,9 @@ export default function ClientDashboard() {
             onSuccess={(projectId) => router.push(`/projects/${projectId}`)}
           />
 
-          {/* Right Section - Connects Cards */}
+          {/* Right Section - Connects Cards - Mobile optimized */}
           <div className="w-full">
-            <div className="grid grid-cols-2 gap-4 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
               {/* Favourite Card */}
               <Link href="/favorites" prefetch>
                 <Card className="cursor-pointer hover:shadow-md bg-[#F3F3F3] hover:bg-gray-100 transition-all duration-200 h-36 flex flex-col justify-center items-center">
