@@ -609,30 +609,40 @@ export function DeveloperProfileSlideBar({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        .faded-scrollbar::-webkit-scrollbar {
-          width: 8px !important;
+        .modern-scrollbar::-webkit-scrollbar {
+          width: 10px !important;
+          height: 10px !important;
         }
-        .faded-scrollbar::-webkit-scrollbar-track {
-          background: transparent !important;
-        }
-        .faded-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(229, 231, 235, 0.4) !important;
+        .modern-scrollbar::-webkit-scrollbar-track {
+          background: rgba(243, 244, 246, 0.15) !important;
           border-radius: 10px !important;
-          transition: background 0.3s ease-out !important;
+          margin: 4px 0 !important;
         }
-        .faded-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(209, 213, 219, 0.5) !important;
+        .modern-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(156, 163, 175, 0.25), rgba(107, 114, 128, 0.3)) !important;
+          border-radius: 10px !important;
+          border: 2px solid rgba(243, 244, 246, 0.15) !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
         }
-        .faded-scrollbar.scrolling::-webkit-scrollbar-thumb {
-          background: rgba(229, 231, 235, 0.45) !important;
+        .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.5)) !important;
+          border-color: rgba(243, 244, 246, 0.25) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+          transform: scale(1.05) !important;
         }
-        .faded-scrollbar {
+        .modern-scrollbar.scrolling::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(75, 85, 99, 0.4), rgba(55, 65, 81, 0.5)) !important;
+        }
+        .modern-scrollbar {
           scrollbar-width: thin !important;
-          scrollbar-color: rgba(229, 231, 235, 0.4) transparent !important;
+          scrollbar-color: rgba(107, 114, 128, 0.3) rgba(243, 244, 246, 0.15) !important;
         }
-        .faded-scrollbar:hover,
-        .faded-scrollbar.scrolling {
-          scrollbar-color: rgba(209, 213, 219, 0.5) transparent !important;
+        .modern-scrollbar:hover {
+          scrollbar-color: rgba(75, 85, 99, 0.4) rgba(243, 244, 246, 0.2) !important;
+        }
+        .modern-scrollbar.scrolling {
+          scrollbar-color: rgba(55, 65, 81, 0.4) rgba(243, 244, 246, 0.2) !important;
         }
       `}} />
       <div
@@ -794,7 +804,7 @@ export function DeveloperProfileSlideBar({
           {/* Content - Scrollable */}
           <div 
             ref={scrollContainerRef}
-            className={`flex-1 overflow-y-auto faded-scrollbar ${isScrolling ? 'scrolling' : ''}`}
+            className={`flex-1 overflow-y-auto modern-scrollbar ${isScrolling ? 'scrolling' : ''}`}
           >
             {loading ? (
               <div className="p-4 space-y-4">

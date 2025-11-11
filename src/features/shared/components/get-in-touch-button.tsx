@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/ui/components/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/ui/components/dialog";
 import { toast } from "sonner";
-import { MessageCircle, AlertCircle } from "lucide-react";
+import { MessageCircle, AlertCircle, Send } from "lucide-react";
 import { useCanViewContact } from "../hooks/use-can-view-contact";
 import { useManualInvite } from "../hooks/use-manual-invite";
 import { ContactCard } from "./contact-card";
@@ -174,6 +174,10 @@ export function GetInTouchButton({
   // Only disable if explicitly disabled or loading
   const isDisabled = disabled || contactLoading || inviteLoading;
 
+  // Icon size based on button size
+  const iconSize = size === "sm" ? "w-3.5 h-3.5" : size === "lg" ? "w-5 h-5" : "w-4 h-4";
+  const iconMargin = size === "sm" ? "mr-1.5" : "mr-2";
+
   return (
     <>
       <Button
@@ -183,7 +187,7 @@ export function GetInTouchButton({
         onClick={handleGetInTouch}
         disabled={isDisabled}
       >
-        <MessageCircle className="w-4 h-4 mr-2" />
+        <Send className={`${iconSize} ${iconMargin} flex-shrink-0`} />
         {getButtonText()}
       </Button>
 

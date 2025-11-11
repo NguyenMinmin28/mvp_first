@@ -248,17 +248,48 @@ export default function ProjectsSidebar({
   }
 
   return (
-    <div className="h-full flex flex-col border border-gray-200 rounded-xl bg-white shadow-lg">
-      <div className="border-b border-gray-200 bg-gray-50 p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900">{getFilterLabel(filter)}</h3>
-          <span className="text-xs border border-blue-200 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg font-medium">
-            {filtered.length} project{filtered.length !== 1 ? 's' : ''}
-          </span>
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        .modern-scrollbar-sidebar::-webkit-scrollbar {
+          width: 10px !important;
+          height: 10px !important;
+        }
+        .modern-scrollbar-sidebar::-webkit-scrollbar-track {
+          background: rgba(243, 244, 246, 0.15) !important;
+          border-radius: 10px !important;
+          margin: 4px 0 !important;
+        }
+        .modern-scrollbar-sidebar::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(156, 163, 175, 0.25), rgba(107, 114, 128, 0.3)) !important;
+          border-radius: 10px !important;
+          border: 2px solid rgba(243, 244, 246, 0.15) !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }
+        .modern-scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.5)) !important;
+          border-color: rgba(243, 244, 246, 0.25) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+        }
+        .modern-scrollbar-sidebar {
+          scrollbar-width: thin !important;
+          scrollbar-color: rgba(107, 114, 128, 0.3) rgba(243, 244, 246, 0.15) !important;
+        }
+        .modern-scrollbar-sidebar:hover {
+          scrollbar-color: rgba(75, 85, 99, 0.4) rgba(243, 244, 246, 0.2) !important;
+        }
+      `}} />
+      <div className="h-full flex flex-col border border-gray-200 rounded-xl bg-white shadow-lg">
+        <div className="border-b border-gray-200 bg-gray-50 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-gray-900">{getFilterLabel(filter)}</h3>
+            <span className="text-xs border border-blue-200 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg font-medium">
+              {filtered.length} project{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex-1 p-4 overflow-y-auto bg-white">
+        
+        <div className="flex-1 p-4 overflow-y-auto bg-white modern-scrollbar-sidebar">
         {filtered.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-sm text-gray-600">No projects found.</div>
@@ -459,6 +490,7 @@ export default function ProjectsSidebar({
           slotIndex={editingSlotIndex || 0}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
