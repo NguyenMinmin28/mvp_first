@@ -267,16 +267,19 @@ export function BlogPostClient({ slug }: BlogPostClientProps) {
 
         {/* Cover Image */}
         {post.coverUrl && (
-          <div className="mb-8">
-            <ImageWithShimmer
-              src={post.coverUrl}
-              alt={post.title}
-              width={1200}
-              height={600}
-              className="w-full rounded-xl object-cover"
-              shimmerSize="hero"
-              priority
-            />
+          <div className="mb-8 w-full flex justify-center items-center">
+            <div className="w-full max-w-4xl mx-auto">
+              <ImageWithShimmer
+                src={post.coverUrl}
+                alt={post.title}
+                width={1200}
+                height={600}
+                className="w-full rounded-xl object-contain mx-auto block"
+                containerClassName="mx-auto"
+                shimmerSize="hero"
+                priority
+              />
+            </div>
           </div>
         )}
 
