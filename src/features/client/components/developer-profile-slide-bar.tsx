@@ -132,6 +132,7 @@ export function DeveloperProfileSlideBar({
   const [totalServicesCount, setTotalServicesCount] = useState(0);
   const [serviceImageIndices, setServiceImageIndices] = useState<Record<string, number>>({});
   const [isScrolling, setIsScrolling] = useState(false);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -273,6 +274,7 @@ export function DeveloperProfileSlideBar({
       // Reset when closing
       setReviews([]);
       setReviewsStats(null);
+      setShowStickyHeader(false); // Reset sticky header when closing
     }
   }, [isOpen, developerId, fetchDeveloperProfile, fetchReviews]);
 
@@ -541,13 +543,17 @@ export function DeveloperProfileSlideBar({
     }
   };
 
-  // Handle scroll detection for scrollbar visibility
+  // Handle scroll detection for scrollbar visibility and sticky header
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer || !isOpen) return;
 
     const handleScroll = () => {
       setIsScrolling(true);
+      
+      // Show sticky header when scrolled past 100px
+      const scrollTop = scrollContainer.scrollTop;
+      setShowStickyHeader(scrollTop > 100);
       
       // Clear existing timeout
       if (scrollTimeoutRef.current) {
@@ -685,6 +691,105 @@ export function DeveloperProfileSlideBar({
               <X className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Sticky Header - Shows when scrolling */}
+          {showStickyHeader && profile && (
+            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {/* Avatar */}
+                <Avatar className="w-10 h-10 flex-shrink-0">
+                  <AvatarImage 
+                    src={profile.photoUrl || profile.image || '/images/avata/default.jpeg'} 
+                    className="object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                    }}
+                  />
+                  <AvatarFallback className="bg-gradient-to-br from-gray-200 to-gray-300 w-full h-full flex items-center justify-center text-sm font-bold text-gray-600">
+                    {(profile.name || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* Name */}
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">
+                    {profile.name || 'Unknown Developer'}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isAuthenticated ? (
+                  <>
+                    {/* Show Follow button for all authenticated users (not own profile) */}
+                    {!isOwnProfile && (
+                      <FollowButton
+                        isFollowing={isFollowing}
+                        onClick={handleFollowToggle}
+                        disabled={isFollowLoading}
+                        className="h-8 px-3 text-xs !border-gray-300 !text-gray-900 hover:!bg-gray-50 hover:!border-gray-400"
+                        size="sm"
+                      >
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </FollowButton>
+                    )}
+                    
+                    {/* Show Get in Touch button for all authenticated users (not own profile) */}
+                    {!isOwnProfile && (
+                      <GetInTouchButton
+                        developerId={profile.id}
+                        developerName={profile.name || 'Unknown Developer'}
+                        className="h-8 px-3 text-xs"
+                        variant="default"
+                      />
+                    )}
+                  </>
+                ) : (
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => setShowAuthModal(true)}
+                  >
+                    Sign in
+                  </Button>
+                )}
+
+                {/* Navigation Arrows for Portfolio */}
+                {profile.portfolioLinks && profile.portfolioLinks.length > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const length = profile.portfolioLinks?.length || 0;
+                        setCurrentPortfolioIndex((prev) => 
+                          prev === 0 ? length - 1 : prev - 1
+                        );
+                      }}
+                      className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                      aria-label="Previous portfolio"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-gray-700" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const length = profile.portfolioLinks?.length || 0;
+                        setCurrentPortfolioIndex((prev) => 
+                          prev === length - 1 ? 0 : prev + 1
+                        );
+                      }}
+                      className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                      aria-label="Next portfolio"
+                    >
+                      <ChevronRight className="h-4 w-4 text-gray-700" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Content - Scrollable */}
           <div 

@@ -114,6 +114,7 @@ class BillingService {
 
   /**
    * Check if user can post a new project
+   * Free Plan (projectsPerMonth >= 999) allows unlimited projects
    */
   async canPostProject(clientId: string): Promise<QuotaCheckResult> {
     const subscription = await this.getActiveSubscription(clientId);
@@ -130,9 +131,12 @@ class BillingService {
     // Promotions removed: always use paid monthly project limit
     const projectLimit = subscription.package.projectsPerMonth;
 
-    const remaining = projectLimit - usage.projectsPostedCount;
+    // Free Plan (projectsPerMonth >= 999) allows unlimited projects
+    const isUnlimited = projectLimit >= 999;
 
-    const allowed = remaining > 0;
+    const remaining = isUnlimited ? 999 : projectLimit - usage.projectsPostedCount;
+
+    const allowed = isUnlimited || remaining > 0;
     
     logger.billing.quota(
       clientId, 
@@ -143,7 +147,8 @@ class BillingService {
         packageName: subscription.package.name,
         limit: projectLimit,
         used: usage.projectsPostedCount,
-        remaining
+        remaining: isUnlimited ? 999 : remaining,
+        isUnlimited
       }
     );
 
@@ -151,7 +156,7 @@ class BillingService {
       allowed,
       reason: allowed ? undefined : "Monthly project limit reached",
       remaining: {
-        projects: Math.max(0, remaining),
+        projects: isUnlimited ? 999 : Math.max(0, remaining),
         contactClicks: subscription.package.contactClicksPerProject
       }
     };

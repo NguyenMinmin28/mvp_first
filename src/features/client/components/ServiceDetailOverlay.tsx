@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { Heart, Info, Share, X, Link as LinkIcon } from "lucide-react";
+import { Heart, Info, Share, X, Link as LinkIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
 
 // Utilities: build responsive src/srcSet for Unsplash (reduces pixelation)
 function appendParams(url: string, params: Record<string, string | number>) {
@@ -93,6 +94,8 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
   const [timelineEnd, setTimelineEnd] = useState("");
   const [recentServices, setRecentServices] = useState<any[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -183,6 +186,30 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
       }
     }
   }, [service?.id]);
+
+  // Reset sticky header when overlay closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowStickyHeader(false);
+    }
+  }, [isOpen]);
+
+  // Handle scroll detection for sticky header
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer || !isOpen) return;
+
+    const handleScroll = () => {
+      const scrollTop = scrollContainer.scrollTop;
+      setShowStickyHeader(scrollTop > 100);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [isOpen]);
 
   const handleHeartClick = async () => {
     if (!service?.id || isLiking) return;
@@ -412,6 +439,76 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
             </div>
           </div>
 
+          {/* Sticky Header - Shows when scrolling */}
+          {showStickyHeader && service && (
+            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {/* Avatar */}
+                <Avatar className="w-10 h-10 flex-shrink-0">
+                  <AvatarImage 
+                    src={service.developer?.user?.image || '/images/avata/default.jpeg'} 
+                    className="object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                    }}
+                  />
+                  <AvatarFallback className="bg-gradient-to-br from-gray-200 to-gray-300 w-full h-full flex items-center justify-center text-sm font-bold text-gray-600">
+                    {(service.developer?.user?.name || 'S').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* Service Title */}
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">
+                    {service.title || 'Service'}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Follow button */}
+                <button
+                  onClick={onFollow}
+                  className="h-8 px-3 text-xs rounded-md border border-gray-300 text-gray-900 bg-white hover:bg-gray-50 hover:border-gray-400"
+                >
+                  Follow
+                </button>
+                
+                {/* Get in Touch button - only for clients */}
+                {session?.user?.role !== "DEVELOPER" && (
+                  <GetInTouchButton
+                    developerId={service.developer?.id || ""}
+                    developerName={service.developer?.user?.name || undefined}
+                    className="h-8 px-3 text-xs bg-black text-white hover:bg-black/90"
+                    variant="default"
+                    size="sm"
+                    projectId={projectId}
+                    responseStatus={service.responseStatus}
+                  />
+                )}
+
+                {/* Navigation Arrows */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={onPrev}
+                    className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                    aria-label="Previous"
+                  >
+                    <ChevronLeft className="h-4 w-4 text-gray-700" />
+                  </button>
+                  <button
+                    onClick={onNext}
+                    className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                    aria-label="Next"
+                  >
+                    <ChevronRight className="h-4 w-4 text-gray-700" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Loading bar/spinner overlay at top while details hydrate */}
           {isInitialLoading && (
             <div className="absolute top-0 left-0 right-0 h-1">
@@ -436,7 +533,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
           <div className="h-8 sm:h-12" />
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto pt-0 relative z-0">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-0 relative z-0">
             {/* Action pills: Details / Share */}
             <div className="px-4 sm:px-6 mb-6 flex items-center justify-center gap-4 relative z-20">
               <button onClick={() => setIsDetailsOpen(true)} className="inline-flex items-center gap-2 px-6 h-12 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-sm">

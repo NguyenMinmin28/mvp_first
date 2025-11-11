@@ -23,7 +23,8 @@ import {
   Trash2,
   Clock,
   Pause,
-  Play
+  Play,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/components/tooltip";
@@ -115,6 +116,11 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const newBatchRequestedAtRef = useRef<number | null>(null);
   const expectingFreshBatchRef = useRef<boolean>(false);
   const previousBatchDeveloperIdsRef = useRef<Set<string>>(new Set());
+  const [quotaStatus, setQuotaStatus] = useState<{
+    hasActiveSubscription: boolean;
+    packageName?: string;
+    remaining?: { connects: number };
+  } | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -128,23 +134,50 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     }
   };
 
+  const resolveBudgetDisplay = () => {
+    const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
+    const max = projectData?.budgetMax ?? project?.budgetMax;
+    const currency = projectData?.currency || project?.currency || "USD";
+    const hasMin = min !== undefined && min !== null;
+    const hasMax = max !== undefined && max !== null;
+
+    if (hasMin && hasMax) {
+      return {
+        text: `${formatAmount(Number(min), currency)} - ${formatAmount(Number(max), currency)}`,
+        hasValue: true,
+      };
+    }
+
+    if (hasMin) {
+      return {
+        text: `${formatAmount(Number(min), currency)}`,
+        hasValue: true,
+      };
+    }
+
+    if (hasMax) {
+      return {
+        text: `${formatAmount(Number(max), currency)}`,
+        hasValue: true,
+      };
+    }
+
+    return {
+      text: null,
+      hasValue: false,
+    };
+  };
+
   // Header sub-section: Project title and price under main header
   const ProjectHeaderBar = () => {
     const projectTitle = project?.title || project?.name || projectData?.title || projectData?.name || "Project";
-    const priceText = (() => {
-      const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
-      const max = projectData?.budgetMax ?? project?.budgetMax;
-      const currency = projectData?.currency || project?.currency || "USD";
-      if (min && max) return `${formatAmount(min, currency)} - ${formatAmount(max, currency)}`;
-      if (min) return `${formatAmount(min, currency)}`;
-      return undefined;
-    })();
+    const { text: priceText, hasValue } = resolveBudgetDisplay();
     return (
       <div className="w-full bg-white/90 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-900 truncate">{projectTitle}</h1>
-            {priceText && (
+            {hasValue && priceText && (
               <span className="text-sm lg:text-base px-3 py-1.5 rounded-xl border border-gray-300 text-gray-700 bg-white whitespace-nowrap">
                 {priceText}
               </span>
@@ -177,23 +210,22 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     setShowDeveloperReviewsModal(true);
   };
 
+  // Fetch quota status to check connects
   useEffect(() => {
-    // Reset polling counter when project changes
-    pollingAttemptsRef.current = 0;
-    isSearchingRef.current = false;
-    setIsSearching(false);
-    autoGenerateBatchAttemptedRef.current = false; // Reset auto-generate flag when project changes
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-      pollingTimeoutRef.current = null;
-    }
-    // Clear 30-second timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-    searchStartTimeRef.current = null;
-  }, [project.id]);
+    const fetchQuota = async () => {
+      try {
+        const res = await fetch("/api/billing/quotas", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setQuotaStatus(data);
+      } catch (error) {
+        console.error("Failed to fetch quota status:", error);
+      }
+    };
+    fetchQuota();
+  }, []);
 
   // Auto open edit modal when ?edit=1 is present (only once and only if not already open)
   useEffect(() => {
@@ -826,6 +858,20 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         newBatchRequestedAtRef.current = null;
         setLoadingContext("existing");
         
+        // Handle connect quota exceeded error
+        if (response.status === 402 && (errorData.code === "CONNECT_QUOTA_EXCEEDED" || errorData.message?.includes("connects"))) {
+          setError("You've used all your available connects. Upgrade your plan to continue finding freelancers for your projects.");
+          toast.error("No connects available", {
+            description: "Upgrade your plan to unlock unlimited connects and continue finding freelancers.",
+            action: {
+              label: "View Plans",
+              onClick: () => router.push("/pricing")
+            },
+            duration: 10000
+          });
+          return;
+        }
+        
         if (errorData.error?.includes("No eligible candidates")) {
           setError("All candidates have been assigned to this project");
         } else if (errorData.error?.includes("exhausted available developers")) {
@@ -1287,16 +1333,14 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
             <h1 className="text-3xl font-bold text-black">
               {projectData?.title || project?.title || project?.name || "Project name here..."}
             </h1>
-            <div className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-600">
-              {(() => {
-                const min = projectData?.budgetMin ?? project?.budgetMin ?? project?.budget;
-                const max = projectData?.budgetMax ?? project?.budgetMax;
-                const currency = projectData?.currency || project?.currency || "USD";
-                if (min && max) return `${formatAmount(min, currency)} - ${formatAmount(max, currency)}`;
-                if (min) return `${formatAmount(min, currency)}`;
-                return `${formatAmount(1000, currency)} - ${formatAmount(2000, currency)}`;
-              })()}
-            </div>
+            {(() => {
+              const { text, hasValue } = resolveBudgetDisplay();
+              return (
+                <div className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-600">
+                  {hasValue && text ? text : "Budget not specified"}
+                </div>
+              );
+            })()}
           </div>
         </div>
         
@@ -1330,6 +1374,34 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
               </div>
             </div>
           </div>
+
+          {/* Upgrade Message for Free Plan when connects exhausted */}
+          {quotaStatus?.packageName === "Free Plan" && quotaStatus.remaining?.connects === 0 && (
+            <div className="mb-6 px-4">
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-red-900 mb-1">
+                        No Connects Available
+                      </h3>
+                      <p className="text-sm text-red-800 mb-3">
+                        You've used all your available connects. You can still post unlimited projects, but you won't be able to find freelancers until you upgrade your plan.
+                      </p>
+                      <Button 
+                        onClick={() => router.push("/pricing")}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                        size="sm"
+                      >
+                        Upgrade Plan
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
        
 

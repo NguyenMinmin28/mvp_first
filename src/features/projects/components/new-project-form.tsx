@@ -36,7 +36,7 @@ export default function NewProjectForm() {
   const [skillSearch, setSkillSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isLoadingSkills, setIsLoadingSkills] = useState(true);
-  const [quotaStatus, setQuotaStatus] = useState<{ hasActiveSubscription: boolean; remaining?: { projects?: number } } | null>(null);
+  const [quotaStatus, setQuotaStatus] = useState<{ hasActiveSubscription: boolean; isUnlimitedProjects?: boolean; remaining?: { projects?: number } } | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Load available skills
@@ -65,15 +65,19 @@ export default function NewProjectForm() {
         const res = await fetch("/api/billing/quotas", { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
-        setQuotaStatus({ hasActiveSubscription: !!data.hasActiveSubscription, remaining: data.remaining });
+        setQuotaStatus({ 
+          hasActiveSubscription: !!data.hasActiveSubscription, 
+          isUnlimitedProjects: data.isUnlimitedProjects,
+          remaining: data.remaining 
+        });
       } catch {}
     };
     fetchQuota();
   }, []);
 
-  // Auto-open upgrade modal when no remaining project slots
+  // Auto-open upgrade modal when no remaining project slots (only for limited plans)
   useEffect(() => {
-    if (quotaStatus && quotaStatus.remaining?.projects === 0) {
+    if (quotaStatus && !quotaStatus.isUnlimitedProjects && quotaStatus.remaining?.projects === 0) {
       setShowUpgradeModal(true);
     }
   }, [quotaStatus]);
@@ -119,7 +123,8 @@ export default function NewProjectForm() {
       toast.error("Please fill in all required fields");
       return;
     }
-    if (quotaStatus && quotaStatus.remaining?.projects === 0) {
+    // Only check project limit for non-unlimited plans
+    if (quotaStatus && !quotaStatus.isUnlimitedProjects && quotaStatus.remaining?.projects === 0) {
       setShowUpgradeModal(true);
       toast.error("You've reached your project limit", {
         description: "Upgrade your plan to post more projects.",
@@ -450,7 +455,7 @@ export default function NewProjectForm() {
                 Posting Project...
               </>
             ) : (
-              (quotaStatus && quotaStatus.remaining?.projects === 0)
+              (quotaStatus && !quotaStatus.isUnlimitedProjects && quotaStatus.remaining?.projects === 0)
                 ? "Upgrade to Post"
                 : "Post Project"
             )}

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/features/auth/auth";
 import { RotationService } from "@/core/services/rotation.service";
 import { prisma } from "@/core/database/db";
+import { billingService } from "@/modules/billing/billing.service";
 import { z } from "zod";
 
 const generateBatchSchema = z.object({
@@ -27,6 +28,36 @@ export async function POST(
     const customSelection = generateBatchSchema.parse(body);
 
     console.log("🔄 Generating batch for project:", projectId, "with selection:", customSelection);
+
+    // Get client profile to check connect quota
+    const clientProfile = await prisma.clientProfile.findFirst({
+      where: {
+        projects: {
+          some: { id: projectId }
+        }
+      }
+    });
+
+    if (!clientProfile) {
+      return NextResponse.json(
+        { error: "Project not found or unauthorized" },
+        { status: 404 }
+      );
+    }
+
+    // Check connect quota - required to find freelancers
+    const connectCheck = await billingService.canUseConnect(clientProfile.id);
+    if (!connectCheck.allowed) {
+      return NextResponse.json(
+        { 
+          error: "No connects available",
+          message: "You've used all your available connects. Upgrade your plan to continue finding freelancers for your projects.",
+          code: "CONNECT_QUOTA_EXCEEDED",
+          remaining: connectCheck.remaining
+        },
+        { status: 402 } // Payment Required
+      );
+    }
 
     // Don't block generate - allow recycling old developers when new ones are exhausted
     // Just log a warning if pool seems exhausted

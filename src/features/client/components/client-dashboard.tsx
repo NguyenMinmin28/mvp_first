@@ -41,10 +41,13 @@ export default function ClientDashboard() {
   const [quotaStatus, setQuotaStatus] = useState<{
     hasActiveSubscription: boolean;
     isHighestTier?: boolean;
+    isUnlimitedProjects?: boolean;
     packageName?: string;
-    quotas?: { projectsPerMonth: number; contactClicksPerProject: number };
-    usage?: { projectsUsed: number; contactClicksUsed: Record<string, number> };
-    remaining?: { projects: number; contactClicks: Record<string, number> };
+    subscriptionStatus?: string;
+    quotas?: { projectsPerMonth: number; contactClicksPerProject: number; connectsPerMonth: number };
+    usage?: { projectsUsed: number; contactClicksUsed: Record<string, number>; connectsUsed: number };
+    remaining?: { projects: number; contactClicks: Record<string, number>; connects: number };
+    message?: string;
   } | null>(null);
   const [hasSavedFormData, setHasSavedFormData] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
@@ -121,54 +124,88 @@ export default function ClientDashboard() {
       {/* Role Mismatch Notice */}
       <RoleMismatchNotice userRole={userRole} targetPortal={targetPortal} />
 
-      {/* Quota Status - Hide for highest tier users */}
-      {quotaStatus && !quotaStatus.isHighestTier && (
+      {/* Quota Status - Only show when subscription is NOT active (or Free Plan) */}
+      {quotaStatus && (!quotaStatus.hasActiveSubscription || quotaStatus.packageName === "Free Plan") && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Project Quota Status
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {quotaStatus.packageName === "Free Plan" ? "Connects & Projects" : "Subscription Status"}
+              </div>
+              <Button 
+                onClick={() => router.push("/pricing")}
+                size="sm"
+                className="ml-auto"
+              >
+                Upgrade
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {quotaStatus.hasActiveSubscription ? (
+            {quotaStatus.hasActiveSubscription && quotaStatus.packageName === "Free Plan" ? (
               <div className="space-y-3">
+                {/* Show connects prominently for Free Plan */}
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <span className="text-sm font-medium text-blue-900">
+                    Connects remaining:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg text-blue-900">
+                      {quotaStatus.remaining?.connects || 0} / {quotaStatus.quotas?.connectsPerMonth || 0}
+                    </span>
+                    {quotaStatus.remaining?.connects === 0 && (
+                      <Badge variant="destructive">Upgrade needed</Badge>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Projects section - show "Unlimited" for Free Plan */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
                     Projects this month:
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {quotaStatus.usage?.projectsUsed || 0} /{" "}
-                      {quotaStatus.quotas?.projectsPerMonth || 0}
-                    </span>
-                    <Badge
-                      variant={
-                        quotaStatus.remaining?.projects === 0
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {quotaStatus.remaining?.projects || 0} remaining
-                    </Badge>
+                    {quotaStatus.isUnlimitedProjects ? (
+                      <span className="font-medium text-green-600">Unlimited</span>
+                    ) : (
+                      <>
+                        <span className="font-medium">
+                          {quotaStatus.usage?.projectsUsed || 0} /{" "}
+                          {quotaStatus.quotas?.projectsPerMonth || 0}
+                        </span>
+                        <Badge
+                          variant={
+                            quotaStatus.remaining?.projects === 0
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
+                          {quotaStatus.remaining?.projects || 0} remaining
+                        </Badge>
+                      </>
+                    )}
                   </div>
                 </div>
-                {quotaStatus.remaining?.projects === 0 && (
+                
+                {/* Warning for Free Plan when connects exhausted */}
+                {quotaStatus.remaining?.connects === 0 && (
                   <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-600" />
                     <span className="text-sm text-red-700">
-                      Monthly project limit reached. Upgrade your plan to create
-                      more projects.
+                      You've used all your connects. You can still post projects, but won't be able to find freelancers until you upgrade.
                     </span>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm text-yellow-700">
-                  No active subscription. Please subscribe to create projects.
-                </span>
+              <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="flex items-center gap-2 flex-1">
+                  <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                  <span className="text-sm text-yellow-700">
+                    {quotaStatus.message || "No active subscription. Please subscribe to create projects."}
+                  </span>
+                </div>
               </div>
             )}
           </CardContent>
@@ -367,3 +404,4 @@ export default function ClientDashboard() {
     </div>
   );
 }
+

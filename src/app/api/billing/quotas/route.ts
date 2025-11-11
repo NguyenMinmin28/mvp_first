@@ -31,20 +31,54 @@ export async function GET(request: NextRequest) {
     // Get quotas and usage
     const quotas = await billingService.getBillingQuotas(clientProfile.id);
     
-    if (!quotas) {
+    // Get subscription details (including inactive ones)
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        clientId: clientProfile.id
+      },
+      include: {
+        package: true
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+    
+    if (!quotas && !subscription) {
       return NextResponse.json({
         hasActiveSubscription: false,
-        message: "No active subscription found"
+        message: "No subscription found"
       });
     }
 
-    // Get subscription details to check if it's the highest tier
-    const subscription = await billingService.getActiveSubscription(clientProfile.id);
+    // Check if subscription is active
+    const isActive = subscription?.status === "active" && 
+                     subscription?.currentPeriodEnd && 
+                     new Date(subscription.currentPeriodEnd) >= new Date();
+    
     const isHighestTier = subscription?.package.name === "Premium" || (subscription?.package.projectsPerMonth ?? 0) >= 15;
+    
+    // Check if projects are unlimited (Free Plan has projectsPerMonth >= 999)
+    const isUnlimitedProjects = (subscription?.package.projectsPerMonth ?? 0) >= 999;
+
+    // If no active subscription, return status info
+    if (!isActive || !quotas) {
+      return NextResponse.json({
+        hasActiveSubscription: false,
+        subscriptionStatus: subscription?.status || null,
+        packageName: subscription?.package.name || null,
+        isUnlimitedProjects: false,
+        message: subscription?.status === "past_due" 
+          ? "Your payment is pending. Please update your payment method or upgrade manually."
+          : subscription?.status === "canceled"
+          ? "Your subscription has been canceled. Upgrade to continue using the platform."
+          : "No active subscription found"
+      });
+    }
 
     // Calculate remaining quotas
     const remaining = {
-      projects: Math.max(0, quotas.projectsPerMonth - quotas.projectsUsed),
+      projects: isUnlimitedProjects ? 999 : Math.max(0, quotas.projectsPerMonth - quotas.projectsUsed),
       contactClicks: Object.entries(quotas.contactClicksUsed).reduce((acc: any, [projectId, used]: any) => {
         acc[projectId] = Math.max(0, quotas.contactClicksPerProject - used);
         return acc;
@@ -55,7 +89,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       hasActiveSubscription: true,
       isHighestTier,
-      packageName: subscription?.package.name,
+      isUnlimitedProjects,
+      packageName: subscription.package.name,
+      subscriptionStatus: subscription.status,
       quotas: {
         projectsPerMonth: quotas.projectsPerMonth,
         contactClicksPerProject: quotas.contactClicksPerProject,
