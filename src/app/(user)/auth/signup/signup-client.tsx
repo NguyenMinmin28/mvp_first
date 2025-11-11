@@ -61,6 +61,7 @@ export default function SignUpClient() {
   const [showConfirmGooglePassword, setShowConfirmGooglePassword] = useState(false);
   const [isAddingPassword, setIsAddingPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [signupFieldErrors, setSignupFieldErrors] = useState<{ email?: string; password?: string; terms?: string }>({});
   const [emailNotifications, setEmailNotifications] = useState(true); // Default checked
   const [openTermsModal, setOpenTermsModal] = useState<string | null>(null); // 'terms' | 'user-agreement' | 'privacy-policy'
   const [isEmailLoading, setIsEmailLoading] = useState(false);
@@ -179,11 +180,10 @@ export default function SignUpClient() {
     register,
     handleSubmit,
     watch,
-    clearErrors,
     formState: { errors, isValid },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
-    mode: "onSubmit",
+    mode: "onChange",
   });
 
   const emailValue = watch("email");
@@ -195,8 +195,8 @@ export default function SignUpClient() {
 
   // Clear errors when user starts typing (only when email value changes)
   useEffect(() => {
-    if (emailValue && errors.email) {
-      clearErrors("email");
+    if (emailValue && signupFieldErrors.email) {
+      setSignupFieldErrors((e) => ({ ...e, email: undefined }));
     }
     
     // Only reset states if email actually changed
@@ -236,13 +236,13 @@ export default function SignUpClient() {
       setEmailAvailable(false);
       setEmailExistsError(false);
     }
-  }, [emailValue, errors.email, clearErrors]);
+  }, [emailValue, signupFieldErrors.email]);
 
   useEffect(() => {
-    if (passwordValue && errors.password) {
-      clearErrors("password");
+    if (passwordValue && signupFieldErrors.password) {
+      setSignupFieldErrors((e) => ({ ...e, password: undefined }));
     }
-  }, [passwordValue, errors.password, clearErrors]);
+  }, [passwordValue, signupFieldErrors.password]);
 
   // Debounced email check - only depends on emailValue to avoid re-checking when password changes
   useEffect(() => {
@@ -339,17 +339,33 @@ export default function SignUpClient() {
     setHasAttemptedSubmit(true);
     setServerError(null); // Reset error state
     setSuccessMessage(null); // Reset success message
+    setSignupFieldErrors({});
 
-    // Check if user agreed to terms
-    if (!agreeToTerms) {
-      setShowTermsValidation(true);
-      toast.error("Please agree to the Terms of Service to continue");
-      return;
+    // Strong client-side guards to force inline errors to appear on submit
+    const normalizedEmailForSubmit = String(formData.email || "").toLowerCase().trim();
+    let hasBlockingError = false;
+    const nextErrors: { email?: string; password?: string; terms?: string } = {};
+    if (!normalizedEmailForSubmit) {
+      nextErrors.email = "Please enter your email address";
+      hasBlockingError = true;
+    } else if (!EMAIL_REGEX.test(normalizedEmailForSubmit)) {
+      nextErrors.email = "Invalid email address";
+      hasBlockingError = true;
     }
-
-    // Validate email and password
-    if (!formData.email || !formData.password) {
-      toast.error("Please fill in all required fields");
+    if (!formData.password) {
+      nextErrors.password = "Please enter your password";
+      hasBlockingError = true;
+    } else if (String(formData.password).length < 8) {
+      nextErrors.password = "Password must be at least 8 characters";
+      hasBlockingError = true;
+    }
+    // Terms check AFTER field validations so all field errors can appear together
+    if (!agreeToTerms) {
+      nextErrors.terms = "Please agree to the Terms of Service to continue";
+      hasBlockingError = true;
+    }
+    if (hasBlockingError) {
+      setSignupFieldErrors(nextErrors);
       return;
     }
 
@@ -372,13 +388,19 @@ export default function SignUpClient() {
           const emailData = await checkEmailResponse.json();
           if (emailData.exists) {
             setEmailExistsError(true);
-            toast.error("This email is already registered. Please use a different email or try signing in.");
+            setSignupFieldErrors((e) => ({
+              ...e,
+              email: "This email is already registered. Please use a different email or try signing in.",
+            }));
             return; // Stop here - don't proceed to OTP
           }
         }
       } catch (emailCheckError) {
         console.error("Error checking email:", emailCheckError);
-        toast.error("Unable to verify email. Please try again.");
+        setSignupFieldErrors((e) => ({
+          ...e,
+          email: "Unable to verify email. Please try again.",
+        }));
         return; // Stop here if email check fails
       }
 
@@ -399,7 +421,7 @@ export default function SignUpClient() {
         if (response.ok) {
           // Go directly to OTP verification step
           setCurrentStep("verify-otp");
-          toast.success("Verification code sent to your email!");
+          // Minimal feedback without toast to avoid non-field alerts
         } else {
           // For testing flow, go to OTP page even if send fails
           setCurrentStep("verify-otp");
@@ -407,19 +429,31 @@ export default function SignUpClient() {
           // Try to parse error message safely
           try {
             const errorData = await response.json();
-            toast.error(errorData.message || "Failed to send verification code, but you can still proceed to test");
+            setSignupFieldErrors((e) => ({
+              ...e,
+              email: errorData.message || "Failed to send verification code, but you can still proceed to test",
+            }));
           } catch (parseError) {
-            toast.error("Failed to send verification code, but you can still proceed to test");
+            setSignupFieldErrors((e) => ({
+              ...e,
+              email: "Failed to send verification code, but you can still proceed to test",
+            }));
           }
         }
       } catch (fetchError) {
         // For testing flow, go to OTP page even if API call fails
         setCurrentStep("verify-otp");
-        toast.error("Network error, but you can still proceed to test the flow");
+        setSignupFieldErrors((e) => ({
+          ...e,
+          email: "Network error, but you can still proceed to test the flow",
+        }));
       }
     } catch (error) {
       console.error("Error in handleEmailSignUp:", error);
-      toast.error("An error occurred. Please try again.");
+      setSignupFieldErrors((e) => ({
+        ...e,
+        email: "An error occurred. Please try again.",
+      }));
     } finally {
       setIsEmailLoading(false);
     }
@@ -512,24 +546,24 @@ export default function SignUpClient() {
   const handleGooglePasswordSubmit = async () => {
     // Validate password
     if (!googlePassword) {
-      toast.error("Please enter a password");
+      setSignupFieldErrors((e) => ({ ...e, password: "Please enter a password" }));
       return;
     }
 
     if (googlePassword.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      setSignupFieldErrors((e) => ({ ...e, password: "Password must be at least 8 characters" }));
       return;
     }
 
     if (googlePassword !== confirmGooglePassword) {
-      toast.error("Passwords do not match");
+      setSignupFieldErrors((e) => ({ ...e, password: "Passwords do not match" }));
       return;
     }
 
     // Check if user agreed to terms
     if (!agreeToTerms) {
       setShowTermsValidation(true);
-      toast.error("Please agree to the Terms of Service to continue");
+      setSignupFieldErrors((e) => ({ ...e, terms: "Please agree to the Terms of Service to continue" }));
       return;
     }
 
@@ -961,6 +995,7 @@ export default function SignUpClient() {
                 <form
                   onSubmit={handleSubmit(handleEmailSignUp)}
                   className="space-y-4"
+                  noValidate
                 >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -1009,9 +1044,15 @@ export default function SignUpClient() {
                           handleSubmit(handleEmailSignUp)();
                         }
                       }}
-                      className={cn("h-12 transition-all hover:border-gray-400", (hasAttemptedSubmit && (errors.email || emailExistsError)) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20")}
+                      className={cn(
+                        "h-12 transition-all hover:border-gray-400",
+                        (errors.email || emailExistsError || signupFieldErrors.email)
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                          : "border-gray-300 focus:border-black focus:ring-black/20"
+                      )}
                     />
-                    {hasAttemptedSubmit && <FieldError error={errors.email?.message} />}
+                    <FieldError error={errors.email?.message} />
+                    <FieldError error={signupFieldErrors.email} />
                     {(
                       isCheckingEmail ||
                       (emailValue && EMAIL_REGEX.test(emailValue) && !emailCheckCompleted)
@@ -1079,7 +1120,7 @@ export default function SignUpClient() {
                         }}
                         className={cn(
                           "h-12 pr-12 transition-all hover:border-gray-400",
-                          (hasAttemptedSubmit && errors.password) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"
+                          (errors.password || signupFieldErrors.password) ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"
                         )}
                       />
                       <button
@@ -1096,9 +1137,15 @@ export default function SignUpClient() {
                         )}
                       </button>
                     </div>
-                    {hasAttemptedSubmit && <FieldError error={errors.password?.message} />}
-                    {(!hasAttemptedSubmit || !errors.password) && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <FieldError error={errors.password?.message} />
+                    <FieldError error={signupFieldErrors.password} />
+                    {(passwordValue || hasAttemptedSubmit) && !errors.password && !signupFieldErrors.password && (
+                      <p
+                        className={cn(
+                          "text-xs flex items-center gap-1",
+                          (errors.password || signupFieldErrors.password) ? "text-red-500" : "text-gray-500"
+                        )}
+                      >
                         <span>Password must be at least 8 characters long</span>
                       </p>
                     )}
@@ -1178,6 +1225,7 @@ export default function SignUpClient() {
                         .
                       </Label>
                     </div>
+                    <FieldError error={signupFieldErrors.terms} />
                     {hasAttemptedSubmit && showTermsValidation && !agreeToTerms && (
                       <p className="text-sm text-red-600 ml-7 -mt-2">
                         You must agree to the Terms of Service to continue
@@ -1305,9 +1353,11 @@ export default function SignUpClient() {
                     )}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Password must be at least 8 characters long
-                </p>
+                {googlePassword && (
+                  <p className="text-xs text-gray-500">
+                    Password must be at least 8 characters long
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

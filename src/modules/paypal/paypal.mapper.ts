@@ -212,6 +212,9 @@ export class PayPalMapper {
     });
 
     // Handle subscription renewal or reactivation
+    // NOTE: In PayPal test/sandbox mode, auto-renewals may not trigger webhooks.
+    // If renewals are not happening automatically, use the admin manual renewal feature
+    // at /api/admin/subscriptions/renew-overdue
     const isRenewal = dbSubscription.status === "active" && 
       new Date() >= new Date(dbSubscription.currentPeriodEnd);
     

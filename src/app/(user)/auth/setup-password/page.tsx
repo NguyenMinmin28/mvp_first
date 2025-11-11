@@ -179,9 +179,6 @@ export default function SetupPasswordPage() {
                 )}
               </button>
             </div>
-            <p className="text-xs text-gray-500">
-              Password must be at least 8 characters long
-            </p>
           </div>
 
           <div className="space-y-2">

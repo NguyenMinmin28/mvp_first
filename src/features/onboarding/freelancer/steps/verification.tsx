@@ -44,8 +44,10 @@ export default function VerificationStep() {
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Label>LinkedIn profile</Label>
-              <span className="text-red-500 text-sm">Required</span>
+              <Label className="flex items-center gap-1">
+                LinkedIn profile
+                <span className="text-red-500">*</span>
+              </Label>
             </div>
             <Input 
               value={linkedin} 

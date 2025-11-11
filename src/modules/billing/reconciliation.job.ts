@@ -28,6 +28,7 @@ export class ReconciliationJob {
 
     try {
       // Get all non-cancelled subscriptions from last 30 days
+      // Skip internal subscriptions (basic-*, internal-*) that don't have real PayPal subscription IDs
       const subscriptions = await prisma.subscription.findMany({
         where: {
           provider: "paypal",
@@ -36,6 +37,14 @@ export class ReconciliationJob {
           },
           updatedAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+          },
+          // Only reconcile subscriptions with real PayPal subscription IDs
+          // PayPal subscription IDs typically start with "I-" or "SUB_I-"
+          // Skip internal subscriptions that start with "basic-" or "internal-"
+          providerSubscriptionId: {
+            not: {
+              startsWith: "basic-"
+            }
           }
         },
         include: {
@@ -117,6 +126,12 @@ export class ReconciliationJob {
     correlationId?: string
   ): Promise<boolean> {
     const reqId = correlationId || logger.generateCorrelationId();
+    
+    // Skip internal subscriptions that don't have real PayPal subscription IDs
+    if (providerSubscriptionId.startsWith("basic-") || providerSubscriptionId.startsWith("internal-")) {
+      logger.debug(`Skipping reconciliation for internal subscription: ${providerSubscriptionId}`, { correlationId: reqId });
+      return false;
+    }
     
     try {
       // Get current state from PayPal

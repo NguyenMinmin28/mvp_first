@@ -17,6 +17,12 @@ const cronJobs = [
     path: '/api/cron/reconcile-subscriptions',
     interval: 5 * 60 * 1000, // 5 minutes
     description: 'Reconcile subscription states with PayPal'
+  },
+  {
+    name: 'renew-overdue-subscriptions',
+    path: '/api/cron/renew-overdue-subscriptions',
+    interval: 60 * 60 * 1000, // 1 hour (có thể giảm xuống để test)
+    description: 'Auto-renew overdue Plus Plan subscriptions'
   }
 ];
 
@@ -55,6 +61,12 @@ function runCronJob(job: typeof cronJobs[0]) {
           }
           if (result.data?.processed !== undefined) {
             console.log(`   Processed subscriptions: ${result.data.processed}`);
+          }
+          if (result.renewed !== undefined) {
+            console.log(`   Renewed subscriptions: ${result.renewed}`);
+            if (result.failed !== undefined && result.failed > 0) {
+              console.log(`   Failed: ${result.failed}`);
+            }
           }
         } else {
           console.log(`❌ ${job.name} failed: ${result.error}`);

@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/expire-candidates",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/renew-overdue-subscriptions",
+      "schedule": "0 0 * * *"
     }
   ],
   "functions": {

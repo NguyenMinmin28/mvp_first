@@ -1081,15 +1081,15 @@ export default function MyProjectsPage() {
                         <div className="w-full sm:w-auto sm:ml-auto">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 sm:h-8 lg:h-9 w-full sm:w-auto flex-shrink-0"
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 sm:h-8 lg:h-9 w-full sm:w-auto flex-shrink-0"
                                 type="button"
                                 onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
+                          >
+                            <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" sideOffset={6}>
                               <DropdownMenuItem

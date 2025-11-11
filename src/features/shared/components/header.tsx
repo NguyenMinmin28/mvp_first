@@ -374,7 +374,7 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
       >
         <div className="container flex h-16 items-center justify-between px-4">
           {/* Logo */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-8 md:gap-10">
             <button 
               onClick={(e) => {
                 if (isNavigationDisabled) {
@@ -399,7 +399,7 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
 
             {/* Portal Switch (hidden when authenticated) */}
             {!isAuthenticated && (
-              <div className="hidden md:flex items-center gap-2 text-sm">
+              <div className="hidden md:flex items-center gap-6 text-sm">
                 <Link
                   href="/services?tab=people"
                   onClick={(e) => {
@@ -742,7 +742,7 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
             )}
 
             {!isAuthenticated && (
-              <nav className="hidden md:flex items-center gap-8">
+              <nav className="hidden md:flex items-center gap-10">
                 <Link 
                   href="/ideas"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
@@ -828,7 +828,7 @@ export default function Header({ user, disableNavigation = false }: HeaderProps)
 
             {/* Public right actions */}
             {!isAuthenticated && (
-              <div className="hidden md:flex items-center gap-6">
+              <div className="hidden md:flex items-center gap-8">
                 <Link 
                   href="/help"
                   onClick={(e) => !handleNavigationClick(e) && e.preventDefault()}
