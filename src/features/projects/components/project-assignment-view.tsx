@@ -369,6 +369,9 @@ export default function ProjectAssignmentView({ projectId }: Props) {
   const { project, candidates, skills } = data;
   const groupedCandidates = groupCandidatesByLevel(candidates);
   const pendingCandidates = candidates.filter(c => c.responseStatus === "pending");
+  const hasCandidates = candidates.length > 0;
+  const showInitialLoadingOverlay =
+    !hasCandidates && (isLoading || isFetching);
 
   // Improved reveal gating with better UX feedback
   const canReveal = project.contactRevealEnabled && hasAccepted && !contactInfo;
@@ -384,7 +387,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
     <div className="max-w-7xl mx-auto space-y-6 relative">
       {/* Searching overlay to avoid flicker during polling */}
       <LoadingOverlay 
-        isVisible={isFetching && project.status === "assigning" && candidatesCount === 0}
+        isVisible={showInitialLoadingOverlay && project.status === "assigning"}
         title="Finding Developers"
         message="AI matchmaking in progress — bringing you the smartest connections."
       />
@@ -443,7 +446,7 @@ export default function ProjectAssignmentView({ projectId }: Props) {
                 <Users className="h-5 w-5 text-blue-600" />
                 <div>
                   <h3 className="font-semibold text-blue-900">
-                    {isFetching && candidatesCount === 0 ? 'Searching for developers…' : 'Assignment in Progress'}
+                    {hasCandidates ? 'Assignment in Progress' : 'Searching for developers…'}
                   </h3>
                   <p className="text-sm text-blue-700" aria-live="polite">
                     {pendingCandidates.length} developers are reviewing your project

@@ -132,6 +132,10 @@ export default function ProjectActivity() {
     console.log('Share project:', projectId);
     setOpenDropdown(null);
   };
+  const handleEditProject = (projectId: string) => {
+    router.push(`/projects/${projectId}?edit=1`);
+    setOpenDropdown(null);
+  };
 
   // Component is now available for all users, but shows only 4 projects
 
@@ -262,6 +266,13 @@ export default function ProjectActivity() {
                               View Project
                             </button>
                             <button
+                              onClick={() => handleEditProject(project.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Edit
+                            </button>
+                            <button
                               onClick={() => handleShareProject(project.id)}
                               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
@@ -300,6 +311,13 @@ export default function ProjectActivity() {
                               >
                                 <Eye className="w-4 h-4" />
                                 View Project
+                              </button>
+                              <button
+                                onClick={() => handleEditProject(project.id)}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <FileText className="w-4 h-4" />
+                                Edit
                               </button>
                               <button
                                 onClick={() => handleShareProject(project.id)}

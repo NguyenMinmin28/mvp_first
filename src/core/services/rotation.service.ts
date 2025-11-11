@@ -599,6 +599,76 @@ export class RotationService {
 
       console.log(`🚀 Fast batch: Found ${allCandidates.length} candidates, creating them immediately...`);
 
+      // If we don't have enough new candidates, recycle old developers
+      const totalNeeded = fastSelection.expertCount + fastSelection.midCount + fastSelection.fresherCount;
+      if (allCandidates.length < totalNeeded) {
+        const stillNeeded = totalNeeded - allCandidates.length;
+        console.log(`🔄 Only found ${allCandidates.length} new candidates, need ${stillNeeded} more. Recycling old developers...`);
+        
+        // Get ALL developers from current batch to exclude them from recycling
+        const currentBatchDevelopers = await prisma.assignmentCandidate.findMany({
+          where: { batchId },
+          select: { developerId: true },
+          distinct: ['developerId']
+        });
+        const currentBatchDeveloperIds = currentBatchDevelopers.map(c => c.developerId);
+        
+        // Exclude: developers from current batch, currently pending/accepted, and developers already in allCandidates
+        const excludeForRecycle = [
+          ...excludeDeveloperIds,
+          ...currentBatchDeveloperIds, // Exclude all from current batch
+          ...allCandidates.map(c => c.developerId)
+        ];
+        
+        // Get all previous batches (except current) to find recyclable developers
+        const previousBatches = await prisma.assignmentBatch.findMany({
+          where: {
+            projectId,
+            id: { not: batchId }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5, // Check last 5 batches
+          include: {
+            candidates: {
+              where: {
+                developerId: { notIn: excludeForRecycle },
+                responseStatus: { in: ['invalidated', 'rejected', 'expired'] }
+              },
+              select: {
+                developerId: true,
+                level: true,
+                usualResponseTimeMsSnapshot: true
+              },
+              distinct: ['developerId'] // One per developer
+            }
+          }
+        });
+        
+        // Collect recyclable developers from old batches
+        const recyclableDevelopers: DeveloperCandidate[] = [];
+        for (const oldBatch of previousBatches) {
+          for (const oldCandidate of oldBatch.candidates) {
+            if (recyclableDevelopers.length >= stillNeeded) break;
+            if (!excludeForRecycle.includes(oldCandidate.developerId)) {
+              recyclableDevelopers.push({
+                developerId: oldCandidate.developerId,
+                level: oldCandidate.level as DevLevel,
+                skillIds: [], // Will be populated from developer skills
+                usualResponseTimeMs: oldCandidate.usualResponseTimeMsSnapshot || 0
+              });
+              excludeForRecycle.push(oldCandidate.developerId);
+            }
+          }
+          if (recyclableDevelopers.length >= stillNeeded) break;
+        }
+        
+        // Add recyclable developers to candidates
+        if (recyclableDevelopers.length > 0) {
+          console.log(`♻️ Recycling ${recyclableDevelopers.length} old developers from previous batches`);
+          allCandidates.push(...recyclableDevelopers.slice(0, stillNeeded));
+        }
+      }
+
       // Create all candidates in parallel batches for better performance
       const batchSize = 10;
       for (let i = 0; i < allCandidates.length; i += batchSize) {
@@ -884,6 +954,101 @@ export class RotationService {
             }
           } catch (error) {
             console.error(`Error finding/creating candidate for ${skillId}-${level}:`, error);
+          }
+        }
+      }
+    }
+    
+    // If we don't have enough candidates, recycle old developers
+    const totalNeeded = selection.expertCount + selection.midCount + selection.fresherCount;
+    const createdCount = createdDeveloperIds.size;
+    if (createdCount < totalNeeded) {
+      const stillNeeded = totalNeeded - createdCount;
+      console.log(`🔄 Only created ${createdCount} new candidates, need ${stillNeeded} more. Recycling old developers...`);
+      
+      // Get ALL developers from current batch to exclude them from recycling
+      const currentBatchDevelopers = await prisma.assignmentCandidate.findMany({
+        where: { batchId },
+        select: { developerId: true },
+        distinct: ['developerId']
+      });
+      const currentBatchDeveloperIds = currentBatchDevelopers.map(c => c.developerId);
+      
+      // Exclude: developers from current batch, currently pending/accepted, and developers already created
+      const excludeForRecycle = [
+        ...excludeDeveloperIds,
+        ...currentBatchDeveloperIds, // Exclude all from current batch
+        ...Array.from(createdDeveloperIds)
+      ];
+      
+      // Get all previous batches (except current) to find recyclable developers
+      const previousBatches = await prisma.assignmentBatch.findMany({
+        where: {
+          projectId,
+          id: { not: batchId }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5, // Check last 5 batches
+        include: {
+          candidates: {
+            where: {
+              developerId: { notIn: excludeForRecycle },
+              responseStatus: { in: ['invalidated', 'rejected', 'expired'] }
+            },
+            select: {
+              developerId: true,
+              level: true,
+              usualResponseTimeMsSnapshot: true
+            },
+            distinct: ['developerId'] // One per developer
+          }
+        }
+      });
+      
+      // Collect recyclable developers from old batches
+      const recyclableDevelopers: Array<{developerId: string, level: DevLevel, usualResponseTimeMs: number}> = [];
+      for (const oldBatch of previousBatches) {
+        for (const oldCandidate of oldBatch.candidates) {
+          if (recyclableDevelopers.length >= stillNeeded) break;
+          if (!excludeForRecycle.includes(oldCandidate.developerId)) {
+            recyclableDevelopers.push({
+              developerId: oldCandidate.developerId,
+              level: oldCandidate.level as DevLevel,
+              usualResponseTimeMs: oldCandidate.usualResponseTimeMsSnapshot || 0
+            });
+            excludeForRecycle.push(oldCandidate.developerId);
+          }
+        }
+        if (recyclableDevelopers.length >= stillNeeded) break;
+      }
+      
+      // Create recyclable developers
+      if (recyclableDevelopers.length > 0) {
+        console.log(`♻️ Recycling ${recyclableDevelopers.length} old developers from previous batches`);
+        for (const recyclableDev of recyclableDevelopers.slice(0, stillNeeded)) {
+          try {
+            await prisma.assignmentCandidate.create({
+              data: {
+                batchId,
+                projectId,
+                developerId: recyclableDev.developerId,
+                level: recyclableDev.level,
+                assignedAt,
+                acceptanceDeadline,
+                responseStatus: "pending",
+                usualResponseTimeMsSnapshot: recyclableDev.usualResponseTimeMs,
+                statusTextForClient: "developer is checking",
+                isFirstAccepted: false,
+                source: "AUTO_ROTATION",
+              },
+            });
+            
+            createdDeveloperIds.add(recyclableDev.developerId);
+            
+            // Small delay to allow frontend to poll and display
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch (error) {
+            console.error(`Error recycling developer ${recyclableDev.developerId}:`, error);
           }
         }
       }
@@ -1628,7 +1793,14 @@ export class RotationService {
               if (projectDetails) {
                 const selection = { ...this.DEFAULT_SELECTION, ...customSelection };
                 const totalNeed = selection.expertCount + selection.midCount + selection.fresherCount;
-                const excludeDeveloperIds = acceptedCandidates.map(c => c.developerId);
+                
+                // Exclude ALL developers from current batch (including invalidated ones)
+                // This ensures we don't recycle developers that were just invalidated
+                const allCurrentBatchDeveloperIds = project.currentBatch?.candidates?.map((c: any) => c.developerId) || [];
+                const excludeDeveloperIds = [
+                  ...acceptedCandidates.map(c => c.developerId),
+                  ...allCurrentBatchDeveloperIds // Exclude all from current batch
+                ];
                 const existingBatchesCount = await tx.assignmentBatch.count({ where: { projectId } });
 
                 // Primary selection (WhatsApp required)
@@ -1683,6 +1855,70 @@ export class RotationService {
                 // Store candidates to be created incrementally after transaction commit
                 // Don't create in transaction - will create one by one after commit
                 replacementCandidates.push(...newCandidates.slice(0, neededNewCandidates));
+                
+                // If we don't have enough new candidates, recycle old developers
+                if (replacementCandidates.length < neededNewCandidates) {
+                  const stillNeeded = neededNewCandidates - replacementCandidates.length;
+                  console.log(`🔄 Only found ${replacementCandidates.length} new candidates, need ${stillNeeded} more. Recycling old developers...`);
+                  
+                  // Exclude ALL developers from current batch + already selected candidates
+                  const excludeForRecycle = [
+                    ...excludeDeveloperIds, // Already includes all current batch developers
+                    ...replacementCandidates.map(c => c.developerId)
+                  ];
+                  
+                  // Get all previous batches (except current) to find recyclable developers
+                  const previousBatches = await tx.assignmentBatch.findMany({
+                    where: {
+                      projectId,
+                      id: { not: project.currentBatchId }
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 5, // Check last 5 batches
+                    include: {
+                      candidates: {
+                        where: {
+                          developerId: { notIn: excludeForRecycle },
+                          responseStatus: { in: ['invalidated', 'rejected', 'expired'] }
+                        },
+                        select: {
+                          developerId: true,
+                          level: true,
+                          usualResponseTimeMsSnapshot: true
+                        },
+                        distinct: ['developerId'] // One per developer
+                      }
+                    }
+                  });
+                  
+                  // Collect recyclable developers from old batches
+                  const recyclableDevelopers: Array<{developerId: string, level: DevLevel, usualResponseTimeMs: number}> = [];
+                  for (const oldBatch of previousBatches) {
+                    for (const oldCandidate of oldBatch.candidates) {
+                      if (recyclableDevelopers.length >= stillNeeded) break;
+                      if (!excludeForRecycle.includes(oldCandidate.developerId)) {
+                        recyclableDevelopers.push({
+                          developerId: oldCandidate.developerId,
+                          level: oldCandidate.level as DevLevel,
+                          usualResponseTimeMs: oldCandidate.usualResponseTimeMsSnapshot || 0
+                        });
+                        excludeForRecycle.push(oldCandidate.developerId);
+                      }
+                    }
+                    if (recyclableDevelopers.length >= stillNeeded) break;
+                  }
+                  
+                  // Add recyclable developers to replacement candidates
+                  if (recyclableDevelopers.length > 0) {
+                    console.log(`♻️ Recycling ${recyclableDevelopers.length} old developers from previous batches`);
+                    replacementCandidates.push(...recyclableDevelopers.slice(0, stillNeeded).map(dev => ({
+                      developerId: dev.developerId,
+                      level: dev.level,
+                      skillIds: [], // Will be populated from developer skills
+                      usualResponseTimeMs: dev.usualResponseTimeMs
+                    })));
+                  }
+                }
               }
             }
 

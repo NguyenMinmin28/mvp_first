@@ -19,7 +19,7 @@ import { GetInTouchModal } from "@/features/client/components/GetInTouchModal";
 import { DeveloperProfileSlideBar } from "./developer-profile-slide-bar";
 import { useInfiniteScroll, useScrollInfiniteLoad } from "@/core/hooks/useInfiniteScroll";
 import PortfolioGrid from "@/features/developer/components/dashboard/portfolio-grid";
-import { FilterDrawer, FilterState } from "@/features/client/components/FilterDrawer";
+import { FilterState } from "@/features/client/components/FilterDrawer";
 import { formatPriceRange, getCurrencySymbol } from "@/core/utils/currency";
 import { AuthRequiredModal } from "@/features/shared/components/auth-required-modal";
 
@@ -208,7 +208,7 @@ export function PeopleGrid({
   const [likedDeveloperIds, setLikedDeveloperIds] = useState<Set<string>>(new Set());
   const [pendingFollowIds, setPendingFollowIds] = useState<Set<string>>(new Set());
   const [followedUserIds, setFollowedUserIds] = useState<Set<string>>(new Set());
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isInlineFilterOpen, setIsInlineFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<FilterState | null>(null);
   const [selectedDeveloper, setSelectedDeveloper] = useState<{id: string, name?: string} | null>(null);
 
@@ -1037,10 +1037,12 @@ export function PeopleGrid({
             type="button"
             aria-label="Filter"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              setIsFilterDrawerOpen(true);
+              console.log('Filter button clicked, toggling inline filters');
+              setIsInlineFilterOpen((v) => !v);
             }}
-            className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-lg transition-shadow"
+            className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-lg transition-shadow cursor-pointer"
           >
             <SlidersHorizontal className="w-6 h-6 text-black" />
             <span className="text-lg font-bold text-black">Filter</span>
@@ -1094,7 +1096,8 @@ export function PeopleGrid({
           </div>
         </div>
 
-        {/* Level filter tabs - responsive layout */}
+        {/* Level filter tabs - responsive layout (only show when toggled) */}
+        {isInlineFilterOpen && (
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {[
             { key: "all", label: "All" },
@@ -1124,6 +1127,7 @@ export function PeopleGrid({
             );
           })}
         </div>
+        )}
       </div>
       )}
 
@@ -1653,13 +1657,7 @@ export function PeopleGrid({
         />
       )}
 
-      {/* Filter Drawer */}
-      <FilterDrawer
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        onApplyFilters={handleApplyFilters}
-        initialFilters={appliedFilters || undefined}
-      />
+      {/* Inline filters replace Filter Drawer */}
 
       {/* Auth Required Modal */}
       <AuthRequiredModal

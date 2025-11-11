@@ -29,13 +29,11 @@ export async function POST(
 
     console.log("🔄 Refreshing batch for project:", projectId, "with selection:", customSelection);
 
-    // Check if project can generate new batch (hasn't exhausted developer pool)
+    // Don't block refresh - allow recycling old developers when new ones are exhausted
+    // Just log a warning if pool seems exhausted
     const canGenerate = await RotationService.canGenerateNewBatch(projectId);
     if (!canGenerate) {
-      return NextResponse.json(
-        { error: "Cannot refresh batch: project has exhausted available developers. Please try manual assignment or contact support." },
-        { status: 400 }
-      );
+      console.log("⚠️ Project may have exhausted new developers, will recycle old ones if needed");
     }
 
     // Check if project locked by status or accepted candidates

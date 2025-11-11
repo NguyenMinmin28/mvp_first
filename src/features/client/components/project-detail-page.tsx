@@ -27,6 +27,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/components/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/ui/components/dialog";
+import { Input } from "@/ui/components/input";
+import { Textarea } from "@/ui/components/textarea";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 interface Freelancer {
   id: string;
@@ -76,6 +80,18 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [sortBy, setSortBy] = useState<"relevance" | "price-asc" | "price-desc" | "response-asc" | "response-desc">("relevance");
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [projectData, setProjectData] = useState<any>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    budgetMin: "" as any,
+    budgetMax: "" as any,
+    currency: "USD",
+    paymentMethod: "" as any,
+    expectedStartAt: "" as any,
+    expectedEndAt: "" as any,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -86,6 +102,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [showDeveloperReviewsModal, setShowDeveloperReviewsModal] = useState(false);
   const [selectedDeveloperForReviews, setSelectedDeveloperForReviews] = useState<{id: string, name: string} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [loadingContext, setLoadingContext] = useState<"existing" | "new">("existing");
   const freelancersRef = useRef<Freelancer[]>([]);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const isSearchingRef = useRef(false);
@@ -95,6 +112,12 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const autoGenerateBatchAttemptedRef = useRef<boolean>(false); // Track if we've tried to auto-generate batch
   const searchStartTimeRef = useRef<number | null>(null); // Track when search started for 30-second timeout
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 30-second timeout
+  const newBatchRequestedAtRef = useRef<number | null>(null);
+  const expectingFreshBatchRef = useRef<boolean>(false);
+  const previousBatchDeveloperIdsRef = useRef<Set<string>>(new Set());
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const formatAmount = (amount: number, currency: string) => {
     try {
@@ -126,6 +149,22 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 {priceText}
               </span>
             )}
+            <Button variant="outline" onClick={() => {
+              const source = projectData || project || {};
+              setEditForm({
+                title: String(source.title || ""),
+                description: String(source.description || ""),
+                budgetMin: source.budgetMin ?? "",
+                budgetMax: source.budgetMax ?? "",
+                currency: String(source.currency || "USD"),
+                paymentMethod: String(source.paymentMethod || ""),
+                expectedStartAt: source.expectedStartAt ? String(source.expectedStartAt).slice(0, 10) : "",
+                expectedEndAt: source.expectedEndAt ? String(source.expectedEndAt).slice(0, 10) : "",
+              });
+              setShowEdit(true);
+            }}>
+              Edit Project
+            </Button>
           </div>
         </div>
       </div>
@@ -156,6 +195,26 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     searchStartTimeRef.current = null;
   }, [project.id]);
 
+  // Auto open edit modal when ?edit=1 is present (only once and only if not already open)
+  useEffect(() => {
+    const wantEdit = searchParams?.get("edit");
+    if (wantEdit === "1" && !showEdit) {
+      const source = projectData || project || {};
+      setEditForm({
+        title: String(source.title || ""),
+        description: String(source.description || ""),
+        budgetMin: source.budgetMin ?? "",
+        budgetMax: source.budgetMax ?? "",
+        currency: String(source.currency || "USD"),
+        paymentMethod: String(source.paymentMethod || ""),
+        expectedStartAt: source.expectedStartAt ? String(source.expectedStartAt).slice(0, 10) : "",
+        expectedEndAt: source.expectedEndAt ? String(source.expectedEndAt).slice(0, 10) : "",
+      });
+      setShowEdit(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, showEdit]);
+
   // Move ticking clock to requestAnimationFrame to avoid setState storms
   useEffect(() => {
     let rafId: number | null = null;
@@ -183,6 +242,11 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       responseStatus: f.responseStatus,
       developerName: f.developer.user.name
     })));
+    if (freelancers.length > 0) {
+      previousBatchDeveloperIdsRef.current = new Set(
+        freelancers.map((f: Freelancer) => f.developer.id)
+      );
+    }
   }, [freelancers]);
 
 
@@ -208,6 +272,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       if (response.ok) {
         const data = await response.json();
         const candidates = data.candidates || [];
+        setProjectData(data.project);
         // Only lock if project status is in_progress or completed, not just accepted
         if (data.project?.locked || ["in_progress", "completed"].includes(String(data.project?.status || ""))) {
           setIsLocked(true);
@@ -233,13 +298,14 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           // ignore abort or network errors
         }
 
-        const candidatesWithFavorites = candidates.map((candidate: Freelancer) => ({
+        const rawCandidatesWithFavorites = candidates.map((candidate: Freelancer): Freelancer => ({
           ...candidate,
           isFavorited: !!favMap[candidate.developer.id],
         }));
+        let candidatesWithFavorites = rawCandidatesWithFavorites;
         
         // Debug log to check candidate data structure
-        console.log('Candidates from API:', candidatesWithFavorites.map((c: Freelancer) => ({
+        console.log('Candidates from API:', rawCandidatesWithFavorites.map((c: Freelancer) => ({
           id: c.id,
           developerId: c.developerId,
           developerIdFromNested: c.developer.id,
@@ -247,6 +313,59 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           developerName: c.developer.user.name
         })));
         
+        const requestTimestamp = newBatchRequestedAtRef.current;
+
+        // Early check for fresh batch - if expecting fresh batch but no fresh candidates yet, continue polling
+        if (requestTimestamp && expectingFreshBatchRef.current) {
+          const timeBufferMs = 2000;
+          const previousIds = previousBatchDeveloperIdsRef.current;
+
+          const isFreshAssignment = (candidate: Freelancer) => {
+            if (!candidate.assignedAt) return true;
+            const assignedMs = Date.parse(candidate.assignedAt);
+            if (Number.isNaN(assignedMs)) return true;
+            return assignedMs >= requestTimestamp - timeBufferMs;
+          };
+
+          const isNewDeveloper = (candidate: Freelancer) => !previousIds.has(candidate.developer.id);
+
+          const freshCandidates = rawCandidatesWithFavorites.filter(
+            (candidate: Freelancer) => isFreshAssignment(candidate) || isNewDeveloper(candidate)
+          );
+          const hasFreshCandidates = freshCandidates.length > 0;
+          const hasNewDevelopers = rawCandidatesWithFavorites.some((candidate: Freelancer) =>
+            isNewDeveloper(candidate)
+          );
+
+          if (
+            rawCandidatesWithFavorites.length > 0 &&
+            !hasFreshCandidates &&
+            !hasNewDevelopers
+          ) {
+            if (pollingAttemptsRef.current >= 30) {
+              console.log('⚠️ Reached max polling attempts while waiting for new batch assignments. Showing latest available candidates.');
+              expectingFreshBatchRef.current = false;
+              newBatchRequestedAtRef.current = null;
+              setLoadingContext("existing");
+            } else {
+              console.log('⏳ Still waiting for new batch assignments. Keeping loader visible and continuing to poll...');
+              isSearchingRef.current = true;
+              setIsSearching(true);
+              if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+              const pollInterval = pollingAttemptsRef.current < 20 ? 600 : 1000;
+              pollingTimeoutRef.current = setTimeout(() => {
+                pollingAttemptsRef.current += 1;
+                fetchFreelancers();
+              }, pollInterval);
+              return;
+            }
+          }
+
+          if (hasFreshCandidates) {
+            candidatesWithFavorites = freshCandidates;
+          }
+        }
+
         // Check accepted candidates trước khi update state
         const acceptedCandidates = candidatesWithFavorites.filter((c: Freelancer) => c.responseStatus === "accepted");
         const hadAccepted = freelancersRef.current.some((c: Freelancer) => c.responseStatus === "accepted");
@@ -266,34 +385,109 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           })));
         }
         
-        // INCREMENTAL UPDATE: Detect và append chỉ các developer mới
-        const currentDeveloperIds = new Set(freelancersRef.current.map((f: Freelancer) => f.developer.id));
-        const newCandidates = candidatesWithFavorites.filter((c: Freelancer) => 
-          !currentDeveloperIds.has(c.developer.id)
-        );
+        // Determine if we should REPLACE (new batch) or MERGE (incremental update)
+        const isNewBatchRequest = expectingFreshBatchRef.current && requestTimestamp !== null;
         
-        // Update existing candidates với data mới nhất (để sync status changes)
-        const updatedExisting = freelancersRef.current.map((existing: Freelancer) => {
-          const updated = candidatesWithFavorites.find((c: Freelancer) => c.developer.id === existing.developer.id);
-          return updated || existing;
-        });
-        
-        // Merge: existing (updated) + new candidates
-        const mergedCandidates = [...updatedExisting, ...newCandidates];
-        
-        // Log new developers found
-        if (newCandidates.length > 0) {
-          console.log(`✨ Found ${newCandidates.length} new developer(s):`, 
-            newCandidates.map((c: Freelancer) => c.developer.user.name));
+        // Check if we have fresh candidates (new developers or fresh assignments)
+        let hasFreshCandidates = false;
+        if (requestTimestamp) {
+          const timeBufferMs = 2000;
+          const previousIds = previousBatchDeveloperIdsRef.current;
+          const isFreshAssignment = (candidate: Freelancer) => {
+            if (!candidate.assignedAt) return true;
+            const assignedMs = Date.parse(candidate.assignedAt);
+            if (Number.isNaN(assignedMs)) return true;
+            return assignedMs >= requestTimestamp - timeBufferMs;
+          };
+          const isNewDeveloper = (candidate: Freelancer) => !previousIds.has(candidate.developer.id);
+          hasFreshCandidates = candidatesWithFavorites.some(
+            (candidate: Freelancer) => isFreshAssignment(candidate) || isNewDeveloper(candidate)
+          );
         }
         
-        // Update state với merged list
-        setFreelancers(mergedCandidates);
-        setProjectData(data.project);
+        let finalCandidates: Freelancer[];
+        
+        if (isNewBatchRequest && hasFreshCandidates) {
+          // NEW BATCH: Replace completely - only show fresh/new developers
+          console.log('🔄 New batch requested - REPLACING all developers with fresh candidates only');
+          
+          // Filter to only fresh candidates
+          const timeBufferMs = 2000;
+          const previousIds = previousBatchDeveloperIdsRef.current;
+          const isFreshAssignment = (candidate: Freelancer) => {
+            if (!candidate.assignedAt) return true;
+            const assignedMs = Date.parse(candidate.assignedAt);
+            if (Number.isNaN(assignedMs)) return true;
+            return assignedMs >= requestTimestamp! - timeBufferMs;
+          };
+          const isNewDeveloper = (candidate: Freelancer) => !previousIds.has(candidate.developer.id);
+          
+          finalCandidates = candidatesWithFavorites.filter(
+            (candidate: Freelancer) => isFreshAssignment(candidate) || isNewDeveloper(candidate)
+          );
+          
+          // Reset flags after processing new batch
+          expectingFreshBatchRef.current = false;
+          newBatchRequestedAtRef.current = null;
+          setLoadingContext("existing");
+          
+          // Update tracking refs with new batch developer IDs
+          previousBatchDeveloperIdsRef.current = new Set(
+            finalCandidates.map((candidate: Freelancer) => candidate.developer.id)
+          );
+        } else if (isNewBatchRequest && !hasFreshCandidates) {
+          // Still waiting for fresh batch - don't update yet, continue polling
+          console.log('⏳ New batch requested but no fresh candidates yet - continuing to poll...');
+          if (pollingAttemptsRef.current < 30) {
+            isSearchingRef.current = true;
+            setIsSearching(true);
+            if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+            const pollInterval = pollingAttemptsRef.current < 20 ? 600 : 1000;
+            pollingTimeoutRef.current = setTimeout(() => {
+              pollingAttemptsRef.current += 1;
+              fetchFreelancers();
+            }, pollInterval);
+            return; // Exit early, don't update state
+          } else {
+            // Max polling reached - show what we have
+            console.log('⚠️ Max polling reached, showing available candidates');
+            finalCandidates = candidatesWithFavorites;
+            expectingFreshBatchRef.current = false;
+            newBatchRequestedAtRef.current = null;
+            setLoadingContext("existing");
+            previousBatchDeveloperIdsRef.current = new Set(
+              candidatesWithFavorites.map((candidate: Freelancer) => candidate.developer.id)
+            );
+          }
+        } else {
+          // INCREMENTAL UPDATE: Detect và append chỉ các developer mới
+          const currentDeveloperIds = new Set(freelancersRef.current.map((f: Freelancer) => f.developer.id));
+          const newCandidates = candidatesWithFavorites.filter((c: Freelancer) => 
+            !currentDeveloperIds.has(c.developer.id)
+          );
+          
+          // Update existing candidates với data mới nhất (để sync status changes)
+          const updatedExisting = freelancersRef.current.map((existing: Freelancer) => {
+            const updated = candidatesWithFavorites.find((c: Freelancer) => c.developer.id === existing.developer.id);
+            return updated || existing;
+          });
+          
+          // Merge: existing (updated) + new candidates
+          finalCandidates = [...updatedExisting, ...newCandidates];
+          
+          // Log new developers found
+          if (newCandidates.length > 0) {
+            console.log(`✨ Found ${newCandidates.length} new developer(s):`, 
+              newCandidates.map((c: Freelancer) => c.developer.user.name));
+          }
+        }
+        
+        // Update state với final list
+        setFreelancers(finalCandidates);
         setLastRefreshTime(new Date());
         
         // Tắt loading ngay khi có ít nhất 1 candidate
-        if (mergedCandidates.length > 0) {
+        if (finalCandidates.length > 0) {
           setIsLoading(false);
           // Clear timeout if candidates found
           if (searchTimeoutRef.current) {
@@ -423,17 +617,24 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           }
         }
         
-        // Nếu có candidates mới, tiếp tục polling với interval ngắn để tìm thêm
-        if (hasBatch && newCandidates.length > 0 && pollingAttemptsRef.current < 30) {
-          // Có developer mới xuất hiện, tiếp tục polling nhanh để tìm thêm
-          isSearchingRef.current = true;
-          setIsSearching(true);
-          if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
-          pollingTimeoutRef.current = setTimeout(() => {
-            pollingAttemptsRef.current += 1;
-            fetchFreelancers();
-          }, 600); // Fast polling khi có developer mới
-          return;
+        // Nếu có candidates mới (incremental update), tiếp tục polling với interval ngắn để tìm thêm
+        if (!isNewBatchRequest && hasBatch) {
+          const currentDeveloperIds = new Set(freelancersRef.current.map((f: Freelancer) => f.developer.id));
+          const incrementalNewCandidates = candidatesWithFavorites.filter((c: Freelancer) => 
+            !currentDeveloperIds.has(c.developer.id)
+          );
+          
+          if (incrementalNewCandidates.length > 0 && pollingAttemptsRef.current < 30) {
+            // Có developer mới xuất hiện, tiếp tục polling nhanh để tìm thêm
+            isSearchingRef.current = true;
+            setIsSearching(true);
+            if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+            pollingTimeoutRef.current = setTimeout(() => {
+              pollingAttemptsRef.current += 1;
+              fetchFreelancers();
+            }, 600); // Fast polling khi có developer mới
+            return;
+          }
         }
         
         // Stop polling if we've reached max attempts
@@ -520,6 +721,16 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
     }
   };
 
+  const loadingTitle =
+    loadingContext === "new"
+      ? "Smart connections loading"
+      : "Loading your developer batch";
+
+  const loadingMessage =
+    loadingContext === "new"
+      ? "AI matchmaking in progress — bringing you the smartest connections."
+      : "Fetching the freelancing batch already sourced for this project...";
+
   const generateNewBatch = async () => {
     try {
       console.log("🔄 Starting NEW batch generation for project:", project.id);
@@ -527,12 +738,20 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       // Check if project has accepted candidates BEFORE clearing
       const hasAccepted = freelancersRef.current.some((f: Freelancer) => f.responseStatus === "accepted");
       
+      // Preserve current developer ids to detect stale data
+      previousBatchDeveloperIdsRef.current = new Set(
+        freelancersRef.current.map((f: Freelancer) => f.developer.id)
+      );
+
       // Clear existing freelancers list để hiển thị batch mới
       setFreelancers([]);
       freelancersRef.current = [];
       
       // Set loading state ngay lập tức để hiển thị loading message
       setIsLoading(true);
+      setLoadingContext("new");
+      newBatchRequestedAtRef.current = Date.now();
+      expectingFreshBatchRef.current = !hasAccepted;
       
       // Set searching state để hiển thị indicator
       isSearchingRef.current = true;
@@ -603,6 +822,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         isSearchingRef.current = false;
         setIsSearching(false);
         setIsLoading(false);
+        expectingFreshBatchRef.current = false;
+        newBatchRequestedAtRef.current = null;
+        setLoadingContext("existing");
         
         if (errorData.error?.includes("No eligible candidates")) {
           setError("All candidates have been assigned to this project");
@@ -638,6 +860,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
       isSearchingRef.current = false;
       setIsSearching(false);
       setIsLoading(false);
+      expectingFreshBatchRef.current = false;
+      newBatchRequestedAtRef.current = null;
+      setLoadingContext("existing");
       setError("An error occurred while generating new batch");
     }
   };
@@ -1112,8 +1337,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           {/* Chỉ hiển thị loading screen khi THỰC SỰ chưa có candidate nào và đang load lần đầu */}
           {isLoading && freelancers.length === 0 && !error ? (
             <LoadingMessage 
-              title="Smart connections loading"
-              message="AI matchmaking in progress — bringing you the smartest connections."
+              title={loadingTitle}
+              message={loadingMessage}
               size="lg"
             />
           ) : error ? (
@@ -1145,6 +1370,163 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           )}
         </div>
       </div>
+
+  {/* Edit Project Dialog */}
+  <Dialog open={showEdit} onOpenChange={setShowEdit}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Edit project</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm text-gray-600">Title</label>
+          <Input
+            value={editForm.title}
+            onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="Project title"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-gray-600">Description</label>
+          <Textarea
+            value={editForm.description}
+            onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+            placeholder="Project description"
+            rows={5}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm text-gray-600">Budget Min</label>
+            <Input
+              type="number"
+              value={editForm.budgetMin}
+              onChange={(e) => setEditForm((f) => ({ ...f, budgetMin: e.target.value }))}
+              placeholder="e.g. 1000"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">Budget Max</label>
+            <Input
+              type="number"
+              value={editForm.budgetMax}
+              onChange={(e) => setEditForm((f) => ({ ...f, budgetMax: e.target.value }))}
+              placeholder="e.g. 2000"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm text-gray-600">Currency</label>
+            <Input
+              value={editForm.currency}
+              onChange={(e) => setEditForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
+              placeholder="USD"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">Payment Method</label>
+            <Input
+              value={editForm.paymentMethod}
+              onChange={(e) => setEditForm((f) => ({ ...f, paymentMethod: e.target.value }))}
+              placeholder="hourly or fixed"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm text-gray-600">Expected Start</label>
+            <Input
+              type="date"
+              value={editForm.expectedStartAt}
+              onChange={(e) => setEditForm((f) => ({ ...f, expectedStartAt: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">Expected End</label>
+            <Input
+              type="date"
+              value={editForm.expectedEndAt}
+              onChange={(e) => setEditForm((f) => ({ ...f, expectedEndAt: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
+      <DialogFooter className="mt-4">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setShowEdit(false);
+            try {
+              const usp = new URLSearchParams(Array.from(searchParams?.entries?.() || []));
+              if (usp.has("edit")) {
+                usp.delete("edit");
+                const qs = usp.toString();
+                router.replace(qs ? `${pathname}?${qs}` : pathname);
+              }
+            } catch {}
+          }}
+          disabled={editSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={async () => {
+            if (editSubmitting) return;
+            setEditSubmitting(true);
+            try {
+              const payload: any = {
+                title: editForm.title,
+                description: editForm.description,
+              };
+              if (editForm.budgetMin !== "") payload.budgetMin = Number(editForm.budgetMin);
+              if (editForm.budgetMax !== "") payload.budgetMax = Number(editForm.budgetMax);
+              if (editForm.currency) payload.currency = editForm.currency;
+              if (editForm.paymentMethod) payload.paymentMethod = editForm.paymentMethod;
+              if (editForm.expectedStartAt) payload.expectedStartAt = editForm.expectedStartAt;
+              if (editForm.expectedEndAt) payload.expectedEndAt = editForm.expectedEndAt;
+
+              const res = await fetch(`/api/projects/${project.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              });
+              if (!res.ok) {
+                let msg = "Failed to update project";
+                try { const j = await res.json(); msg = j.error || msg; } catch {}
+                toast.error(msg);
+                return;
+              }
+              const result = await res.json();
+              // Update local project data
+              setProjectData((prev: any) => ({
+                ...(prev || {}),
+                ...result.project,
+              }));
+              toast.success("Project updated");
+              setShowEdit(false);
+              try {
+                const usp = new URLSearchParams(Array.from(searchParams?.entries?.() || []));
+                if (usp.has("edit")) {
+                  usp.delete("edit");
+                  const qs = usp.toString();
+                  router.replace(qs ? `${pathname}?${qs}` : pathname);
+                }
+              } catch {}
+            } catch (e) {
+              console.error(e);
+              toast.error("Something went wrong");
+            } finally {
+              setEditSubmitting(false);
+            }
+          }}
+          disabled={editSubmitting}
+        >
+          {editSubmitting ? "Saving..." : "Save changes"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 
       {/* Review Slide Modal */}
       {showReviewModal && selectedDevelopers.length > 0 && (

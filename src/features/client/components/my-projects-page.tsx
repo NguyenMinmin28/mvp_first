@@ -30,6 +30,13 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/ui/components/dropdown-menu";
 import { toast } from "sonner";
 import { ProjectReviewModal } from "./project-review-modal";
 import { MessageDetailModal } from "./message-detail-modal";
@@ -54,6 +61,7 @@ interface Project {
 }
 
 export default function MyProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,6 +103,7 @@ export default function MyProjectsPage() {
   const [manualInvitations, setManualInvitations] = useState<Record<string, any[]>>({});
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -1070,13 +1079,37 @@ export default function MyProjectsPage() {
                         
                         {/* More button - full width on mobile, inline on desktop */}
                         <div className="w-full sm:w-auto sm:ml-auto">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 sm:h-8 lg:h-9 w-full sm:w-auto flex-shrink-0"
-                          >
-                            <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 sm:h-8 lg:h-9 w-full sm:w-auto flex-shrink-0"
+                                type="button"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" sideOffset={6}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/projects/${project.id}?edit=1`);
+                                }}
+                              >
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/projects/${project.id}`);
+                                }}
+                              >
+                                View
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>

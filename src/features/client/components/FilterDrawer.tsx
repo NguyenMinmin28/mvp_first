@@ -157,18 +157,41 @@ export function FilterDrawer({ isOpen, onClose, onApplyFilters, initialFilters }
     return count;
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      console.log("🔓 FilterDrawer opened");
+      const scrollY = window.scrollY;
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.position = "";
+        document.body.style.width = "";
+        document.body.style.overflow = "";
+        const y = document.body.style.top;
+        document.body.style.top = "";
+        if (y) window.scrollTo(0, parseInt(y || "0") * -1);
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div
+      className="fixed inset-0 z-[100] overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+    >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+        className="absolute inset-0 bg-black bg-opacity-50 transition-opacity pointer-events-auto"
         onClick={onClose}
       />
       
       {/* Drawer */}
-      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl transform transition-transform">
+      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl transform transition-transform pointer-events-auto z-[101]">
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -391,13 +414,19 @@ export function FilterDrawer({ isOpen, onClose, onApplyFilters, initialFilters }
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={handleClearFilters}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleClearFilters();
+                }}
                 className="flex-1"
               >
                 Clear All
               </Button>
               <Button
-                onClick={handleApplyFilters}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleApplyFilters();
+                }}
                 className="flex-1 bg-black text-white hover:bg-gray-800"
               >
                 Apply Filters
