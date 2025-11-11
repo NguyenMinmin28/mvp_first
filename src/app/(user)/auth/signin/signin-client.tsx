@@ -432,9 +432,7 @@ export default function SignInClient() {
                     }}
                     className={`h-12 ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-black focus:ring-black/20"} transition-all hover:border-gray-400`}
                   />
-                  {errors.email && (
-                    <p className="text-sm text-red-600">{errors.email.message}</p>
-                  )}
+                  <FieldError error={errors.email?.message} />
                 </div>
 
                 {/* Password Input */}
@@ -500,9 +498,7 @@ export default function SignInClient() {
                     )}
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-red-600">{errors.password.message}</p>
-                )}
+                <FieldError error={errors.password?.message} />
               </div>
 
               {/* Continue button */}

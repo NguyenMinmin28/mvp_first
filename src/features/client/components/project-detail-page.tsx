@@ -1112,7 +1112,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           {/* Chỉ hiển thị loading screen khi THỰC SỰ chưa có candidate nào và đang load lần đầu */}
           {isLoading && freelancers.length === 0 && !error ? (
             <LoadingMessage 
-              title="Finding the Perfect Developers"
+              title="Smart connections loading"
               message="AI matchmaking in progress — bringing you the smartest connections."
               size="lg"
             />

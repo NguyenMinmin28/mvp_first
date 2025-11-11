@@ -53,11 +53,40 @@ export function ImageUpload({
   };
 
   const handleUrlSubmit = () => {
-    if (urlInput.trim()) {
-      onChange(urlInput.trim());
-      setUrlInput("");
-      setShowUrlInput(false);
-      toast.success("Image URL set");
+    const url = urlInput.trim();
+    if (url) {
+      // Validate URL format
+      try {
+        new URL(url);
+        onChange(url);
+        setUrlInput("");
+        setShowUrlInput(false);
+        toast.success("Image URL set");
+      } catch (e) {
+        toast.error("Please enter a valid URL");
+      }
+    }
+  };
+
+  // Handle paste event
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (pastedText && (pastedText.startsWith('http://') || pastedText.startsWith('https://'))) {
+      e.preventDefault();
+      setUrlInput(pastedText);
+      // Auto-submit if it looks like a valid image URL
+      setTimeout(() => {
+        try {
+          new URL(pastedText);
+          onChange(pastedText);
+          setUrlInput("");
+          setShowUrlInput(false);
+          toast.success("Image URL set");
+        } catch (e) {
+          // If not valid URL, just set the input value
+          setUrlInput(pastedText);
+        }
+      }, 100);
     }
   };
 
@@ -81,6 +110,10 @@ export function ImageUpload({
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
+              toast.error("Failed to load image. Please check the URL.");
+            }}
+            onLoad={() => {
+              // Image loaded successfully
             }}
           />
           <button
@@ -94,70 +127,58 @@ export function ImageUpload({
         </div>
       )}
 
-      {/* Upload Options */}
-      {!value && (
-        <div className="space-y-3">
-          {/* File Upload */}
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isUploading}
-              className="flex items-center gap-2"
-            >
-              {isUploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Upload className="w-4 h-4" />
-              )}
-              {isUploading ? "Uploading..." : "Upload Image"}
-            </Button>
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowUrlInput(!showUrlInput)}
+      {/* Upload Options - Always show to allow changing image */}
+      <div className="space-y-3">
+        {/* File Upload */}
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isUploading}
+            className="flex items-center gap-2"
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {isUploading ? "Uploading..." : value ? "Change Image" : "Upload Image"}
+          </Button>
+        </div>
+
+        {/* URL Input */}
+        {showUrlInput && (
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onPaste={handlePaste}
+              placeholder="https://example.com/image.jpg"
               disabled={disabled}
-              className="flex items-center gap-2"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              onClick={handleUrlSubmit}
+              disabled={disabled || !urlInput.trim()}
+              size="sm"
             >
-              <ImageIcon className="w-4 h-4" />
-              Paste URL
+              Set
             </Button>
           </div>
+        )}
 
-          {/* URL Input */}
-          {showUrlInput && (
-            <div className="flex gap-2">
-              <Input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                disabled={disabled}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                onClick={handleUrlSubmit}
-                disabled={disabled || !urlInput.trim()}
-                size="sm"
-              >
-                Set
-              </Button>
-            </div>
-          )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-            disabled={disabled}
-          />
-        </div>
-      )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+          disabled={disabled}
+        />
+      </div>
 
       {/* Help Text */}
       <p className="text-sm text-gray-500">

@@ -394,7 +394,8 @@ export default function DashboardClient({
 
                         {/* Projects Layout - Full Width - Mobile optimized */}
                         <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 flex-1 min-h-[400px] sm:min-h-[500px] w-full">
-                          <div className="lg:col-span-1 order-2 lg:order-1">
+                          {/* Projects Sidebar - Left side (List) */}
+                          <div className="lg:col-span-1 order-1">
                             <ProjectsSidebar
                               filter={projectStatus}
                               selectedProjectId={selectedProjectId}
@@ -419,7 +420,8 @@ export default function DashboardClient({
                             />
                           </div>
 
-                          <div className="lg:col-span-3" ref={projectDetailRef}>
+                          {/* Project Detail - Right side (Content) */}
+                          <div className="lg:col-span-3 order-2" ref={projectDetailRef}>
                             {projectStatus === "MANUAL_INVITATIONS" ? (
                               <ManualInvitationDetail
                                 invitation={selectedInvitation}

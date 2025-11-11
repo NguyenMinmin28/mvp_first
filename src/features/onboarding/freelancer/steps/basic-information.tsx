@@ -471,7 +471,7 @@ export default function BasicInformationStep() {
                   ? "text-red-500" 
                   : "text-gray-500"
               }`}>
-                {bioCharCount}/{maxChars} characters {bioCharCount < minChars && `(min ${minChars})`}
+                {bioCharCount}/{maxChars} characters
               </p>
             </div>
             {bioError && (

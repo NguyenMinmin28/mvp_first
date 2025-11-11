@@ -32,7 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/ui/components/tooltip";
-import { X, Star, CheckCircle2, User, AlertTriangle, ChevronLeft, ChevronRight, Sparkles, Image as ImageIcon, Lightbulb, Award, MapPin, Mail, DollarSign, Briefcase, Heart, MessageCircle, Bookmark, ArrowRight, Upload, Play, Zap, Camera, Edit } from "lucide-react";
+import { X, Star, CheckCircle2, User, AlertTriangle, ChevronLeft, ChevronRight, Sparkles, Image as ImageIcon, Lightbulb, Award, MapPin, Mail, DollarSign, Briefcase, Heart, MessageCircle, Bookmark, ArrowRight, Upload, Play, Zap, Camera, Edit, Plus, Eye } from "lucide-react";
 import { cn } from "@/core/utils/utils";
 import PortfolioDetailOverlay from "@/features/client/components/PortfolioDetailOverlay";
 import { PortfolioModal } from "@/features/onboarding/freelancer/components/portfolio-modal";
@@ -960,7 +960,7 @@ export default function ProfileSummary({
                         <span>Add Portfolio</span>
                       </button>
                       <a
-                        href="/ideas"
+                        href="/ideas/submit"
                         className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors shadow-sm"
                       >
                         <Zap className="w-4 h-4" />
@@ -1178,7 +1178,7 @@ export default function ProfileSummary({
                       <Zap className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                       <p className="text-sm text-gray-700 font-medium mb-2">No ideas yet</p>
                       <a
-                        href="/ideas"
+                        href="/ideas/submit"
                         className="inline-flex items-center gap-1.5 text-sm text-gray-900 hover:text-gray-700 font-medium border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
                       >
                         <span>Create your first idea</span>
@@ -1190,7 +1190,7 @@ export default function ProfileSummary({
                       <div
                         ref={ideasScrollRef}
                         className={`flex gap-3 scroll-smooth hide-scrollbar pb-2 ${
-                          userIdeas.length > 3 ? 'overflow-x-auto' : 'overflow-x-hidden'
+                          userIdeas.length > 0 ? 'overflow-x-auto' : 'overflow-x-hidden'
                         }`}
                         style={{ scrollSnapType: 'x mandatory' }}
                       >
@@ -1231,31 +1231,42 @@ export default function ProfileSummary({
                                   {idea.summary}
                                 </p>
                                 <div className="flex items-center gap-2.5 text-[10px] text-gray-500">
-                                  {idea._count?.likes > 0 && (
-                                    <div className="flex items-center gap-0.5">
-                                      <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                                      <span className="font-medium">{idea._count.likes}</span>
-                      </div>
-                                  )}
-                                  {idea._count?.comments > 0 && (
-                                    <div className="flex items-center gap-0.5">
-                                      <MessageCircle className="w-3 h-3 text-blue-500" />
-                                      <span className="font-medium">{idea._count.comments}</span>
-                    </div>
-                                  )}
-                                  {idea._count?.bookmarks > 0 && (
-                                    <div className="flex items-center gap-0.5">
-                                      <Bookmark className="w-3 h-3 text-amber-500 fill-amber-500" />
-                                      <span className="font-medium">{idea._count.bookmarks}</span>
-                  </div>
-                                  )}
+                                  {/* Likes */}
+                                  <div className="flex items-center gap-0.5">
+                                    <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                                    <span className="font-medium">{idea._count?.likes || 0}</span>
+                                  </div>
+                                  {/* Love/Bookmarks */}
+                                  <div className="flex items-center gap-0.5">
+                                    <Bookmark className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                    <span className="font-medium">{idea._count?.bookmarks || 0}</span>
+                                  </div>
+                                  {/* Views */}
+                                  <div className="flex items-center gap-0.5">
+                                    <Eye className="w-3 h-3 text-gray-500" />
+                                    <span className="font-medium">{idea._count?.connects || 0}</span>
+                                  </div>
                     </div>
                   </div>
                             </a>
                           );
                         })}
+                        
+                        {/* Add New Idea Card - Last Item */}
+                        <a
+                          href="/ideas/submit"
+                          className="flex-shrink-0 w-full max-w-[calc(100%-0.75rem)] sm:max-w-[280px] block bg-white rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 overflow-hidden group/add"
+                          style={{ scrollSnapAlign: 'start' }}
+                        >
+                          <div className="w-full aspect-square bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
+                            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mb-3 group-hover/add:bg-gray-300 transition-colors">
+                              <Plus className="w-6 h-6 text-gray-600 group-hover/add:text-gray-900" />
+                            </div>
+                            <p className="text-xs font-medium text-gray-600 text-center">Add new idea</p>
+                          </div>
+                        </a>
                 </div>
-                      {userIdeas.length > 3 && (
+                      {(userIdeas.length + 1) > 3 && (
                         <>
                           <button
                             onClick={() => {
@@ -1415,35 +1426,34 @@ export default function ProfileSummary({
           }
         }}
       >
-        <DialogContent className="max-w-md">
-          <div className="flex items-center gap-3 rounded-full bg-orange-100 text-orange-700 px-4 py-2 w-fit">
-            <AlertTriangle className="h-5 w-5" />
-            <span className="text-sm font-semibold">Heads up</span>
-          </div>
-          <DialogHeader className="mt-2">
-            <DialogTitle>Pause new project invites?</DialogTitle>
-            <DialogDescription>
-              When you mark yourself as <span className="font-semibold text-gray-900">Not Available</span>, we immediately stop sending you new project invitations. You can switch back to <span className="font-semibold text-gray-900">Available</span> anytime to resume receiving matches.
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-black bg-transparent">
+                <span className="text-black font-bold text-lg">!</span>
+              </div>
+              <DialogTitle className="text-lg font-semibold">Are you sure?</DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-gray-600 mt-2">
+              By disabling your "Available" button, Clients won't be able to contact you, and you will no longer appear in Discover.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
-            <p className="font-medium">You will still appear in your existing conversations, but new clients won&apos;t be able to invite you while this status is active.</p>
-          </div>
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-6 flex-row gap-3 justify-end">
             <Button
               variant="outline"
               onClick={() => {
                 setShowAvailabilityConfirm(false);
                 setPendingStatus(null);
               }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              Keep me Available
+              Never mind
             </Button>
             <Button
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-black hover:bg-black/90 text-white"
               onClick={handleConfirmAvailability}
             >
-              Yes, set Not Available
+              Turn Off
             </Button>
           </DialogFooter>
         </DialogContent>

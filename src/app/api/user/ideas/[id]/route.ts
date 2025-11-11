@@ -19,9 +19,9 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { title, summary, body: ideaBody, coverFileId, skillIds } = body;
+    const { title, summary, body: ideaBody, coverFileId, coverUrl, skillIds } = body;
 
-    if (!title && !summary && !ideaBody && !coverFileId && !skillIds) {
+    if (!title && !summary && !ideaBody && !coverFileId && !coverUrl && !skillIds) {
       return NextResponse.json(
         { error: "At least one field is required" },
         { status: 400 }
@@ -30,7 +30,7 @@ export async function PATCH(
 
     const idea = await ideaSparkService.updateIdea(
       params.id,
-      { title, summary, body: ideaBody, coverFileId, skillIds },
+      { title, summary, body: ideaBody, coverFileId, coverUrl, skillIds },
       session.user.id
     );
 

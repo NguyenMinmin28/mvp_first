@@ -12,7 +12,8 @@ import {
   ThumbsUp,
   User,
   Calendar,
-  Tag
+  Tag,
+  Edit
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { optimisticLike, optimisticBookmark } from "@/core/utils/fireAndForget";
@@ -271,6 +272,17 @@ export function IdeaDetail({ idea, currentUserId }: IdeaDetailProps) {
                 >
                   <Send className="w-4 h-4" />
                   Connect
+                </Button>
+              )}
+
+              {idea.author?.id === currentUserId && (
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/user/ideas/${idea.id}/edit`)}
+                  className="flex items-center gap-2 hover:bg-gray-100"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
                 </Button>
               )}
 

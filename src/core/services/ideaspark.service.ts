@@ -289,14 +289,28 @@ export class IdeaSparkService {
       throw new Error('Unauthorized to edit this idea');
     }
 
-    if (!isAdmin && idea.status !== IdeaStatus.PENDING && idea.status !== IdeaStatus.REJECTED) {
-      throw new Error('Cannot edit approved idea');
-    }
-
     const updateData: any = { ...data };
     delete updateData.skillIds;
 
-    const updatedIdea = await prisma.idea.update({
+    // If coverUrl is provided, clear coverFileId (only use one)
+    if (data.coverUrl !== undefined) {
+      if (data.coverUrl) {
+        // If setting a new coverUrl, clear the coverFileId
+        updateData.coverFileId = null;
+      } else {
+        // If clearing coverUrl, also clear coverFileId
+        updateData.coverFileId = null;
+      }
+    }
+
+    // Allow editing approved ideas, but they will need to be re-approved
+    // If idea is approved and being edited, set status back to PENDING for re-approval
+    if (!isAdmin && idea.status === IdeaStatus.APPROVED) {
+      // Set status to PENDING so admin can review changes
+      updateData.status = IdeaStatus.PENDING;
+    }
+
+    await prisma.idea.update({
       where: { id },
       data: updateData,
     });
@@ -314,7 +328,30 @@ export class IdeaSparkService {
       }
     }
 
-    return updatedIdea;
+    // Fetch updated idea with all relations
+    const updatedIdea = await prisma.idea.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        cover: {
+          select: { id: true, storageKey: true },
+        },
+        skills: {
+          include: {
+            Skill: {
+              select: { id: true, name: true, category: true }
+            }
+          }
+        },
+        _count: {
+          select: { likes: true, comments: true, bookmarks: true, connects: true },
+        },
+      },
+    });
+
+    return updatedIdea as any;
   }
 
   /**
