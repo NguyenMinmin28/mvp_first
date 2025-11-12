@@ -8,7 +8,7 @@ import { Button } from "@/ui/components/button";
 import { FollowButton } from "@/ui/components/modern-button";
 import { Badge } from "@/ui/components/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/components/avatar";
-import { Heart, MessageCircle, Star, MapPin, Clock, DollarSign, SlidersHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Clock, DollarSign } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, memo, useMemo } from "react";
@@ -208,7 +208,6 @@ export function PeopleGrid({
   const [likedDeveloperIds, setLikedDeveloperIds] = useState<Set<string>>(new Set());
   const [pendingFollowIds, setPendingFollowIds] = useState<Set<string>>(new Set());
   const [followedUserIds, setFollowedUserIds] = useState<Set<string>>(new Set());
-  const [isInlineFilterOpen, setIsInlineFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<FilterState | null>(null);
   const [selectedDeveloper, setSelectedDeveloper] = useState<{id: string, name?: string} | null>(null);
 
@@ -1031,25 +1030,41 @@ export function PeopleGrid({
       {/* Top toolbar: Filter button and controls */}
       {!hideHeaderControls && (
       <div className="mb-6 space-y-4">
-        {/* First row: Filter button and action buttons */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <button
-            type="button"
-            aria-label="Filter"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Filter button clicked, toggling inline filters');
-              setIsInlineFilterOpen((v) => !v);
-            }}
-            className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-gray-200 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-lg transition-shadow cursor-pointer"
-          >
-            <SlidersHorizontal className="w-6 h-6 text-black" />
-            <span className="text-lg font-bold text-black">Filter</span>
-          </button>
+        {/* Filters and action buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+          {/* Level filter tabs - always visible */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            {[
+              { key: "all", label: "All" },
+              { key: "beginner", label: "Beginner" },
+              { key: "professional", label: "Professional" },
+              { key: "expert", label: "Expert" },
+              { key: "ready", label: "Ready to Work" },
+            ].map((opt) => {
+              const selected = levelFilter === (opt.key as any);
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLevelFilter(opt.key as any);
+                  }}
+                  className={`px-3 py-2 sm:px-4 sm:py-2 sm:w-40 h-10 rounded-lg border transition-colors whitespace-nowrap flex items-center justify-center text-sm sm:text-base ${
+                    selected
+                      ? "bg-[#F5F6F9] border-gray-200"
+                      : "bg-transparent border-transparent"
+                  }`}
+                  style={{ color: selected ? "#111827" : "#999999" }}
+                >
+                  <span className="font-semibold">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {/* Action buttons - positioned at the right on larger screens */}
-          <div className="flex items-center gap-4 ml-auto">
+          <div className="flex items-center gap-4 sm:ml-auto">
           {/* Generate New Batch Button */}
           {onGenerateNewBatch && (
             <button
@@ -1096,38 +1111,6 @@ export function PeopleGrid({
           </div>
         </div>
 
-        {/* Level filter tabs - responsive layout (only show when toggled) */}
-        {isInlineFilterOpen && (
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          {[
-            { key: "all", label: "All" },
-            { key: "beginner", label: "Beginner" },
-            { key: "professional", label: "Professional" },
-            { key: "expert", label: "Expert" },
-            { key: "ready", label: "Ready to Work" },
-          ].map((opt) => {
-            const selected = levelFilter === (opt.key as any);
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLevelFilter(opt.key as any);
-                }}
-                className={`px-3 py-2 sm:px-4 sm:py-2 sm:w-40 h-10 rounded-lg border transition-colors whitespace-nowrap flex items-center justify-center text-sm sm:text-base ${
-                  selected
-                    ? "bg-[#F5F6F9] border-gray-200"
-                    : "bg-transparent border-transparent"
-                }`}
-                style={{ color: selected ? "#111827" : "#999999" }}
-              >
-                <span className="font-semibold">{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        )}
       </div>
       )}
 
