@@ -467,7 +467,7 @@ export const PeopleGridOptimized = memo(function PeopleGridOptimized({
         <div className="flex space-x-2">
           <Button
             onClick={() => handleGetInTouch(developer)}
-            className="flex-1"
+            className="flex-1 px-6"
             disabled={locked}
           >
             Get in Touch

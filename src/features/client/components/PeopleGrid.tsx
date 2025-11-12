@@ -1502,7 +1502,7 @@ export function PeopleGrid({
                         developerId={developer.id}
                         developerName={developer.user.name || undefined}
                         projectId={projectId}
-                        className="w-full sm:w-28 bg-black text-white hover:bg-gray-800 text-sm"
+                        className="w-full sm:w-32 px-5 bg-black text-white hover:bg-gray-800 text-sm"
                         variant="default"
                         size="default"
                         responseStatus={projectId ? computedStatuses?.[developer.id] : undefined}

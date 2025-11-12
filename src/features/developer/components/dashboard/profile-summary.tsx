@@ -981,7 +981,7 @@ export default function ProfileSummary({
                   <div className="relative group">
                     <div
                       ref={portfolioScrollRef}
-                      className="flex gap-4 overflow-x-auto scroll-smooth hide-scrollbar pb-2"
+                      className="flex gap-4 overflow-x-auto scroll-smooth horizontal-scrollbar pb-2"
                     >
                       {(profile.portfolioLinks || profile.portfolioItems || []).map((portfolio: any, index: number) => (
                         <div
@@ -1189,7 +1189,7 @@ export default function ProfileSummary({
                     <div className="relative flex-1 group">
                       <div
                         ref={ideasScrollRef}
-                        className={`flex gap-3 scroll-smooth hide-scrollbar pb-2 ${
+                        className={`flex gap-3 scroll-smooth horizontal-scrollbar pb-2 ${
                           userIdeas.length > 0 ? 'overflow-x-auto' : 'overflow-x-hidden'
                         }`}
                         style={{ scrollSnapType: 'x mandatory' }}

@@ -274,7 +274,7 @@ export function ServicesStrip() {
               {/* Hide Get in Touch button for developers */}
               {session?.user?.role !== "DEVELOPER" && (
                 <Button
-                  className="w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
+                  className="w-full mt-auto h-8 px-6 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
                   variant="outline"
                   onClick={(e) => {
                     e.stopPropagation();

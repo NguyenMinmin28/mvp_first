@@ -750,7 +750,7 @@ export function DeveloperProfileSlideBar({
                       <GetInTouchButton
                         developerId={profile.id}
                         developerName={profile.name || 'Unknown Developer'}
-                        className="h-8 px-3 text-xs"
+                        className="h-8 px-5 text-xs"
                         variant="default"
                       />
                     )}
@@ -947,7 +947,7 @@ export function DeveloperProfileSlideBar({
                         <GetInTouchButton
                           developerId={profile.id}
                           developerName={profile.name || 'Unknown Developer'}
-                                  className="flex-1 sm:flex-initial sm:min-w-[140px]"
+                                  className="flex-1 sm:flex-initial sm:min-w-[160px] px-5"
                           variant="default"
                         />
                               )}

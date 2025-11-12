@@ -31,7 +31,7 @@ export function GetInTouchButton({
   developerId,
   developerName,
   projectId,
-  className = "w-full mt-auto h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm",
+  className = "w-full mt-auto h-8 px-6 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm",
   variant = "outline",
   size = "default",
   disabled = false,

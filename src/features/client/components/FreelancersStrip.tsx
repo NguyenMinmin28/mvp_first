@@ -246,7 +246,7 @@ export function FreelancersStrip() {
                   <GetInTouchButton
                     developerId={freelancer.id}
                     developerName={freelancer.name || undefined}
-                    className="w-full h-8 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
+                    className="w-full h-8 px-6 border border-[#838383] bg-transparent hover:bg-black hover:text-white text-gray-900 text-sm"
                     variant="outline"
                     size="default"
                   />

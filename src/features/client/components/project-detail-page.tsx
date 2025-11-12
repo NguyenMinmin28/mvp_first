@@ -103,7 +103,10 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
   const [showDeveloperReviewsModal, setShowDeveloperReviewsModal] = useState(false);
   const [selectedDeveloperForReviews, setSelectedDeveloperForReviews] = useState<{id: string, name: string} | null>(null);
   const [isLocked, setIsLocked] = useState(false);
-  const [loadingContext, setLoadingContext] = useState<"existing" | "new">("existing");
+  // Khởi tạo loadingContext dựa trên project prop: project mới (chưa có batch) -> "new", project đã có batch -> "existing"
+  const [loadingContext, setLoadingContext] = useState<"existing" | "new">(
+    project?.currentBatchId ? "existing" : "new"
+  );
   const freelancersRef = useRef<Freelancer[]>([]);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const isSearchingRef = useRef(false);
@@ -305,6 +308,25 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         const data = await response.json();
         const candidates = data.candidates || [];
         setProjectData(data.project);
+        
+        // Check if project has batch and set loading context immediately
+        // Project mới (chưa có batch) -> hiển thị "AI đang tìm kiếm"
+        // Project đã có batch -> hiển thị "Loading..."
+        const hasBatch = !!data.project?.currentBatchId;
+        const hasCandidates = candidates.length > 0;
+        
+        // Set loading context ngay lập tức dựa trên trạng thái batch
+        // Chỉ update khi chưa có candidates để tránh override khi đang polling
+        if (freelancersRef.current.length === 0) {
+          if (hasBatch) {
+            // Project đã có batch -> hiển thị "Loading..."
+            setLoadingContext("existing");
+          } else {
+            // Project mới chưa có batch -> hiển thị "AI đang tìm kiếm"
+            setLoadingContext("new");
+          }
+        }
+        
         // Only lock if project status is in_progress or completed, not just accepted
         if (data.project?.locked || ["in_progress", "completed"].includes(String(data.project?.status || ""))) {
           setIsLocked(true);
@@ -521,6 +543,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         // Tắt loading ngay khi có ít nhất 1 candidate
         if (finalCandidates.length > 0) {
           setIsLoading(false);
+          // Reset loading context to "existing" when candidates are found
+          setLoadingContext("existing");
           // Clear timeout if candidates found
           if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
@@ -552,7 +576,7 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
         }
 
         // Check if project needs initial batch generation
-        const hasBatch = !!data.project?.currentBatchId;
+        // Note: hasBatch is already checked above when setting loadingContext
         const stillSearching = !!data.searching && hasBatch; // Only search if batch exists and API says it's searching
         const hasNoCandidates = candidatesWithFavorites.length === 0;
         const needsInitialBatch = !hasBatch && hasNoCandidates && !autoGenerateBatchAttemptedRef.current && !isLocked;
@@ -564,6 +588,9 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
           autoGenerateBatchAttemptedRef.current = true;
           isSearchingRef.current = true;
           setIsSearching(true);
+          // Set loading state and context for first-time batch generation
+          setIsLoading(true);
+          setLoadingContext("new");
           
           // Start 30-second timeout timer for auto-generation
           searchStartTimeRef.current = Date.now();
@@ -576,6 +603,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
               console.log('⏱️ 30-second timeout reached during auto-generation, showing timeout message');
               isSearchingRef.current = false;
               setIsSearching(false);
+              setIsLoading(false);
+              setLoadingContext("existing");
               setError("Sorry, we couldn't find the right match with your project. Please try adjusting your project requirements or contact support.");
               // Stop polling
               if (pollingTimeoutRef.current) {
@@ -619,6 +648,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 autoGenerateBatchAttemptedRef.current = false; // Allow retry
                 isSearchingRef.current = false;
                 setIsSearching(false);
+                setIsLoading(false);
+                setLoadingContext("existing");
               }
             } catch (error: any) {
               if (error?.name !== 'AbortError') {
@@ -626,6 +657,8 @@ export default function ProjectDetailPage({ project }: ProjectDetailPageProps) {
                 autoGenerateBatchAttemptedRef.current = false; // Allow retry
                 isSearchingRef.current = false;
                 setIsSearching(false);
+                setIsLoading(false);
+                setLoadingContext("existing");
               }
             }
           })();

@@ -507,7 +507,7 @@ export function ServicesGrid({ searchQuery = "", sortBy = "popular", filters = [
                   <GetInTouchButton
                     developerId={service.developer.id}
                     developerName={service.developer.user.name || undefined}
-                    className="w-full mt-auto border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900"
+                    className="w-full mt-auto px-6 border border-[#838383] bg-transparent hover:bg-gray-50 text-gray-900"
                     variant="outline"
                   />
                 )}

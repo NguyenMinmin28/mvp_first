@@ -866,7 +866,7 @@ export default function ServiceDetailOverlay({ isOpen, service, onClose, onGetIn
                           onClick={() => {
                             onGetInTouch?.();
                           }}
-                          className="px-5 h-11 rounded-xl bg-black text-white hover:bg-black/90 w-36 sm:w-40"
+                          className="px-6 h-11 rounded-xl bg-black text-white hover:bg-black/90 w-40 sm:w-44"
                         >
                           Get in Touch
                         </button>
