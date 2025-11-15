@@ -1321,16 +1321,16 @@ export default function ProfileSummary({
                 </div>
               )}
             </div>
-        {showReviewsOverlay && developerId && (
-          <DeveloperReviewsModal
-            isOpen={showReviewsOverlay}
-            onClose={() => setShowReviewsOverlay(false)}
-            developerId={developerId}
-            developerName={name || profile?.name || "Developer"}
-          />
-        )}
         </CardContent>
       </Card>
+      {showReviewsOverlay && developerId && (
+        <DeveloperReviewsModal
+          isOpen={showReviewsOverlay}
+          onClose={() => setShowReviewsOverlay(false)}
+          developerId={developerId}
+          developerName={name || profile?.name || "Developer"}
+        />
+      )}
 
       {/* Portfolio Detail Overlay */}
       <PortfolioDetailOverlay
