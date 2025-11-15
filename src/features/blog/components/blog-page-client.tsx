@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BlogHero } from './blog-hero';
 import { PostCard } from './post-card';
-import { PopularPostsSidebar } from './popular-posts-sidebar';
 import { CTACard } from './cta-card';
 import { Button } from '@/ui/components/button';
 import { Loader2 } from 'lucide-react';
@@ -55,7 +54,6 @@ export function BlogPageClient() {
   
   const [posts, setPosts] = useState<Post[]>([]);
   const [featuredPost, setFeaturedPost] = useState<Post | null>(null);
-  const [popularPosts, setPopularPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,17 +99,6 @@ export function BlogPageClient() {
       }
     } catch (error) {
       console.error('Error fetching featured post:', error);
-    }
-  }, []);
-
-  // Fetch popular posts
-  const fetchPopularPosts = useCallback(async () => {
-    try {
-      const response = await fetch('/api/blog/popular?days=7&limit=5');
-      const data = await response.json();
-      setPopularPosts(data.posts);
-    } catch (error) {
-      console.error('Error fetching popular posts:', error);
     }
   }, []);
 
@@ -193,14 +180,13 @@ export function BlogPageClient() {
       await Promise.all([
         fetchFeaturedPost(),
         fetchPosts(),
-        fetchPopularPosts(),
         fetchCategories()
       ]);
       setLoading(false);
     };
     
     fetchData();
-  }, [fetchFeaturedPost, fetchPosts, fetchPopularPosts, fetchCategories]);
+  }, [fetchFeaturedPost, fetchPosts, fetchCategories]);
 
   // Refetch posts when filters change
   useEffect(() => {
@@ -277,28 +263,15 @@ export function BlogPageClient() {
           </div>
         </div>
 
-        {/* Third Row - 2 Small Blog Cards + Popular Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* First 2 columns - Small Blog Cards */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {posts?.slice(5, 7).map((post) => (
-                <PostCard 
-                  key={post.id}
-                  post={post} 
-                  onTrackClick={trackClick}
-                />
-              ))}
-            </div>
-          </div>
-          
-          {/* Third column - Popular Section */}
-          <div className="lg:col-span-1">
-            <PopularPostsSidebar 
-              posts={popularPosts}
+        {/* Third Row - 2 Small Blog Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {posts?.slice(5, 7).map((post) => (
+            <PostCard 
+              key={post.id}
+              post={post} 
               onTrackClick={trackClick}
             />
-          </div>
+          ))}
         </div>
 
         {/* Remaining Posts in 3-column Grid */}
@@ -347,15 +320,6 @@ export function BlogPageClient() {
           </div>
         )}
 
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-8 space-y-6">
-            <PopularPostsSidebar 
-              posts={popularPosts}
-              onTrackClick={trackClick}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -390,18 +354,11 @@ function BlogPageSkeleton() {
             </div>
           </div>
 
-          {/* Third Row - 2 Small Blog Cards + Popular Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="bg-gray-200 rounded-xl h-80 animate-pulse" />
-                ))}
-              </div>
-            </div>
-            <div className="lg:col-span-1">
-              <div className="bg-gray-200 rounded-xl h-96 animate-pulse" />
-            </div>
+          {/* Third Row - 2 Small Blog Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="bg-gray-200 rounded-xl h-80 animate-pulse" />
+            ))}
           </div>
         </div>
     </div>

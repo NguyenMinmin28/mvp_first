@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { PortalProvider } from "@/features/shared/portal-context";
+import { SessionKeepAlive } from "@/features/shared/components/session-keep-alive";
 import { ErrorBoundary } from "@/features/shared/components/error-boundary";
 
 interface ProvidersProps {
@@ -17,7 +18,10 @@ export function Providers({ children }: ProvidersProps) {
         refetchOnWindowFocus={false} // Disable to prevent constant refreshes
         refetchWhenOffline={false}
       >
-        <PortalProvider>{children}</PortalProvider>
+        <PortalProvider>
+          <SessionKeepAlive />
+          {children}
+        </PortalProvider>
       </SessionProvider>
     </ErrorBoundary>
   );

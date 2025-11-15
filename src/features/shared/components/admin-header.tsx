@@ -99,7 +99,17 @@ export function AdminHeader({
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => signOut()}
+                    onClick={async () => {
+                      try {
+                        // SignOut first and wait briefly
+                        await signOut({ redirect: false });
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        window.location.href = "/admin/login";
+                      } catch (error) {
+                        console.error("Sign out error:", error);
+                        window.location.href = "/admin/login";
+                      }
+                    }}
                     className="cursor-pointer group"
                   >
                     <LogOut className="mr-2 h-4 w-4 group-hover:text-red-500" />

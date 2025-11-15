@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import { X, Star, MapPin, Clock, DollarSign, MessageCircle, Heart, ExternalLink, User, Briefcase, GraduationCap, Code, Award, Calendar, Globe, Lock, ChevronLeft, ChevronRight } from "lucide-react";
 import { GetInTouchButton } from "@/features/shared/components/get-in-touch-button";
+import { cn } from "@/core/utils/utils";
 import { AuthRequiredModal } from "@/features/shared/components/auth-required-modal";
 import { FollowButton } from "@/ui/components/modern-button";
 
@@ -135,6 +136,7 @@ export function DeveloperProfileSlideBar({
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stickyHeaderStateRef = useRef(false);
   
   const isAuthenticated = !!session?.user;
   const isDeveloper = session?.user?.role === "DEVELOPER";
@@ -274,7 +276,8 @@ export function DeveloperProfileSlideBar({
       // Reset when closing
       setReviews([]);
       setReviewsStats(null);
-      setShowStickyHeader(false); // Reset sticky header when closing
+      setShowStickyHeader(false);
+      stickyHeaderStateRef.current = false;
     }
   }, [isOpen, developerId, fetchDeveloperProfile, fetchReviews]);
 
@@ -543,27 +546,44 @@ export function DeveloperProfileSlideBar({
     }
   };
 
-  // Handle scroll detection for scrollbar visibility and sticky header
+  // Handle scroll detection for scrollbar visibility and sticky header reveal
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer || !isOpen) return;
 
+    let ticking = false;
+
     const handleScroll = () => {
-      setIsScrolling(true);
-      
-      // Show sticky header when scrolled past 100px
-      const scrollTop = scrollContainer.scrollTop;
-      setShowStickyHeader(scrollTop > 100);
-      
-      // Clear existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolling(true);
+
+          const scrollTop = scrollContainer.scrollTop;
+          const showThreshold = 120;
+          const hideThreshold = 80;
+
+          if (scrollTop > showThreshold && !stickyHeaderStateRef.current) {
+            stickyHeaderStateRef.current = true;
+            setShowStickyHeader(true);
+          } else if (scrollTop < hideThreshold && stickyHeaderStateRef.current) {
+            stickyHeaderStateRef.current = false;
+            setShowStickyHeader(false);
+          }
+
+          // Clear existing timeout
+          if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+          }
+          
+          // Hide scrollbar after scrolling stops (300ms)
+          scrollTimeoutRef.current = setTimeout(() => {
+            setIsScrolling(false);
+          }, 300);
+          
+          ticking = false;
+        });
+        ticking = true;
       }
-      
-      // Hide scrollbar after scrolling stops (300ms)
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 300);
     };
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
@@ -606,47 +626,52 @@ export function DeveloperProfileSlideBar({
     };
   }, [isOpen, onClose]);
 
+  const scrollbarStyles = `
+    .modern-scrollbar::-webkit-scrollbar {
+      width: 10px !important;
+      height: 10px !important;
+    }
+    .modern-scrollbar::-webkit-scrollbar-track {
+      background: rgba(243, 244, 246, 0.15) !important;
+      border-radius: 10px !important;
+      margin: 4px 0 !important;
+    }
+    .modern-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(156, 163, 175, 0.25), rgba(107, 114, 128, 0.3)) !important;
+      border-radius: 10px !important;
+      border: 2px solid rgba(243, 244, 246, 0.15) !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    }
+    .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.5)) !important;
+      border-color: rgba(243, 244, 246, 0.25) !important;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+      transform: scale(1.05) !important;
+    }
+    .modern-scrollbar.scrolling::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(75, 85, 99, 0.4), rgba(55, 65, 81, 0.5)) !important;
+    }
+    .modern-scrollbar {
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(107, 114, 128, 0.3) rgba(243, 244, 246, 0.15) !important;
+    }
+    .modern-scrollbar:hover {
+      scrollbar-color: rgba(75, 85, 99, 0.4) rgba(243, 244, 246, 0.2) !important;
+    }
+    .modern-scrollbar.scrolling {
+      scrollbar-color: rgba(55, 65, 81, 0.4) rgba(243, 244, 246, 0.2) !important;
+    }
+  `;
+
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
-        .modern-scrollbar::-webkit-scrollbar {
-          width: 10px !important;
-          height: 10px !important;
-        }
-        .modern-scrollbar::-webkit-scrollbar-track {
-          background: rgba(243, 244, 246, 0.15) !important;
-          border-radius: 10px !important;
-          margin: 4px 0 !important;
-        }
-        .modern-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, rgba(156, 163, 175, 0.25), rgba(107, 114, 128, 0.3)) !important;
-          border-radius: 10px !important;
-          border: 2px solid rgba(243, 244, 246, 0.15) !important;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-        }
-        .modern-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, rgba(107, 114, 128, 0.4), rgba(75, 85, 99, 0.5)) !important;
-          border-color: rgba(243, 244, 246, 0.25) !important;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
-          transform: scale(1.05) !important;
-        }
-        .modern-scrollbar.scrolling::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, rgba(75, 85, 99, 0.4), rgba(55, 65, 81, 0.5)) !important;
-        }
-        .modern-scrollbar {
-          scrollbar-width: thin !important;
-          scrollbar-color: rgba(107, 114, 128, 0.3) rgba(243, 244, 246, 0.15) !important;
-        }
-        .modern-scrollbar:hover {
-          scrollbar-color: rgba(75, 85, 99, 0.4) rgba(243, 244, 246, 0.2) !important;
-        }
-        .modern-scrollbar.scrolling {
-          scrollbar-color: rgba(55, 65, 81, 0.4) rgba(243, 244, 246, 0.2) !important;
-        }
-      `}} />
+      <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
       <div
-        className={`fixed inset-0 z-[110] pointer-events-${isOpen ? "auto" : "none"}`}
+        className={cn(
+          "fixed inset-0 z-[110]",
+          isOpen ? "pointer-events-auto" : "pointer-events-none"
+        )}
         aria-hidden={!isOpen}
       >
       {/* Mobile backdrop: darken entire screen */}
@@ -687,119 +712,137 @@ export function DeveloperProfileSlideBar({
             <X className="w-5 h-5 text-gray-900" />
           </button>
 
-          {/* Header with Close Button */}
-          <div className="flex items-center justify-between px-4 sm:px-6 pt-6 lg:pt-8 pb-4 border-b border-gray-100">
-            <div className="flex items-center gap-3 min-w-0">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Developer Profile</h2>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onClose} 
-              className="hidden sm:flex hover:bg-gray-100"
+          {/* Profile summary header appears after user scrolls */}
+          <div className="sticky top-0 z-20">
+            <div
+              className={cn(
+                "bg-white border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between gap-4 shadow-sm transition-all duration-300 ease-in-out",
+                showStickyHeader
+                  ? "py-3 opacity-100 translate-y-0 pointer-events-auto"
+                  : "py-0 opacity-0 -translate-y-4 pointer-events-none h-0 overflow-hidden border-transparent shadow-none"
+              )}
             >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Sticky Header - Shows when scrolling */}
-          {showStickyHeader && profile && (
-            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {/* Avatar */}
-                <Avatar className="w-10 h-10 flex-shrink-0">
-                  <AvatarImage 
-                    src={profile.photoUrl || profile.image || '/images/avata/default.jpeg'} 
-                    className="object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
-                    }}
-                  />
-                  <AvatarFallback className="bg-gradient-to-br from-gray-200 to-gray-300 w-full h-full flex items-center justify-center text-sm font-bold text-gray-600">
-                    {(profile.name || 'U').charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                
-                {/* Name */}
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">
-                    {profile.name || 'Unknown Developer'}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {isAuthenticated ? (
-                  <>
-                    {/* Show Follow button for all authenticated users (not own profile) */}
-                    {!isOwnProfile && (
-                      <FollowButton
-                        isFollowing={isFollowing}
-                        onClick={handleFollowToggle}
-                        disabled={isFollowLoading}
-                        className="h-8 px-3 text-xs !border-gray-300 !text-gray-900 hover:!bg-gray-50 hover:!border-gray-400"
-                        size="sm"
-                      >
-                        {isFollowing ? 'Following' : 'Follow'}
-                      </FollowButton>
-                    )}
-                    
-                    {/* Show Get in Touch button for all authenticated users (not own profile) */}
-                    {!isOwnProfile && (
-                      <GetInTouchButton
-                        developerId={profile.id}
-                        developerName={profile.name || 'Unknown Developer'}
-                        className="h-8 px-5 text-xs"
-                        variant="default"
+              {profile ? (
+                <>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarImage 
+                        src={profile.photoUrl || profile.image || '/images/avata/default.jpeg'} 
+                        className="object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/avata/default.jpeg';
+                        }}
                       />
-                    )}
-                  </>
-                ) : (
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    className="h-8 px-3 text-xs"
-                    onClick={() => setShowAuthModal(true)}
-                  >
-                    Sign in
-                  </Button>
-                )}
-
-                {/* Navigation Arrows for Portfolio */}
-                {profile.portfolioLinks && profile.portfolioLinks.length > 1 && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const length = profile.portfolioLinks?.length || 0;
-                        setCurrentPortfolioIndex((prev) => 
-                          prev === 0 ? length - 1 : prev - 1
-                        );
-                      }}
-                      className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
-                      aria-label="Previous portfolio"
-                    >
-                      <ChevronLeft className="h-4 w-4 text-gray-700" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const length = profile.portfolioLinks?.length || 0;
-                        setCurrentPortfolioIndex((prev) => 
-                          prev === length - 1 ? 0 : prev + 1
-                        );
-                      }}
-                      className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
-                      aria-label="Next portfolio"
-                    >
-                      <ChevronRight className="h-4 w-4 text-gray-700" />
-                    </button>
+                      <AvatarFallback className="bg-gradient-to-br from-gray-200 to-gray-300 w-full h-full flex items-center justify-center text-sm font-bold text-gray-600">
+                        {(profile.name || 'U').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {profile.name || 'Unknown Developer'}
+                      </h3>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {isAuthenticated ? (
+                      <>
+                        {!isOwnProfile && (
+                          <FollowButton
+                            isFollowing={isFollowing}
+                            onClick={handleFollowToggle}
+                            disabled={isFollowLoading}
+                            className="h-8 px-3 text-xs !border-gray-300 !text-gray-900 hover:!bg-gray-50 hover:!border-gray-400"
+                            size="sm"
+                          >
+                            {isFollowing ? 'Following' : 'Follow'}
+                          </FollowButton>
+                        )}
+                        
+                        {!isOwnProfile && profile && (
+                          <GetInTouchButton
+                            developerId={profile.id}
+                            developerName={profile.name || 'Unknown Developer'}
+                            className="h-8 px-5 text-xs"
+                            variant="default"
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        onClick={() => setShowAuthModal(true)}
+                      >
+                        Sign in
+                      </Button>
+                    )}
+
+                    {profile.portfolioLinks && profile.portfolioLinks.length > 1 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const length = profile.portfolioLinks?.length || 0;
+                            setCurrentPortfolioIndex((prev) => 
+                              prev === 0 ? length - 1 : prev - 1
+                            );
+                          }}
+                          className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                          aria-label="Previous portfolio"
+                        >
+                          <ChevronLeft className="h-4 w-4 text-gray-700" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const length = profile.portfolioLinks?.length || 0;
+                            setCurrentPortfolioIndex((prev) => 
+                              prev === length - 1 ? 0 : prev + 1
+                            );
+                          }}
+                          className="w-8 h-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+                          aria-label="Next portfolio"
+                        >
+                          <ChevronRight className="h-4 w-4 text-gray-700" />
+                        </button>
+                      </div>
+                    )}
+
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={onClose} 
+                      className="hidden sm:flex hover:bg-gray-100"
+                      aria-label="Close profile panel"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="relative flex shrink-0 overflow-hidden rounded-full w-10 h-10 bg-gray-200 animate-pulse" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onClose} 
+                    className="hidden sm:flex hover:bg-gray-100"
+                    aria-label="Close profile panel"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Content - Scrollable */}
           <div 
@@ -978,11 +1021,23 @@ export function DeveloperProfileSlideBar({
 
                     {/* Right Column - Portfolio Carousel */}
                     <div className="lg:border-l lg:border-gray-200 lg:pl-8">
-                      <div className="mb-4">
-                        <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Portfolio</h4>
-                        <p className="text-sm text-gray-500">
-                          {profile.portfolioLinks?.length || 0} {profile.portfolioLinks?.length === 1 ? 'project' : 'projects'}
-                        </p>
+                      <div className="mb-4 flex items-center justify-between">
+                        <div>
+                          <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Portfolio</h4>
+                          <p className="text-sm text-gray-500">
+                            {profile.portfolioLinks?.length || 0} {profile.portfolioLinks?.length === 1 ? 'project' : 'projects'}
+                          </p>
+                        </div>
+                        {profile.portfolioLinks && profile.portfolioLinks.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`/developer/${developerId}/portfolio`, '_blank')}
+                            className="text-sm text-gray-600 hover:text-gray-900"
+                          >
+                            View all
+                          </Button>
+                        )}
                           </div>
 
                       {profile.portfolioLinks && profile.portfolioLinks.length > 0 ? (
@@ -1262,14 +1317,14 @@ export function DeveloperProfileSlideBar({
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Services</h3>
-                    {totalServicesCount > 4 && (
+                    {services.length > 0 && (
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                        onClick={() => window.open(`/services?developer=${developerId}`, '_blank')}
+                        onClick={() => window.open(`/developer/${developerId}/services`, '_blank')}
                         className="text-sm text-gray-600 hover:text-gray-900"
                                     >
-                        View all ({totalServicesCount})
+                        View all {totalServicesCount > 4 ? `(${totalServicesCount})` : ''}
                                     </Button>
                     )}
                                   </div>
@@ -1451,7 +1506,7 @@ export function DeveloperProfileSlideBar({
         onClose={() => setShowAuthModal(false)}
         action="contact this developer"
       />
-    </div>
+      </div>
     </>
   );
 }

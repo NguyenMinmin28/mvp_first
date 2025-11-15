@@ -126,10 +126,20 @@ export function AdminSidebar({
   const handleSignOut = async () => {
     setIsLoading(true);
     try {
+      // SignOut first and wait briefly to ensure session is cleared
       await signOut({ redirect: false });
+      
+      // Small delay to ensure NextAuth cleanup completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Use router.push for Next.js compatibility
       router.push("/admin/login");
     } catch (error) {
       console.error("Sign out error:", error);
+      // Fallback redirect
+      if (typeof window !== "undefined") {
+        window.location.href = "/admin/login";
+      }
     } finally {
       setIsLoading(false);
     }

@@ -127,8 +127,8 @@ export default function ProfileSummary({
   const [pendingStatus, setPendingStatus] = useState<"available" | "not_available" | null>(null);
   const [userIdeas, setUserIdeas] = useState<any[]>([]);
   const [ideasLoading, setIdeasLoading] = useState(false);
-  const portfolioScrollRef = useRef<HTMLDivElement>(null);
-  const ideasScrollRef = useRef<HTMLDivElement>(null);
+  const [portfolioIndex, setPortfolioIndex] = useState(0);
+  const [ideaGroupIndex, setIdeaGroupIndex] = useState(0);
   const [isPortfolioOverlayOpen, setIsPortfolioOverlayOpen] = useState(false);
   const [selectedPortfolio, setSelectedPortfolio] = useState<any | null>(null);
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
@@ -140,6 +140,139 @@ export default function ProfileSummary({
     imageUrl: "",
     images: [],
   });
+
+  const portfolioItems = useMemo(() => {
+    if (Array.isArray(profile?.portfolioLinks) && profile.portfolioLinks.length > 0) {
+      return profile.portfolioLinks;
+    }
+    if (Array.isArray(profile?.portfolioItems) && profile.portfolioItems.length > 0) {
+      return profile.portfolioItems;
+    }
+    return [];
+  }, [profile?.portfolioLinks, profile?.portfolioItems]);
+
+  const ideaSlides = useMemo(() => {
+    if (userIdeas.length === 0) return [];
+    return [
+      ...userIdeas.map((idea) => ({ ...idea, __kind: "idea" })),
+      { id: "add-card", __kind: "add" } as any,
+    ];
+  }, [userIdeas]);
+
+  const ideaGroups = useMemo(() => {
+    if (ideaSlides.length === 0) return [];
+    const groups: any[][] = [];
+    for (let i = 0; i < ideaSlides.length; i += 3) {
+      groups.push(ideaSlides.slice(i, i + 3));
+    }
+    return groups;
+  }, [ideaSlides]);
+
+  useEffect(() => {
+    if (portfolioItems.length === 0) {
+      setPortfolioIndex(0);
+      return;
+    }
+    setPortfolioIndex((prev) => (prev >= portfolioItems.length ? 0 : prev));
+  }, [portfolioItems.length]);
+
+  useEffect(() => {
+    if (ideaGroups.length === 0) {
+      setIdeaGroupIndex(0);
+      return;
+    }
+    setIdeaGroupIndex((prev) => (prev >= ideaGroups.length ? 0 : prev));
+  }, [ideaGroups.length]);
+
+  const currentPortfolio = portfolioItems.length > 0 ? portfolioItems[portfolioIndex] : null;
+  const currentIdeaGroup = ideaGroups.length > 0 ? ideaGroups[ideaGroupIndex] : [];
+
+  const handlePortfolioNavigate = (direction: "prev" | "next") => {
+    if (portfolioItems.length <= 1) return;
+    setPortfolioIndex((prev) => {
+      if (direction === "prev") {
+        return prev === 0 ? portfolioItems.length - 1 : prev - 1;
+      }
+      return prev === portfolioItems.length - 1 ? 0 : prev + 1;
+    });
+  };
+
+  const handleIdeaNavigate = (direction: "prev" | "next") => {
+    if (ideaGroups.length <= 1) return;
+    setIdeaGroupIndex((prev) => {
+      if (direction === "prev") {
+        return prev === 0 ? ideaGroups.length - 1 : prev - 1;
+      }
+      return prev === ideaGroups.length - 1 ? 0 : prev + 1;
+    });
+  };
+
+  const openPortfolioItem = (portfolio: any) => {
+    if (!portfolio) return;
+    if (developerId) {
+      router.push(`/developer/${developerId}/portfolio`);
+      return;
+    }
+    setSelectedPortfolio({
+      ...portfolio,
+      url: portfolio.url || portfolio.projectUrl,
+      images: portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []),
+      developer: {
+        user: {
+          name: profile?.name || name,
+          image: profile?.photoUrl || photoUrl,
+        },
+        photoUrl: profile?.photoUrl || photoUrl,
+        location: profile?.location || location,
+      },
+    });
+    setIsPortfolioOverlayOpen(true);
+  };
+
+  const handlePortfolioEdit = async (portfolio: any, index: number) => {
+    if (developerId || !portfolio) return;
+    try {
+      const response = await fetch("/api/portfolio");
+      if (response.ok) {
+        const data = await response.json();
+        const portfolios = data.portfolios || [];
+        const portfolioToEdit =
+          portfolios.find((p: any) => p.id === portfolio.id) || portfolios[index];
+
+        if (portfolioToEdit) {
+          const portfolioData = {
+            id: portfolioToEdit.id,
+            title: portfolioToEdit.title || "",
+            description: portfolioToEdit.description || "",
+            projectUrl: portfolioToEdit.projectUrl || portfolioToEdit.url || "",
+            imageUrl: portfolioToEdit.imageUrl || "",
+            images:
+              portfolioToEdit.images ||
+              (portfolioToEdit.imageUrl ? [portfolioToEdit.imageUrl] : []),
+          };
+          setCurrentPortfolioItem(portfolioData);
+          const actualIndex = portfolios.findIndex((p: any) => p.id === portfolio.id);
+          setEditingPortfolioIndex(actualIndex >= 0 ? actualIndex : index);
+          setIsPortfolioModalOpen(true);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error loading portfolio data:", error);
+    }
+
+    const fallbackData = {
+      id: portfolio.id,
+      title: portfolio.title || "",
+      description: portfolio.description || "",
+      projectUrl: portfolio.projectUrl || portfolio.url || "",
+      imageUrl: portfolio.imageUrl || "",
+      images: portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []),
+    };
+    setCurrentPortfolioItem(fallbackData);
+    setEditingPortfolioIndex(index);
+    setIsPortfolioModalOpen(true);
+  };
 
   const { uploadImage, isUploading: isUploadingAvatar } = useImageUpload({
     onSuccess: async (result) => {
@@ -906,7 +1039,7 @@ export default function ProfileSummary({
               {!developerId && (!Array.isArray(profile?.portfolioLinks) || profile.portfolioLinks.length === 0) && 
                (!Array.isArray(profile?.portfolioItems) || profile.portfolioItems.length === 0) &&
                !ideasLoading && userIdeas.length === 0 ? (
-                  <div className="w-full bg-white rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
+                <div className="w-full bg-white rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
                     {/* Media Icons */}
                     <div className="flex items-center justify-center gap-3 mb-6">
                       <div className="relative">
@@ -968,54 +1101,30 @@ export default function ProfileSummary({
                       </a>
                   </div>
                 </div>
-                ) : (
-                  <>
-                    {/* Portfolio Section */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <ImageIcon className="w-5 h-5 text-gray-700" />
-                        <h3 className="text-lg font-bold text-gray-900">Portfolio</h3>
-                      </div>
-                    {((Array.isArray(profile?.portfolioLinks) && profile.portfolioLinks.length > 0) ||
-                      (Array.isArray(profile?.portfolioItems) && profile.portfolioItems.length > 0)) ? (
-                  <div className="relative group">
-                    <div
-                      ref={portfolioScrollRef}
-                      className="flex gap-4 overflow-x-auto scroll-smooth horizontal-scrollbar pb-2"
-                    >
-                      {(profile.portfolioLinks || profile.portfolioItems || []).map((portfolio: any, index: number) => (
-                        <div
-                          key={portfolio.id || index}
-                          className="flex-shrink-0 w-full bg-white rounded-xl border border-gray-200/80 hover:border-gray-300 hover:shadow-xl transition-all duration-300 overflow-hidden group/item relative"
-                        >
+              ) : (
+                <div>
+                  {/* Portfolio Section */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <ImageIcon className="w-5 h-5 text-gray-700" />
+                      <h3 className="text-lg font-bold text-gray-900">Portfolio</h3>
+                    </div>
+                    {portfolioItems.length > 0 ? (
+                      <div className="relative group">
+                        <div className="w-full bg-white rounded-xl border border-gray-200/80 hover:border-gray-300 hover:shadow-xl transition-all duration-300 overflow-hidden group/item relative">
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedPortfolio({
-                                ...portfolio,
-                                url: portfolio.url || portfolio.projectUrl,
-                                images: portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []),
-                                developer: {
-                                  user: {
-                                    name: profile?.name || name,
-                                    image: profile?.photoUrl || photoUrl,
-                                  },
-                                  photoUrl: profile?.photoUrl || photoUrl,
-                                  location: profile?.location || location,
-                                },
-                              });
-                              setIsPortfolioOverlayOpen(true);
-                            }}
+                            onClick={() => openPortfolioItem(currentPortfolio)}
                             className="w-full text-left cursor-pointer"
                           >
-                            {portfolio.imageUrl && (
+                            {currentPortfolio?.imageUrl && (
                               <div className="w-full h-80 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
                                 <img
-                                  src={portfolio.imageUrl}
-                                  alt={portfolio.title || 'Portfolio'}
+                                  src={currentPortfolio.imageUrl}
+                                  alt={currentPortfolio.title || "Portfolio"}
                                   className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).style.display = "none";
                                   }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
@@ -1023,11 +1132,11 @@ export default function ProfileSummary({
                             )}
                             <div className="p-4">
                               <h4 className="text-base font-bold text-gray-900 line-clamp-1 mb-1.5">
-                                {portfolio.title || 'Portfolio Project'}
+                                {currentPortfolio?.title || "Portfolio Project"}
                               </h4>
-                              {portfolio.description && (
+                              {currentPortfolio?.description && (
                                 <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                                  {portfolio.description}
+                                  {currentPortfolio.description}
                                 </p>
                               )}
                               <div className="mt-3 flex items-center gap-1 text-blue-600 text-sm font-medium">
@@ -1039,74 +1148,9 @@ export default function ProfileSummary({
                           {!developerId && (
                             <button
                               type="button"
-                              onClick={async (e) => {
+                              onClick={(e) => {
                                 e.stopPropagation();
-                                // Fetch fresh portfolio data from API to ensure we have correct structure
-                                try {
-                                  const response = await fetch('/api/portfolio');
-                                  if (response.ok) {
-                                    const data = await response.json();
-                                    const portfolios = data.portfolios || [];
-                                    // Find portfolio by ID or use index
-                                    const portfolioToEdit = portfolios.find((p: any) => p.id === portfolio.id) || portfolios[index];
-                                    
-                                    if (portfolioToEdit) {
-                                      const portfolioData = {
-                                        id: portfolioToEdit.id,
-                                        title: portfolioToEdit.title || "",
-                                        description: portfolioToEdit.description || "",
-                                        projectUrl: portfolioToEdit.projectUrl || portfolioToEdit.url || "",
-                                        imageUrl: portfolioToEdit.imageUrl || "",
-                                        images: portfolioToEdit.images || (portfolioToEdit.imageUrl ? [portfolioToEdit.imageUrl] : []),
-                                      };
-                                      setCurrentPortfolioItem(portfolioData);
-                                      // Find the actual index in the portfolios array
-                                      const actualIndex = portfolios.findIndex((p: any) => p.id === portfolio.id);
-                                      setEditingPortfolioIndex(actualIndex >= 0 ? actualIndex : index);
-                                      setIsPortfolioModalOpen(true);
-                                    } else {
-                                      // Fallback to using portfolio data from props
-                                      const portfolioData = {
-                                        id: portfolio.id,
-                                        title: portfolio.title || "",
-                                        description: portfolio.description || "",
-                                        projectUrl: portfolio.projectUrl || portfolio.url || "",
-                                        imageUrl: portfolio.imageUrl || "",
-                                        images: portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []),
-                                      };
-                                      setCurrentPortfolioItem(portfolioData);
-                                      setEditingPortfolioIndex(index);
-                                      setIsPortfolioModalOpen(true);
-                                    }
-                                  } else {
-                                    // Fallback to using portfolio data from props
-                                    const portfolioData = {
-                                      id: portfolio.id,
-                                      title: portfolio.title || "",
-                                      description: portfolio.description || "",
-                                      projectUrl: portfolio.projectUrl || portfolio.url || "",
-                                      imageUrl: portfolio.imageUrl || "",
-                                      images: portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []),
-                                    };
-                                    setCurrentPortfolioItem(portfolioData);
-                                    setEditingPortfolioIndex(index);
-                                    setIsPortfolioModalOpen(true);
-                                  }
-                                } catch (error) {
-                                  console.error('Error loading portfolio data:', error);
-                                  // Fallback to using portfolio data from props
-                                  const portfolioData = {
-                                    id: portfolio.id,
-                                    title: portfolio.title || "",
-                                    description: portfolio.description || "",
-                                    projectUrl: portfolio.projectUrl || portfolio.url || "",
-                                    imageUrl: portfolio.imageUrl || "",
-                                    images: portfolio.images || (portfolio.imageUrl ? [portfolio.imageUrl] : []),
-                                  };
-                                  setCurrentPortfolioItem(portfolioData);
-                                  setEditingPortfolioIndex(index);
-                                  setIsPortfolioModalOpen(true);
-                                }
+                                handlePortfolioEdit(currentPortfolio, portfolioIndex);
                               }}
                               className="absolute top-2 right-2 bg-white/90 hover:bg-white border border-gray-300 rounded-lg p-2 shadow-md opacity-0 group-hover/item:opacity-100 transition-opacity z-10"
                               title="Edit portfolio"
@@ -1115,65 +1159,54 @@ export default function ProfileSummary({
                             </button>
                           )}
                         </div>
-                      ))}
-                    </div>
-                    {((profile.portfolioLinks || profile.portfolioItems || []).length > 1) && (
-                      <>
-                        <button
-                          onClick={() => {
-                            if (portfolioScrollRef.current) {
-                              portfolioScrollRef.current.scrollBy({ left: -320, behavior: 'smooth' });
-                            }
-                          }}
-                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2.5 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10 opacity-0 group-hover:opacity-100"
-                          aria-label="Scroll left"
-                        >
-                          <ChevronLeft className="w-5 h-5 text-gray-700" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (portfolioScrollRef.current) {
-                              portfolioScrollRef.current.scrollBy({ left: 320, behavior: 'smooth' });
-                            }
-                          }}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2.5 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10 opacity-0 group-hover:opacity-100"
-                          aria-label="Scroll right"
-                        >
-                          <ChevronRight className="w-5 h-5 text-gray-700" />
-                        </button>
-                      </>
-                    )}
-              </div>
-            ) : (
-                  <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50">
-                    <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm text-gray-500 font-medium mb-2">No portfolio yet</p>
-                    {!developerId && (
-                      <a
-                        href="/profile"
-                        className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
-                      >
-                        <span>Add portfolio</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </a>
+                        {portfolioItems.length > 1 && (
+                          <>
+                            <button
+                              onClick={() => handlePortfolioNavigate("prev")}
+                              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2.5 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10"
+                              aria-label="Previous portfolio"
+                            >
+                              <ChevronLeft className="w-5 h-5 text-gray-700" />
+                            </button>
+                            <button
+                              onClick={() => handlePortfolioNavigate("next")}
+                              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2.5 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10"
+                              aria-label="Next portfolio"
+                            >
+                              <ChevronRight className="w-5 h-5 text-gray-700" />
+                            </button>
+                          </>
+                        )}
+                        {portfolioItems.length > 1 && (
+                          <div className="mt-3 text-center text-xs font-medium text-gray-500">
+                            {portfolioIndex + 1} / {portfolioItems.length}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50">
+                        <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p className="text-sm text-gray-500 font-medium mb-2">No portfolio yet</p>
+                        {!developerId && (
+                          <a
+                            href="/profile"
+                            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                          >
+                            <span>Add portfolio</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-                    </div>
 
                     {/* IdeaSpark Section */}
                     <div className="flex-1 flex flex-col">
                       <div className="flex items-center gap-2 mb-4">
-                        <Zap className="w-5 h-5 text-gray-900" />
+                        <Zap className="w-5 h-5 text-gray-700" />
                         <h3 className="text-lg font-bold text-gray-900">IdeaSpark</h3>
                       </div>
-
-                  {ideasLoading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full mx-auto"></div>
-                      <p className="text-sm text-gray-500 mt-3">Loading ideas...</p>
-                </div>
-                  ) : userIdeas.length === 0 ? (
+                      {userIdeas.length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-white">
                       <Zap className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                       <p className="text-sm text-gray-700 font-medium mb-2">No ideas yet</p>
@@ -1187,121 +1220,109 @@ export default function ProfileSummary({
               </div>
             ) : (
                     <div className="relative flex-1 group">
-                      <div
-                        ref={ideasScrollRef}
-                        className={`flex gap-3 scroll-smooth horizontal-scrollbar pb-2 ${
-                          userIdeas.length > 0 ? 'overflow-x-auto' : 'overflow-x-hidden'
-                        }`}
-                        style={{ scrollSnapType: 'x mandatory' }}
-                      >
-                        {userIdeas.map((idea) => {
-                          const imageUrl = idea.coverUrl || (idea.cover?.storageKey ? `/api/files/${idea.cover.storageKey}` : null);
-                          return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {currentIdeaGroup.map((slide) =>
+                          slide.__kind === "add" ? (
                             <a
-                              key={idea.id}
-                              href={`/ideas/${idea.id}`}
-                              className="flex-shrink-0 w-full max-w-[calc(100%-0.75rem)] sm:max-w-[280px] block bg-white rounded-xl border border-gray-200/80 hover:border-gray-400 hover:shadow-lg transition-all duration-300 overflow-hidden group/item"
-                              style={{ scrollSnapAlign: 'start' }}
+                              key={slide.id}
+                              href="/ideas/submit"
+                              className="block h-full bg-white rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 overflow-hidden group/add"
                             >
-                              {/* Image Section - Square */}
-                              {imageUrl ? (
-                                <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
-                                  <img
-                                    src={imageUrl}
-                                    alt={idea.title}
-                                    className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
-                      </div>
-                              ) : (
-                                <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                  <Zap className="w-8 h-8 text-gray-400" />
-                    </div>
-                              )}
-                              
-                              {/* Content Section */}
+                              <div className="w-full aspect-square bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
+                                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mb-3 group-hover/add:bg-gray-300 transition-colors">
+                                  <Plus className="w-6 h-6 text-gray-600 group-hover/add:text-gray-900" />
+                                </div>
+                                <p className="text-xs font-medium text-gray-600 text-center">Add new idea</p>
+                              </div>
+                            </a>
+                          ) : (
+                            <a
+                              key={slide.id}
+                              href={`/ideas/${slide.id}`}
+                              className="block h-full bg-white rounded-xl border border-gray-200/80 hover:border-gray-400 hover:shadow-lg transition-all duration-300 overflow-hidden group/item"
+                            >
+                              {(() => {
+                                const imageUrl =
+                                  slide.coverUrl ||
+                                  (slide.cover?.storageKey ? `/api/files/${slide.cover.storageKey}` : null);
+                                return imageUrl ? (
+                                  <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
+                                    <img
+                                      src={imageUrl}
+                                      alt={slide.title}
+                                      className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = "none";
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
+                                  </div>
+                                ) : (
+                                  <div className="w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                    <Zap className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                );
+                              })()}
                               <div className="p-3">
                                 <h4 className="text-xs font-bold text-gray-900 line-clamp-2 mb-1.5 group-hover/item:text-gray-700 transition-colors">
-                                  {idea.title}
-                    </h4>
+                                  {slide.title}
+                                </h4>
                                 <p className="text-[11px] text-gray-600 line-clamp-2 mb-2 leading-relaxed">
-                                  {idea.summary}
+                                  {slide.summary}
                                 </p>
                                 <div className="flex items-center gap-2.5 text-[10px] text-gray-500">
-                                  {/* Likes */}
                                   <div className="flex items-center gap-0.5">
                                     <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                                    <span className="font-medium">{idea._count?.likes || 0}</span>
+                                    <span className="font-medium">{slide._count?.likes || 0}</span>
                                   </div>
-                                  {/* Love/Bookmarks */}
                                   <div className="flex items-center gap-0.5">
                                     <Bookmark className="w-3 h-3 text-amber-500 fill-amber-500" />
-                                    <span className="font-medium">{idea._count?.bookmarks || 0}</span>
+                                    <span className="font-medium">{slide._count?.bookmarks || 0}</span>
                                   </div>
-                                  {/* Views */}
                                   <div className="flex items-center gap-0.5">
                                     <Eye className="w-3 h-3 text-gray-500" />
-                                    <span className="font-medium">{idea._count?.connects || 0}</span>
+                                    <span className="font-medium">{slide._count?.connects || 0}</span>
                                   </div>
-                    </div>
-                  </div>
+                                </div>
+                              </div>
                             </a>
-                          );
-                        })}
-                        
-                        {/* Add New Idea Card - Last Item */}
-                        <a
-                          href="/ideas/submit"
-                          className="flex-shrink-0 w-full max-w-[calc(100%-0.75rem)] sm:max-w-[280px] block bg-white rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 overflow-hidden group/add"
-                          style={{ scrollSnapAlign: 'start' }}
-                        >
-                          <div className="w-full aspect-square bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
-                            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mb-3 group-hover/add:bg-gray-300 transition-colors">
-                              <Plus className="w-6 h-6 text-gray-600 group-hover/add:text-gray-900" />
-                            </div>
-                            <p className="text-xs font-medium text-gray-600 text-center">Add new idea</p>
-                          </div>
-                        </a>
-                </div>
-                      {(userIdeas.length + 1) > 3 && (
+                          )
+                        )}
+                        {currentIdeaGroup.length < 3 &&
+                          Array.from({ length: 3 - currentIdeaGroup.length }).map((_, idx) => (
+                            <div key={`idea-placeholder-${idx}`} className="hidden md:block" />
+                          ))}
+                      </div>
+
+                      {ideaGroups.length > 1 && (
                         <>
                           <button
-                            onClick={() => {
-                              if (ideasScrollRef.current) {
-                                ideasScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-                              }
-                            }}
-                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10 opacity-0 group-hover:opacity-100"
-                            aria-label="Scroll left"
+                            onClick={() => handleIdeaNavigate("prev")}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10"
+                            aria-label="Previous idea"
                           >
                             <ChevronLeft className="w-4 h-4 text-gray-700" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (ideasScrollRef.current) {
-                                ideasScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-                              }
-                            }}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10 opacity-0 group-hover:opacity-100"
-                            aria-label="Scroll right"
+                            onClick={() => handleIdeaNavigate("next")}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full p-2 shadow-lg hover:bg-white hover:shadow-xl transition-all z-10"
+                            aria-label="Next idea"
                           >
                             <ChevronRight className="w-4 h-4 text-gray-700" />
                           </button>
+                          <div className="mt-3 text-center text-xs font-medium text-gray-500">
+                            {ideaGroupIndex + 1} / {ideaGroups.length}
+                          </div>
                         </>
-            )}
+                      )}
                     </div>
                   )}
-                    </div>
-                  </>
-                )}
+                </div>
+                </div>
+              )}
             </div>
-          </div>
-
-        </CardContent>
-        {/* Reviews overlay modal */}
+            </div>
+          )}
         {showReviewsOverlay && developerId && (
           <DeveloperReviewsModal
             isOpen={showReviewsOverlay}
@@ -1310,6 +1331,7 @@ export default function ProfileSummary({
             developerName={name || profile?.name || "Developer"}
           />
         )}
+        </CardContent>
       </Card>
 
       {/* Portfolio Detail Overlay */}
@@ -1595,4 +1617,3 @@ export default function ProfileSummary({
     </>
   );
 }
-

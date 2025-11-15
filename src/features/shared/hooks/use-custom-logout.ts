@@ -16,6 +16,8 @@ export function useCustomLogout() {
   const logout = async (callbackUrl?: string) => {
     if (!mounted) return;
     
+    const targetUrl = callbackUrl || "/";
+    
     try {
       // Fire-and-forget: update developer status in the background to keep UI snappy
       if (session?.user?.role === "DEVELOPER") {
@@ -35,40 +37,39 @@ export function useCustomLogout() {
         } catch {}
       }
 
-      // Use window.location for logout to avoid React context issues
-      const targetUrl = callbackUrl || "/";
-      
-      // Small delay before redirect to allow React to cleanup components
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Try signOut first, but fallback to direct navigation if it fails
+      // SignOut first and wait briefly to ensure session is cleared
       try {
         await signOut({
           callbackUrl: targetUrl,
-          redirect: false, // Don't let NextAuth handle redirect
+          redirect: false,
         });
-        
-        // Additional delay before redirect to ensure React cleanup completes
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Manual redirect to avoid context issues
-        if (typeof window !== "undefined") {
-          window.location.href = targetUrl;
-        }
-      } catch (signOutError) {
-        console.warn("SignOut failed, using direct navigation:", signOutError);
-        // Additional delay before redirect
-        await new Promise(resolve => setTimeout(resolve, 50));
-        // Direct navigation fallback
-        if (typeof window !== "undefined") {
+      } catch (error) {
+        console.warn("SignOut error (continuing anyway):", error);
+      }
+
+      // Small delay to ensure NextAuth cleanup completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use router.push for Next.js compatibility, fallback to window.location
+      if (typeof window !== "undefined") {
+        try {
+          router.push(targetUrl);
+          // Fallback to window.location if router.push doesn't work
+          setTimeout(() => {
+            if (window.location.pathname !== targetUrl) {
+              window.location.href = targetUrl;
+            }
+          }, 200);
+        } catch (error) {
+          console.warn("Router push failed, using window.location:", error);
           window.location.href = targetUrl;
         }
       }
     } catch (error) {
-      console.error("❌ Custom logout error:", error);
+      console.error("Logout error:", error);
       // Final fallback - direct navigation
       if (typeof window !== "undefined") {
-        window.location.href = callbackUrl || "/";
+        window.location.href = targetUrl;
       }
     }
   };

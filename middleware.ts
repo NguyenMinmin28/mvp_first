@@ -8,7 +8,7 @@ const PUBLIC_ROUTES = [
   "/auth/signin", "/auth/signup", "/auth/setup-password",
   "/role-selection", "/ideas", 
   "/how-clevrs-work", "/newsroom", "/investors",
-  "/services"
+  "/services", "/developer"
 ];
 
 import {

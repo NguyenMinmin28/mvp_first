@@ -8,7 +8,7 @@ const PUBLIC_ROUTES = [
   "/auth/signin", "/auth/signup", 
   "/role-selection", "/ideas", 
   "/how-clevrs-work", "/newsroom", "/investors",
-  "/services"
+  "/services", "/developer" // Allow public access to developer profiles and their services/portfolio
 ];
 
 import {

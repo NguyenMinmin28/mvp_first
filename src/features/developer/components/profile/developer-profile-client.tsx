@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/ui/components/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { UserLayout } from "@/features/shared/components/user-layout";
 import ProfileSummary from "@/features/developer/components/dashboard/profile-summary";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
@@ -28,6 +29,7 @@ export function DeveloperProfileClient({
   developerId,
   user,
 }: DeveloperProfileClientProps) {
+  const router = useRouter();
   const [isSimpleView, setIsSimpleView] = useState(false);
 
   return (
@@ -242,6 +244,10 @@ export function DeveloperProfileClient({
                         portfolioLinks={Array.isArray(profile?.portfolioItems) ? profile.portfolioItems : []}
                         onAddPortfolio={undefined}
                         variant="public"
+                        onItemClick={() => {
+                          // Redirect to portfolio page when clicking on portfolio item
+                          router.push(`/developer/${developerId}/portfolio`);
+                        }}
                       />
                     </div>
                   </TabsContent>
