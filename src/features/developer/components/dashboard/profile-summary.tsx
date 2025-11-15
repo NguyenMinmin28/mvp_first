@@ -1321,8 +1321,6 @@ export default function ProfileSummary({
                 </div>
               )}
             </div>
-            </div>
-          )}
         {showReviewsOverlay && developerId && (
           <DeveloperReviewsModal
             isOpen={showReviewsOverlay}
