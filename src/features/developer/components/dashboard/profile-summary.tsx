@@ -1321,6 +1321,7 @@ export default function ProfileSummary({
                 </div>
               )}
             </div>
+          </div>
         </CardContent>
       </Card>
       {showReviewsOverlay && developerId && (
