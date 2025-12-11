@@ -97,6 +97,12 @@ const navigationItems = [
     icon: Clock,
     description: "History of scheduled jobs",
   },
+  {
+    name: "Skills",
+    href: adminRoutes.SKILLS,
+    icon: List,
+    description: "Manage platform skills",
+  },
 ];
 
 export function AdminSidebar({

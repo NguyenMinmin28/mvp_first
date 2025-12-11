@@ -6,6 +6,7 @@ export const adminRoutes = {
   SETTINGS: "/admin/settings",
   LOGS: "/admin/logs",
   SECURITY: "/admin/security",
+  SKILLS: "/admin/skills",
 } as const;
 
 export const userRoutes = {
