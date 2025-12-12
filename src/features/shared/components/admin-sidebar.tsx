@@ -21,6 +21,7 @@ import {
   Lightbulb,
   MessageSquare,
   TrendingUp,
+  Briefcase,
 } from "lucide-react";
 
 import { adminRoutes } from "@/core/config/routes";
@@ -102,6 +103,12 @@ const navigationItems = [
     href: adminRoutes.SKILLS,
     icon: List,
     description: "Manage platform skills",
+  },
+  {
+    name: "Roles",
+    href: adminRoutes.ROLES,
+    icon: Briefcase,
+    description: "Manage developer roles",
   },
 ];
 

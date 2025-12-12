@@ -26,14 +26,27 @@ interface OnboardingLayoutProps {
   user?: any; // accepted for compatibility with server pages that pass user
 }
 
-export function OnboardingLayout({ children }: OnboardingLayoutProps) {
+export function OnboardingLayout({ children, user: serverUser }: OnboardingLayoutProps) {
   const [mounted, setMounted] = useState(false);
-  const { data: session } = useSession();
-  useEffect(() => setMounted(true), []);
+  const { data: session, status } = useSession();
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-
-  // Use session user if available, otherwise use passed user prop
-  const user = session?.user || undefined;
+  // Prioritize server user prop, fallback to session user
+  // Use server user immediately if available, otherwise wait for session to load
+  const user = serverUser || (status === "loading" ? undefined : (session?.user || undefined));
+  
+  // Debug log to check session state
+  useEffect(() => {
+    if (mounted) {
+      console.log("🔍 OnboardingLayout - Server user prop:", serverUser);
+      console.log("🔍 OnboardingLayout - Session status:", status);
+      console.log("🔍 OnboardingLayout - Session user:", session?.user);
+      console.log("🔍 OnboardingLayout - Final user:", user);
+    }
+  }, [mounted, status, session?.user, serverUser, user]);
   
   // Calculate header height: 64px (h-16) + 32px (welcome bar if authenticated) = 96px when authenticated, 64px otherwise
   const headerHeight = user ? '96px' : '64px';
@@ -42,10 +55,14 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col bg-white w-full m-0 p-0 overflow-x-hidden">
         {/* Header - Same as other user pages */}
-        <Header user={user} />
+        {mounted ? (
+          <Header key={user?.id || 'no-user'} user={user} />
+        ) : (
+          <div className="h-16 bg-black" /> // Placeholder to prevent layout shift
+        )}
         
         {/* Main Content */}
-        <main className="flex-1 flex flex-col main-content dashboard-main bg-gradient-to-br from-blue-50 via-white to-indigo-50" style={{ paddingTop: headerHeight }}>
+        <main className="flex-1 flex flex-col main-content dashboard-main bg-gradient-to-br from-blue-50 via-white to-indigo-50" style={{ paddingTop: mounted ? headerHeight : '64px' }}>
           <div className="container mx-auto px-4 py-8 w-full">{children}</div>
         </main>
         {/* Footer - Same as other user pages */}
