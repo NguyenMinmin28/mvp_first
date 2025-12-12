@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               companyName: true,
+              currentSubscriptionId: true,
             }
           },
           developerProfile: {
@@ -89,6 +90,25 @@ export async function GET(request: NextRequest) {
       }),
       prisma.user.count({ where })
     ]);
+
+    // Fetch latest active subscriptions for all listed client profiles in batch
+    const clientIds = users.map(u => u.clientProfile?.id).filter(Boolean) as string[];
+    const subscriptions = clientIds.length
+      ? await prisma.subscription.findMany({
+          where: {
+            clientId: { in: clientIds },
+            status: "active",
+            currentPeriodEnd: { gte: new Date() }
+          },
+          orderBy: { createdAt: "desc" },
+          include: { package: true }
+        })
+      : [];
+    const latestByClient: Record<string, any> = {};
+    for (const sub of subscriptions) {
+      const key = sub.clientId as string;
+      if (!latestByClient[key]) latestByClient[key] = sub;
+    }
 
     // Transform users data
     const transformedUsers = users.map(user => ({
@@ -106,6 +126,10 @@ export async function GET(request: NextRequest) {
       // Add profile info
       profileType: user.clientProfile ? "CLIENT" : user.developerProfile ? "DEVELOPER" : null,
       profileStatus: user.developerProfile?.adminApprovalStatus || null,
+      // Current plan name
+      packageName: user.clientProfile?.id
+        ? latestByClient[user.clientProfile.id]?.package?.name || null
+        : null,
     }));
 
     // Calculate pagination info

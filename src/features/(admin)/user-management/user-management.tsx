@@ -32,6 +32,7 @@ interface User {
   // Profile info
   profileType?: string; // "CLIENT" | "DEVELOPER" | null
   profileStatus?: string; // For developers: approval status
+  packageName?: string | null; // Current subscription package
 }
 
 interface PaginationInfo {
@@ -58,6 +59,7 @@ export function UserManagement() {
   const [resettingRole, setResettingRole] = useState<string | null>(null);
   const [clearingPlans, setClearingPlans] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [seedingPlan, setSeedingPlan] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     role: "all",
     status: "all",
@@ -177,6 +179,40 @@ export function UserManagement() {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  // Seed Free Plan for users without an active subscription
+  const handleSeedFreePlan = async (userId: string, userName: string) => {
+    // Prevent spamming while a request is in-flight
+    if (seedingPlan) {
+      toast.info("A seed request is already processing");
+      return;
+    }
+    try {
+      setSeedingPlan(userId);
+      const response = await fetch(`/api/admin/users/${userId}/seed-free-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      let result: any = {};
+      try { result = await response.json(); } catch {}
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Failed to seed Free Plan (status ${response.status})`);
+      }
+
+      const msg = result?.message || (result?.subscription?.package?.name
+        ? `Active plan: ${result.subscription.package.name}`
+        : `Seeded Free Plan for ${userName}`);
+      toast.success(msg);
+      // Refresh current page to display updated plan column
+      await fetchUsers(pagination.currentPage);
+    } catch (error: any) {
+      console.error("Error seeding Free Plan:", error);
+      toast.error(error?.message || "Failed to seed Free Plan");
+    } finally {
+      setSeedingPlan(null);
+    }
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setFilters({
@@ -263,6 +299,14 @@ export function UserManagement() {
       },
     },
     {
+      key: "packageName",
+      label: "Plan",
+      sortable: false,
+      render: (value) => (
+        <Badge variant={value ? "secondary" : "outline"}>{value || "None"}</Badge>
+      )
+    },
+    {
       key: "status",
       label: "Status",
       render: (value) => (
@@ -295,7 +339,7 @@ export function UserManagement() {
     {
       key: "actions",
       label: "Actions",
-      width: "w-32",
+      width: "w-44",
       render: (_, item) => (
         <div className="flex justify-center gap-2">
           <Button
@@ -322,6 +366,20 @@ export function UserManagement() {
               )}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleSeedFreePlan(item.id, item.name || item.email || "User")}
+            disabled={seedingPlan === item.id}
+            title="Seed Free Plan for this user"
+            className="text-green-700 hover:text-green-800 hover:bg-green-50"
+          >
+            {seedingPlan === item.id ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>
+            ) : (
+              <span className="text-xs font-semibold">Free</span>
+            )}
+          </Button>
           <Button
             size="sm"
             variant="outline"

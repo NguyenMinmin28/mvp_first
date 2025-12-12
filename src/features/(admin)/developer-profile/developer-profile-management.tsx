@@ -46,6 +46,7 @@ interface DeveloperProfile {
   rejectedAt: string | null;
   rejectedReason: string | null;
   whatsappNumber: string;
+  whatsappVerified?: boolean;
   whatsappVerifiedAt: string | null;
   usualResponseTimeMs: number;
   currentStatus: string;
@@ -86,6 +87,7 @@ export function DeveloperProfileManagement() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [resettingRole, setResettingRole] = useState<string | null>(null);
   const [clearingPlans, setClearingPlans] = useState<string | null>(null);
+  const [seedingPlan, setSeedingPlan] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: "all",
     level: "all",
@@ -143,6 +145,7 @@ export function DeveloperProfileManagement() {
           rejectedReason: dev.rejectedReason || null,
           whatsappNumber: dev.whatsappNumber || "",
           whatsappVerifiedAt: null,
+          whatsappVerified: !!dev.whatsappVerified,
           usualResponseTimeMs: dev.usualResponseTimeMs ?? 0,
           currentStatus: dev.currentStatus,
           averageRating: dev.reviewsAggregate?.averageRating || 0,
@@ -279,6 +282,65 @@ export function DeveloperProfileManagement() {
       toast.error("Failed to reset role");
     } finally {
       setResettingRole(null);
+    }
+  };
+
+  // Seed Free Plan for users without an active subscription
+  const handleSeedFreePlan = async (userId: string, userName: string) => {
+    // Prevent spamming while a request is in-flight
+    if (seedingPlan) {
+      toast.info("A seed request is already processing");
+      return;
+    }
+    try {
+      setSeedingPlan(userId);
+      const response = await fetch(`/api/admin/users/${userId}/seed-free-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      let result: any = {};
+      try { result = await response.json(); } catch {}
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Failed to seed Free Plan (status ${response.status})`);
+      }
+
+      const msg = result?.message || (result?.subscription?.package?.name
+        ? `Active plan: ${result.subscription.package.name}`
+        : `Seeded Free Plan for ${userName}`);
+      toast.success(msg);
+      // Optionally refresh developer list to reflect any client state changes
+      await fetchProfiles(pagination.currentPage);
+    } catch (error: any) {
+      console.error("Error seeding Free Plan:", error);
+      toast.error(error?.message || "Failed to seed Free Plan");
+    } finally {
+      setSeedingPlan(null);
+    }
+  };
+
+  // Toggle WhatsApp verification for developer
+  const [togglingWhatsApp, setTogglingWhatsApp] = useState<string | null>(null);
+  const handleToggleWhatsapp = async (developerId: string, current: boolean, name: string) => {
+    if (togglingWhatsApp) return;
+    try {
+      setTogglingWhatsApp(developerId);
+      const res = await fetch(`/api/admin/developers/${developerId}/whatsapp-verify`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappVerified: !current })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update WhatsApp verification");
+      }
+      toast.success(data?.message || `Updated WhatsApp verification for ${name}`);
+      await fetchProfiles(pagination.currentPage);
+    } catch (e: any) {
+      console.error("toggle whatsapp error", e);
+      toast.error(e?.message || "Failed to update WhatsApp verification");
+    } finally {
+      setTogglingWhatsApp(null);
     }
   };
 
@@ -501,7 +563,7 @@ export function DeveloperProfileManagement() {
     {
       key: "actions",
       label: "Actions",
-      width: "w-32",
+      width: "w-44",
       render: (_, item) => (
         <div className="flex justify-center gap-2">
           <Button
@@ -524,6 +586,34 @@ export function DeveloperProfileManagement() {
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
             ) : (
               <RotateCcw className="w-4 h-4" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleSeedFreePlan(item.userId, item.name)}
+            disabled={seedingPlan === item.userId}
+            title="Seed Free Plan for this user"
+            className="text-green-700 hover:text-green-800 hover:bg-green-50"
+          >
+            {seedingPlan === item.userId ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>
+            ) : (
+              <span className="text-xs font-semibold">Free</span>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant={item.whatsappVerified ? "outline" : "default"}
+            onClick={() => handleToggleWhatsapp(item.id, !!item.whatsappVerified, item.name)}
+            disabled={togglingWhatsApp === item.id}
+            title={item.whatsappVerified ? "Disable WhatsApp Verified" : "Enable WhatsApp Verified"}
+            className={item.whatsappVerified ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-700 hover:text-green-800 hover:bg-green-50"}
+          >
+            {togglingWhatsApp === item.id ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+            ) : (
+              <span className="text-xs font-semibold">{item.whatsappVerified ? "Unverify" : "Verify"}</span>
             )}
           </Button>
           <Button

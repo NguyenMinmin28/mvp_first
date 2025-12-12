@@ -21,10 +21,66 @@ export interface QuotaCheckResult {
   };
 }
 
+const DEFAULT_FREE_ALLOWANCES = {
+  projectsPerMonth: 999,
+  contactClicksPerProject: 0,
+  connectsPerMonth: 25
+};
+
 /**
  * Billing service for quota management and subscription handling
  */
 class BillingService {
+  /**
+   * Ensure the client has an active subscription. If none exists, automatically
+   * provision the Free Plan so new users aren't blocked from posting projects.
+   */
+  private async ensureActiveSubscription(clientId: string): Promise<(Subscription & { package: Package }) | null> {
+    const existing = await this.getActiveSubscription(clientId);
+    if (existing) return existing;
+
+    const freePlan = await prisma.package.findFirst({
+      where: {
+        name: "Free Plan",
+        priceUSD: 0,
+        active: true
+      }
+    });
+
+    if (!freePlan) {
+      logger.billing.quota(clientId, "ensure-subscription", "free-plan-missing", {
+        reason: "Free Plan package not seeded"
+      });
+      return null;
+    }
+
+    const now = new Date();
+    const subscription = await prisma.subscription.create({
+      data: {
+        clientId,
+        packageId: freePlan.id,
+        status: "active",
+        provider: freePlan.provider || "paypal",
+        providerSubscriptionId: `free-${clientId}-${Date.now()}`,
+        startAt: now,
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        cancelAtPeriodEnd: false,
+        trialStart: null,
+        trialEnd: null
+      },
+      include: {
+        package: true
+      }
+    });
+
+    logger.billing.usage(subscription.id, "Auto-provisioned Free Plan", {
+      clientId,
+      packageId: freePlan.id
+    });
+
+    return subscription as Subscription & { package: Package };
+  }
   
   /**
    * Get active subscription for user with package details
@@ -117,12 +173,15 @@ class BillingService {
    * Free Plan (projectsPerMonth >= 999) allows unlimited projects
    */
   async canPostProject(clientId: string): Promise<QuotaCheckResult> {
-    const subscription = await this.getActiveSubscription(clientId);
-    
+    const subscription = await this.ensureActiveSubscription(clientId);
+
     if (!subscription) {
       return {
-        allowed: false,
-        reason: "No active subscription found"
+        allowed: true,
+        remaining: {
+          projects: DEFAULT_FREE_ALLOWANCES.projectsPerMonth,
+          contactClicks: DEFAULT_FREE_ALLOWANCES.contactClicksPerProject
+        }
       };
     }
 
@@ -210,13 +269,19 @@ class BillingService {
    * Check if user can use a connect (send get-in-touch message)
    */
   async canUseConnect(clientId: string): Promise<QuotaCheckResult> {
-    const subscription = await this.getActiveSubscription(clientId);
+    const subscription = await this.ensureActiveSubscription(clientId);
     if (!subscription) {
-      return { allowed: false, reason: "No active subscription found" };
+      return {
+        allowed: true,
+        remaining: {
+          projects: DEFAULT_FREE_ALLOWANCES.projectsPerMonth,
+          contactClicks: DEFAULT_FREE_ALLOWANCES.connectsPerMonth
+        }
+      };
     }
 
     const usage = await this.getOrCreateCurrentUsage(subscription.id);
-    const connectsLimit = (subscription.package as any).connectsPerMonth ?? 0;
+    const connectsLimit = (subscription.package as any).connectsPerMonth ?? DEFAULT_FREE_ALLOWANCES.connectsPerMonth;
     const connectsUsed = (usage as any).connectsUsed ?? 0;
     const remaining = connectsLimit - connectsUsed;
 
@@ -248,9 +313,10 @@ class BillingService {
    * Increment connects usage after successful lead creation
    */
   async incrementConnectUsage(clientId: string): Promise<void> {
-    const subscription = await this.getActiveSubscription(clientId);
+    const subscription = await this.ensureActiveSubscription(clientId);
     if (!subscription) {
-      throw new Error("No active subscription found");
+      logger.billing.usage("missing-subscription", "Skip increment connect usage", { clientId });
+      return;
     }
 
     const usage = await this.getOrCreateCurrentUsage(subscription.id);
@@ -274,10 +340,11 @@ class BillingService {
    * Increment project post count
    */
   async incrementProjectUsage(clientId: string): Promise<void> {
-    const subscription = await this.getActiveSubscription(clientId);
+    const subscription = await this.ensureActiveSubscription(clientId);
     
     if (!subscription) {
-      throw new Error("No active subscription found");
+      logger.billing.usage("missing-subscription", "Skip increment project usage", { clientId });
+      return;
     }
 
     const usage = await this.getOrCreateCurrentUsage(subscription.id);
@@ -304,10 +371,11 @@ class BillingService {
    * Increment contact reveal count for a project
    */
   async incrementContactRevealUsage(clientId: string, projectId: string): Promise<void> {
-    const subscription = await this.getActiveSubscription(clientId);
+    const subscription = await this.ensureActiveSubscription(clientId);
     
     if (!subscription) {
-      throw new Error("No active subscription found");
+      logger.billing.usage("missing-subscription", "Skip increment contact reveal", { clientId, projectId });
+      return;
     }
 
     const usage = await this.getOrCreateCurrentUsage(subscription.id);
@@ -358,10 +426,17 @@ class BillingService {
    * Get billing quotas and usage for client
    */
   async getBillingQuotas(clientId: string): Promise<BillingQuotas | null> {
-    const subscription = await this.getActiveSubscription(clientId);
+    const subscription = await this.ensureActiveSubscription(clientId);
     
     if (!subscription) {
-      return null;
+      return {
+        projectsPerMonth: DEFAULT_FREE_ALLOWANCES.projectsPerMonth,
+        contactClicksPerProject: DEFAULT_FREE_ALLOWANCES.contactClicksPerProject,
+        connectsPerMonth: DEFAULT_FREE_ALLOWANCES.connectsPerMonth,
+        projectsUsed: 0,
+        contactClicksUsed: {},
+        connectsUsed: 0
+      };
     }
 
     const usage = await this.getOrCreateCurrentUsage(subscription.id);
@@ -370,7 +445,7 @@ class BillingService {
     return {
       projectsPerMonth: subscription.package.projectsPerMonth,
       contactClicksPerProject: subscription.package.contactClicksPerProject,
-      connectsPerMonth: (subscription.package as any).connectsPerMonth ?? 0,
+      connectsPerMonth: (subscription.package as any).connectsPerMonth ?? DEFAULT_FREE_ALLOWANCES.connectsPerMonth,
       projectsUsed: usage.projectsPostedCount,
       contactClicksUsed: contactClicks,
       connectsUsed: (usage as any).connectsUsed ?? 0
